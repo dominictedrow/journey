@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Tauri merges this into the app's Info.plist. The dashboard points at a backend on the LAN
+  over plain http (e.g. http://<windows-box-ip>:8000), which macOS App Transport Security
+  blocks by default inside a WKWebView. Because the backend host/IP is a runtime setting, we
+  can't scope an ATS exception to one domain — so we allow arbitrary + local-network loads.
+  This is a thin client for a self-hosted backend on a trusted network; it makes no other
+  outbound calls. Tighten to NSExceptionDomains if you later put the backend behind HTTPS.
+-->
+<plist version="1.0">
+  <dict>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <true/>
+      <key>NSAllowsLocalNetworking</key>
+      <true/>
+    </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Copytrader connects to your self-hosted backend on the local network.</string>
+  </dict>
+</plist>

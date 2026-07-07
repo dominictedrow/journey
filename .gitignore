@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Celery beat runtime state
+celerybeat-schedule
+celerybeat.pid
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+!docker/.env.example
+
+# Defense in depth: never allow these regardless of where they show up in the tree.
+*.pem
+*.p12
+*.key
+*.keystore
+id_rsa*
+id_ed25519*
+*credentials*.json
+wallet*.json
+
+# Tauri / Rust
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+.gstack/
+
+# Local tool caches / generated artifacts — not source, shouldn't be pushed
+graphify-out/

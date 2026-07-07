@@ -1,0 +1,97 @@
+name: copytrader
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copytrader}:${POSTGRES_PASSWORD:-copytrader}@postgres:5432/${POSTGRES_DB:-copytrader}
+  REDIS_URL: redis://redis:6379/0
+
+x-app-env-file: &app-env-file
+  env_file:
+    - path: ../.env
+      required: false
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-copytrader}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copytrader}
+      POSTGRES_DB: ${POSTGRES_DB:-copytrader}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-copytrader} -d ${POSTGRES_DB:-copytrader}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [core]
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [core]
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    <<: *app-env-file
+    environment: *backend-env
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [core]
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    <<: *app-env-file
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [core]
+
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    <<: *app-env-file
+    environment: *backend-env
+    command: celery -A app.workers.celery_app:celery_app beat --loglevel=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [core]
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks: [core]
+
+volumes:
+  pgdata:
+
+networks:
+  core:
+    driver: bridge

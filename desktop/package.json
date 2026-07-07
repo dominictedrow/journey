@@ -1,0 +1,16 @@
+{
+  "name": "copytrader-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri 2 thin-client desktop shell for the Copytrader dashboard.",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build -- --bundles dmg",
+    "build:windows": "tauri build -- --bundles nsis",
+    "icons": "python3 scripts/generate_icons.py"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0"
+  }
+}
