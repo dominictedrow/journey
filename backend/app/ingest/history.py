@@ -131,14 +131,16 @@ async def backfill_wallet_history(address: str) -> int:
     """Backfill one wallet's fills from the Data-API up to its handoff block, then rebuild
     positions. Idempotent; returns the number of new rows inserted."""
     settings = get_settings()
-    pool = RpcPool(settings.polygon_rpc_url_list)
     address = address.lower()
     async with async_session_factory() as session:
         tracked = bool(
             await session.scalar(select(Wallet.is_tracked).where(Wallet.address == address))
         )
-        handoff = await _resolve_handoff(session, pool, address, tracked)
-        cutoff_ts = int((await pool.get_block(handoff))["timestamp"])
+        # Pool scoped to the handoff resolution only: the Data-API streaming below can run for
+        # minutes and needs no RPC, so the aiohttp sessions are closed before it starts.
+        async with RpcPool(settings.polygon_rpc_url_list) as pool:
+            handoff = await _resolve_handoff(session, pool, address, tracked)
+            cutoff_ts = int((await pool.get_block(handoff))["timestamp"])
         # The disjoint-source guarantee (history owns blocks <= H, live tail owns > H) breaks if
         # the live tail already ingested blocks <= H for this wallet — which happens whenever the
         # wallet was marked is_tracked before this backfill ran, since LIVE_STREAM is a single

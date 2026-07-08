@@ -32,6 +32,22 @@ class RpcPool:
             raise RuntimeError("POLYGON_RPC_URLS is not configured")
         self._w3s = [_make_w3(url) for url in urls]
 
+    async def aclose(self) -> None:
+        """Close every provider's cached aiohttp sessions. Callers create a pool per task run
+        (15s live tail), so leaving this to GC leaks a session per run ("Unclosed client
+        session" in the worker log)."""
+        for w3 in self._w3s:
+            try:
+                await w3.provider.disconnect()
+            except Exception:  # noqa: BLE001 — closing must never mask the task's real outcome
+                logger.warning("rpc provider close failed", exc_info=True)
+
+    async def __aenter__(self) -> "RpcPool":
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        await self.aclose()
+
     async def _try(self, op: Callable[[AsyncWeb3], Awaitable[T]]) -> T:
         last_exc: Exception | None = None
         for round_index in range(RETRY_ROUNDS):

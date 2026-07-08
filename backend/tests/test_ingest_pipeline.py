@@ -95,6 +95,12 @@ class FakePool:
     async def get_logs(self, params):  # noqa: ANN001, ANN201
         return self.logs
 
+    async def __aenter__(self) -> "FakePool":
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        return None
+
 
 def mock_httpx(monkeypatch, handler) -> None:
     """Route httpx.AsyncClient through a MockTransport (capture the real class first to

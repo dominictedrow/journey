@@ -69,28 +69,28 @@ async def fetch_trade_rows(
 async def backfill_wallet(address: str, from_block: int | None = None) -> int:
     """Backfill one wallet's full fill history, then rebuild its positions."""
     settings = get_settings()
-    pool = RpcPool(settings.polygon_rpc_url_list)
     address = address.lower()
     stream = f"backfill:{address}"
-    head = await pool.get_block_number() - settings.chain_confirmations
     inserted = 0
-    async with async_session_factory() as session:
-        checkpoint = await get_checkpoint(session, stream)
-        if from_block is not None:
-            start = from_block
-        elif checkpoint is not None:
-            start = checkpoint + 1
-        else:
-            start = settings.backfill_start_block
-        token_map = await load_token_market_map(session)
-        for lo in range(start, head + 1, settings.rpc_log_chunk_size):
-            hi = min(lo + settings.rpc_log_chunk_size - 1, head)
-            rows = await fetch_trade_rows(
-                pool, session, lo, hi, [address_topic(address)], token_map
-            )
-            inserted += await insert_trades(session, rows)
-            await set_checkpoint(session, stream, hi)
+    async with RpcPool(settings.polygon_rpc_url_list) as pool:
+        head = await pool.get_block_number() - settings.chain_confirmations
+        async with async_session_factory() as session:
+            checkpoint = await get_checkpoint(session, stream)
+            if from_block is not None:
+                start = from_block
+            elif checkpoint is not None:
+                start = checkpoint + 1
+            else:
+                start = settings.backfill_start_block
+            token_map = await load_token_market_map(session)
+            for lo in range(start, head + 1, settings.rpc_log_chunk_size):
+                hi = min(lo + settings.rpc_log_chunk_size - 1, head)
+                rows = await fetch_trade_rows(
+                    pool, session, lo, hi, [address_topic(address)], token_map
+                )
+                inserted += await insert_trades(session, rows)
+                await set_checkpoint(session, stream, hi)
+                await session.commit()
+            await rebuild_positions(session, address)
             await session.commit()
-        await rebuild_positions(session, address)
-        await session.commit()
     return inserted
