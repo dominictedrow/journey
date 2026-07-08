@@ -1,10 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
 
-import { getDiscoveryStatus, getWallets, runDiscovery } from "@/lib/api";
+import { getDiscoveryStatus, getWallets } from "@/lib/api";
 import { fmtDate, fmtUsd, shortAddress } from "@/lib/format";
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -17,9 +16,6 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 }
 
 export default function DiscoveryPage() {
-  const queryClient = useQueryClient();
-  const [taskId, setTaskId] = useState<string | null>(null);
-
   const { data: status, error } = useQuery({
     queryKey: ["discovery"],
     queryFn: getDiscoveryStatus,
@@ -31,45 +27,14 @@ export default function DiscoveryPage() {
     refetchInterval: 30_000,
   });
 
-  const sweep = useMutation({
-    mutationFn: runDiscovery,
-    onSuccess: (res) => {
-      setTaskId(res.task_id);
-      // Give the worker a moment, then pull fresh counts.
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["discovery"] });
-        queryClient.invalidateQueries({ queryKey: ["wallets"] });
-      }, 5000);
-    },
-  });
-
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Discovery</h1>
-        <button
-          onClick={() => sweep.mutate()}
-          disabled={sweep.isPending}
-          className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium hover:bg-emerald-600 disabled:opacity-50"
-        >
-          {sweep.isPending ? "Queuing…" : "Run discovery sweep"}
-        </button>
-      </div>
+      <h1 className="text-2xl font-semibold">Discovery</h1>
       <p className="mt-1 text-sm text-slate-500">
         Sources: Polymarket trader leaderboard (PnL & volume, monthly & lifetime) and top holders of
-        the highest-volume active markets. Also runs automatically every 6 hours.
+        the highest-volume active markets. Runs automatically every 2 hours.
       </p>
 
-      {taskId && (
-        <p className="mt-3 rounded border border-sky-900 bg-sky-950 p-2 text-sm text-sky-300">
-          Sweep queued (task {taskId}) — counts refresh as the worker reports in.
-        </p>
-      )}
-      {sweep.error && (
-        <p className="mt-3 rounded border border-red-900 bg-red-950 p-2 text-sm text-red-300">
-          Failed to queue sweep: {sweep.error.message}
-        </p>
-      )}
       {error && (
         <p className="mt-3 rounded border border-red-900 bg-red-950 p-2 text-sm text-red-300">
           Failed to load discovery status: {error.message}
@@ -105,7 +70,7 @@ export default function DiscoveryPage() {
                 {status && status.by_source.length === 0 && (
                   <tr>
                     <td colSpan={2} className="px-3 py-6 text-center text-slate-500">
-                      No candidates yet — run a sweep.
+                      No candidates yet — waiting on the next discovery sweep.
                     </td>
                   </tr>
                 )}

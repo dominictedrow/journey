@@ -44,10 +44,12 @@ class Settings(BaseSettings):
 
     # --- Autonomous promotion (Module 2 → 3 bridge; discovery.autopromote hourly beat) ------
     # Full-history backfills are the heaviest Data-API reads, so promotion is budgeted:
-    # 8/hour ≈ 200 wallets/day flowing into metrics + rankings, well inside the shared
+    # 25/hour ≈ 600 wallets/day flowing into metrics + rankings, well inside the shared
     # throttle. The cap bounds the live tail's maker-topic list and the hourly metrics sweep.
-    autopromote_per_run: int = 8
-    max_tracked_wallets: int = 300
+    # Widened from the original 8/300 so enough wallets are tracked to clear the ≥1 trade/day
+    # floor without relying solely on the activity governor's runtime overrides (Module D).
+    autopromote_per_run: int = 25
+    max_tracked_wallets: int = 1000
 
     # On-chain contract addresses (Polygon) — verified against
     # docs.polymarket.com/resources/contracts on 2026-07-02.
@@ -103,18 +105,37 @@ class Settings(BaseSettings):
     live_max_retries: int = 3  # attempts when a placement fails transiently (nonce/network)
     live_retry_backoff_seconds: Decimal = Decimal("0.5")  # linear backoff between attempts
 
+    # --- On-chain redemption (Module E — settled live positions) ----------------------------
+    # Neg Risk Adapter (`Polymarket/neg-risk-ctf-adapter`), verified against its on-chain
+    # source on 2026-07-08: multi-outcome markets redeem here (`redeemPositions(bytes32
+    # conditionId, uint256[] amounts)`), not through the standard CTF contract.
+    neg_risk_adapter_address: str = "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296"
+    redemption_max_retries: int = 3  # attempts when tx submission fails transiently
+    redemption_retry_backoff_seconds: Decimal = Decimal("2.0")  # linear backoff between attempts
+    redemption_gas_limit: int = 300_000  # generous static limit; redemptions don't loop on-chain
+    redemption_receipt_timeout_seconds: int = 120  # wait for confirmation before treating as sent
+
     # --- Risk limits (Module 8 defaults; USDC unless noted) --------------------------------
-    risk_max_total_exposure: Decimal = Decimal("5000")
+    # Every exposure cap is a fraction of current equity, not a flat dollar figure — they all
+    # scale with capital automatically instead of binding arbitrarily once the book grows past
+    # whatever dollar figure they were sized for. Nested so no single lever can alone reach the
+    # portfolio-wide ceiling: position (10%) < per-market (15%) < per-wallet (20%) < total (60%).
+    risk_max_total_exposure_pct: Decimal = Decimal("0.60")
     risk_max_daily_loss: Decimal = Decimal("100")
     risk_max_weekly_loss: Decimal = Decimal("250")
     risk_max_monthly_loss: Decimal = Decimal("500")
     risk_max_open_positions: int = 10
-    risk_max_position_size: Decimal = Decimal("100")
-    risk_max_per_market_exposure: Decimal = Decimal("200")
-    risk_max_per_wallet_exposure: Decimal = Decimal("300")
+    risk_max_position_size_pct: Decimal = Decimal("0.10")
+    risk_max_per_market_exposure_pct: Decimal = Decimal("0.15")
+    risk_max_per_wallet_exposure_pct: Decimal = Decimal("0.20")
     risk_min_market_liquidity: Decimal = Decimal("10000")
     risk_max_slippage_pct: Decimal = Decimal("2.0")
     risk_max_copy_delay_seconds: int = 60
+    # Live mode has no on-chain balance read yet (follow-up once redemption exists), so this
+    # is the equity baseline used until the first live snapshot exists: both the live cash
+    # reconstruction (portfolio/service.py::current_cash) and the equity fallback the
+    # percentage-sizing/exposure-cap math read (portfolio/service.py::current_equity).
+    risk_live_starting_equity: Decimal = Decimal("0")
 
     # --- Strategy optimizer (Module 6; weekly beat) ----------------------------------------
     # The optimizer backtests candidate strategies (Top-N / weighting / sizing grid) over a

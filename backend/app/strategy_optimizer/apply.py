@@ -9,10 +9,10 @@ enforces that selection on the `wallets` table:
   - every other copy-enabled wallet is demoted with a recorded reason — decayed wallets
     rotate out without anyone clicking anything.
 
-Wallets a human explicitly disabled (disabled_reason starts with "manual") are never
-re-enabled: the human veto outranks the optimizer (kill-switch principle applied
-per-wallet). Runs from the weekly optimizer task and an hourly enforcement beat, so
-manual drift or a restored DB converges back to the adopted strategy within the hour.
+There is no manual veto: the optimizer's selection is authoritative and unconditionally
+enforced, so a wallet that rotated out is re-enabled the moment it's back in the active
+strategy's selection. Runs from the weekly optimizer task and an hourly enforcement beat,
+so drift or a restored DB converges back to the adopted strategy within the hour.
 
 Returns a summary dict; `needs_backfill` lists wallets that were newly promoted to
 tracked and therefore need their history seam re-derived (`history:{address}` cleared +
@@ -28,8 +28,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.models import Strategy, Wallet
 
 logger = logging.getLogger(__name__)
-
-MANUAL_DISABLE_PREFIX = "manual"
 
 
 async def get_active_strategy(session: AsyncSession) -> Strategy | None:
@@ -52,9 +50,6 @@ async def apply_active_strategy(session: AsyncSession) -> dict:
     needs_backfill: list[str] = []
     rows = (await session.scalars(select(Wallet).where(Wallet.address.in_(selected)))).all()
     for wallet in rows:
-        reason = wallet.disabled_reason or ""
-        if not wallet.copy_enabled and reason.startswith(MANUAL_DISABLE_PREFIX):
-            continue  # human veto wins over the optimizer
         if not wallet.is_tracked:
             needs_backfill.append(wallet.address)
             wallet.is_tracked = True

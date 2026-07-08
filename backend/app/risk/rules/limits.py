@@ -12,18 +12,19 @@ from app.risk.rules.base import cap_by_notional
 
 
 class PositionSizeRule:
-    """Cap the total notional held in a single token at `max_position_size`."""
+    """Cap the total notional held in a single token at `max_position_size_pct` of equity."""
 
     name = "position_size"
 
     def __init__(self, limits: RiskLimits) -> None:
-        self.cap = limits.max_position_size
+        self.pct = limits.max_position_size_pct
 
     def evaluate(self, ctx: RiskContext, intent: TradeIntent, size: Decimal) -> RuleResult:
         if intent.side != "BUY":
             return RuleResult.allow(size)
-        remaining = self.cap - ctx.token_exposure
-        return cap_by_notional(size, intent.price, remaining, "max_position_size")
+        cap = ctx.total_equity * self.pct
+        remaining = cap - ctx.token_exposure
+        return cap_by_notional(size, intent.price, remaining, "max_position_size_pct")
 
 
 class MaxOpenPositionsRule:
@@ -43,45 +44,49 @@ class MaxOpenPositionsRule:
 
 
 class PerMarketExposureRule:
-    """Cap total notional in one market at `max_per_market_exposure`."""
+    """Cap total notional in one market at `max_per_market_exposure_pct` of equity."""
 
     name = "per_market_exposure"
 
     def __init__(self, limits: RiskLimits) -> None:
-        self.cap = limits.max_per_market_exposure
+        self.pct = limits.max_per_market_exposure_pct
 
     def evaluate(self, ctx: RiskContext, intent: TradeIntent, size: Decimal) -> RuleResult:
         if intent.side != "BUY":
             return RuleResult.allow(size)
-        remaining = self.cap - ctx.market_exposure
-        return cap_by_notional(size, intent.price, remaining, "max_per_market_exposure")
+        cap = ctx.total_equity * self.pct
+        remaining = cap - ctx.market_exposure
+        return cap_by_notional(size, intent.price, remaining, "max_per_market_exposure_pct")
 
 
 class PerWalletExposureRule:
-    """Cap total notional copied from one source wallet at `max_per_wallet_exposure`."""
+    """Cap total notional copied from one source wallet at `max_per_wallet_exposure_pct` of
+    equity."""
 
     name = "per_wallet_exposure"
 
     def __init__(self, limits: RiskLimits) -> None:
-        self.cap = limits.max_per_wallet_exposure
+        self.pct = limits.max_per_wallet_exposure_pct
 
     def evaluate(self, ctx: RiskContext, intent: TradeIntent, size: Decimal) -> RuleResult:
         if intent.side != "BUY":
             return RuleResult.allow(size)
-        remaining = self.cap - ctx.wallet_exposure
-        return cap_by_notional(size, intent.price, remaining, "max_per_wallet_exposure")
+        cap = ctx.total_equity * self.pct
+        remaining = cap - ctx.wallet_exposure
+        return cap_by_notional(size, intent.price, remaining, "max_per_wallet_exposure_pct")
 
 
 class PortfolioExposureRule:
-    """Cap the whole portfolio's open notional at `max_total_exposure`."""
+    """Cap the whole portfolio's open notional at `max_total_exposure_pct` of current equity."""
 
     name = "portfolio_exposure"
 
     def __init__(self, limits: RiskLimits) -> None:
-        self.cap = limits.max_total_exposure
+        self.pct = limits.max_total_exposure_pct
 
     def evaluate(self, ctx: RiskContext, intent: TradeIntent, size: Decimal) -> RuleResult:
         if intent.side != "BUY":
             return RuleResult.allow(size)
-        remaining = self.cap - ctx.total_exposure
-        return cap_by_notional(size, intent.price, remaining, "max_total_exposure")
+        cap = ctx.total_equity * self.pct
+        remaining = cap - ctx.total_exposure
+        return cap_by_notional(size, intent.price, remaining, "max_total_exposure_pct")

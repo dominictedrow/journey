@@ -53,8 +53,12 @@ def settle_resolutions_task() -> list[int]:
 
 
 @celery_app.task(name="copy.revalue_portfolio")
-def revalue_portfolio_task(mode: str = "paper") -> str:
-    """Mark the copy portfolio to market and append a snapshot."""
+def revalue_portfolio_task(mode: str = "paper") -> str | None:
+    """Mark the copy portfolio to market and append a snapshot. No-op for the live beat entry
+    on a paper-only deployment, so an unarmed box doesn't grow a live snapshot series for a
+    mode that isn't actually trading."""
+    if mode == "live" and get_settings().execution_mode != "live":
+        return None
 
     async def job() -> str:
         async with async_session_factory() as session:

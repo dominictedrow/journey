@@ -13,8 +13,9 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.database.models import PortfolioPosition, PortfolioSnapshot, RiskEvent, Wallet
+from app.portfolio.service import current_equity
 from app.risk.killswitch import is_engaged, set_engaged
 from app.risk.models import RiskContext, RiskDecision, RiskLimits, TradeIntent
 from app.risk.rules import Rule, default_rules
@@ -55,7 +56,11 @@ async def _period_pnl(session: AsyncSession, mode: str, now: datetime) -> dict[s
 
 
 async def build_context(
-    session: AsyncSession, intent: TradeIntent, mode: str, now: datetime | None = None
+    session: AsyncSession,
+    intent: TradeIntent,
+    mode: str,
+    now: datetime | None = None,
+    settings: Settings | None = None,
 ) -> RiskContext:
     """Assemble the portfolio state the rules evaluate against."""
     now = now or datetime.now(UTC)
@@ -88,6 +93,7 @@ async def build_context(
     wallet = await session.get(Wallet, intent.source_wallet)
     return RiskContext(
         total_exposure=total,
+        total_equity=await current_equity(session, mode, settings),
         open_positions=len(positions),
         token_exposure=token_exposure,
         market_exposure=market_exposure,
@@ -100,14 +106,25 @@ async def build_context(
 
 
 class RiskEngine:
-    def __init__(self, limits: RiskLimits | None = None, rules: list[Rule] | None = None) -> None:
-        self.limits = limits or RiskLimits.from_settings(get_settings())
+    def __init__(
+        self,
+        limits: RiskLimits | None = None,
+        rules: list[Rule] | None = None,
+        settings: Settings | None = None,
+    ) -> None:
+        self.settings = settings or get_settings()
+        self.limits = limits or RiskLimits.from_settings(self.settings)
         self.rules = rules if rules is not None else default_rules(self.limits)
 
     async def check(
-        self, session: AsyncSession, intent: TradeIntent, *, record: bool = True
+        self,
+        session: AsyncSession,
+        intent: TradeIntent,
+        *,
+        record: bool = True,
+        now: datetime | None = None,
     ) -> RiskDecision:
-        now = datetime.now(UTC)
+        now = now or datetime.now(UTC)
         if await is_engaged(session):
             decision = RiskDecision(
                 allow=False,
@@ -119,7 +136,7 @@ class RiskEngine:
                 self._record(session, intent, decision, now, "critical", "blocked")
             return decision
 
-        ctx = await build_context(session, intent, intent.mode, now)
+        ctx = await build_context(session, intent, intent.mode, now, self.settings)
         size = intent.size
         adjustments: list[dict] = []
         for rule in self.rules:

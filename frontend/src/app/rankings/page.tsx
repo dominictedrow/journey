@@ -1,12 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Fragment, useState } from "react";
 
 import {
   getRankings,
-  rebuildRankings,
   type RankingCategory,
   type ScoreExplanationComponent,
   type WalletScoreDetail,
@@ -115,16 +114,10 @@ function ExplanationPanel({ detail }: { detail: WalletScoreDetail }) {
 export default function RankingsPage() {
   const [category, setCategory] = useState<RankingCategory>("overall");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const { data, isPending, error } = useQuery({
     queryKey: ["rankings", category],
     queryFn: () => getRankings(category),
-  });
-
-  const rebuild = useMutation({
-    mutationFn: rebuildRankings,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rankings"] }),
   });
 
   const counts = new Map(data?.categories.map((c) => [c.category, c.count]));
@@ -133,18 +126,9 @@ export default function RankingsPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Rankings</h1>
-        <div className="flex items-center gap-3">
-          {data?.computed_at && (
-            <span className="text-sm text-slate-500">Generation: {fmtDate(data.computed_at)}</span>
-          )}
-          <button
-            onClick={() => rebuild.mutate()}
-            disabled={rebuild.isPending}
-            className="rounded bg-sky-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-40"
-          >
-            {rebuild.isPending ? "Rebuilding…" : "Rebuild now"}
-          </button>
-        </div>
+        {data?.computed_at && (
+          <span className="text-sm text-slate-500">Generation: {fmtDate(data.computed_at)}</span>
+        )}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -172,12 +156,6 @@ export default function RankingsPage() {
           Failed to load rankings: {error.message}
         </p>
       )}
-      {rebuild.error && (
-        <p className="mt-6 rounded border border-red-900 bg-red-950 p-3 text-sm text-red-300">
-          Rebuild failed: {rebuild.error.message}
-        </p>
-      )}
-
       <div className="mt-4 overflow-x-auto rounded border border-slate-800">
         <table className="w-full text-sm">
           <thead className="bg-slate-900 text-left text-slate-400">
@@ -254,7 +232,7 @@ export default function RankingsPage() {
                 <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
                   {data.computed_at
                     ? "No wallets qualify for this category yet."
-                    : "No rankings yet — compute wallet metrics, then hit Rebuild now."}
+                    : "No rankings yet — waiting on the next rankings rebuild."}
                 </td>
               </tr>
             )}

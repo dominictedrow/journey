@@ -39,3 +39,9 @@ class PortfolioPosition(Base):
     is_open: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # On-chain redemption of settled live positions (Module E). Null until the redemption
+    # sweep first looks at this position; "redeemed"/"failed" thereafter — never re-redeemed
+    # once "redeemed" (idempotency), and "failed" is retried by the next sweep.
+    redemption_status: Mapped[str | None] = mapped_column(String(16), index=True)
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    redemption_tx_hash: Mapped[str | None] = mapped_column(String(80))

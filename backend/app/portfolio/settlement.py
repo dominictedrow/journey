@@ -10,9 +10,9 @@ position whose market is closed with outcomePrices at its payout price. The clos
 synthetic settlement `CopyOrder` + `apply_fill(SELL)`, so cash and realized PnL stay on the
 single copy_orders spine every other module reconciles against.
 
-Live-mode caveat: this realizes the outcome in *our books*. Actually redeeming the CTF
-tokens on-chain (converting winning shares back to collateral) is not automated — do that
-in the Polymarket UI for now.
+Live-mode caveat: this realizes the outcome in *our books* only. Actually redeeming the CTF
+tokens on-chain (converting winning shares back to collateral) is a separate, later sweep —
+see `app.blockchain.redemption` — so on-chain confirmation latency never blocks this one.
 """
 
 import logging

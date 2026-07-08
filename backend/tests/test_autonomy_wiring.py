@@ -89,19 +89,24 @@ async def test_apply_enables_selected_and_demotes_others(session: AsyncSession) 
     assert "rotated out by optimizer" in c.disabled_reason
 
 
-async def test_apply_respects_manual_veto(session: AsyncSession) -> None:
+async def test_apply_reenables_previously_rotated_out_wallet(session: AsyncSession) -> None:
     session.add(
-        _wallet(W_A, is_tracked=True, copy_enabled=False, disabled_reason="manually disabled")
+        _wallet(
+            W_A,
+            is_tracked=True,
+            copy_enabled=False,
+            disabled_reason="rotated out by optimizer (strategy 1)",
+        )
     )
     session.add(_strategy({"wallets": [W_A]}))
     await session.commit()
 
     result = await apply_active_strategy(session)
 
-    assert result["enabled"] == []
+    assert result["enabled"] == [W_A]
     wallet = await session.get(Wallet, W_A)
-    assert wallet.copy_enabled is False
-    assert wallet.disabled_reason == "manually disabled"
+    assert wallet.copy_enabled is True
+    assert wallet.disabled_reason is None
 
 
 async def test_apply_noop_without_active_or_resolved_strategy(session: AsyncSession) -> None:

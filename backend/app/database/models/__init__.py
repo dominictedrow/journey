@@ -9,6 +9,7 @@ from app.database.models.portfolio import PortfolioPosition, PortfolioSnapshot
 from app.database.models.position import Position
 from app.database.models.ranking import Ranking
 from app.database.models.risk_event import RiskEvent
+from app.database.models.runtime_override import RuntimeOverride
 from app.database.models.strategy import Strategy
 from app.database.models.system_flag import SystemFlag
 from app.database.models.trade import Trade
@@ -26,6 +27,7 @@ __all__ = [
     "Position",
     "Ranking",
     "RiskEvent",
+    "RuntimeOverride",
     "Strategy",
     "SystemFlag",
     "Trade",

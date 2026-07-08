@@ -1,17 +1,10 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
 
-import {
-  backfillWallet,
-  getWallet,
-  refreshWalletMetrics,
-  updateWallet,
-  type WalletMetrics,
-} from "@/lib/api";
+import { getWallet, type WalletMetrics } from "@/lib/api";
 import { fmtDate, fmtNum, fmtPct, fmtUsd, pnlClass } from "@/lib/format";
 
 function Metric({ label, value, className }: { label: string; value: string; className?: string }) {
@@ -101,34 +94,12 @@ function MetricsGrid({ m }: { m: WalletMetrics }) {
 
 export function WalletDetail() {
   const address = useSearchParams().get("address") ?? "";
-  const queryClient = useQueryClient();
-  const [taskId, setTaskId] = useState<string | null>(null);
 
   const { data: wallet, isPending, error } = useQuery({
     queryKey: ["wallet", address],
     queryFn: () => getWallet(address),
     enabled: address !== "",
   });
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["wallet", address] });
-    queryClient.invalidateQueries({ queryKey: ["wallets"] });
-  };
-  const patch = useMutation({
-    mutationFn: (body: { is_tracked?: boolean; copy_enabled?: boolean }) =>
-      updateWallet(address, body),
-    onSuccess: invalidate,
-  });
-  const refresh = useMutation({
-    mutationFn: () => refreshWalletMetrics(address),
-    onSuccess: invalidate,
-  });
-  const backfill = useMutation({
-    mutationFn: () => backfillWallet(address),
-    onSuccess: (res) => setTaskId(res.task_id),
-  });
-
-  const mutationError = backfill.error ?? refresh.error;
 
   if (address === "")
     return (
@@ -151,69 +122,38 @@ export function WalletDetail() {
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <h1 className="font-mono text-xl font-semibold">{wallet.address}</h1>
-        <button
-          onClick={() => patch.mutate({ is_tracked: !wallet.is_tracked })}
+        <span
           className={`rounded px-3 py-1 text-sm font-medium ${
             wallet.is_tracked
-              ? "bg-emerald-900 text-emerald-300 hover:bg-emerald-800"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              ? "bg-emerald-900 text-emerald-300"
+              : "bg-slate-800 text-slate-400"
           }`}
         >
-          {wallet.is_tracked ? "Tracked ✓" : "Track"}
-        </button>
-        <button
-          onClick={() =>
-            // Enabling copy also tracks the wallet — untracked wallets never get their fills
-            // indexed, so copy-only would silently do nothing.
-            patch.mutate(
-              wallet.copy_enabled ? { copy_enabled: false } : { copy_enabled: true, is_tracked: true },
-            )
-          }
+          {wallet.is_tracked ? "Tracked" : "Not tracked"}
+        </span>
+        <span
           className={`rounded px-3 py-1 text-sm font-medium ${
             wallet.copy_enabled
-              ? "bg-sky-900 text-sky-300 hover:bg-sky-800"
-              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              ? "bg-sky-900 text-sky-300"
+              : "bg-slate-800 text-slate-400"
           }`}
         >
-          {wallet.copy_enabled ? "Copy enabled ✓" : "Enable copy"}
-        </button>
-        <button
-          onClick={() => refresh.mutate()}
-          disabled={refresh.isPending}
-          className="rounded bg-slate-800 px-3 py-1 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
-        >
-          {refresh.isPending ? "Recomputing…" : "Refresh metrics"}
-        </button>
-        <button
-          onClick={() => backfill.mutate()}
-          disabled={backfill.isPending}
-          className="rounded bg-slate-800 px-3 py-1 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
-        >
-          Backfill on-chain
-        </button>
+          {wallet.copy_enabled ? "Copy enabled" : "Copy disabled"}
+        </span>
       </div>
       <p className="mt-1 text-sm text-slate-500">
         {wallet.discovery_source ? `Discovered via ${wallet.discovery_source}` : "Seen on-chain"}
         {wallet.discovered_at ? ` on ${fmtDate(wallet.discovered_at)}` : ""} · Active{" "}
         {fmtDate(wallet.first_seen)} → {fmtDate(wallet.last_active)}
       </p>
-      {taskId && (
-        <p className="mt-2 rounded border border-sky-900 bg-sky-950 p-2 text-sm text-sky-300">
-          Backfill queued (task {taskId}). Refresh metrics once the worker finishes.
-        </p>
-      )}
-      {mutationError && (
-        <p className="mt-2 rounded border border-red-900 bg-red-950 p-2 text-sm text-red-300">
-          {mutationError.message || "Request failed."}
-        </p>
-      )}
 
       <div className="mt-8">
         {wallet.metrics ? (
           <MetricsGrid m={wallet.metrics} />
         ) : (
           <p className="rounded border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-400">
-            No metrics yet — backfill this wallet&apos;s on-chain history, then refresh metrics.
+            No metrics yet — on-chain history and metrics compute automatically once this wallet
+            is tracked.
           </p>
         )}
       </div>
@@ -293,7 +233,7 @@ export function WalletDetail() {
               {wallet.recent_trades.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
-                    No indexed trades — backfill this wallet to pull its on-chain history.
+                    No indexed trades yet.
                   </td>
                 </tr>
               )}

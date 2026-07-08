@@ -8,7 +8,6 @@ import {
   getCopyOrders,
   getPortfolio,
   getPortfolioHistory,
-  revaluePortfolio,
   type CopyOrder,
   type PortfolioPosition,
   type PortfolioSummary,
@@ -101,7 +100,8 @@ function PositionsTable({
           {positions.length === 0 && (
             <tr>
               <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
-                No open positions — fire a copy from the Risk tab to populate the book.
+                No open positions yet — the copy engine populates this once a tracked wallet
+                trades.
               </td>
             </tr>
           )}
@@ -181,14 +181,6 @@ export default function PortfolioPage() {
     refetchInterval: 5000,
   });
 
-  const revalue = useMutation({
-    mutationFn: () => revaluePortfolio("paper"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
-    },
-  });
-
   const close = useMutation({
     mutationFn: (positionId: number) => closePosition(positionId),
     onSettled: () => {
@@ -235,13 +227,6 @@ export default function PortfolioPage() {
           </span>
           <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400">paper</span>
         </div>
-        <button
-          onClick={() => revalue.mutate()}
-          disabled={revalue.isPending}
-          className="rounded bg-sky-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-40"
-        >
-          {revalue.isPending ? "Revaluing…" : "Revalue now"}
-        </button>
       </div>
 
       {summary && (

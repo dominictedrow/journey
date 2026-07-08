@@ -1,10 +1,10 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
-import { getWallets, updateWallet, type WalletSortKey } from "@/lib/api";
+import { getWallets, type WalletSortKey } from "@/lib/api";
 import { fmtDate, fmtNum, fmtPct, fmtUsd, pnlClass, shortAddress } from "@/lib/format";
 
 const PAGE_SIZE = 25;
@@ -25,7 +25,6 @@ export default function WalletsPage() {
   const [sort, setSort] = useState<WalletSortKey>("total_volume");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
-  const queryClient = useQueryClient();
 
   const params = {
     search: search || undefined,
@@ -39,21 +38,6 @@ export default function WalletsPage() {
     queryKey: ["wallets", params],
     queryFn: () => getWallets(params),
     placeholderData: keepPreviousData,
-  });
-
-  const track = useMutation({
-    mutationFn: ({ address, tracked }: { address: string; tracked: boolean }) =>
-      updateWallet(address, { is_tracked: tracked }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wallets"] }),
-  });
-
-  const copy = useMutation({
-    mutationFn: ({ address, enabled }: { address: string; enabled: boolean }) =>
-      // Enabling copy also tracks the wallet — untracked wallets never get their fills
-      // indexed (blockchain/listener.py only watches tracked addresses), so copy-only would
-      // silently do nothing.
-      updateWallet(address, enabled ? { copy_enabled: true, is_tracked: true } : { copy_enabled: false }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wallets"] }),
   });
 
   const sortBy = (key: WalletSortKey) => {
@@ -122,8 +106,6 @@ export default function WalletsPage() {
                 </th>
               ))}
               <th className="px-3 py-2 font-medium">Source</th>
-              <th className="px-3 py-2 font-medium">Copy</th>
-              <th className="px-3 py-2 font-medium">Tracked</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
@@ -149,35 +131,11 @@ export default function WalletsPage() {
                 <td className="px-3 py-2">{fmtNum(w.metrics?.sharpe)}</td>
                 <td className="px-3 py-2 text-slate-400">{fmtDate(w.last_active)}</td>
                 <td className="px-3 py-2 text-slate-400">{w.discovery_source ?? "—"}</td>
-                <td className="px-3 py-2">
-                  <button
-                    onClick={() => copy.mutate({ address: w.address, enabled: !w.copy_enabled })}
-                    className={`rounded px-2 py-1 text-xs font-medium ${
-                      w.copy_enabled
-                        ? "bg-sky-900 text-sky-300 hover:bg-sky-800"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                    }`}
-                  >
-                    {w.copy_enabled ? "Copying" : "Enable"}
-                  </button>
-                </td>
-                <td className="px-3 py-2">
-                  <button
-                    onClick={() => track.mutate({ address: w.address, tracked: !w.is_tracked })}
-                    className={`rounded px-2 py-1 text-xs font-medium ${
-                      w.is_tracked
-                        ? "bg-emerald-900 text-emerald-300 hover:bg-emerald-800"
-                        : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                    }`}
-                  >
-                    {w.is_tracked ? "Tracked" : "Track"}
-                  </button>
-                </td>
               </tr>
             ))}
             {!isPending && data?.items.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
                   No wallets yet — run discovery or backfill a wallet to get started.
                 </td>
               </tr>

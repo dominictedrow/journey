@@ -23,6 +23,7 @@ import logging
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.autonomy.overrides import get_override
 from app.config import get_settings
 from app.database.models import IndexerState, Wallet
 
@@ -30,15 +31,20 @@ logger = logging.getLogger(__name__)
 
 
 async def promotion_budget(session: AsyncSession) -> int:
-    """How many wallets this run may promote: per-run budget, clamped by cohort headroom."""
+    """How many wallets this run may promote: per-run budget, clamped by cohort headroom.
+
+    Both figures read through the runtime-override layer first, so the activity governor's
+    autonomous widening (Module D) takes effect without a restart."""
     settings = get_settings()
+    per_run = await get_override(session, "autopromote_per_run", settings.autopromote_per_run)
+    cap = await get_override(session, "max_tracked_wallets", settings.max_tracked_wallets)
     tracked = (
         await session.scalar(
             select(func.count()).select_from(Wallet).where(Wallet.is_tracked.is_(True))
         )
         or 0
     )
-    return min(settings.autopromote_per_run, max(0, settings.max_tracked_wallets - tracked))
+    return min(per_run, max(0, cap - tracked))
 
 
 async def promotion_candidates(session: AsyncSession, budget: int) -> list[str]:

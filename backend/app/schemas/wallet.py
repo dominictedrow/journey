@@ -102,11 +102,6 @@ class WalletDetailOut(WalletWithMetrics):
     recent_trades: list[TradeOut]
 
 
-class WalletUpdate(BaseModel):
-    is_tracked: bool | None = None
-    copy_enabled: bool | None = None
-
-
 class DiscoverySourceCount(BaseModel):
     source: str | None  # None = auto-created by the chain indexer, no attribution
     count: int

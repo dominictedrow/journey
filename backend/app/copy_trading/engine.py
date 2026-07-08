@@ -22,8 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.copy_trading.executors import Executor, LiveExecutor, PaperExecutor, build_live_client
-from app.database.models import CopyOrder, Market, PortfolioSnapshot, Position, Trade, Wallet
-from app.portfolio.service import apply_fill, get_position
+from app.database.models import CopyOrder, Market, Position, Trade, Wallet
+from app.portfolio.service import apply_fill, current_equity, get_position
 from app.risk.engine import RiskEngine
 from app.risk.models import RiskDecision, TradeIntent
 from app.strategy_optimizer.apply import get_active_strategy
@@ -53,7 +53,7 @@ class CopyEngine:
         settings: Settings | None = None,
     ) -> None:
         self.settings = settings or get_settings()
-        self.risk = risk_engine or RiskEngine()
+        self.risk = risk_engine or RiskEngine(settings=self.settings)
         self.executor = executor or select_executor(self.settings)
         self.mode = self.executor.mode
         # Active-strategy sizing params, loaded once per engine instance (one detect sweep).
@@ -61,15 +61,7 @@ class CopyEngine:
         self._strategy_loaded = False
 
     async def _equity(self, session: AsyncSession) -> Decimal:
-        snapshot = await session.scalar(
-            select(PortfolioSnapshot)
-            .where(PortfolioSnapshot.mode == self.mode)
-            .order_by(PortfolioSnapshot.timestamp.desc())
-            .limit(1)
-        )
-        if snapshot is not None:
-            return Decimal(snapshot.total_value)
-        return self.settings.paper_starting_cash if self.mode == "paper" else Decimal(0)
+        return await current_equity(session, self.mode, self.settings)
 
     async def _sizing(
         self, session: AsyncSession, wallet_address: str
@@ -178,7 +170,7 @@ class CopyEngine:
             mode=self.mode,
         )
 
-        decision: RiskDecision = await self.risk.check(session, intent)
+        decision: RiskDecision = await self.risk.check(session, intent, now=now)
         if not decision.allow:
             order.status = "rejected"
             order.filled_size = Decimal(0)

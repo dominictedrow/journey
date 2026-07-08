@@ -1,14 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import {
   ApiError,
   getActiveStrategy,
   getStrategies,
   getStrategy,
-  runOptimizer,
   type CandidateSummary,
   type OptimizerDecision,
   type Strategy,
@@ -53,7 +52,7 @@ function StrategyCard({
         {strategy && <span className="font-mono text-xs text-slate-500">#{strategy.id}</span>}
       </div>
       {!strategy ? (
-        <p className="mt-3 text-sm text-slate-500">None yet — run the optimizer.</p>
+        <p className="mt-3 text-sm text-slate-500">None yet — waiting on the next optimizer run.</p>
       ) : (
         <>
           <p className="mt-2 text-sm text-slate-200">{specLine(strategy.params)}</p>
@@ -143,10 +142,7 @@ function CandidatesTable({
 }
 
 export default function OptimizationPage() {
-  const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [queued, setQueued] = useState(false);
-  const baseline = useRef<number | null>(null);
 
   const active = useQuery({
     queryKey: ["strategy-active"],
@@ -160,29 +156,12 @@ export default function OptimizationPage() {
   const list = useQuery({
     queryKey: ["strategies"],
     queryFn: () => getStrategies(50),
-    refetchInterval: queued ? 3000 : false,
   });
-
-  // Clear the "queued" polling once a new run has landed a strategy row.
-  useEffect(() => {
-    if (queued && list.data && baseline.current !== null && list.data.total > baseline.current) {
-      setQueued(false);
-      queryClient.invalidateQueries({ queryKey: ["strategy-active"] });
-    }
-  }, [queued, list.data, queryClient]);
 
   const detail = useQuery({
     queryKey: ["strategy", selectedId],
     queryFn: () => getStrategy(selectedId as number),
     enabled: selectedId !== null,
-  });
-
-  const optimize = useMutation({
-    mutationFn: runOptimizer,
-    onSuccess: () => {
-      baseline.current = list.data?.total ?? 0;
-      setQueued(true);
-    },
   });
 
   // The most recent run's recommendation (top of the history list).
@@ -198,26 +177,11 @@ export default function OptimizationPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Optimization</h1>
-        <div className="flex items-center gap-3">
-          {queued && <span className="text-xs text-amber-400">optimizing…</span>}
-          <button
-            onClick={() => optimize.mutate()}
-            disabled={optimize.isPending || queued}
-            className="rounded bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-40"
-          >
-            {optimize.isPending || queued ? "Running…" : "Run optimizer"}
-          </button>
-        </div>
-      </div>
+      <h1 className="text-2xl font-semibold">Optimization</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Backtests a grid of candidate strategies each week and adopts the best only when it beats
+        Backtests a grid of candidate strategies daily and adopts the best only when it beats
         the active strategy by the configured margin and clears the risk constraints.
       </p>
-      {optimize.error && (
-        <p className="mt-2 text-xs text-red-400">{(optimize.error as Error).message}</p>
-      )}
 
       {/* Current vs recommended */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -270,7 +234,7 @@ export default function OptimizationPage() {
             {!list.isPending && list.data?.items.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
-                  No optimizer runs yet — click “Run optimizer”.
+                  No optimizer runs yet — waiting on the next scheduled run.
                 </td>
               </tr>
             )}

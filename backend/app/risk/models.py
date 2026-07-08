@@ -44,14 +44,16 @@ class TradeIntent:
 class RiskLimits:
     """The configured caps, frozen into a plain object the rules read (USDC unless noted)."""
 
-    max_total_exposure: Decimal
+    # Every exposure cap below is a fraction of current equity, not a flat dollar figure —
+    # see config.py's risk limits section for the nesting rationale.
+    max_total_exposure_pct: Decimal
     max_daily_loss: Decimal
     max_weekly_loss: Decimal
     max_monthly_loss: Decimal
     max_open_positions: int
-    max_position_size: Decimal
-    max_per_market_exposure: Decimal
-    max_per_wallet_exposure: Decimal
+    max_position_size_pct: Decimal
+    max_per_market_exposure_pct: Decimal
+    max_per_wallet_exposure_pct: Decimal
     min_market_liquidity: Decimal
     max_slippage_pct: Decimal
     max_copy_delay_seconds: int
@@ -59,14 +61,14 @@ class RiskLimits:
     @classmethod
     def from_settings(cls, settings: Settings) -> RiskLimits:
         return cls(
-            max_total_exposure=settings.risk_max_total_exposure,
+            max_total_exposure_pct=settings.risk_max_total_exposure_pct,
             max_daily_loss=settings.risk_max_daily_loss,
             max_weekly_loss=settings.risk_max_weekly_loss,
             max_monthly_loss=settings.risk_max_monthly_loss,
             max_open_positions=settings.risk_max_open_positions,
-            max_position_size=settings.risk_max_position_size,
-            max_per_market_exposure=settings.risk_max_per_market_exposure,
-            max_per_wallet_exposure=settings.risk_max_per_wallet_exposure,
+            max_position_size_pct=settings.risk_max_position_size_pct,
+            max_per_market_exposure_pct=settings.risk_max_per_market_exposure_pct,
+            max_per_wallet_exposure_pct=settings.risk_max_per_wallet_exposure_pct,
             min_market_liquidity=settings.risk_min_market_liquidity,
             max_slippage_pct=settings.risk_max_slippage_pct,
             max_copy_delay_seconds=settings.risk_max_copy_delay_seconds,
@@ -78,6 +80,7 @@ class RiskContext:
     """The portfolio state the gate evaluates against (built from the DB by the engine)."""
 
     total_exposure: Decimal = Decimal(0)
+    total_equity: Decimal = Decimal(0)  # current portfolio equity — the exposure cap's basis
     open_positions: int = 0
     token_exposure: Decimal = Decimal(0)  # our notional already held in the intent's token
     market_exposure: Decimal = Decimal(0)

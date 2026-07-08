@@ -13,8 +13,8 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
-from app.database.models import CopyOrder, PortfolioPosition
+from app.config import Settings, get_settings
+from app.database.models import CopyOrder, PortfolioPosition, PortfolioSnapshot
 
 QUANTUM = Decimal("0.000001")
 
@@ -92,9 +92,20 @@ async def apply_fill(
     return position
 
 
-async def current_cash(session: AsyncSession, mode: str) -> Decimal:
+def starting_cash(mode: str, settings: Settings | None = None) -> Decimal:
+    """Baseline cash/equity before any fills or snapshots exist for this mode.
+
+    Paper has a configured play-money balance; live has no on-chain balance read yet (a
+    follow-up once on-chain redemption exists), so it uses a configured fallback instead."""
+    settings = settings or get_settings()
+    return settings.paper_starting_cash if mode == "paper" else settings.risk_live_starting_equity
+
+
+async def current_cash(
+    session: AsyncSession, mode: str, settings: Settings | None = None
+) -> Decimal:
     """Starting cash minus net spend across all filled copy orders for this mode."""
-    starting = get_settings().paper_starting_cash if mode == "paper" else Decimal(0)
+    starting = starting_cash(mode, settings)
     rows = await session.execute(
         select(CopyOrder.side, CopyOrder.filled_size, CopyOrder.fill_price).where(
             CopyOrder.mode == mode,
@@ -132,3 +143,19 @@ async def realized_pnl_total(session: AsyncSession, mode: str) -> Decimal:
         )
     )
     return _dec(Decimal(str(total or 0)))
+
+
+async def current_equity(
+    session: AsyncSession, mode: str, settings: Settings | None = None
+) -> Decimal:
+    """Latest marked equity for this mode, or the starting baseline before any snapshot
+    exists. The shared basis for percentage-sizing and the portfolio exposure cap."""
+    snapshot = await session.scalar(
+        select(PortfolioSnapshot)
+        .where(PortfolioSnapshot.mode == mode)
+        .order_by(PortfolioSnapshot.timestamp.desc())
+        .limit(1)
+    )
+    if snapshot is not None:
+        return Decimal(snapshot.total_value)
+    return starting_cash(mode, settings)

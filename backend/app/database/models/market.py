@@ -22,6 +22,9 @@ class Market(Base):
     outcome_prices: Mapped[list | None] = mapped_column(JsonB)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     closed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Gamma's negRisk flag: multi-outcome markets redeem through the Neg Risk Adapter, not the
+    # standard CTF contract (app.blockchain.redemption).
+    neg_risk: Mapped[bool] = mapped_column(Boolean, default=False)
     end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     liquidity: Mapped[Decimal | None] = mapped_column(Numeric)
     volume: Mapped[Decimal | None] = mapped_column(Numeric)

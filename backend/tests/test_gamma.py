@@ -16,6 +16,7 @@ RAW = {
     "liquidity": "12345.67",
     "volume": 890.12,
     "createdAt": "2026-01-15T10:30:00Z",
+    "negRisk": True,
 }
 
 
@@ -30,6 +31,7 @@ def test_parse_market_maps_gamma_fields() -> None:
     assert row["volume"] == Decimal("890.12")
     assert row["active"] is True
     assert row["closed"] is False
+    assert row["neg_risk"] is True
 
 
 def test_parse_market_without_condition_id_is_skipped() -> None:
@@ -42,3 +44,4 @@ def test_parse_market_tolerates_missing_fields() -> None:
     assert row["question"] == ""
     assert row["end_date"] is None
     assert row["liquidity"] is None
+    assert row["neg_risk"] is False

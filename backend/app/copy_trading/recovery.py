@@ -7,10 +7,12 @@ orders and, for each:
 
   * matched to a tracked copy order still in flight — refreshes fill + status, folding a
     newly-observed fill into the portfolio exactly once;
-  * with no local record (an *orphan*) — captures it as a flagged `copy_orders` row and writes
-    a `risk_event` for review. It deliberately does **not** auto-book an orphan into the
-    portfolio: an order we can't attribute to a source trade shouldn't silently move P&L
-    (Transparency). Operators reconcile it by hand.
+  * with no local record (an *orphan*) — captures it as a `copy_orders` row tagged with the
+    sentinel source wallet `"reconciled_orphan"` and auto-books any observed fill into the
+    portfolio via `apply_fill`, so cash/positions stay accurate with zero human step (the whole
+    point of the full-autonomy remodel: Dom never trades manually except kill-switch/close, so
+    an orphan on this wallet is the bot's own order, not a stray human trade to preserve
+    visibility into). A `risk_event` is still written for audit visibility either way.
 
 The sweep is idempotent: captured orphans carry the CLOB order id, so a second run matches
 them and skips (their status is terminal). Run on startup and on a slow beat.
@@ -22,12 +24,15 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.blockchain.normalize import load_token_market_map
 from app.copy_trading.executors import OrderState, ReconcilableClient
 from app.database.models import CopyOrder, RiskEvent
 from app.portfolio.service import apply_fill
 
 # Orders in these states are settled; the sweep leaves them alone.
 TERMINAL = {"filled", "partial", "rejected", "skipped", "canceled", "orphaned"}
+
+ORPHAN_SOURCE_WALLET = "reconciled_orphan"
 
 
 async def reconcile_live_orders(
@@ -49,12 +54,15 @@ async def reconcile_live_orders(
     }
 
     touched: list[str] = []
+    token_map: dict[str, str] | None = None
     for state in remote:
         if not state.order_id:
             continue
         order = known.get(state.order_id)
         if order is None:
-            _capture_orphan(session, state, now)
+            if token_map is None:
+                token_map = await load_token_market_map(session)
+            await _capture_orphan(session, state, now, token_map)
             touched.append(state.order_id)
             continue
         if order.status in TERMINAL:
@@ -66,12 +74,17 @@ async def reconcile_live_orders(
     return touched
 
 
-def _capture_orphan(session: AsyncSession, state: OrderState, now: datetime) -> None:
-    """Record a CLOB order that has no local copy-order and flag it for manual review."""
+async def _capture_orphan(
+    session: AsyncSession, state: OrderState, now: datetime, token_map: dict[str, str]
+) -> None:
+    """Record a CLOB order with no local copy-order, auto-booking any observed fill."""
+    market_id = token_map.get(str(state.token_id)) if state.token_id else None
     session.add(
         CopyOrder(
             created_at=now,
             mode="live",
+            source_wallet=ORPHAN_SOURCE_WALLET,
+            market_id=market_id,
             side=state.side or "",
             token_id=state.token_id,
             requested_size=state.filled_size or Decimal(0),
@@ -79,9 +92,29 @@ def _capture_orphan(session: AsyncSession, state: OrderState, now: datetime) -> 
             fill_price=state.avg_price,
             status="orphaned",
             external_order_id=state.order_id,
-            error="reconciled: live order on CLOB with no local record — review before booking",
+            error="reconciled: live order on CLOB with no local record — auto-booked",
         )
     )
+
+    bookable = (
+        state.side is not None
+        and state.token_id is not None
+        and (state.filled_size or Decimal(0)) > 0
+        and state.avg_price is not None
+    )
+    if bookable:
+        await apply_fill(
+            session,
+            mode="live",
+            source_wallet=ORPHAN_SOURCE_WALLET,
+            market_id=market_id,
+            token_id=state.token_id,  # type: ignore[arg-type]  # guarded by bookable
+            side=state.side,  # type: ignore[arg-type]  # guarded by bookable
+            filled_size=state.filled_size,
+            fill_price=state.avg_price,  # type: ignore[arg-type]  # guarded by bookable
+            now=now,
+        )
+
     session.add(
         RiskEvent(
             timestamp=now,
@@ -94,8 +127,9 @@ def _capture_orphan(session: AsyncSession, state: OrderState, now: datetime) -> 
                 "status": state.status,
                 "filled_size": float(state.filled_size or 0),
                 "avg_price": float(state.avg_price) if state.avg_price is not None else None,
+                "auto_booked": bookable,
             },
-            action_taken="flagged",
+            action_taken="auto_booked" if bookable else "flagged",
         )
     )
 

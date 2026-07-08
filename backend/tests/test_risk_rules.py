@@ -23,14 +23,14 @@ WALLET = "0x" + "aa" * 20
 
 def _limits(**overrides) -> RiskLimits:
     base = dict(
-        max_total_exposure=Decimal("1000"),
+        max_total_exposure_pct=Decimal("0.60"),
         max_daily_loss=Decimal("100"),
         max_weekly_loss=Decimal("250"),
         max_monthly_loss=Decimal("500"),
         max_open_positions=3,
-        max_position_size=Decimal("100"),
-        max_per_market_exposure=Decimal("200"),
-        max_per_wallet_exposure=Decimal("300"),
+        max_position_size_pct=Decimal("0.10"),
+        max_per_market_exposure_pct=Decimal("0.20"),
+        max_per_wallet_exposure_pct=Decimal("0.30"),
         min_market_liquidity=Decimal("10000"),
         max_slippage_pct=Decimal("2.0"),
         max_copy_delay_seconds=60,
@@ -110,57 +110,82 @@ def test_max_open_positions_allow_deny_and_increase_bypass() -> None:
 
 
 def test_position_size_allow_adjust_deny() -> None:
-    rule = PositionSizeRule(_limits(max_position_size=Decimal("100")))
+    # pct=0.1 and equity=1000 makes the cap a flat 100, matching the pre-% test's shape.
+    rule = PositionSizeRule(_limits(max_position_size_pct=Decimal("0.10")))
+    equity = Decimal("1000")
     # notional 25 < 100 -> allow untouched.
     assert (
-        rule.evaluate(RiskContext(), _intent(size="50", price="0.50"), Decimal("50")).action
+        rule.evaluate(
+            RiskContext(total_equity=equity), _intent(size="50", price="0.50"), Decimal("50")
+        ).action
         == "allow"
     )
     # notional 150 > 100 -> shrink to 200 shares (100 / 0.5).
-    adjusted = rule.evaluate(RiskContext(), _intent(size="300", price="0.50"), Decimal("300"))
+    adjusted = rule.evaluate(
+        RiskContext(total_equity=equity), _intent(size="300", price="0.50"), Decimal("300")
+    )
     assert adjusted.action == "adjust" and adjusted.size == Decimal("200")
     # already at the cap -> deny.
-    full = RiskContext(token_exposure=Decimal("100"))
+    full = RiskContext(total_equity=equity, token_exposure=Decimal("100"))
     assert rule.evaluate(full, _intent(size="10", price="0.50"), Decimal("10")).action == "deny"
+    # same exposure, but a bigger book raises the cap along with it.
+    big_book = RiskContext(total_equity=Decimal("10000"), token_exposure=Decimal("100"))
+    assert (
+        rule.evaluate(big_book, _intent(size="10", price="0.50"), Decimal("10")).action == "allow"
+    )
 
 
 def test_per_market_exposure_adjust_and_deny() -> None:
-    rule = PerMarketExposureRule(_limits(max_per_market_exposure=Decimal("200")))
-    ctx = RiskContext(market_exposure=Decimal("150"))
+    # pct=0.2 and equity=1000 makes the cap a flat 200, matching the pre-% test's shape.
+    rule = PerMarketExposureRule(_limits(max_per_market_exposure_pct=Decimal("0.20")))
+    equity = Decimal("1000")
+    ctx = RiskContext(total_equity=equity, market_exposure=Decimal("150"))
     # 50 of headroom / price 0.5 = 100 shares max; request 300 -> adjust to 100.
     adjusted = rule.evaluate(ctx, _intent(size="300", price="0.50"), Decimal("300"))
     assert adjusted.action == "adjust" and adjusted.size == Decimal("100")
-    assert (
-        rule.evaluate(RiskContext(market_exposure=Decimal("200")), _intent(), Decimal("100")).action
-        == "deny"
-    )
+    at_cap = RiskContext(total_equity=equity, market_exposure=Decimal("200"))
+    assert rule.evaluate(at_cap, _intent(), Decimal("100")).action == "deny"
 
 
 def test_per_wallet_exposure_adjust_and_deny() -> None:
-    rule = PerWalletExposureRule(_limits(max_per_wallet_exposure=Decimal("300")))
-    ctx = RiskContext(wallet_exposure=Decimal("250"))
+    # pct=0.3 and equity=1000 makes the cap a flat 300, matching the pre-% test's shape.
+    rule = PerWalletExposureRule(_limits(max_per_wallet_exposure_pct=Decimal("0.30")))
+    equity = Decimal("1000")
+    ctx = RiskContext(total_equity=equity, wallet_exposure=Decimal("250"))
     adjusted = rule.evaluate(ctx, _intent(size="300", price="0.50"), Decimal("300"))
     assert adjusted.action == "adjust" and adjusted.size == Decimal("100")  # 50 / 0.5
-    assert (
-        rule.evaluate(RiskContext(wallet_exposure=Decimal("300")), _intent(), Decimal("100")).action
-        == "deny"
-    )
+    at_cap = RiskContext(total_equity=equity, wallet_exposure=Decimal("300"))
+    assert rule.evaluate(at_cap, _intent(), Decimal("100")).action == "deny"
 
 
 def test_portfolio_exposure_allow_adjust_deny() -> None:
-    rule = PortfolioExposureRule(_limits(max_total_exposure=Decimal("1000")))
+    # pct=1 and equity=1000 makes the cap a flat 1000, matching the pre-% test's shape.
+    rule = PortfolioExposureRule(_limits(max_total_exposure_pct=Decimal("1")))
+    equity = Decimal("1000")
     assert (
         rule.evaluate(
-            RiskContext(total_exposure=Decimal("500")),
+            RiskContext(total_exposure=Decimal("500"), total_equity=equity),
             _intent(size="100", price="0.5"),
             Decimal("100"),
         ).action
         == "allow"
     )
-    ctx = RiskContext(total_exposure=Decimal("950"))
+    ctx = RiskContext(total_exposure=Decimal("950"), total_equity=equity)
     adjusted = rule.evaluate(ctx, _intent(size="300", price="0.50"), Decimal("300"))
     assert adjusted.action == "adjust" and adjusted.size == Decimal("100")  # 50 / 0.5
+    at_cap = RiskContext(total_exposure=Decimal("1000"), total_equity=equity)
+    assert rule.evaluate(at_cap, _intent(), Decimal("100")).action == "deny"
+
+
+def test_portfolio_exposure_cap_scales_with_equity() -> None:
+    """The cap is a % of current equity, not a fixed dollar figure — it moves with the book."""
+    rule = PortfolioExposureRule(_limits(max_total_exposure_pct=Decimal("0.60")))
+    small_book = RiskContext(total_exposure=Decimal("60"), total_equity=Decimal("100"))
     assert (
-        rule.evaluate(RiskContext(total_exposure=Decimal("1000")), _intent(), Decimal("100")).action
+        rule.evaluate(small_book, _intent(size="100", price="0.5"), Decimal("100")).action
         == "deny"
-    )
+    )  # cap is 60 (60% of 100 equity), already fully used
+    big_book = RiskContext(total_exposure=Decimal("60"), total_equity=Decimal("10000"))
+    assert (
+        rule.evaluate(big_book, _intent(size="100", price="0.5"), Decimal("100")).action == "allow"
+    )  # same exposure, but cap is now 6000 (60% of 10000 equity)

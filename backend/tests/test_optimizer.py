@@ -28,7 +28,7 @@ def _settings(**overrides: object) -> Settings:
         "optimizer_max_drawdown": Decimal("1"),
         "optimizer_min_total_return": Decimal("0"),
         "risk_max_open_positions": 10,
-        "risk_max_position_size": Decimal("100"),
+        "risk_max_position_size_pct": Decimal("0.1"),  # 10% of the 1000 initial_capital = 100
     }
     base.update(overrides)
     return Settings(**base)

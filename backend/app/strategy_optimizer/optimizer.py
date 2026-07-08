@@ -17,6 +17,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.autonomy.overrides import get_override
 from app.backtesting.engine import load_backtest_trades, run_backtest
 from app.config import Settings, get_settings
 from app.database.models import Strategy
@@ -41,10 +42,8 @@ def _passes_risk(spec: StrategySpec, metrics: dict, settings: Settings) -> bool:
         return False
     if spec.top_n > settings.risk_max_open_positions:
         return False
-    if (
-        spec.max_position_size is not None
-        and spec.max_position_size > settings.risk_max_position_size
-    ):
+    max_position_cap = settings.optimizer_initial_capital * settings.risk_max_position_size_pct
+    if spec.max_position_size is not None and spec.max_position_size > max_position_cap:
         return False
     return True
 
@@ -140,8 +139,9 @@ async def optimize(
     if rebuild:
         await rebuild_rankings(session)
 
+    extra_top_n = await get_override(session, "optimizer_top_n_extra", 0)
     candidates: list[CandidateResult] = []
-    for spec in candidate_specs(settings):
+    for spec in candidate_specs(settings, extra_top_n=extra_top_n or None):
         evaluated = await _evaluate(session, spec, settings, now)
         if evaluated is not None:
             candidates.append(evaluated)

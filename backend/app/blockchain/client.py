@@ -5,6 +5,8 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
+from eth_account import Account
+from eth_typing import HexStr
 from web3 import AsyncHTTPProvider, AsyncWeb3
 from web3.middleware import ExtraDataToPOAMiddleware
 
@@ -79,5 +81,45 @@ class RpcPool:
     async def get_logs(self, params: dict[str, Any]) -> list[Any]:
         async def op(w3: AsyncWeb3) -> list[Any]:
             return list(await w3.eth.get_logs(params))  # type: ignore[arg-type]
+
+        return await self._try(op)
+
+    async def call(self, *, to: str, data: str) -> bytes:
+        """Read-only contract call (e.g. `balanceOf`)."""
+
+        async def op(w3: AsyncWeb3) -> bytes:
+            return await w3.eth.call({"to": to, "data": HexStr(data)})
+
+        return await self._try(op)
+
+    async def send_signed_transaction(
+        self, *, to: str, data: str, private_key: str, chain_id: int, gas_limit: int
+    ) -> str:
+        """Sign and broadcast a write call from the key's own address (EOA gas payer + signer).
+        Returns the transaction hash (hex, `0x`-prefixed)."""
+        account = Account.from_key(private_key)
+
+        async def op(w3: AsyncWeb3) -> str:
+            tx = {
+                "chainId": chain_id,
+                "to": to,
+                "data": data,
+                "value": 0,
+                "gas": gas_limit,
+                "gasPrice": await w3.eth.gas_price,
+                "nonce": await w3.eth.get_transaction_count(account.address, "pending"),
+            }
+            signed = account.sign_transaction(tx)
+            tx_hash = await w3.eth.send_raw_transaction(signed.raw_transaction)
+            return tx_hash.hex()
+
+        return await self._try(op)
+
+    async def wait_for_receipt(self, tx_hash: str, *, timeout: float) -> Any:
+        """Block (async) until `tx_hash` confirms; raises on timeout — the caller decides
+        whether that means "still pending, check next sweep" or a real failure."""
+
+        async def op(w3: AsyncWeb3) -> Any:
+            return await w3.eth.wait_for_transaction_receipt(HexStr(tx_hash), timeout=timeout)
 
         return await self._try(op)

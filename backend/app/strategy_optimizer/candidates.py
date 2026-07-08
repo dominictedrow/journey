@@ -38,11 +38,22 @@ def _default_sizing_value(mode: SizingMode, initial_capital: Decimal) -> Decimal
     return _SIZING_FRACTION[mode]
 
 
-def candidate_specs(settings: Settings, category: str = "overall") -> list[StrategySpec]:
-    """Every strategy the optimizer evaluates this run, clamped to risk limits."""
+def candidate_specs(
+    settings: Settings, category: str = "overall", *, extra_top_n: int | None = None
+) -> list[StrategySpec]:
+    """Every strategy the optimizer evaluates this run, clamped to risk limits.
+
+    `extra_top_n` — the activity governor's (Module D) widened selection size, read through
+    the runtime-override layer by the caller — is folded into the grid alongside the static
+    choices when the book has gone quiet, so a wider top-N gets a chance to be adopted."""
     max_positions = settings.risk_max_open_positions
-    max_size = settings.risk_max_position_size
-    top_ns = [min(n, max_positions) for n in settings.optimizer_top_n_list]
+    # The live rule caps a position at a % of *current equity*; the backtest replays against
+    # a fixed simulated capital, so the same % is applied to that instead for an equivalent cap.
+    max_size = settings.optimizer_initial_capital * settings.risk_max_position_size_pct
+    choices = list(settings.optimizer_top_n_list)
+    if extra_top_n:
+        choices.append(extra_top_n)
+    top_ns = [min(n, max_positions) for n in choices]
     top_ns = sorted({n for n in top_ns if n >= 1})
 
     specs: list[StrategySpec] = []

@@ -105,7 +105,9 @@ async def test_risk_adjusts_size_down(session: AsyncSession) -> None:
     trade = await _add_trade(session, "BUY", "0.50", "1000")  # proportional -> 1000 shares desired
 
     tight = RiskLimits.from_settings(get_settings())
-    tight.max_position_size = Decimal("50")  # cap notional at 50 -> 100 shares at 0.50
+    # No snapshot yet, so equity falls back to paper_starting_cash (10000); 0.5% of that is a
+    # 50 notional cap -> 100 shares at 0.50.
+    tight.max_position_size_pct = Decimal("0.005")
     order = await _engine(risk_engine=RiskEngine(limits=tight)).process_trade(
         session, trade, now=NOW
     )

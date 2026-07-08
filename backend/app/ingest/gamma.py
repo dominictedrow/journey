@@ -45,6 +45,7 @@ def parse_market(raw: dict) -> dict | None:
         "outcome_prices": _json_list(raw.get("outcomePrices")),
         "active": bool(raw.get("active", True)),
         "closed": bool(raw.get("closed", False)),
+        "neg_risk": bool(raw.get("negRisk", False)),
         "end_date": _dt(raw.get("endDate")),
         "liquidity": _num(raw.get("liquidity")),
         "volume": _num(raw.get("volume")),

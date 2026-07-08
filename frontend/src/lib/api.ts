@@ -150,13 +150,6 @@ export function getWallet(address: string): Promise<WalletDetail> {
   return apiFetch<WalletDetail>(`/wallets/${address}`);
 }
 
-export function updateWallet(
-  address: string,
-  body: { is_tracked?: boolean; copy_enabled?: boolean },
-): Promise<Wallet> {
-  return apiFetch<Wallet>(`/wallets/${address}`, { method: "PATCH", body: JSON.stringify(body) });
-}
-
 export function refreshWalletMetrics(address: string): Promise<Wallet> {
   return apiFetch<Wallet>(`/wallets/${address}/refresh-metrics`, { method: "POST" });
 }
@@ -346,14 +339,14 @@ export function getBacktest(id: number): Promise<BacktestDetail> {
 // --- Phase 5: risk, copy, portfolio (Decimals arrive as strings) --------------------------
 
 export interface RiskLimits {
-  max_total_exposure: string;
+  max_total_exposure_pct: string;
   max_daily_loss: string;
   max_weekly_loss: string;
   max_monthly_loss: string;
   max_open_positions: number;
-  max_position_size: string;
-  max_per_market_exposure: string;
-  max_per_wallet_exposure: string;
+  max_position_size_pct: string;
+  max_per_market_exposure_pct: string;
+  max_per_wallet_exposure_pct: string;
   min_market_liquidity: string;
   max_slippage_pct: string;
   max_copy_delay_seconds: number;

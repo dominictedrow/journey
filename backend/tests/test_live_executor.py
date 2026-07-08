@@ -36,6 +36,10 @@ def armed_settings(**over) -> Settings:
         execution_mode="live",
         live_trading_armed=True,
         live_retry_backoff_seconds=Decimal("0"),  # no real sleeps in tests
+        # A funded live book: with no PortfolioSnapshot yet, total_equity falls back to this,
+        # so the % exposure cap has room to allow trades (see test_live_buy_blocked_without_
+        # starting_equity_or_snapshot for the zero-equity case this setting exists to avoid).
+        risk_live_starting_equity=Decimal("10000"),
     )
     base.update(over)
     return Settings(**base)  # type: ignore[arg-type]
@@ -226,6 +230,26 @@ async def test_live_engine_mirrors_buy_then_exit(session: AsyncSession) -> None:
     assert position.realized_pnl == Decimal("19.500000")
 
 
+async def test_live_buy_blocked_without_starting_equity_or_snapshot(session: AsyncSession) -> None:
+    """Every exposure cap (position/market/wallet/total) is a % of equity; with no live
+    snapshot yet and the starting equity fallback left at its zero default, every one of those
+    caps is 0 and every live BUY is denied — the exact gap `risk_live_starting_equity` exists
+    to let an operator configure their way out of once real capital backs the live wallet."""
+    await _add_wallet(session)
+    settings = armed_settings(risk_live_starting_equity=Decimal("0"))
+    client = FakeLiveClient(responses=[OrderPlacement("buy1", Decimal("100"), Decimal("0.402"))])
+    engine = CopyEngine(executor=LiveExecutor(client=client, settings=settings), settings=settings)
+
+    buy = await _add_trade(session, "BUY", "0.40", "100", h="01")
+    order = await engine.process_trade(session, buy, now=NOW)
+
+    assert order.status == "rejected"
+    # position_size is the tightest (and earliest-evaluated) of the equity-scaled caps, so it
+    # denies first — any of them denying proves the zero-equity gap blocks every live BUY.
+    assert order.error == "max_position_size_pct"
+    assert client.calls == []  # risk gate stops us before the venue
+
+
 async def test_kill_switch_blocks_live_order(session: AsyncSession) -> None:
     await _add_wallet(session)
     settings = armed_settings()
@@ -261,8 +285,12 @@ async def test_reconcile_captures_orphan_and_is_idempotent(session: AsyncSession
     assert order.status == "orphaned"
     event = await session.scalar(select(RiskEvent).where(RiskEvent.type == "orphan_live_order"))
     assert event is not None
-    # Orphans are flagged, not auto-booked: no portfolio position is created.
-    assert await session.scalar(select(PortfolioPosition)) is None
+    assert event.action_taken == "auto_booked"
+    # A fillable orphan is auto-booked into the portfolio under the sentinel wallet.
+    position = await session.scalar(select(PortfolioPosition))
+    assert position is not None
+    assert position.source_wallet == "reconciled_orphan"
+    assert position.size == Decimal("50.000000")
 
     # A second sweep matches the captured orphan and does nothing new.
     again = await reconcile_live_orders(session, client, now=NOW)

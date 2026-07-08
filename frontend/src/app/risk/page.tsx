@@ -3,22 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import {
-  getRiskStatus,
-  setKillSwitch,
-  simulateTrade,
-  type RiskEvent,
-  type RiskLimits,
-  type SimulateResult,
-} from "@/lib/api";
-import { fmtDate, fmtNum, shortAddress } from "@/lib/format";
+import { getRiskStatus, setKillSwitch, type RiskEvent, type RiskLimits } from "@/lib/api";
+import { fmtDate, fmtNum, fmtPct } from "@/lib/format";
 import { useLiveState } from "@/lib/ws";
 
-const LIMIT_ROWS: { key: keyof RiskLimits; label: string; kind: "usd" | "num" }[] = [
-  { key: "max_total_exposure", label: "Max total exposure", kind: "usd" },
-  { key: "max_position_size", label: "Max position size", kind: "usd" },
-  { key: "max_per_market_exposure", label: "Max per-market", kind: "usd" },
-  { key: "max_per_wallet_exposure", label: "Max per-wallet", kind: "usd" },
+const LIMIT_ROWS: { key: keyof RiskLimits; label: string; kind: "usd" | "num" | "pct" }[] = [
+  { key: "max_total_exposure_pct", label: "Max total exposure (% of equity)", kind: "pct" },
+  { key: "max_position_size_pct", label: "Max position size (% of equity)", kind: "pct" },
+  { key: "max_per_market_exposure_pct", label: "Max per-market (% of equity)", kind: "pct" },
+  { key: "max_per_wallet_exposure_pct", label: "Max per-wallet (% of equity)", kind: "pct" },
   { key: "max_open_positions", label: "Max open positions", kind: "num" },
   { key: "max_daily_loss", label: "Max daily loss", kind: "usd" },
   { key: "max_weekly_loss", label: "Max weekly loss", kind: "usd" },
@@ -90,24 +83,6 @@ export default function RiskPage() {
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => setKillSwitch(enabled, reason || undefined),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["risk-status"] }),
-  });
-
-  const [sim, setSim] = useState({
-    source_wallet: "0x" + "ab".repeat(20),
-    token_id: "demo-token",
-    side: "BUY" as "BUY" | "SELL",
-    size: "100",
-    price: "0.50",
-  });
-  const [simResult, setSimResult] = useState<SimulateResult | null>(null);
-  const simulate = useMutation({
-    mutationFn: () => simulateTrade(sim),
-    onSuccess: (result) => {
-      setSimResult(result);
-      queryClient.invalidateQueries({ queryKey: ["risk-status"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
-      queryClient.invalidateQueries({ queryKey: ["copy-orders"] });
-    },
   });
 
   const killSwitch = frame?.kill_switch ?? status.data?.kill_switch;
@@ -182,83 +157,8 @@ export default function RiskPage() {
           <EventsTable events={events} />
         </div>
 
-        {/* Simulate + limits */}
+        {/* Limits */}
         <div className="space-y-6">
-          <div className="rounded border border-slate-800 bg-slate-950 p-4">
-            <h2 className="text-sm font-medium text-slate-200">Simulate source trade</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Fires one synthetic fill through detect → risk → paper-execute → portfolio.
-            </p>
-            <div className="mt-3 space-y-2 text-xs">
-              <label className="block text-slate-400">
-                Source wallet
-                <input
-                  value={sim.source_wallet}
-                  onChange={(e) => setSim({ ...sim, source_wallet: e.target.value })}
-                  className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-slate-100"
-                />
-              </label>
-              <label className="block text-slate-400">
-                Token id
-                <input
-                  value={sim.token_id}
-                  onChange={(e) => setSim({ ...sim, token_id: e.target.value })}
-                  className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
-                />
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <label className="text-slate-400">
-                  Side
-                  <select
-                    value={sim.side}
-                    onChange={(e) => setSim({ ...sim, side: e.target.value as "BUY" | "SELL" })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
-                  >
-                    <option value="BUY">BUY</option>
-                    <option value="SELL">SELL</option>
-                  </select>
-                </label>
-                <label className="text-slate-400">
-                  Size
-                  <input
-                    value={sim.size}
-                    onChange={(e) => setSim({ ...sim, size: e.target.value })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
-                  />
-                </label>
-                <label className="text-slate-400">
-                  Price
-                  <input
-                    value={sim.price}
-                    onChange={(e) => setSim({ ...sim, price: e.target.value })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
-                  />
-                </label>
-              </div>
-              <button
-                onClick={() => simulate.mutate()}
-                disabled={simulate.isPending}
-                className="mt-1 w-full rounded bg-sky-700 px-3 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-40"
-              >
-                {simulate.isPending ? "Firing…" : "Fire simulated trade"}
-              </button>
-              {simResult && (
-                <p
-                  className={`mt-2 rounded border p-2 ${
-                    simResult.order.status === "filled"
-                      ? "border-emerald-900 bg-emerald-950 text-emerald-300"
-                      : "border-amber-900 bg-amber-950 text-amber-300"
-                  }`}
-                >
-                  {simResult.order.status}: {simResult.detail}
-                </p>
-              )}
-              {simulate.error && (
-                <p className="mt-2 text-xs text-red-400">{simulate.error.message}</p>
-              )}
-            </div>
-          </div>
-
           {limits && (
             <div className="rounded border border-slate-800 bg-slate-950 p-4">
               <h2 className="text-sm font-medium text-slate-200">Configured limits</h2>
@@ -270,7 +170,9 @@ export default function RiskPage() {
                       <td className="py-1 text-right font-mono text-slate-200">
                         {kind === "usd"
                           ? `$${fmtNum(limits[key] as string)}`
-                          : fmtNum(limits[key] as number)}
+                          : kind === "pct"
+                            ? fmtPct(limits[key] as string)
+                            : fmtNum(limits[key] as number)}
                       </td>
                     </tr>
                   ))}

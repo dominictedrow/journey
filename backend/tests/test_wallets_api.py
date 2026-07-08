@@ -92,13 +92,6 @@ async def test_wallet_detail_and_404(client: AsyncClient) -> None:
     assert (await client.get("/wallets/0x" + "ff" * 20)).status_code == 404
 
 
-async def test_patch_wallet_toggles_tracking(client: AsyncClient) -> None:
-    body = (await client.patch(f"/wallets/{CANDIDATE}", json={"is_tracked": True})).json()
-    assert body["is_tracked"] is True
-    body = (await client.get(f"/wallets/{CANDIDATE}")).json()
-    assert body["is_tracked"] is True
-
-
 async def test_refresh_metrics_computes_row(client: AsyncClient) -> None:
     body = (await client.post(f"/wallets/{TRACKED}/refresh-metrics")).json()
     assert body["metrics"]["sample_size"] == 1
