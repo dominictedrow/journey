@@ -156,7 +156,10 @@ async def test_optimize_keeps_active_when_below_threshold(session: AsyncSession)
     session.add(
         Strategy(
             name="incumbent",
-            params=active_spec.model_dump(mode="json"),
+            # Enforceable incumbent: params carry a resolved wallet set. (Spec-only params
+            # are the unenforceable case covered by the bootstrap test below.)
+            params=active_spec.model_dump(mode="json")
+            | {"wallets": [W1, W2], "weights": {W1: "1", W2: "1"}},
             is_active=True,
             created_at=NOW - timedelta(days=7),
         )
@@ -178,6 +181,46 @@ async def test_optimize_keeps_active_when_below_threshold(session: AsyncSession)
     assert incumbent is not None and incumbent.is_active is True
     recommended = await session.get(Strategy, result.strategy_id)
     assert recommended is not None and recommended.is_active is False
+
+
+async def test_optimize_replaces_unenforceable_active(session: AsyncSession) -> None:
+    """An active strategy without a resolved wallet set (pre-wiring row) cannot be enforced
+    by apply_active_strategy — and a same-spec candidate grades identically, so the hurdle
+    would deadlock adoption forever. The optimizer must replace it regardless of the margin."""
+    await _seed_profitable(session)
+    active_spec = StrategySpec(
+        category="overall",
+        top_n=2,
+        weighting="equal",
+        sizing_mode="proportional",
+        sizing_value=Decimal("1.0"),
+        max_open_positions=10,
+        max_position_size=Decimal("100"),
+    )
+    session.add(
+        Strategy(
+            name="incumbent (spec only)",
+            params=active_spec.model_dump(mode="json"),  # no "wallets": unenforceable
+            is_active=True,
+            created_at=NOW - timedelta(days=7),
+        )
+    )
+    await session.commit()
+
+    result = await optimize(
+        session,
+        settings=_settings(optimizer_min_improvement=Decimal("10")),
+        rebuild=False,
+        now=NOW,
+    )
+
+    assert result.adopted is True
+    assert "no resolved wallets" in result.rationale["summary"]
+    adopted = await session.get(Strategy, result.strategy_id)
+    assert adopted is not None and adopted.is_active is True
+    assert adopted.params.get("wallets")  # the replacement is enforceable
+    incumbent = await session.get(Strategy, 1)
+    assert incumbent is not None and incumbent.is_active is False
 
 
 async def test_optimize_no_candidate_when_all_lose(session: AsyncSession) -> None:

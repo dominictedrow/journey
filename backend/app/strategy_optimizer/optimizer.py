@@ -179,6 +179,17 @@ async def optimize(
             f"Adopted {best.name}: {settings.optimizer_objective} "
             f"{best_objective:.4f} (no active strategy to beat)."
         )
+    elif active_row is None or not (active_row.params or {}).get("wallets"):
+        # Pre-wiring active rows carry only the spec, no resolved wallet set — so
+        # `apply_active_strategy` cannot enforce them and nothing ever gets copy-enabled.
+        # An unenforceable incumbent must not hold the hurdle (it grades identically to a
+        # same-spec candidate, deadlocking adoption forever); replace it with the best
+        # candidate so the loop gains a concrete selection.
+        adopted = True
+        summary = (
+            f"Adopted {best.name}: {settings.optimizer_objective} {best_objective:.4f} "
+            "(active strategy has no resolved wallets to enforce)."
+        )
     else:
         hurdle = _hurdle(active.objective_value, settings.optimizer_min_improvement)
         adopted = best_objective >= hurdle
