@@ -128,6 +128,8 @@ export function WalletDetail() {
     onSuccess: (res) => setTaskId(res.task_id),
   });
 
+  const mutationError = backfill.error ?? refresh.error;
+
   if (address === "")
     return (
       <p className="rounded border border-slate-800 bg-slate-900/50 p-3 text-sm text-slate-400">
@@ -160,7 +162,13 @@ export function WalletDetail() {
           {wallet.is_tracked ? "Tracked ✓" : "Track"}
         </button>
         <button
-          onClick={() => patch.mutate({ copy_enabled: !wallet.copy_enabled })}
+          onClick={() =>
+            // Enabling copy also tracks the wallet — untracked wallets never get their fills
+            // indexed, so copy-only would silently do nothing.
+            patch.mutate(
+              wallet.copy_enabled ? { copy_enabled: false } : { copy_enabled: true, is_tracked: true },
+            )
+          }
           className={`rounded px-3 py-1 text-sm font-medium ${
             wallet.copy_enabled
               ? "bg-sky-900 text-sky-300 hover:bg-sky-800"
@@ -192,6 +200,11 @@ export function WalletDetail() {
       {taskId && (
         <p className="mt-2 rounded border border-sky-900 bg-sky-950 p-2 text-sm text-sky-300">
           Backfill queued (task {taskId}). Refresh metrics once the worker finishes.
+        </p>
+      )}
+      {mutationError && (
+        <p className="mt-2 rounded border border-red-900 bg-red-950 p-2 text-sm text-red-300">
+          {mutationError.message || "Request failed."}
         </p>
       )}
 

@@ -32,9 +32,22 @@ class Settings(BaseSettings):
     # docs.polymarket.com/api-reference/core/get-trader-leaderboard-rankings on 2026-07-02.
     leaderboard_url: str = "https://data-api.polymarket.com"
 
+    # --- Outbound API politeness (app/ingest/http.py) ---------------------------------------
+    # Retries per GET against the free Polymarket APIs (429/5xx/transport), with exponential
+    # backoff from this base. Per-upstream request throttles live in app/ingest/http.py.
+    http_retries: int = 4
+    http_backoff_seconds: Decimal = Decimal("0.5")
+
     # --- Wallet discovery (Module 2) --------------------------------------------------------
     discovery_leaderboard_limit: int = 50  # API max is 50 per page
     discovery_holder_markets: int = 20  # top active markets (by volume) scanned for holders
+
+    # --- Autonomous promotion (Module 2 → 3 bridge; discovery.autopromote hourly beat) ------
+    # Full-history backfills are the heaviest Data-API reads, so promotion is budgeted:
+    # 8/hour ≈ 200 wallets/day flowing into metrics + rankings, well inside the shared
+    # throttle. The cap bounds the live tail's maker-topic list and the hourly metrics sweep.
+    autopromote_per_run: int = 8
+    max_tracked_wallets: int = 300
 
     # On-chain contract addresses (Polygon) — verified against
     # docs.polymarket.com/resources/contracts on 2026-07-02.
@@ -91,7 +104,7 @@ class Settings(BaseSettings):
     live_retry_backoff_seconds: Decimal = Decimal("0.5")  # linear backoff between attempts
 
     # --- Risk limits (Module 8 defaults; USDC unless noted) --------------------------------
-    risk_max_total_exposure: Decimal = Decimal("1000")
+    risk_max_total_exposure: Decimal = Decimal("5000")
     risk_max_daily_loss: Decimal = Decimal("100")
     risk_max_weekly_loss: Decimal = Decimal("250")
     risk_max_monthly_loss: Decimal = Decimal("500")

@@ -1,12 +1,19 @@
 """Polygon RPC access: a small failover pool over the configured provider URLs."""
 
+import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from web3 import AsyncHTTPProvider, AsyncWeb3
 from web3.middleware import ExtraDataToPOAMiddleware
 
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T")
+
+RETRY_ROUNDS = 2  # passes over the whole provider list before giving up
+ROUND_BACKOFF_SECONDS = 1.0  # pause between passes — rides out a shared rate-limit blip
 
 
 def _make_w3(url: str) -> AsyncWeb3:
@@ -27,11 +34,17 @@ class RpcPool:
 
     async def _try(self, op: Callable[[AsyncWeb3], Awaitable[T]]) -> T:
         last_exc: Exception | None = None
-        for w3 in self._w3s:
-            try:
-                return await op(w3)
-            except Exception as exc:  # noqa: BLE001 — any provider failure means "try next"
-                last_exc = exc
+        for round_index in range(RETRY_ROUNDS):
+            for w3 in self._w3s:
+                try:
+                    return await op(w3)
+                except Exception as exc:  # noqa: BLE001 — any provider failure means "try next"
+                    last_exc = exc
+                    logger.warning("rpc provider failed (round %d): %s", round_index + 1, exc)
+            if round_index + 1 < RETRY_ROUNDS:
+                # Every provider failed this pass — most likely a transient/rate-limit blip,
+                # so wait before the next pass instead of hammering them back-to-back.
+                await asyncio.sleep(ROUND_BACKOFF_SECONDS * (round_index + 1))
         assert last_exc is not None
         raise last_exc
 

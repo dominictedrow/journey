@@ -118,11 +118,22 @@ async def get_wallet(session: DbSession, address: str) -> WalletDetailOut:
 @router.patch("/{address}", response_model=WalletOut)
 async def update_wallet(session: DbSession, address: str, update: WalletUpdate) -> Wallet:
     wallet = await _get_wallet(session, address)
+    newly_tracked = update.is_tracked and not wallet.is_tracked
     if update.is_tracked is not None:
         wallet.is_tracked = update.is_tracked
     if update.copy_enabled is not None:
         wallet.copy_enabled = update.copy_enabled
+        # A human disable is a durable veto: the hourly strategy enforcement re-enables
+        # optimizer-demoted wallets but never ones whose reason starts with "manual".
+        wallet.disabled_reason = None if update.copy_enabled else "manually disabled"
     await session.commit()
+    if newly_tracked:
+        # Tracking a wallet is the signal it's worth its Data-API cost. The promote task
+        # also re-derives the history/live-tail seam (clears the frozen handoff) so an
+        # analyse-only wallet promoted later doesn't keep a coverage gap.
+        from app.workers.celery_app import celery_app  # deferred: not needed at API import time
+
+        celery_app.send_task("analytics.promote_and_backfill", args=[wallet.address])
     return wallet
 
 

@@ -50,3 +50,13 @@ class PortfolioSummaryOut(BaseModel):
 class PortfolioHistoryOut(BaseModel):
     mode: str
     items: list[PortfolioSnapshotOut]
+
+
+class ClosePositionOut(BaseModel):
+    """Result of a manual close: the execution outcome and the position's final state."""
+
+    status: str  # filled | partial | rejected
+    filled_size: Decimal
+    fill_price: Decimal | None
+    error: str | None
+    position: PortfolioPositionOut

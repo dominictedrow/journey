@@ -1,6 +1,7 @@
 """Phase 2 tasks: wallet metrics computation (Module 3)."""
 
 from app.database.base import async_session_factory
+from app.database.models import Wallet
 from app.ingest.history import backfill_wallet_history
 from app.wallet_analytics.metrics import compute_wallet_metrics, wallets_with_trades
 from app.workers.celery_app import celery_app
@@ -39,6 +40,31 @@ def backfill_and_compute_task(address: str) -> int:
         inserted = await backfill_wallet_history(address)
         async with async_session_factory() as session:
             await compute_wallet_metrics(session, address)
+        return inserted
+
+    return run_async(job())
+
+
+@celery_app.task(name="analytics.promote_and_backfill")
+def promote_and_backfill_task(address: str) -> int:
+    """Analyse-only → tracked promotion (wallet PATCH route, strategy application): mark
+    tracked, drop any frozen history handoff from an untracked-era backfill so the seam is
+    re-derived at the live cursor (no coverage gap), then full backfill + fresh metrics."""
+
+    async def job() -> int:
+        from app.ingest.history import clear_history_checkpoint
+
+        lowered = address.lower()
+        async with async_session_factory() as session:
+            wallet = await session.get(Wallet, lowered)
+            if wallet is None:
+                return 0
+            wallet.is_tracked = True
+            await clear_history_checkpoint(session, lowered)
+            await session.commit()
+        inserted = await backfill_wallet_history(lowered)
+        async with async_session_factory() as session:
+            await compute_wallet_metrics(session, lowered)
         return inserted
 
     return run_async(job())

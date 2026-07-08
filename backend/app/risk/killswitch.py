@@ -25,9 +25,10 @@ async def get_state(session: AsyncSession) -> SystemFlag | None:
 
 
 async def set_engaged(
-    session: AsyncSession, engaged: bool, reason: str | None = None
+    session: AsyncSession, engaged: bool, reason: str | None = None, *, commit: bool = True
 ) -> SystemFlag:
-    """Engage/disengage the switch and commit; logs a `risk_event` for the transition."""
+    """Engage/disengage the switch; logs a `risk_event` for the transition. Commits unless
+    the caller is mid-transaction (`commit=False`) and will commit atomically itself."""
     now = datetime.now(UTC)
     flag = await session.get(SystemFlag, KILL_SWITCH_KEY)
     if flag is None:
@@ -46,5 +47,6 @@ async def set_engaged(
             action_taken="engaged" if engaged else "disengaged",
         )
     )
-    await session.commit()
+    if commit:
+        await session.commit()
     return flag

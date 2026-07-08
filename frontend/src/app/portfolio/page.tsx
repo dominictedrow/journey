@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { EquityChart, SERIES_COLORS } from "@/components/charts/EquityChart";
 import {
+  closePosition,
   getCopyOrders,
   getPortfolio,
   getPortfolioHistory,
@@ -48,7 +49,15 @@ function SummaryTiles({ s }: { s: PortfolioSummary }) {
   );
 }
 
-function PositionsTable({ positions }: { positions: PortfolioPosition[] }) {
+function PositionsTable({
+  positions,
+  onClose,
+  closingId,
+}: {
+  positions: PortfolioPosition[];
+  onClose: (id: number) => void;
+  closingId: number | null;
+}) {
   return (
     <div className="overflow-x-auto rounded border border-slate-800">
       <table className="w-full text-sm">
@@ -60,6 +69,7 @@ function PositionsTable({ positions }: { positions: PortfolioPosition[] }) {
             <th className="px-3 py-2 font-medium">Avg entry</th>
             <th className="px-3 py-2 font-medium">Unrealized</th>
             <th className="px-3 py-2 font-medium">Opened</th>
+            <th className="px-3 py-2 font-medium" />
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -77,11 +87,20 @@ function PositionsTable({ positions }: { positions: PortfolioPosition[] }) {
                 {fmtUsd(p.unrealized_pnl)}
               </td>
               <td className="px-3 py-2 text-slate-400">{fmtDate(p.opened_at)}</td>
+              <td className="px-3 py-2 text-right">
+                <button
+                  onClick={() => onClose(p.id)}
+                  disabled={closingId === p.id}
+                  className="rounded bg-red-900/70 px-2 py-1 text-xs font-medium text-red-200 hover:bg-red-800 disabled:opacity-40"
+                >
+                  {closingId === p.id ? "Closing…" : "Close"}
+                </button>
+              </td>
             </tr>
           ))}
           {positions.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+              <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                 No open positions — fire a copy from the Risk tab to populate the book.
               </td>
             </tr>
@@ -170,6 +189,15 @@ export default function PortfolioPage() {
     },
   });
 
+  const close = useMutation({
+    mutationFn: (positionId: number) => closePosition(positionId),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
+      queryClient.invalidateQueries({ queryKey: ["copy-orders"] });
+    },
+  });
+
   const summary = frame?.portfolio ?? summaryQuery.data;
   const orders = frame?.copy_orders ?? ordersQuery.data?.items ?? [];
 
@@ -232,7 +260,16 @@ export default function PortfolioPage() {
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <div>
           <h2 className="mb-2 text-sm font-medium text-slate-200">Open positions</h2>
-          <PositionsTable positions={summary?.positions ?? []} />
+          {close.isError && (
+            <p className="mb-2 text-xs text-red-400">
+              Close failed: {(close.error as Error)?.message ?? "unknown error"}
+            </p>
+          )}
+          <PositionsTable
+            positions={summary?.positions ?? []}
+            onClose={(id) => close.mutate(id)}
+            closingId={close.isPending ? (close.variables ?? null) : null}
+          />
         </div>
         <div>
           <h2 className="mb-2 text-sm font-medium text-slate-200">Recent copy orders</h2>

@@ -9,7 +9,7 @@ def test_defaults_are_safe() -> None:
     settings = Settings(_env_file=None)
     assert settings.execution_mode == "paper"
     assert settings.live_trading_armed is False
-    assert settings.risk_max_total_exposure == Decimal("1000")
+    assert settings.risk_max_total_exposure == Decimal("5000")
 
 
 def test_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:

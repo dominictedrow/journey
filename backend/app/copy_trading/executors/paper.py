@@ -8,12 +8,15 @@ slippage, so paper trading never stalls on connectivity. `delay_ms` records how 
 was at decision time, feeding the copy-quality score.
 """
 
+import logging
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
 
 from app.copy_trading.executors.base import ExecutionResult, Executor
 from app.ingest.clob_api import get_book
 from app.risk.models import TradeIntent
+
+logger = logging.getLogger(__name__)
 
 QUANTUM = Decimal("0.000001")
 PRICE_FLOOR = Decimal("0.001")
@@ -29,7 +32,8 @@ def _dec(value: Decimal) -> Decimal:
 async def _default_book_fetcher(token_id: str) -> dict | None:
     try:
         return await get_book(token_id)
-    except Exception:  # noqa: BLE001 — offline/thin market is expected; fall back to intent price
+    except Exception as exc:  # noqa: BLE001 — offline/thin market; fall back to intent price
+        logger.warning("book fetch failed for token %s (%s); using fallback fill", token_id, exc)
         return None
 
 
@@ -92,12 +96,16 @@ class PaperExecutor(Executor):
             size,
             ascending=is_buy,
         )
+        error = None
         if walked is not None:
             filled, fill_price = walked
         else:
             # No book: fill fully at the intent price, moved adversely by the fallback slippage.
+            # Recorded on the order so a rate-limited/offline book is distinguishable from a
+            # real simulated fill when auditing copy quality.
             move = 1 + self._fallback_slippage if is_buy else 1 - self._fallback_slippage
             filled, fill_price = size, _dec(intent.price * move)
+            error = "book unavailable; fallback fill at intent price"
 
         fill_price = min(max(fill_price, PRICE_FLOOR), PRICE_CEIL)
         slippage = None
@@ -105,4 +113,4 @@ class PaperExecutor(Executor):
             raw = (fill_price - intent.price) / intent.price
             slippage = _dec(raw if is_buy else -raw)  # adverse move is positive for both sides
         status = "filled" if filled >= size else "partial"
-        return ExecutionResult(status, filled, fill_price, slippage, delay_ms)
+        return ExecutionResult(status, filled, fill_price, slippage, delay_ms, error)

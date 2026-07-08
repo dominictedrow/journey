@@ -9,6 +9,7 @@ Rows carry `proxyWallet`, `userName`, `vol`, `pnl`, `rank`.
 import httpx
 
 from app.config import get_settings
+from app.ingest.http import throttled_get
 
 
 async def get_leaderboard(
@@ -27,6 +28,6 @@ async def get_leaderboard(
         "offset": offset,
     }
     async with httpx.AsyncClient(base_url=settings.leaderboard_url, timeout=30) as client:
-        response = await client.get("/v1/leaderboard", params=params)
+        response = await throttled_get(client, "/v1/leaderboard", params, upstream="data_api")
         response.raise_for_status()
         return response.json()

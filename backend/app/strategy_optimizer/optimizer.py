@@ -200,9 +200,17 @@ async def optimize(
         summary=summary,
     )
 
+    # Persist the *resolved* selection alongside the spec: the copy engine and
+    # `apply_active_strategy` need the concrete wallet set + weights this adoption was
+    # graded on, not a rule that would silently re-resolve against future rankings.
+    # StrategySpec ignores the extra keys on re-validation.
+    params = best.spec.model_dump(mode="json") | {
+        "wallets": list(best.config.wallets),
+        "weights": {a: str(w) for a, w in (best.config.weights or {}).items()},
+    }
     row = Strategy(
         name=best.name,
-        params=best.spec.model_dump(mode="json"),
+        params=params,
         is_active=adopted,
         created_at=now,
         adopted_at=now if adopted else None,

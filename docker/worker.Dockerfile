@@ -13,4 +13,7 @@ COPY backend/pyproject.toml ./
 RUN mkdir -p app && touch app/__init__.py && pip install -e .[dev]
 COPY backend/ ./
 
-CMD ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO"]
+# --concurrency=2: the outbound-API throttles (app/ingest/http.py) are per-process, so the
+# pool size is part of the rate-limit math — 2 processes keeps the live tail responsive while
+# a long backfill runs, without multiplying request rates by the host's CPU count.
+CMD ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]

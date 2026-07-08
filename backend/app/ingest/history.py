@@ -29,7 +29,7 @@ from collections import defaultdict
 from datetime import UTC
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.blockchain.client import RpcPool
 from app.blockchain.indexer import get_checkpoint, set_checkpoint
@@ -43,7 +43,7 @@ from app.blockchain.normalize import (
 )
 from app.config import get_settings
 from app.database.base import async_session_factory
-from app.database.models import Trade, Wallet
+from app.database.models import IndexerState, Trade, Wallet
 from app.ingest.data_api import iter_trades
 
 
@@ -89,6 +89,19 @@ def data_api_trade_to_row(trade: dict, log_index: int, token_map: dict[str, str]
         "timestamp": utc_from_unix(int(trade["timestamp"])),
         "source": "data_api",
     }
+
+
+async def clear_history_checkpoint(session, address: str) -> bool:
+    """Drop the frozen handoff for `address` so the next backfill re-derives it at the live
+    cursor. Required when an analyse-only wallet is promoted to tracked (see module
+    docstring): the old handoff predates live coverage, so keeping it would leave the gap
+    between the analyse-time head and the live tail permanently unfetched. Deduplication on
+    (tx_hash, log_index) absorbs the re-download overlap. Returns True if a checkpoint
+    existed."""
+    result = await session.execute(
+        delete(IndexerState).where(IndexerState.stream == f"history:{address.lower()}")
+    )
+    return bool(result.rowcount)
 
 
 async def _resolve_handoff(session, pool: RpcPool, address: str, tracked: bool) -> int:

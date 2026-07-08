@@ -1,11 +1,19 @@
-"""Data-API reads: a wallet's positions/trades, used to seed and cross-check on-chain data."""
+"""Data-API reads: a wallet's positions/trades, used to seed and cross-check on-chain data.
 
+All requests go through `ingest.http.throttled_get` (retry/backoff + shared throttle), so
+unattended backfills of many wallets stay inside the free API's tolerance instead of
+hammering it and dying on the first 429."""
+
+import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
 
 from app.config import get_settings
+from app.ingest.http import throttled_get
+
+logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 1000  # limit accepted by /trades and /positions
 # Polymarket caps offset-based pagination: offset > 3000 returns HTTP 400 regardless of limit.
@@ -19,9 +27,14 @@ async def _page_window(client: httpx.AsyncClient, path: str, params: dict[str, A
     out: list[dict] = []
     offset = 0
     while True:
-        response = await client.get(path, params=params | {"limit": PAGE_SIZE, "offset": offset})
+        response = await throttled_get(
+            client, path, params | {"limit": PAGE_SIZE, "offset": offset}, upstream="data_api"
+        )
         if response.status_code == 400 and offset > 0:
-            break  # deep-pagination cap hit — return what we have (data is newest-first)
+            # Deep-pagination cap hit — return what we have (data is newest-first). A 400 at
+            # offset 0 is a genuinely bad query and raises below instead of being swallowed.
+            logger.warning("data_api %s: offset cap hit at %d for %s", path, offset, params)
+            break
         response.raise_for_status()
         batch = response.json()
         out.extend(batch)
@@ -79,6 +92,6 @@ async def get_holders(condition_ids: list[str], limit: int = 20) -> list[dict]:
     settings = get_settings()
     params: dict[str, str | int] = {"market": ",".join(condition_ids), "limit": min(limit, 20)}
     async with httpx.AsyncClient(base_url=settings.data_api_url, timeout=30) as client:
-        response = await client.get("/holders", params=params)
+        response = await throttled_get(client, "/holders", params, upstream="data_api")
         response.raise_for_status()
         return response.json()

@@ -29,14 +29,28 @@ celery_app = Celery(
 celery_app.conf.timezone = "UTC"
 celery_app.conf.beat_schedule = {
     "sync-markets-hourly": {"task": "ingest.sync_markets", "schedule": 3600.0},
-    # 60s (was 30s): the only RPC-hitting beat — halves QuickNode credit drip on the free tier.
-    # Still well under copy_max_trade_age_seconds (300s) so live copies keep firing.
-    "chain-live-tail": {"task": "chain.live_tail", "schedule": 60.0},
+    # 15s: end-to-end copy lag must clear the 60s TimingRule gate. Worst case is now
+    # ~5 confirmations (~10s) + 15s tail + 15s detect ≈ 40s; at the old 60s cadence most
+    # copies arrived >60s stale and were denied. RPC cost stays trivial on Alchemy's free
+    # tier: ~5760 runs/day x (eth_blockNumber 10 CU + ~1 eth_getLogs 75 CU + a get_block
+    # per fill-bearing block) ≈ 15M CU/month vs a 100M+ monthly allowance. If a QuickNode
+    # free URL is ever primary again, drop this back to 60s.
+    "chain-live-tail": {"task": "chain.live_tail", "schedule": 15.0},
     "discovery-sweep-6h": {"task": "discovery.run", "schedule": 21600.0},
+    # Budgeted discovery→analysis bridge: track + backfill + score a few new wallets each
+    # hour, so rankings grow autonomously without bursting the Data-API.
+    "discovery-autopromote-hourly": {"task": "discovery.autopromote", "schedule": 3600.0},
     "refresh-metrics-hourly": {"task": "analytics.refresh_all_metrics", "schedule": 3600.0},
     "rebuild-rankings-hourly": {"task": "ranking.rebuild", "schedule": 3600.0},
     "copy-detect-15s": {"task": "copy.detect_and_copy", "schedule": 15.0},
     "revalue-portfolio-60s": {"task": "copy.revalue_portfolio", "schedule": 60.0},
+    # Close positions in resolved markets at true $0/$1 payout so the equity curve (and the
+    # loss limits and sizing built on it) tracks reality, not the last stale trade print.
+    # Targeted Gamma fetch of only the held markets — a request or two per run.
+    "settle-resolutions-10m": {"task": "copy.settle_resolutions", "schedule": 600.0},
     "reconcile-live-120s": {"task": "copy.reconcile_live", "schedule": 120.0},
     "optimize-strategies-weekly": {"task": "strategies.optimize", "schedule": 604800.0},
+    # Enforcement half of the optimizer loop: converge wallet copy flags back to the adopted
+    # strategy (rotations, restored DBs, accidental manual drift) without waiting a week.
+    "apply-strategy-hourly": {"task": "strategies.apply_active", "schedule": 3600.0},
 }

@@ -47,6 +47,15 @@ export default function WalletsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wallets"] }),
   });
 
+  const copy = useMutation({
+    mutationFn: ({ address, enabled }: { address: string; enabled: boolean }) =>
+      // Enabling copy also tracks the wallet — untracked wallets never get their fills
+      // indexed (blockchain/listener.py only watches tracked addresses), so copy-only would
+      // silently do nothing.
+      updateWallet(address, enabled ? { copy_enabled: true, is_tracked: true } : { copy_enabled: false }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wallets"] }),
+  });
+
   const sortBy = (key: WalletSortKey) => {
     if (key === sort) {
       setOrder(order === "desc" ? "asc" : "desc");
@@ -113,6 +122,7 @@ export default function WalletsPage() {
                 </th>
               ))}
               <th className="px-3 py-2 font-medium">Source</th>
+              <th className="px-3 py-2 font-medium">Copy</th>
               <th className="px-3 py-2 font-medium">Tracked</th>
             </tr>
           </thead>
@@ -141,6 +151,18 @@ export default function WalletsPage() {
                 <td className="px-3 py-2 text-slate-400">{w.discovery_source ?? "—"}</td>
                 <td className="px-3 py-2">
                   <button
+                    onClick={() => copy.mutate({ address: w.address, enabled: !w.copy_enabled })}
+                    className={`rounded px-2 py-1 text-xs font-medium ${
+                      w.copy_enabled
+                        ? "bg-sky-900 text-sky-300 hover:bg-sky-800"
+                        : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                    }`}
+                  >
+                    {w.copy_enabled ? "Copying" : "Enable"}
+                  </button>
+                </td>
+                <td className="px-3 py-2">
+                  <button
                     onClick={() => track.mutate({ address: w.address, tracked: !w.is_tracked })}
                     className={`rounded px-2 py-1 text-xs font-medium ${
                       w.is_tracked
@@ -155,7 +177,7 @@ export default function WalletsPage() {
             ))}
             {!isPending && data?.items.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-slate-500">
+                <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
                   No wallets yet — run discovery or backfill a wallet to get started.
                 </td>
               </tr>

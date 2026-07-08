@@ -7,8 +7,11 @@ portfolio. Every processed source trade yields exactly one copy order (keyed by
 risk, skipped (nothing to mirror), or filled/partial.
 
 BUY sizing mirrors the backtester: fixed USDC, a fraction of equity, or a multiple of the
-source notional. SELL mirrors the *fraction* of the source's position being closed onto our
-own holding, so exits track the source proportionally.
+source notional. The sizing model and per-wallet weights come from the *active strategy*
+(the optimizer's adopted selection) when one exists, falling back to the static settings
+otherwise — so what the optimizer graded is what actually trades. SELL mirrors the
+*fraction* of the source's position being closed onto our own holding, so exits track the
+source proportionally.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -23,6 +26,7 @@ from app.database.models import CopyOrder, Market, PortfolioSnapshot, Position, 
 from app.portfolio.service import apply_fill, get_position
 from app.risk.engine import RiskEngine
 from app.risk.models import RiskDecision, TradeIntent
+from app.strategy_optimizer.apply import get_active_strategy
 
 QUANTUM = Decimal("0.000001")
 MIN_SPEND = Decimal("0.01")
@@ -52,6 +56,9 @@ class CopyEngine:
         self.risk = risk_engine or RiskEngine()
         self.executor = executor or select_executor(self.settings)
         self.mode = self.executor.mode
+        # Active-strategy sizing params, loaded once per engine instance (one detect sweep).
+        self._strategy_params: dict | None = None
+        self._strategy_loaded = False
 
     async def _equity(self, session: AsyncSession) -> Decimal:
         snapshot = await session.scalar(
@@ -64,13 +71,34 @@ class CopyEngine:
             return Decimal(snapshot.total_value)
         return self.settings.paper_starting_cash if self.mode == "paper" else Decimal(0)
 
+    async def _sizing(
+        self, session: AsyncSession, wallet_address: str
+    ) -> tuple[str, Decimal, Decimal]:
+        """(sizing_mode, sizing_value, wallet_weight) — from the active strategy when one
+        carries a resolved selection, else the static settings (weight 1)."""
+        if not self._strategy_loaded:
+            active = await get_active_strategy(session)
+            raw = (active.params or {}) if active is not None else {}
+            self._strategy_params = raw if raw.get("wallets") else None
+            self._strategy_loaded = True
+        params = self._strategy_params
+        if params is None:
+            return self.settings.copy_sizing_mode, self.settings.copy_sizing_value, Decimal(1)
+        weight = Decimal(str((params.get("weights") or {}).get(wallet_address, "1")))
+        return (
+            params.get("sizing_mode", self.settings.copy_sizing_mode),
+            Decimal(str(params.get("sizing_value", self.settings.copy_sizing_value))),
+            weight,
+        )
+
     async def _buy_size(self, session: AsyncSession, trade: Trade) -> Decimal:
-        """Shares to buy per the configured sizing model (before risk adjustment)."""
+        """Shares to buy per the active sizing model (before risk adjustment). The wallet
+        weight multiplies spend exactly as the backtester applies it, so live sizing matches
+        what the optimizer graded."""
         price = trade.price
         if price <= 0:
             return Decimal(0)
-        mode = self.settings.copy_sizing_mode
-        value = self.settings.copy_sizing_value
+        mode, value, weight = await self._sizing(session, trade.wallet_address)
         if mode == "fixed":
             spend = value
         elif mode == "percentage":
@@ -80,6 +108,7 @@ class CopyEngine:
                 trade.usdc_amount if trade.usdc_amount is not None else price * trade.size
             )
             spend = source_notional * value
+        spend *= weight
         return _dec(spend / price) if spend >= MIN_SPEND else Decimal(0)
 
     async def _sell_size(self, session: AsyncSession, trade: Trade) -> Decimal:

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database.models import PortfolioPosition, PortfolioSnapshot, RiskEvent, Wallet
-from app.risk.killswitch import is_engaged
+from app.risk.killswitch import is_engaged, set_engaged
 from app.risk.models import RiskContext, RiskDecision, RiskLimits, TradeIntent
 from app.risk.rules import Rule, default_rules
 
@@ -134,6 +134,13 @@ class RiskEngine:
                 )
                 if record:
                     self._record(session, intent, decision, now, "warning", "blocked")
+                    if rule.name == "loss_limit":
+                        # A breached loss cap halts everything durably, not just this order:
+                        # per-rule denial would keep re-testing each new signal while the book
+                        # bleeds. Engaging the kill switch stops all execution until a human
+                        # reviews and disengages it from the risk page. The caller's commit
+                        # persists the flag atomically with the denial's risk event.
+                        await set_engaged(session, True, f"auto: {result.reason}", commit=False)
                 return decision
             if result.action == "adjust":
                 adjustments.append(

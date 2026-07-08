@@ -526,6 +526,20 @@ export function revaluePortfolio(mode = "paper"): Promise<PortfolioSnapshot> {
   return apiFetch<PortfolioSnapshot>(`/portfolio/revalue?mode=${mode}`, { method: "POST" });
 }
 
+export interface ClosePositionResult {
+  status: string;
+  filled_size: string;
+  fill_price: string | null;
+  error: string | null;
+  position: PortfolioPosition;
+}
+
+export function closePosition(positionId: number): Promise<ClosePositionResult> {
+  return apiFetch<ClosePositionResult>(`/portfolio/positions/${positionId}/close`, {
+    method: "POST",
+  });
+}
+
 // Shape pushed by the /ws/live socket every interval.
 export interface LiveFrame {
   type: "state";

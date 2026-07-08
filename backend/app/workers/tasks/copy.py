@@ -6,6 +6,7 @@ from app.copy_trading.engine import CopyEngine
 from app.copy_trading.executors import build_live_client
 from app.copy_trading.recovery import reconcile_live_orders
 from app.database.base import async_session_factory
+from app.portfolio.settlement import settle_resolved_positions
 from app.portfolio.valuation import revalue
 from app.workers.celery_app import celery_app
 from app.workers.tasks import run_async
@@ -36,6 +37,17 @@ def reconcile_live_task() -> int:
         async with async_session_factory() as session:
             touched = await reconcile_live_orders(session, build_live_client(settings))
             return len(touched)
+
+    return run_async(job())
+
+
+@celery_app.task(name="copy.settle_resolutions")
+def settle_resolutions_task() -> list[int]:
+    """Close positions in resolved markets at their $0/$1 payout (Module 10 settlement)."""
+
+    async def job() -> list[int]:
+        async with async_session_factory() as session:
+            return await settle_resolved_positions(session)
 
     return run_async(job())
 

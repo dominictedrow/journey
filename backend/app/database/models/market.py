@@ -18,6 +18,8 @@ class Market(Base):
     category: Mapped[str | None] = mapped_column(String(64), index=True)
     outcomes: Mapped[list | None] = mapped_column(JsonB)
     token_ids: Mapped[list | None] = mapped_column(JsonB)
+    # Gamma outcomePrices, index-aligned with token_ids ("1"/"0" once resolved; null before).
+    outcome_prices: Mapped[list | None] = mapped_column(JsonB)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     closed: Mapped[bool] = mapped_column(Boolean, default=False)
     end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
