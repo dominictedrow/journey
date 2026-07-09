@@ -150,14 +150,6 @@ export function getWallet(address: string): Promise<WalletDetail> {
   return apiFetch<WalletDetail>(`/wallets/${address}`);
 }
 
-export function refreshWalletMetrics(address: string): Promise<Wallet> {
-  return apiFetch<Wallet>(`/wallets/${address}/refresh-metrics`, { method: "POST" });
-}
-
-export function backfillWallet(address: string): Promise<{ task_id: string }> {
-  return apiFetch<{ task_id: string }>(`/wallets/${address}/backfill`, { method: "POST" });
-}
-
 export interface DiscoveryStatus {
   total_wallets: number;
   tracked_wallets: number;
@@ -167,10 +159,6 @@ export interface DiscoveryStatus {
 
 export function getDiscoveryStatus(): Promise<DiscoveryStatus> {
   return apiFetch<DiscoveryStatus>("/discovery");
-}
-
-export function runDiscovery(): Promise<{ task_id: string }> {
-  return apiFetch<{ task_id: string }>("/discovery/run", { method: "POST" });
 }
 
 export type RankingCategory =
@@ -231,16 +219,6 @@ export function getRankings(
   limit = 50,
 ): Promise<RankingsResponse> {
   return apiFetch<RankingsResponse>(`/rankings?category=${category}&limit=${limit}`);
-}
-
-export interface RebuildRankingsResponse {
-  computed_at: string;
-  wallets_scored: number;
-  categories: Record<string, number>;
-}
-
-export function rebuildRankings(): Promise<RebuildRankingsResponse> {
-  return apiFetch<RebuildRankingsResponse>("/rankings/rebuild", { method: "POST" });
 }
 
 export type BacktestStatus = "queued" | "running" | "completed" | "failed";
@@ -385,10 +363,6 @@ export function getRiskStatus(): Promise<RiskStatus> {
   return apiFetch<RiskStatus>("/risk");
 }
 
-export function getRiskEvents(limit = 50, offset = 0): Promise<RiskEventList> {
-  return apiFetch<RiskEventList>(`/risk/events?limit=${limit}&offset=${offset}`);
-}
-
 export function setKillSwitch(enabled: boolean, reason?: string): Promise<KillSwitch> {
   return apiFetch<KillSwitch>("/risk/kill-switch", {
     method: "POST",
@@ -424,45 +398,8 @@ export interface CopyOrderList {
   offset: number;
 }
 
-export interface CopyStatus {
-  mode: string;
-  total_orders: number;
-  by_status: Record<string, number>;
-  last_order_at: string | null;
-}
-
-export interface SimulateTradeBody {
-  source_wallet: string;
-  token_id: string;
-  side: "BUY" | "SELL";
-  size: string;
-  price: string;
-  market_id?: string | null;
-  usdc_amount?: string | null;
-}
-
-export interface SimulateResult {
-  order: CopyOrder;
-  detail: string;
-}
-
-export function getCopyStatus(mode = "paper"): Promise<CopyStatus> {
-  return apiFetch<CopyStatus>(`/copy?mode=${mode}`);
-}
-
 export function getCopyOrders(mode = "paper", limit = 50): Promise<CopyOrderList> {
   return apiFetch<CopyOrderList>(`/copy/orders?mode=${mode}&limit=${limit}`);
-}
-
-export function simulateTrade(body: SimulateTradeBody): Promise<SimulateResult> {
-  return apiFetch<SimulateResult>("/copy/simulate", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-}
-
-export function runDetector(): Promise<{ task_id: string }> {
-  return apiFetch<{ task_id: string }>("/copy/run", { method: "POST" });
 }
 
 export interface PortfolioPosition {
@@ -513,10 +450,6 @@ export function getPortfolio(mode = "paper"): Promise<PortfolioSummary> {
 
 export function getPortfolioHistory(mode = "paper"): Promise<PortfolioHistory> {
   return apiFetch<PortfolioHistory>(`/portfolio/history?mode=${mode}`);
-}
-
-export function revaluePortfolio(mode = "paper"): Promise<PortfolioSnapshot> {
-  return apiFetch<PortfolioSnapshot>(`/portfolio/revalue?mode=${mode}`, { method: "POST" });
 }
 
 export interface ClosePositionResult {
@@ -617,8 +550,4 @@ export function getStrategy(id: number): Promise<StrategyDetail> {
 // The active strategy 404s until the first adoption; callers treat that as "none yet".
 export function getActiveStrategy(): Promise<StrategyDetail> {
   return apiFetch<StrategyDetail>("/strategies/active");
-}
-
-export function runOptimizer(): Promise<{ task_id: string; message: string }> {
-  return apiFetch<{ task_id: string; message: string }>("/strategies/optimize", { method: "POST" });
 }

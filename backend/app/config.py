@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     gamma_api_url: str = "https://gamma-api.polymarket.com"
     data_api_url: str = "https://data-api.polymarket.com"
     clob_api_url: str = "https://clob.polymarket.com"
-    clob_ws_url: str = "wss://ws-subscriptions-clob.polymarket.com"
     # Trader leaderboard lives on the Data-API host at /v1/leaderboard — verified against
     # docs.polymarket.com/api-reference/core/get-trader-leaderboard-rankings on 2026-07-02.
     leaderboard_url: str = "https://data-api.polymarket.com"
