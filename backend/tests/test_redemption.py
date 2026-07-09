@@ -184,9 +184,7 @@ async def test_sweep_noops_in_paper_mode(session: AsyncSession, monkeypatch) -> 
     assert result == []
 
 
-async def test_sweep_groups_by_market_and_is_idempotent(
-    session: AsyncSession, monkeypatch
-) -> None:
+async def test_sweep_groups_by_market_and_is_idempotent(session: AsyncSession, monkeypatch) -> None:
     market = _market()
     session.add(market)
     session.add_all(

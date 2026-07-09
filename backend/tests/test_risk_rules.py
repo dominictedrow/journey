@@ -182,8 +182,7 @@ def test_portfolio_exposure_cap_scales_with_equity() -> None:
     rule = PortfolioExposureRule(_limits(max_total_exposure_pct=Decimal("0.60")))
     small_book = RiskContext(total_exposure=Decimal("60"), total_equity=Decimal("100"))
     assert (
-        rule.evaluate(small_book, _intent(size="100", price="0.5"), Decimal("100")).action
-        == "deny"
+        rule.evaluate(small_book, _intent(size="100", price="0.5"), Decimal("100")).action == "deny"
     )  # cap is 60 (60% of 100 equity), already fully used
     big_book = RiskContext(total_exposure=Decimal("60"), total_equity=Decimal("10000"))
     assert (
