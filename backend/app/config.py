@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     gamma_api_url: str = "https://gamma-api.polymarket.com"
     data_api_url: str = "https://data-api.polymarket.com"
     clob_api_url: str = "https://clob.polymarket.com"
-    clob_ws_url: str = "wss://ws-subscriptions-clob.polymarket.com"
     # Trader leaderboard lives on the Data-API host at /v1/leaderboard — verified against
     # docs.polymarket.com/api-reference/core/get-trader-leaderboard-rankings on 2026-07-02.
     leaderboard_url: str = "https://data-api.polymarket.com"
@@ -152,6 +151,15 @@ class Settings(BaseSettings):
     optimizer_min_total_return: Decimal = Decimal("0")
     optimizer_max_drawdown: Decimal = Decimal("0.5")
     optimizer_top_n_choices: str = "5,10,20"  # selection sizes explored (clamped to max positions)
+
+    # --- Ollama advisory layer (Module G) --------------------------------------------------
+    # Narrative-only: the local LLM annotates strategy-adoption and activity-governor decisions
+    # with a plain-English rationale. It NEVER blocks or gates a decision and fails open (returns
+    # None) on any error. In Docker the backend/worker reach the `ollama` service on the `core`
+    # network; the default host resolves there. A small CPU-friendly instruction model keeps the
+    # single-operator deployment light — the client pulls it lazily on first use.
+    ollama_url: str = "http://ollama:11434"
+    ollama_model: str = "llama3.2:3b"
 
     @property
     def optimizer_top_n_list(self) -> list[int]:

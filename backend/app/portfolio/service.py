@@ -13,6 +13,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.blockchain.balances import read_collateral_balance
 from app.config import Settings, get_settings
 from app.database.models import CopyOrder, PortfolioPosition, PortfolioSnapshot
 
@@ -104,7 +105,17 @@ def starting_cash(mode: str, settings: Settings | None = None) -> Decimal:
 async def current_cash(
     session: AsyncSession, mode: str, settings: Settings | None = None
 ) -> Decimal:
-    """Starting cash minus net spend across all filled copy orders for this mode."""
+    """Spendable cash for this mode.
+
+    Live: the on-chain collateral balance is the source of truth — it already nets every buy,
+    sell, settlement, and redemption — so we read it directly (config-fallback reconstruction
+    only if the chain read fails). Paper: the configured starting balance minus net spend across
+    all filled copy orders."""
+    settings = settings or get_settings()
+    if mode == "live":
+        onchain = await read_collateral_balance(settings)
+        if onchain is not None:
+            return _dec(onchain)
     starting = starting_cash(mode, settings)
     rows = await session.execute(
         select(CopyOrder.side, CopyOrder.filled_size, CopyOrder.fill_price).where(
@@ -158,4 +169,11 @@ async def current_equity(
     )
     if snapshot is not None:
         return Decimal(snapshot.total_value)
+    # No snapshot yet — bootstrap. Live reads real on-chain collateral (so the exposure cap and
+    # percentage sizing aren't pinned at 0 before the first live snapshot lands); paper and the
+    # live chain-read-failed path fall back to the configured starting baseline.
+    if mode == "live":
+        onchain = await read_collateral_balance(settings)
+        if onchain is not None:
+            return _dec(onchain)
     return starting_cash(mode, settings)

@@ -1,8 +1,14 @@
 # Dev overrides: hot reload + bind mounts.
 # docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
 services:
+  # Migrations run in the one-shot `migrate` service (base compose); bind-mount so it applies
+  # the local migration scripts in dev, not the baked image's.
+  migrate:
+    volumes:
+      - ../backend:/app
+
   api:
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - ../backend:/app
 

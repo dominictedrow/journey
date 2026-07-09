@@ -17,6 +17,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai_advisor import narrate
 from app.autonomy.overrides import get_override
 from app.backtesting.engine import load_backtest_trades, run_backtest
 from app.config import Settings, get_settings
@@ -126,6 +127,22 @@ def _build_rationale(
     }
 
 
+def _narration_prompt(rationale: dict) -> str:
+    """A compact prompt describing the adoption decision for the advisory LLM to narrate."""
+    return (
+        "You are a trading-operations analyst. In 2-3 sentences, plainly explain the following "
+        "automated strategy-adoption decision for an operator's audit log. Do not add caveats or "
+        "recommendations; just describe what was decided and why.\n"
+        f"objective: {rationale['objective']}\n"
+        f"decision: {rationale['decision']}\n"
+        f"summary: {rationale['summary']}\n"
+        f"chosen: {rationale['chosen']}\n"
+        f"active: {rationale['active']}\n"
+        f"min_improvement_margin: {rationale['min_improvement']}\n"
+        f"lookback_days: {rationale['lookback_days']}"
+    )
+
+
 async def optimize(
     session: AsyncSession,
     *,
@@ -210,6 +227,11 @@ async def optimize(
         decision="adopted" if adopted else "kept_active",
         summary=summary,
     )
+
+    # Advisory only: annotate the decision with a plain-English narrative. `narrate` fails open
+    # (returns None on any error), so this never blocks or alters the adoption itself — the
+    # decision above is already final. `Strategy.rationale` is JSONB, so no schema change.
+    rationale["ai_narrative"] = await narrate(_narration_prompt(rationale))
 
     # Persist the *resolved* selection alongside the spec: the copy engine and
     # `apply_active_strategy` need the concrete wallet set + weights this adoption was

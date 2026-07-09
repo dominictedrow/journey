@@ -5,6 +5,7 @@ a hard multiple of each lever's static default."""
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,11 +16,22 @@ from app.autonomy.activity_governor import (
     TOP_N_EXTRA_KEY,
     run_activity_governor,
 )
-from app.autonomy.overrides import get_override
+from app.autonomy.overrides import get_override, set_override
 from app.config import Settings
 from app.database.models import CopyOrder, RiskEvent
 
 NOW = datetime(2026, 7, 8, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture(autouse=True)
+def _stub_narrate(monkeypatch):
+    """The advisory LLM annotates a widen but is off in tests (fails open → None), so the
+    governor never reaches out to a real Ollama."""
+
+    async def _none(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("app.autonomy.activity_governor.narrate", _none)
 
 
 def _settings(**over) -> Settings:
@@ -96,3 +108,65 @@ async def test_governor_bounded_widen_never_exceeds_max_multiplier(
     ).all()
     # Widening stops once every lever is capped; not one event per call.
     assert len(events) < 20
+
+
+async def _seed_filled_trade(session: AsyncSession, now: datetime) -> None:
+    session.add(
+        CopyOrder(
+            created_at=now - timedelta(hours=1),
+            mode="paper",
+            side="BUY",
+            token_id="tok",
+            requested_size=Decimal("10"),
+            filled_size=Decimal("10"),
+            fill_price=Decimal("0.5"),
+            status="filled",
+        )
+    )
+    await session.commit()
+
+
+async def test_governor_narrows_back_toward_baseline_when_target_met(
+    session: AsyncSession,
+) -> None:
+    settings = _settings()
+    # Start from a previously-widened state (a quiet spell had bumped the funnel wide).
+    await set_override(session, AUTOPROMOTE_KEY, 40, "prior widen")
+    await set_override(session, MAX_TRACKED_KEY, 900, "prior widen")
+    await set_override(session, TOP_N_EXTRA_KEY, 8, "prior widen")
+    await _seed_filled_trade(session, NOW)  # activity has recovered to target
+
+    result = await run_activity_governor(session, settings=settings, now=NOW)
+
+    assert result["trailing_trades"] == 1
+    assert result[AUTOPROMOTE_KEY] == 36  # 40 - step(4), toward baseline 8
+    assert result[MAX_TRACKED_KEY] == 750  # 900 - step(150), toward baseline 300
+    assert result[TOP_N_EXTRA_KEY] == 6  # 8 - step(2), toward baseline 0
+
+    event = await session.scalar(
+        select(RiskEvent).where(RiskEvent.type == "activity_governor_narrowed")
+    )
+    assert event is not None
+    assert event.action_taken == "narrowed"
+
+
+async def test_governor_narrowing_stops_at_baseline_and_never_undershoots(
+    session: AsyncSession,
+) -> None:
+    settings = _settings()
+    await set_override(session, AUTOPROMOTE_KEY, 10, "prior widen")  # one step above baseline 8
+    await _seed_filled_trade(session, NOW)
+
+    # First run steps down to the baseline exactly (10 - step(4) floored at 8).
+    first = await run_activity_governor(session, settings=settings, now=NOW)
+    assert first[AUTOPROMOTE_KEY] == settings.autopromote_per_run  # 8, not 6 — floored
+    assert await get_override(session, AUTOPROMOTE_KEY, 0) == settings.autopromote_per_run
+
+    # Second run is a genuine no-op: already at baseline, nothing to decay, no event.
+    before = len((await session.scalars(select(RiskEvent))).all())
+    second = await run_activity_governor(session, settings=settings, now=NOW)
+    assert second[AUTOPROMOTE_KEY] is None
+    assert second[MAX_TRACKED_KEY] is None
+    assert second[TOP_N_EXTRA_KEY] is None
+    after = len((await session.scalars(select(RiskEvent))).all())
+    assert after == before
