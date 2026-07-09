@@ -3,6 +3,7 @@ name: copytrader
 x-backend-env: &backend-env
   DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-copytrader}:${POSTGRES_PASSWORD:-copytrader}@postgres:5432/${POSTGRES_DB:-copytrader}
   REDIS_URL: redis://redis:6379/0
+  OLLAMA_URL: http://ollama:11434
 
 x-app-env-file: &app-env-file
   env_file:
@@ -36,6 +37,22 @@ services:
       retries: 10
     networks: [core]
 
+  # One-shot schema migration. Runs to completion before api/worker/beat start, so no task
+  # ever races an unmigrated DB (worker/beat query tables the api used to migrate inline, e.g.
+  # runtime_overrides and the redemption_* columns, and would error until the api caught up).
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    restart: "no"
+    <<: *app-env-file
+    environment: *backend-env
+    command: sh -c "alembic upgrade head"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [core]
+
   api:
     build:
       context: ..
@@ -43,7 +60,7 @@ services:
     restart: unless-stopped
     <<: *app-env-file
     environment: *backend-env
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     depends_on:
@@ -51,6 +68,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [core]
 
   worker:
@@ -65,6 +84,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [core]
 
   beat:
@@ -78,6 +99,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [core]
 
   frontend:
@@ -89,8 +112,19 @@ services:
       - "3000:3000"
     networks: [core]
 
+  # Module G — local advisory LLM. Narrative-only; the backend/worker fail open if it's down,
+  # so it has no healthcheck gating and nothing depends_on it. The model itself is pulled lazily
+  # by the client on first use (docs/auto.md item G) and cached in the named volume below.
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    networks: [core]
+
 volumes:
   pgdata:
+  ollama:
 
 networks:
   core:

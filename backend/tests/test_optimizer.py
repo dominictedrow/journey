@@ -18,6 +18,19 @@ W1 = "0x" + "11" * 20
 W2 = "0x" + "22" * 20
 
 
+@pytest.fixture(autouse=True)
+def _stub_narrate(monkeypatch):
+    """Keep the optimizer hermetic: the advisory LLM is off by default (fails open → None), so
+    no test reaches out to a real Ollama. Individual tests override this to assert the narrative
+    is purely additive."""
+
+    async def _none(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("app.strategy_optimizer.optimizer.narrate", _none)
+    return monkeypatch
+
+
 def _settings(**overrides: object) -> Settings:
     base: dict = {
         "optimizer_objective": "total_return",
@@ -270,3 +283,42 @@ async def test_optimize_no_candidate_when_all_lose(session: AsyncSession) -> Non
     assert result.adopted is False
     assert result.best is None
     assert result.rationale["decision"] == "no_candidate"
+
+
+async def test_narrative_is_purely_additive(_stub_narrate) -> None:
+    """The adoption decision must be byte-for-byte identical whether the advisory LLM answers or
+    fails — the only difference in the persisted rationale is the `ai_narrative` field. Run over
+    two independent in-memory DBs seeded identically so the decision inputs are the same."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    import app.database.models  # noqa: F401 — register tables
+    from app.database.base import Base
+
+    async def _run_once(narrate_stub) -> dict:
+        _stub_narrate.setattr("app.strategy_optimizer.optimizer.narrate", narrate_stub)
+        engine = create_async_engine("sqlite+aiosqlite://")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with async_sessionmaker(engine, expire_on_commit=False)() as s:
+            await _seed_profitable(s)
+            result = await optimize(s, settings=_settings(), rebuild=False, now=NOW)
+            row = await s.get(Strategy, result.strategy_id)
+            rationale = dict(row.rationale)
+        await engine.dispose()
+        return rationale
+
+    async def _fails(*_a, **_k):
+        return None
+
+    async def _succeeds(*_a, **_k):
+        return "the model liked it"
+
+    failed = await _run_once(_fails)
+    succeeded = await _run_once(_succeeds)
+
+    assert failed["ai_narrative"] is None
+    assert succeeded["ai_narrative"] == "the model liked it"
+    # Every field except the narrative is identical.
+    assert {k: v for k, v in failed.items() if k != "ai_narrative"} == {
+        k: v for k, v in succeeded.items() if k != "ai_narrative"
+    }
