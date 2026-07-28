@@ -1,0 +1,30 @@
+epoch 1/20 - train_loss: 0.6433 - train_acc: 0.6180 - val_loss: 0.6109 - val_acc: 0.6568 - lr: 0.001000
+  saved new best checkpoint (val_acc=0.6568) -> checkpoints/best_model.pt
+epoch 2/20 - train_loss: 0.6049 - train_acc: 0.6679 - val_loss: 0.5926 - val_acc: 0.6855 - lr: 0.000994
+  saved new best checkpoint (val_acc=0.6855) -> checkpoints/best_model.pt
+epoch 3/20 - train_loss: 0.5810 - train_acc: 0.6924 - val_loss: 0.6240 - val_acc: 0.6493 - lr: 0.000976
+epoch 4/20 - train_loss: 0.5610 - train_acc: 0.7150 - val_loss: 0.5248 - val_acc: 0.7423 - lr: 0.000946
+  saved new best checkpoint (val_acc=0.7423) -> checkpoints/best_model.pt
+epoch 5/20 - train_loss: 0.5462 - train_acc: 0.7187 - val_loss: 0.5672 - val_acc: 0.6987 - lr: 0.000905
+epoch 6/20 - train_loss: 0.5366 - train_acc: 0.7345 - val_loss: 0.5218 - val_acc: 0.7479 - lr: 0.000854
+  saved new best checkpoint (val_acc=0.7479) -> checkpoints/best_model.pt
+epoch 7/20 - train_loss: 0.5328 - train_acc: 0.7391 - val_loss: 0.6457 - val_acc: 0.6421 - lr: 0.000794
+epoch 8/20 - train_loss: 0.5233 - train_acc: 0.7378 - val_loss: 0.5722 - val_acc: 0.7108 - lr: 0.000727
+epoch 9/20 - train_loss: 0.5152 - train_acc: 0.7470 - val_loss: 0.6076 - val_acc: 0.6843 - lr: 0.000655
+epoch 10/20 - train_loss: 0.5089 - train_acc: 0.7520 - val_loss: 0.4799 - val_acc: 0.7732 - lr: 0.000578
+  saved new best checkpoint (val_acc=0.7732) -> checkpoints/best_model.pt
+epoch 11/20 - train_loss: 0.5033 - train_acc: 0.7551 - val_loss: 0.5205 - val_acc: 0.7409 - lr: 0.000500
+epoch 12/20 - train_loss: 0.4921 - train_acc: 0.7645 - val_loss: 0.5589 - val_acc: 0.7172 - lr: 0.000422
+epoch 13/20 - train_loss: 0.4876 - train_acc: 0.7679 - val_loss: 0.4669 - val_acc: 0.7771 - lr: 0.000345
+  saved new best checkpoint (val_acc=0.7771) -> checkpoints/best_model.pt
+epoch 14/20 - train_loss: 0.4773 - train_acc: 0.7745 - val_loss: 0.4620 - val_acc: 0.7831 - lr: 0.000273
+  saved new best checkpoint (val_acc=0.7831) -> checkpoints/best_model.pt
+epoch 15/20 - train_loss: 0.4693 - train_acc: 0.7810 - val_loss: 0.4574 - val_acc: 0.7871 - lr: 0.000206
+  saved new best checkpoint (val_acc=0.7871) -> checkpoints/best_model.pt
+epoch 16/20 - train_loss: 0.4673 - train_acc: 0.7806 - val_loss: 0.4594 - val_acc: 0.7819 - lr: 0.000146
+epoch 17/20 - train_loss: 0.4622 - train_acc: 0.7848 - val_loss: 0.4423 - val_acc: 0.7945 - lr: 0.000095
+  saved new best checkpoint (val_acc=0.7945) -> checkpoints/best_model.pt
+epoch 18/20 - train_loss: 0.4578 - train_acc: 0.7864 - val_loss: 0.4373 - val_acc: 0.8008 - lr: 0.000054
+  saved new best checkpoint (val_acc=0.8008) -> checkpoints/best_model.pt
+epoch 19/20 - train_loss: 0.4534 - train_acc: 0.7912 - val_loss: 0.4370 - val_acc: 0.7992 - lr: 0.000024
+epoch 20/20 - train_loss: 0.4552 - train_acc: 0.7876 - val_loss: 0.4352 - val_acc: 0.7986 - lr: 0.000006
