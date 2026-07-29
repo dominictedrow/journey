@@ -1,0 +1,17 @@
+# Session state, tokens, captured API responses — never commit
+data/
+.auth/
+*.env
+contacts*.csv
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+
+# macOS
+.DS_Store
+.gstack/

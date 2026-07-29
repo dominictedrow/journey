@@ -1,0 +1,11 @@
+[project]
+name = "cwork"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+gmail = ["google-api-python-client", "google-auth-oauthlib"]
+
+[tool.setuptools.packages.find]
+include = ["skills*"]
