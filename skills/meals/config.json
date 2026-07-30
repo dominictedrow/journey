@@ -2,6 +2,10 @@
   "protein_min_g": 40,
   "calorie_min": 500,
   "calorie_max": 900,
-  "required_vitamins": ["D", "B12", "Iron"],
+  "required_vitamins": [
+    "D",
+    "B12",
+    "Iron"
+  ],
   "avoid": []
 }

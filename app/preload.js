@@ -26,4 +26,9 @@ contextBridge.exposeInMainWorld('cwork', {
     setDone: (id, done) => ipcRenderer.invoke('assignments:setDone', id, done),
     delete: (id) => ipcRenderer.invoke('assignments:delete', id),
   },
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    updateHome: (home) => ipcRenderer.invoke('settings:updateHome', home),
+    updateMeals: (meals) => ipcRenderer.invoke('settings:updateMeals', meals),
+  },
 });

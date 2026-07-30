@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process');
 
 const registry = require('./registry');
 const db = require('./db');
+const settings = require('./settings');
 
 const isDev = !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5173';
@@ -182,3 +183,11 @@ ipcMain.handle('assignments:delete', (event, id) => {
   if (!Number.isInteger(id)) throw new Error('assignment id must be an integer');
   db.deleteAssignment(id);
 });
+
+// --- settings ---
+
+ipcMain.handle('settings:get', () => settings.getSettings(RESOURCES_ROOT));
+
+ipcMain.handle('settings:updateHome', (event, home) => settings.updateHome(RESOURCES_ROOT, home));
+
+ipcMain.handle('settings:updateMeals', (event, meals) => settings.updateMeals(RESOURCES_ROOT, meals));
