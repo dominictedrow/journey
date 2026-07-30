@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "electron": "electron ."
+    "electron": "electron .",
+    "dist": "npm run build && electron-builder --mac"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -22,5 +23,24 @@
     "electron@33.4.11": true,
     "esbuild@0.25.12": true,
     "fsevents@2.3.3": true
+  },
+  "build": {
+    "appId": "com.dom.cwork",
+    "productName": "cwork",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "app/**/*",
+      "dist/**/*"
+    ],
+    "extraResources": [
+      { "from": "skills", "to": "skills" },
+      { "from": "scripts", "to": "scripts" }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg"]
+    }
   }
 }

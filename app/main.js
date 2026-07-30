@@ -8,6 +8,14 @@ const db = require('./db');
 const isDev = !app.isPackaged;
 const DEV_SERVER_URL = 'http://localhost:5173';
 
+// Where `skills/` and `scripts/` actually live on disk: the repo root in
+// dev, or the packaged app's Resources dir (see the `extraResources` entries
+// in package.json's `build` config) once built by electron-builder. Needed
+// because `conda run` spawns a real OS process that reads skills/*.py off
+// disk directly — it can't reach into an asar archive the way Electron's
+// own `require()`/`loadFile()` can.
+const RESOURCES_ROOT = isDev ? path.join(__dirname, '..') : process.resourcesPath;
+
 // Vite dev mode injects its React Fast Refresh preamble as an inline
 // <script> tag, so script-src needs 'unsafe-inline' in dev only — the
 // production build (loaded from disk, no dev server) has no inline scripts
@@ -96,7 +104,7 @@ ipcMain.handle('skills:run', (event, id, input) => {
   }
 
   return new Promise((resolve) => {
-    const child = spawn('conda', args, { shell: false, cwd: path.join(__dirname, '..') });
+    const child = spawn('conda', args, { shell: false, cwd: RESOURCES_ROOT });
     let stdout = '';
     let stderr = '';
 
