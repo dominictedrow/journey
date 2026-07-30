@@ -31,6 +31,22 @@ CREATE TABLE IF NOT EXISTS assignments (
     done        INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS delivered_items (
+    item_hash   TEXT PRIMARY KEY,
+    skill       TEXT NOT NULL,
+    delivered_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS release_items (
+    category      TEXT NOT NULL,
+    item          TEXT NOT NULL,
+    date          TEXT,
+    confidence    TEXT,
+    source_url    TEXT,
+    checked_month TEXT,
+    PRIMARY KEY (category, item)
+);
 """
 # `skill_runs`/`classes`/`assignments` are also created (idempotently) by
 # app/db.js, since the Electron main process talks to this same file directly
