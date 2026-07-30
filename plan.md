@@ -152,6 +152,32 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 ---
 
+## Phase 5 — proposed skills (not started; pending Dom's go-ahead)
+
+Six candidates surfaced from a review of the shipped app, chosen because each fits the existing architecture with zero new API keys and no scraping/auth. None of these are built — this section is the plan for slotting one in once Dom picks which, in what order.
+
+| Skill | Kind | Data source | Claude calls | Notes |
+|---|---|---|---|---|
+| `assignments-prep` | on-demand | local SQLite (existing `classes`/`assignments` tables) | 1 | Gives the one zero-Claude corner of the app (Assignments) a judgment layer: reads what's already in the DB, asks Claude to turn the nearest due assignment into a study plan. No new network host, no new IPC beyond one read + one `claude.ask()` — reuses `db.js` exactly as `skills:lastResults` does today. |
+| `weather` | scheduled, daily | `api.weather.gov` (NOAA — free, keyless, US government) | 0–1 | Raw forecast needs zero Claude calls; a "plan your day around this" framing adds one. Reuses the home lat/lon already in `config.json` from the `places`/Settings work — no new Settings field. Requires adding `api.weather.gov` to `_lib/net.py`'s allowlist, the first addition to that list since `places` added `overpass-api.de`. |
+| `trips` | on-demand | Overpass (same host `places` already uses) + Claude web search | 2 | Same shape as `places` — wider radius, "weekend getaway within N hours" framing instead of "near me." No new dependencies or hosts; could plausibly share most of `places`' code rather than duplicate it. |
+| `gifts` | scheduled, weekly | local SQLite (new `people`/`occasions` table) + Claude web search | 1 | Manual tracker like Assignments (person, occasion, date) plus one weekly scheduled call surfacing "X's birthday is in 2 weeks, here are 3 ideas." Needs two new SQLite tables + IPC handlers in `db.js` (mirroring `classes`/`assignments`) and a small UI to maintain the list. |
+| `reads` | scheduled, monthly | Claude web search | 1 | Book-world sibling of `concepts` — same repeat-avoidance-by-recent-history trick (name the last ~N delivered titles in the prompt so Claude doesn't repeat itself). |
+| `wishlist` | on-demand or monthly | Claude web search | 1 | Sibling of `releases` but for items Dom names instead of the fixed eight categories ("is the PS5 Pro restocked," "did that jacket go on sale"). A pure on-demand text-field version needs no new storage (like `places`/`projects`); an ongoing-tracking version would need a small list like `gifts`. |
+
+### Open questions before building any of these
+
+- Which of the six (if any), and in what order?
+- `gifts` and any list-backed `wishlist` both want a small manually-maintained list — worth generalizing into one "Lists" tab/table pattern instead of building two bespoke ones?
+- `weather`: a daily scheduled card on Home (like `concepts`/`releases`), or on-demand only?
+- `wishlist`: one-shot on-demand query, or a persisted list checked on a schedule?
+
+### Incremental cost per skill
+
+Same shape as Phase 2: each approved skill is Python plus one `app/registry.js` line, no new UI framework. `weather` needs one `_lib/net.py` allowlist entry. `gifts` and a list-backed `wishlist` additionally need one new SQLite table pair (mirroring `classes`/`assignments`) and either a new tab or a Settings sub-section to manage the list.
+
+---
+
 ## Claude token discipline
 
 | Skill | Claude calls per run | What it sees |
@@ -244,6 +270,12 @@ Main process, preload, registry, theme, `SkillOutput.jsx`, Home, the generic on-
 
 **Phase 3 — Scheduling, packaging, docs**
 `scripts/schedule.py` writes the launchd plists (for `concepts`/`releases`; Assignments needs no schedule, it's manual); `electron-builder` produces a signed-if-possible `.app` and DMG; README, SECURITY.md, screenshots.
+
+**Phase 4 — Settings tab**
+`ui/tabs/Settings.jsx` went from an "Empty" stub (deferred at Phase 1) to actually editing the two configs that needed hand-editing: home coordinate and meal macros. Both route through validated IPC (`app/settings.js`) into `~/Library/Application Support/cwork/config.json`, never into a tracked or packaged file — `skills/meals/config.json` stays a read-only shipped default template, exactly like `places` already treated the home coordinate.
+
+**Phase 5 — proposed additional skills (not started)**
+See "Phase 5 — proposed skills" above. Blocked on Dom picking which of the six to build; each one is scoped to roughly the same size as a Phase 2 skill.
 
 ---
 
