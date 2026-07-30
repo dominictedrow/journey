@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 ALLOWED_HOSTS = {
     "overpass-api.de",
+    "api.weather.gov",
 }
 
 _TIMEOUT = 15

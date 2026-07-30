@@ -152,29 +152,32 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 ---
 
-## Phase 5 — proposed skills (not started; pending Dom's go-ahead)
+## Phase 5 — additional skills
 
-Six candidates surfaced from a review of the shipped app, chosen because each fits the existing architecture with zero new API keys and no scraping/auth. None of these are built — this section is the plan for slotting one in once Dom picks which, in what order.
+Six candidates surfaced from a review of the shipped app, chosen because each fit the existing architecture with zero new API keys and no scraping/auth. Dom picked three; the other three were dropped rather than built speculatively.
+
+**Built, in order: `assignments-prep` → `weather` → `wishlist`.**
 
 | Skill | Kind | Data source | Claude calls | Notes |
 |---|---|---|---|---|
-| `assignments-prep` | on-demand | local SQLite (existing `classes`/`assignments` tables) | 1 | Gives the one zero-Claude corner of the app (Assignments) a judgment layer: reads what's already in the DB, asks Claude to turn the nearest due assignment into a study plan. No new network host, no new IPC beyond one read + one `claude.ask()` — reuses `db.js` exactly as `skills:lastResults` does today. |
-| `weather` | scheduled, daily | `api.weather.gov` (NOAA — free, keyless, US government) | 0–1 | Raw forecast needs zero Claude calls; a "plan your day around this" framing adds one. Reuses the home lat/lon already in `config.json` from the `places`/Settings work — no new Settings field. Requires adding `api.weather.gov` to `_lib/net.py`'s allowlist, the first addition to that list since `places` added `overpass-api.de`. |
-| `trips` | on-demand | Overpass (same host `places` already uses) + Claude web search | 2 | Same shape as `places` — wider radius, "weekend getaway within N hours" framing instead of "near me." No new dependencies or hosts; could plausibly share most of `places`' code rather than duplicate it. |
-| `gifts` | scheduled, weekly | local SQLite (new `people`/`occasions` table) + Claude web search | 1 | Manual tracker like Assignments (person, occasion, date) plus one weekly scheduled call surfacing "X's birthday is in 2 weeks, here are 3 ideas." Needs two new SQLite tables + IPC handlers in `db.js` (mirroring `classes`/`assignments`) and a small UI to maintain the list. |
-| `reads` | scheduled, monthly | Claude web search | 1 | Book-world sibling of `concepts` — same repeat-avoidance-by-recent-history trick (name the last ~N delivered titles in the prompt so Claude doesn't repeat itself). |
-| `wishlist` | on-demand or monthly | Claude web search | 1 | Sibling of `releases` but for items Dom names instead of the fixed eight categories ("is the PS5 Pro restocked," "did that jacket go on sale"). A pure on-demand text-field version needs no new storage (like `places`/`projects`); an ongoing-tracking version would need a small list like `gifts`. |
+| `assignments_prep` | on-demand | local SQLite (existing `classes`/`assignments` tables) | 1 | Gives the one zero-Claude corner of the app (Assignments) a judgment layer: reads the nearest undone assignment (earliest `due_date`, overdue included) via `_lib/store.py`, asks Claude for 3–6 concrete steps plus a "start here" action. No new network host, no new IPC — reuses the same SQLite file `db.js`'s CRUD writes to. |
+| `weather` | scheduled, daily (6:30 AM, ahead of `concepts` at 7:00) | `api.weather.gov` (NOAA — free, keyless, US government) | 1 | Two NOAA calls (resolve gridpoint from home lat/lon, then fetch the period forecast) need zero Claude calls; a "plan your day around this" framing pass adds one, and degrades gracefully (forecast still renders) if that call fails. Reuses the home coordinate already in `config.json` from the `places`/Settings work — no new Settings field. Added `api.weather.gov` to `_lib/net.py`'s allowlist, the first addition since `places` added `overpass-api.de`. |
+| `wishlist` | on-demand | Claude web search | 1 | Sibling of `releases` but for one item Dom names instead of the fixed eight categories ("is the PS5 Pro restocked," "did that jacket go on sale"). Built as the pure one-shot query variant discussed below — no new storage, same shape as `places`/`projects`. |
 
-### Open questions before building any of these
+**Dropped (not built):**
 
-- Which of the six (if any), and in what order?
-- `gifts` and any list-backed `wishlist` both want a small manually-maintained list — worth generalizing into one "Lists" tab/table pattern instead of building two bespoke ones?
-- `weather`: a daily scheduled card on Home (like `concepts`/`releases`), or on-demand only?
-- `wishlist`: one-shot on-demand query, or a persisted list checked on a schedule?
+- `trips` — same shape as `places` (Overpass + wider radius, "weekend getaway" framing) but not picked; `places` already covers the "find me somewhere" need closely enough that a second skill wasn't worth the duplication risk right now.
+- `gifts` — would have needed two new SQLite tables (`people`/`occasions`) and a small list-maintenance UI; not picked, so the "generalize into a Lists pattern" question below never had a second consumer and was dropped along with it.
+- `reads` — book-world sibling of `concepts`; not picked.
 
-### Incremental cost per skill
+### Decisions made
 
-Same shape as Phase 2: each approved skill is Python plus one `app/registry.js` line, no new UI framework. `weather` needs one `_lib/net.py` allowlist entry. `gifts` and a list-backed `wishlist` additionally need one new SQLite table pair (mirroring `classes`/`assignments`) and either a new tab or a Settings sub-section to manage the list.
+- **`weather` is a daily scheduled card on Home**, not on-demand-only — same pattern as `concepts`/`releases`, scheduled 30 minutes ahead of `concepts` so both are ready before Dom's day starts.
+- **`wishlist` is a one-shot on-demand query**, not a persisted list — Dom types an item, gets a status check, nothing is stored. Since `gifts` wasn't built either, the "generalize into one Lists pattern" question is moot for now; revisit if a list-backed skill actually gets proposed later.
+
+### Incremental cost per skill (actual)
+
+Matched the Phase 2 shape: each skill is a `skills/<id>/__main__.py` plus one `app/registry.js` entry, no new UI code (the generic on-demand tab and Home already render any registry entry). `weather` was the only one needing a `_lib/net.py` allowlist change. `scripts/schedule.py install` still needs to be (re-)run to pick up `weather`'s new launchd agent — not run automatically as part of this build, since it's a persistent system-level change outside the repo.
 
 ---
 
@@ -274,8 +277,8 @@ Main process, preload, registry, theme, `SkillOutput.jsx`, Home, the generic on-
 **Phase 4 — Settings tab**
 `ui/tabs/Settings.jsx` went from an "Empty" stub (deferred at Phase 1) to actually editing the two configs that needed hand-editing: home coordinate and meal macros. Both route through validated IPC (`app/settings.js`) into `~/Library/Application Support/cwork/config.json`, never into a tracked or packaged file — `skills/meals/config.json` stays a read-only shipped default template, exactly like `places` already treated the home coordinate.
 
-**Phase 5 — proposed additional skills (not started)**
-See "Phase 5 — proposed skills" above. Blocked on Dom picking which of the six to build; each one is scoped to roughly the same size as a Phase 2 skill.
+**Phase 5 — additional skills**
+`assignments_prep`, `weather`, `wishlist` — see "Phase 5 — additional skills" above. Each is Python plus one registry line, same size as a Phase 2 skill; `weather` also added one `_lib/net.py` allowlist entry.
 
 ---
 

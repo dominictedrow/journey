@@ -41,4 +41,23 @@ module.exports = [
     kind: 'on-demand',
     inputs: [{ name: 'craving', label: 'Craving (optional)', placeholder: 'e.g. chicken' }],
   },
+  {
+    id: 'weather',
+    label: 'Weather',
+    kind: 'scheduled',
+    schedule: { hour: 6, minute: 30 }, // daily 6:30 AM, ahead of concepts at 7:00
+    inputs: [],
+  },
+  {
+    id: 'assignments_prep',
+    label: 'Assignments Prep',
+    kind: 'on-demand',
+    inputs: [],
+  },
+  {
+    id: 'wishlist',
+    label: 'Wishlist',
+    kind: 'on-demand',
+    inputs: [{ name: 'item', label: 'Item', placeholder: 'e.g. PS5 Pro restock' }],
+  },
 ];
