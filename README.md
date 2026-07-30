@@ -24,6 +24,8 @@ code.
 Plus a manual **Classes & Assignments** tracker (add/edit/delete, due-date
 grouping) — plain local CRUD, no scraping, no external calls.
 
+![The Meals skill running in the app, showing macro-constrained meal ideas and recipes](docs/screenshot-meals.png)
+
 ## Setup
 
 Requirements: [conda](https://docs.conda.io), Node 20+, and the
