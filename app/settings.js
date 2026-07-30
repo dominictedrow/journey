@@ -1,11 +1,26 @@
-// Direct fs read/write for the two files Settings edits:
-//   - ~/Library/Application Support/cwork/config.json  (home coordinate — read by skills/places)
-//   - skills/meals/config.json                          (macro constraints — read by skills/meals)
-// Same spirit as db.js: plain local CRUD, validated here, no shell/Python round-trip.
+// Direct fs read/write for the shared config Settings edits:
+//   ~/Library/Application Support/cwork/config.json — holds both "home"
+//   (read by skills/places) and "meals" (read by skills/meals as an
+//   override). Both live outside the repo and outside the packaged app's
+//   Resources dir on purpose: skills/meals/config.json ships as the
+//   default template only and is never written to — it's a tracked file
+//   in dev and lives inside the code-signed .app bundle once packaged, so
+//   writing there would dirty git in dev and invalidate the bundle's
+//   signature (or get silently overwritten by a future reinstall) in prod.
+// Same spirit as db.js: plain local CRUD, validated here, no shell/Python
+// round-trip.
 
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+
+const DEFAULT_MEALS = {
+  protein_min_g: 40,
+  calorie_min: 500,
+  calorie_max: 900,
+  required_vitamins: [],
+  avoid: [],
+};
 
 function configPath() {
   const dir = path.join(os.homedir(), 'Library', 'Application Support', 'cwork');
@@ -13,7 +28,9 @@ function configPath() {
   return path.join(dir, 'config.json');
 }
 
-function mealsConfigPath(resourcesRoot) {
+// The shipped default template — read-only, never written to. Used only to
+// pre-fill Settings the first time, before Dom has ever saved an override.
+function mealsDefaultsPath(resourcesRoot) {
   return path.join(resourcesRoot, 'skills', 'meals', 'config.json');
 }
 
@@ -27,13 +44,7 @@ function readJson(file, fallback) {
 
 function getSettings(resourcesRoot) {
   const config = readJson(configPath(), {});
-  const meals = readJson(mealsConfigPath(resourcesRoot), {
-    protein_min_g: 40,
-    calorie_min: 500,
-    calorie_max: 900,
-    required_vitamins: [],
-    avoid: [],
-  });
+  const meals = config.meals || readJson(mealsDefaultsPath(resourcesRoot), DEFAULT_MEALS);
   return { home: config.home || null, meals };
 }
 
@@ -56,7 +67,7 @@ function updateHome(resourcesRoot, home) {
   return config.home;
 }
 
-function updateMeals(resourcesRoot, meals) {
+function updateMeals(meals) {
   const { protein_min_g, calorie_min, calorie_max, required_vitamins, avoid } = meals || {};
   if (typeof protein_min_g !== 'number' || !Number.isFinite(protein_min_g) || protein_min_g < 0) {
     throw new Error('protein_min_g must be a non-negative number');
@@ -81,7 +92,10 @@ function updateMeals(resourcesRoot, meals) {
     required_vitamins: required_vitamins.map((v) => v.trim()),
     avoid: avoid.map((v) => v.trim()),
   };
-  fs.writeFileSync(mealsConfigPath(resourcesRoot), JSON.stringify(out, null, 2) + '\n');
+  const file = configPath();
+  const config = readJson(file, {});
+  config.meals = out;
+  fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
   return out;
 }
 

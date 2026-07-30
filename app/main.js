@@ -190,4 +190,4 @@ ipcMain.handle('settings:get', () => settings.getSettings(RESOURCES_ROOT));
 
 ipcMain.handle('settings:updateHome', (event, home) => settings.updateHome(RESOURCES_ROOT, home));
 
-ipcMain.handle('settings:updateMeals', (event, meals) => settings.updateMeals(RESOURCES_ROOT, meals));
+ipcMain.handle('settings:updateMeals', (event, meals) => settings.updateMeals(meals));

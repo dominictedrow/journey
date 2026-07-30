@@ -11,6 +11,14 @@ function fromCsv(str) {
     .filter(Boolean);
 }
 
+// Number('') is 0, not NaN — a blank field would otherwise silently save
+// as a valid-looking 0 instead of failing validation. Blank -> NaN so the
+// main-process range/finite checks actually reject it.
+function numOrNaN(str) {
+  const trimmed = String(str).trim();
+  return trimmed === '' ? NaN : Number(trimmed);
+}
+
 export default function Settings() {
   const [loaded, setLoaded] = useState(false);
   const [home, setHome] = useState({ label: '', lat: '', lon: '' });
@@ -47,8 +55,8 @@ export default function Settings() {
     try {
       await window.cwork.settings.updateHome({
         label: home.label,
-        lat: Number(home.lat),
-        lon: Number(home.lon),
+        lat: numOrNaN(home.lat),
+        lon: numOrNaN(home.lon),
       });
       setHomeStatus({ ok: true, text: 'Saved — places will use this as "near me".' });
     } catch (err) {
@@ -61,9 +69,9 @@ export default function Settings() {
     setMealsStatus(null);
     try {
       await window.cwork.settings.updateMeals({
-        protein_min_g: Number(meals.protein_min_g),
-        calorie_min: Number(meals.calorie_min),
-        calorie_max: Number(meals.calorie_max),
+        protein_min_g: numOrNaN(meals.protein_min_g),
+        calorie_min: numOrNaN(meals.calorie_min),
+        calorie_max: numOrNaN(meals.calorie_max),
         required_vitamins: fromCsv(meals.required_vitamins),
         avoid: fromCsv(meals.avoid),
       });
@@ -100,6 +108,7 @@ export default function Settings() {
               placeholder="e.g. Bay Ho, San Diego, CA"
               value={home.label}
               onChange={(e) => setHome((h) => ({ ...h, label: e.target.value }))}
+              required
             />
           </label>
           <label>
@@ -110,6 +119,7 @@ export default function Settings() {
               placeholder="32.8239077"
               value={home.lat}
               onChange={(e) => setHome((h) => ({ ...h, lat: e.target.value }))}
+              required
             />
           </label>
           <label>
@@ -120,6 +130,7 @@ export default function Settings() {
               placeholder="-117.2087893"
               value={home.lon}
               onChange={(e) => setHome((h) => ({ ...h, lon: e.target.value }))}
+              required
             />
           </label>
           <button className="btn" type="submit">
@@ -140,6 +151,7 @@ export default function Settings() {
               min="0"
               value={meals.protein_min_g}
               onChange={(e) => setMeals((m) => ({ ...m, protein_min_g: e.target.value }))}
+              required
             />
           </label>
           <label>
@@ -149,6 +161,7 @@ export default function Settings() {
               min="0"
               value={meals.calorie_min}
               onChange={(e) => setMeals((m) => ({ ...m, calorie_min: e.target.value }))}
+              required
             />
           </label>
           <label>
@@ -158,6 +171,7 @@ export default function Settings() {
               min="0"
               value={meals.calorie_max}
               onChange={(e) => setMeals((m) => ({ ...m, calorie_max: e.target.value }))}
+              required
             />
           </label>
           <label>

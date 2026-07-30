@@ -23,8 +23,25 @@ from .._lib import claude, envelope
 CONFIG_PATH = Path(__file__).parent / "config.json"
 
 
+def _shared_config_path():
+    """Mirrors places' _config_path() — same shared app-support config.json."""
+    return Path.home() / "Library" / "Application Support" / "cwork" / "config.json"
+
+
 def load_config():
-    with open(CONFIG_PATH) as f:
+    """Prefer Dom's Settings-tab override (the "meals" key in the shared
+    app config.json) over the shipped default template. Settings never
+    writes to CONFIG_PATH itself — see app/settings.js — since that file
+    is tracked in dev and lives inside the packaged app bundle in prod.
+    """
+    try:
+        with open(_shared_config_path(), encoding="utf-8") as f:
+            shared = json.load(f)
+        if "meals" in shared:
+            return shared["meals"]
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -104,28 +121,41 @@ def main():
     parser.add_argument("--input", default="{}")
     args = parser.parse_args()
 
-    payload = json.loads(args.input)
+    try:
+        payload = json.loads(args.input)
+    except json.JSONDecodeError as e:
+        envelope.emit("meals", ok=False, summary="Invalid --input JSON", sections=[], error=str(e))
+        return
     craving = (payload.get("craving") or "").strip()
 
-    config = load_config()
+    try:
+        config = load_config()
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        envelope.emit(
+            "meals",
+            ok=False,
+            summary="Could not load meals config",
+            sections=[],
+            error=f"{type(e).__name__}: {e}",
+        )
+        return
 
     envelope.progress("meals: loaded config", config)
     envelope.progress(f"meals: asking Claude (craving={craving!r})")
 
     prompt = build_prompt(config, craving)
-    response = claude.ask(prompt)
-
     try:
+        response = claude.ask(prompt)
         parsed = _parse_claude_json(response["result"])
         candidate_meals = parsed.get("meals", [])
-    except (KeyError, json.JSONDecodeError) as e:
-        envelope.progress(f"meals: failed to parse Claude response: {e}")
+    except Exception as e:  # noqa: BLE001 - skill must always emit a valid envelope, never crash bare
+        envelope.progress(f"meals: failed: {e}")
         envelope.emit(
             "meals",
             ok=False,
-            summary="Claude response could not be parsed as JSON",
+            summary="Claude call or response parsing failed",
             sections=[],
-            error=str(e),
+            error=f"{type(e).__name__}: {e}",
         )
         return
 
