@@ -24,16 +24,6 @@ module.exports = [
     inputs: [],
   },
   {
-    id: 'cold_email',
-    label: 'Cold Email',
-    kind: 'on-demand',
-    inputs: [
-      { name: 'template_path', label: 'Template file', placeholder: '/path/to/template.txt' },
-      { name: 'contacts_csv_path', label: 'Contacts CSV', placeholder: '/path/to/contacts.csv' },
-      { name: 'mode', label: 'Mode', placeholder: 'preview or draft' },
-    ],
-  },
-  {
     id: 'projects',
     label: 'Projects',
     kind: 'on-demand',

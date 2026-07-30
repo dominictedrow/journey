@@ -1,8 +1,8 @@
 # Security model
 
-cwork runs on one person's Mac, does a fair amount of authenticated
-internet access (X, Gmail, Overpass), and is source-available on GitHub.
-This document is what that tradeoff looks like in practice.
+cwork runs on one person's Mac, does a fair amount of internet access
+(Claude web search, Overpass), and is source-available on GitHub. This
+document is what that tradeoff looks like in practice.
 
 ## Electron hardening
 
@@ -29,11 +29,11 @@ nowhere in the codebase.
 
 ## Secrets never touch the repo
 
-- Any OAuth tokens live in `~/Library/Application Support/cwork/`, outside
-  the repo, written `0600`/`0700`.
-- The Gmail token is written to the macOS Keychain via `security` CLI
-  (`skills/_lib/secrets.py`), not to a file.
-- `.gitignore` excludes `data/`, `.auth/`, `*.env`, and `contacts*.csv`.
+- Any tokens a future skill needs go through `skills/_lib/secrets.py`
+  (macOS Keychain via the `security` CLI) — nothing currently in the
+  codebase stores a secret in a file, but that helper exists so nothing
+  ever has to.
+- `.gitignore` excludes `data/`, `.auth/`, and `*.env`.
 - There is no API key and no stored password in the default
   configuration — Claude is invoked through the already-authenticated
   `claude -p` CLI, and Overpass needs no key. This is also why an earlier,
@@ -61,16 +61,9 @@ this client, so they don't appear on the allowlist at all.
   re-validated in Python — Claude's arithmetic is not trusted as the
   source of truth.
 
-## cold_email is draft-only by construction
-
-`skills/cold_email` has exactly one code path that touches the Gmail API
-(`mode: "draft"`), and it only ever calls `drafts().create()` — never
-`send()`. Nothing is emailed without Dom opening Gmail and clicking send
-himself. `--dry-run`/preview mode has no Gmail dependency at all.
-
 ## Before every push
 
 ```bash
-git status --ignored                                            # no session/token/CSV files staged
+git status --ignored                                            # no session/token files staged
 grep -rE "(sk-|ya29\.|AIza|BEGIN .*PRIVATE)" .                   # should be empty over the tracked tree
 ```

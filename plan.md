@@ -28,7 +28,6 @@ Decision: **no portal scraping, no automated grades/performance tracking.** Repl
 | App shell | Electron + React + Vite (no new toolchain; Node already present) |
 | Claude runtime | `claude -p` headless CLI — $0 marginal cost, no API key to leak |
 | Concepts source | Claude web search (X/Twitter, arXiv, Hacker News, GitHub, HuggingFace) — a personal X login was tried and dropped, see below |
-| Cold email | Gmail API, **drafts only** — Dom reviews and sends |
 | Places / meals | OpenStreetMap Overpass + Claude web search — no API keys, no billing |
 | Scheduling | macOS `launchd` — runs whether or not the app is open |
 | Meal macros | `skills/meals/config.json` with defaults, editable from Settings |
@@ -92,12 +91,10 @@ c_work/
 │   │   └── secrets.py        # macOS Keychain via `security` CLI
 │   ├── concepts/             # Claude web search → 2 AI + 2 SWE deep dives
 │   ├── releases/             # monthly release radar
-│   ├── cold_email/           # template × CSV → Gmail drafts
 │   ├── projects/             # AI concept → applied project ideas
 │   ├── places/               # Overpass → ranked spots
 │   └── meals/                # macro-filtered meal ideas + config.json
 ├── scripts/
-│   ├── auth_gmail.py         # one-time Gmail OAuth consent
 │   └── schedule.py           # install/uninstall launchd agents
 ├── SECURITY.md
 ├── README.md
@@ -106,7 +103,7 @@ c_work/
 └── package.json
 ```
 
-`data/`, `.auth/`, `*.env`, and `contacts*.csv` are gitignored. Session state and tokens live in `~/Library/Application Support/cwork/`, **outside the repo**, mode `0600`.
+`data/`, `.auth/`, and `*.env` are gitignored. Session state and tokens live in `~/Library/Application Support/cwork/`, **outside the repo**, mode `0600`.
 
 ### Skill invocation contract
 
@@ -133,7 +130,7 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 ---
 
-## The six skills
+## The five skills
 
 ### Scheduled (results land on Home)
 
@@ -145,13 +142,13 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 ### On-demand (own tab, run button)
 
-**3. `cold_email`** — Dom pastes an email template with `{{variables}}` and uploads/points at a contacts CSV. Script renders template × contacts with `string.Template`, Claude optionally personalizes one line per contact, and the result is written as **Gmail drafts**. UI shows a preview table before anything is created. `--dry-run` renders previews with no Gmail dependency at all.
+> **Cold email — dropped.** The original plan had a fourth on-demand skill, `cold_email`: an email template + contacts CSV rendered with `string.Template`, Claude personalizing one opening line per contact, written out as Gmail **drafts only** (never sent automatically). Built and working in Phase 2, but dropped in Phase 4 — before the Gmail OAuth client was ever set up — per Dom's call. `skills/cold_email/`, `scripts/auth_gmail.py`, and the `gmail` optional dependency extra were removed as a result.
 
-**4. `projects`** — Dom names AI concepts or models to grow into. Claude returns 3–5 concrete buildable projects per concept, each with a scope, the specific skill it exercises, a starter repo/dataset, and a difficulty rating.
+**3. `projects`** — Dom names AI concepts or models to grow into. Claude returns 3–5 concrete buildable projects per concept, each with a scope, the specific skill it exercises, a starter repo/dataset, and a difficulty rating.
 
-**5. `places`** — Dom types a natural description ("calm study spot"). Claude converts the description into Overpass QL tags (e.g. `amenity=cafe` + `internet_access=yes` + quiet-leaning tags); the script queries Overpass, filters by distance from Dom's saved home coordinates, and returns a ranked list with map links. Defaults to "near me" unless an area is named.
+**4. `places`** — Dom types a natural description ("calm study spot"). Claude converts the description into Overpass QL tags (e.g. `amenity=cafe` + `internet_access=yes` + quiet-leaning tags); the script queries Overpass, filters by distance from Dom's saved home coordinates, and returns a ranked list with map links. Defaults to "near me" unless an area is named.
 
-**6. `meals`** — Dom optionally states a craving ("chicken"). Script loads hard constraints from `skills/meals/config.json` (protein floor, calorie band, required vitamins, avoid-list); Claude proposes meals that satisfy them, with macros and a short recipe. Constraints are enforced in the prompt *and* re-validated in Python — Claude's arithmetic is not trusted.
+**5. `meals`** — Dom optionally states a craving ("chicken"). Script loads hard constraints from `skills/meals/config.json` (protein floor, calorie band, required vitamins, avoid-list); Claude proposes meals that satisfy them, with macros and a short recipe. Constraints are enforced in the prompt *and* re-validated in Python — Claude's arithmetic is not trusted.
 
 ---
 
@@ -159,10 +156,10 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 | Skill | Claude calls per run | What it sees |
 |---|---|---|
-| `concepts` | 1 | ~40 short post texts |
+| `concepts` | 1 | the prompt + recently-delivered concept names |
 | `releases` | 1 | search results only |
 | `places` | 2 | the query; then ~30 POI names |
-| `meals`, `projects`, `cold_email` | 1 | the prompt + config |
+| `meals`, `projects` | 1 | the prompt + config |
 | Classes & Assignments | **0** | — (plain CRUD) |
 
 Rules enforced in `_lib/claude.py`: never pass raw HTML; always request `--output-format json` against a declared schema; truncate any input over 8KB; cache identical prompts for 24h in SQLite.
@@ -187,18 +184,9 @@ Everything else uses the Python standard library:
 |---|---|
 | HTTP / JSON (Overpass) | `urllib.request` + `json` |
 | Storage | `sqlite3` |
-| CSV + templating | `csv`, `string.Template` |
 | Keychain, Claude CLI, notifications | `subprocess` |
 
-`playwright-python` was in this list from Phase 0 through most of Phase 2, as the authenticated HTTP client for `concepts`'s planned X-session reading. Removed once that approach was tried and dropped (see the "Personal X login" note above) — nothing else in the codebase used it.
-
-**Optional extra**, installed only if/when Gmail drafting is wanted:
-
-```bash
-pip install -e ".[gmail]"   # google-api-python-client, google-auth-oauthlib
-```
-
-`cold_email --dry-run` works with zero extra packages.
+`playwright-python` was in this list from Phase 0 through most of Phase 2, as the authenticated HTTP client for `concepts`'s planned X-session reading. Removed once that approach was tried and dropped (see the "Personal X login" note above) — nothing else in the codebase used it. `csv`/`string.Template` and the optional `gmail` extra (`google-api-python-client`, `google-auth-oauthlib`) were similarly dropped along with `cold_email` in Phase 4 (see the "Cold email — dropped" note above) — nothing else used them either.
 
 ### Node — 2 runtime, 4 dev
 
@@ -234,7 +222,7 @@ Given this goes on GitHub and does a lot of authenticated internet access:
 
 - **Electron hardening** — `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, strict CSP, all in-app navigation and `window.open` blocked, DevTools off in production.
 - **No arbitrary execution from the renderer.** IPC accepts a skill *id* only, validated against `app/registry.js`. Python is spawned with an argument array; `shell=True` appears nowhere.
-- **Secrets never touch the repo.** The Gmail token lives in `~/Library/Application Support/cwork/` at mode `0600`. Nothing is committed; `.gitignore` covers `data/`, `.auth/`, `*.env`, `contacts*.csv`.
+- **Secrets never touch the repo.** Anything a future skill stores via `skills/_lib/secrets.py` lives in the macOS Keychain, not a file. Nothing is committed; `.gitignore` covers `data/`, `.auth/`, and `*.env`.
 - **No API keys, no stored passwords** in the default configuration — the CLI-based Claude runtime and keyless Overpass choice mean there is nothing to leak. (This is also why the "store Dom's Google password for automated portal re-login" option was rejected — it would have been the one exception.)
 - **Outbound allowlist** in `_lib/net.py`; unexpected hosts raise rather than silently connect.
 - `SECURITY.md` documents the model; README setup uses placeholder data so the public repo contains none of Dom's personal information.
@@ -252,7 +240,7 @@ Each phase ends somewhere runnable.
 Main process, preload, registry, theme, `SkillOutput.jsx`, Home, the generic on-demand tab, and the Assignments tab (classes CRUD, assignment CRUD, due-date grouping). This phase needs no external auth at all and delivers a genuinely useful app on its own.
 
 **Phase 2 — Remaining skills**
-`concepts`, `releases`, `places`, `meals`, `projects`, `cold_email`. Each is Python plus one registry line — no additional UI work. (`concepts` originally planned a personal-X-login step here; tried and dropped in Phase 4 — see the note under "The six skills.")
+`concepts`, `releases`, `places`, `meals`, `projects`. Each is Python plus one registry line — no additional UI work. (`concepts` originally planned a personal-X-login step here, and a sixth skill `cold_email` also shipped in this phase; both were tried/built and then dropped in Phase 4 — see the notes under "The five skills.")
 
 **Phase 3 — Scheduling, packaging, docs**
 `scripts/schedule.py` writes the launchd plists (for `concepts`/`releases`; Assignments needs no schedule, it's manual); `electron-builder` produces a signed-if-possible `.app` and DMG; README, SECURITY.md, screenshots.
@@ -267,7 +255,6 @@ Nothing here blocks starting — these come up at specific phases and each takes
 |---|---|
 | Phase 1 | Your home address or neighborhood, for the `places` "near me" default. |
 | Phase 2 | Any changes to the default meal macros — the shipped defaults are protein ≥ 40 g, 500–900 cal, vitamins D/B12/Iron, no allergens. Also tell me any allergies. |
-| Phase 2 | For `cold_email`: your contacts CSV column names, and Gmail OAuth consent (one browser click). |
 
 ---
 

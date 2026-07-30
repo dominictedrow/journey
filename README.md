@@ -1,9 +1,9 @@
 # cwork
 
 A personal automation suite: a set of Claude-powered skills that handle
-recurring parts of daily life (learning digests, release watching, cold
-email, place/meal search), plus a native-feeling macOS app that runs them
-and displays their output. You never open a terminal to use it day to day.
+recurring parts of daily life (learning digests, release watching,
+place/meal search), plus a native-feeling macOS app that runs them and
+displays their output. You never open a terminal to use it day to day.
 
 Every skill is a small Python module that prints one JSON envelope; the app
 has exactly one renderer that understands that envelope. Adding a skill
@@ -16,7 +16,6 @@ code.
 |---|---|---|
 | `concepts` | scheduled, daily | Claude researches X/Twitter, arXiv, Hacker News, GitHub, and HuggingFace via web search, picks 2 AI + 2 software-engineering concepts worth a deep-dive, writes a brief for each. |
 | `releases` | scheduled, monthly | Checks upcoming releases across categories you care about (an album, a game set, a movie, a gadget — configure your own list) via Claude web search. |
-| `cold_email` | on-demand | Template + contacts CSV → personalized Gmail **drafts only**. Nothing is ever sent automatically. |
 | `projects` | on-demand | Turns a named concept/model into 3-5 concrete practice projects. |
 | `places` | on-demand | Natural-language query ("calm study spot") → ranked nearby places via OpenStreetMap. |
 | `meals` | on-demand | Macro-constrained meal ideas + recipes, constraints enforced in Python, not just prompted. |
@@ -54,12 +53,6 @@ npm run electron     # in another terminal, launches the app shell
   personal X timeline through an authenticated Playwright session —
   abandoned once X's bot detection flagged the automated browser as "not
   secure" at the login screen, the same wall the Parker Portal spike hit.)
-- **`cold_email`** (draft mode only — `--dry-run`/preview needs nothing) —
-  create a Desktop-app OAuth client with the Gmail API enabled at
-  https://console.cloud.google.com/apis/credentials, save its downloaded
-  JSON as `.auth/gmail_client_secret.json`, then run
-  `python scripts/auth_gmail.py` once. Requires the optional extra:
-  `pip install -e ".[gmail]"`.
 
 ## Running a skill directly
 
