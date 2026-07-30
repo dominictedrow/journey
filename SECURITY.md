@@ -29,9 +29,8 @@ nowhere in the codebase.
 
 ## Secrets never touch the repo
 
-- Playwright's X session and any OAuth tokens live in
-  `~/Library/Application Support/cwork/`, outside the repo, written
-  `0600`/`0700`.
+- Any OAuth tokens live in `~/Library/Application Support/cwork/`, outside
+  the repo, written `0600`/`0700`.
 - The Gmail token is written to the macOS Keychain via `security` CLI
   (`skills/_lib/secrets.py`), not to a file.
 - `.gitignore` excludes `data/`, `.auth/`, `*.env`, and `contacts*.csv`.
@@ -45,10 +44,10 @@ nowhere in the codebase.
 ## Outbound allowlist
 
 `skills/_lib/net.py` only permits requests to a fixed set of hosts
-(currently Overpass, arXiv, Hacker News, GitHub, and HuggingFace);
-anything else raises `DisallowedHostError` rather than silently
-connecting. `concepts`'s X access goes through a separate, purpose-built
-Playwright session rather than this general HTTP client.
+(currently just Overpass, for `places`); anything else raises
+`DisallowedHostError` rather than silently connecting. `concepts` and
+`releases` do their research through Claude's own web search instead of
+this client, so they don't appear on the allowlist at all.
 
 ## Claude token/data discipline
 

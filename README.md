@@ -14,7 +14,7 @@ code.
 
 | Skill | Kind | What it does |
 |---|---|---|
-| `concepts` | scheduled, daily | Reads your X timeline (+ configured lists), picks 2 AI + 2 software-engineering concepts worth a deep-dive, writes a brief for each. Falls back to arXiv/Hacker News/GitHub/HuggingFace if X isn't reachable. |
+| `concepts` | scheduled, daily | Claude researches X/Twitter, arXiv, Hacker News, GitHub, and HuggingFace via web search, picks 2 AI + 2 software-engineering concepts worth a deep-dive, writes a brief for each. |
 | `releases` | scheduled, monthly | Checks upcoming releases across categories you care about (an album, a game set, a movie, a gadget — configure your own list) via Claude web search. |
 | `cold_email` | on-demand | Template + contacts CSV → personalized Gmail **drafts only**. Nothing is ever sent automatically. |
 | `projects` | on-demand | Turns a named concept/model into 3-5 concrete practice projects. |
@@ -34,7 +34,6 @@ Requirements: [conda](https://docs.conda.io), Node 20+, and the
 
 ```bash
 conda env create -f environment.yml
-conda run -n c_work playwright install chromium
 
 npm install
 npm run dev          # UI dev server
@@ -50,12 +49,11 @@ npm run electron     # in another terminal, launches the app shell
   ```
 - **`meals`** — edit `skills/meals/config.json` (protein floor, calorie
   band, required vitamins, avoid-list) to match your own targets/allergies.
-- **`concepts`** — run `python scripts/auth_x.py` once to log into X in a
-  real (headed) browser window; the session is saved to
-  `~/Library/Application Support/cwork/x_profile`. Optionally list X list
-  URLs to also read from under `"concepts": {"x_lists": [...]}` in the same
-  `config.json` as above. If the saved session isn't valid at run time,
-  `concepts` automatically falls back to free sources instead of failing.
+- **`concepts`** — nothing to set up; Claude researches X/arXiv/HN/GitHub/HuggingFace
+  itself via web search each run. (An earlier version tried reading Dom's
+  personal X timeline through an authenticated Playwright session —
+  abandoned once X's bot detection flagged the automated browser as "not
+  secure" at the login screen, the same wall the Parker Portal spike hit.)
 - **`cold_email`** (draft mode only — `--dry-run`/preview needs nothing) —
   create a Desktop-app OAuth client with the Gmail API enabled at
   https://console.cloud.google.com/apis/credentials, save its downloaded

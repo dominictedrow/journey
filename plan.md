@@ -19,7 +19,7 @@ The original plan automated the Parker Portal (Blackbaud MySchoolApp) via a Play
 - A fully automated headless re-login was tested and gets partway (filling Blackbaud's login form correctly triggers the real Google SSO redirect) but stalls at Google's account chooser, which reported the account as **signed out** — meaning full automation would require storing Dom's actual Google password and fighting Google's bot-detection on a Workspace-for-Education account. Not worth it, and a different class of secret than anything else in this project.
 - Separately confirmed that `claude -p --chrome` **can** open a new tab that inherits Dom's real, already-logged-in Chrome session (same profile, same cookies) — so the mechanism isn't impossible. But building a robust, unattended daily digest around visually reading a live authenticated page was judged more fragile and costly than it's worth right now.
 
-Decision: **no portal scraping, no automated grades/performance tracking.** Replaced with a manual class/assignment tracker built directly into the app UI — see "Classes & Assignments" below. `docs/blackbaud_endpoints.md` and `scripts/auth_portal.py` (the spike artifacts) have been removed; `skills/_lib/browser.py` (generic Playwright persistent-context helper) is kept since `concepts` still needs it for X.
+Decision: **no portal scraping, no automated grades/performance tracking.** Replaced with a manual class/assignment tracker built directly into the app UI — see "Classes & Assignments" below. `docs/blackbaud_endpoints.md` and `scripts/auth_portal.py` (the spike artifacts) have been removed. `skills/_lib/browser.py` (generic Playwright persistent-context helper) was kept for `concepts`'s X access at the time, but was later also removed — see the "Personal X login" note under the six skills below, where `concepts` hit the same bot-detection wall.
 
 ### Decisions already made (from Q&A)
 
@@ -27,7 +27,7 @@ Decision: **no portal scraping, no automated grades/performance tracking.** Repl
 |---|---|
 | App shell | Electron + React + Vite (no new toolchain; Node already present) |
 | Claude runtime | `claude -p` headless CLI — $0 marginal cost, no API key to leak |
-| Concepts source | X via a logged-in Playwright session (primary), free feeds as fallback |
+| Concepts source | Claude web search (X/Twitter, arXiv, Hacker News, GitHub, HuggingFace) — a personal X login was tried and dropped, see below |
 | Cold email | Gmail API, **drafts only** — Dom reviews and sends |
 | Places / meals | OpenStreetMap Overpass + Claude web search — no API keys, no billing |
 | Scheduling | macOS `launchd` — runs whether or not the app is open |
@@ -87,18 +87,16 @@ c_work/
 │   ├── _lib/
 │   │   ├── envelope.py       # build/validate the JSON envelope
 │   │   ├── store.py          # sqlite3 (stdlib) — runs, classes, assignments
-│   │   ├── browser.py        # Playwright persistent-context helper (used by concepts/X)
 │   │   ├── claude.py         # subprocess → `claude -p`, JSON out
 │   │   ├── net.py            # urllib GET/JSON + outbound domain allowlist
 │   │   └── secrets.py        # macOS Keychain via `security` CLI
-│   ├── concepts/             # X session → 2 AI + 2 SWE deep dives
+│   ├── concepts/             # Claude web search → 2 AI + 2 SWE deep dives
 │   ├── releases/             # monthly release radar
 │   ├── cold_email/           # template × CSV → Gmail drafts
 │   ├── projects/             # AI concept → applied project ideas
 │   ├── places/               # Overpass → ranked spots
 │   └── meals/                # macro-filtered meal ideas + config.json
 ├── scripts/
-│   ├── auth_x.py             # one-time interactive X login
 │   ├── auth_gmail.py         # one-time Gmail OAuth consent
 │   └── schedule.py           # install/uninstall launchd agents
 ├── SECURITY.md
@@ -139,9 +137,9 @@ Replaces the abandoned Parker Portal scraping. Dom maintains his own class list 
 
 ### Scheduled (results land on Home)
 
-**1. `concepts`** — daily 7:00 AM. Playwright opens X with Dom's saved session, reads the home timeline plus any AI/SWE lists, and extracts ~40 candidate post texts. Script deduplicates against everything already delivered (SQLite). Claude then picks **2 AI + 2 software-engineering concepts** and writes a deep-dive brief for each: what it is, why it matters, the one paper or repo to read, and a 30-minute exercise.
+**1. `concepts`** — daily 7:00 AM. One `claude -p` call with web search (covering X/Twitter, arXiv, Hacker News, GitHub, and HuggingFace) picks **2 AI + 2 software-engineering concepts** worth a deep-dive and writes a brief for each: what it is, why it matters, the one paper or repo to read, and a 30-minute exercise. Avoids repeating a concept covered on a recent day by naming the last ~30 delivered concepts in the prompt and asking Claude not to repeat them.
 
-> Per Dom's call, X is primary. Because X breaks scrapers regularly, `concepts` degrades gracefully to free sources (arXiv RSS, Hacker News API, GitHub Trending, HuggingFace trending) and marks the envelope `"source": "fallback"` so the failure is visible, not silent. **Note:** the Parker Portal spike found that Playwright-based session auth can be much shorter-lived than a saved-cookie approach assumes (see "Parker Portal automation" above) — worth confirming early in Phase 2 that X's session behaves better, rather than assuming it does.
+> **Personal X login — investigated, dropped.** The original plan read Dom's own X timeline (+ any lists) via an authenticated Playwright session, degrading to the free sources above only as a fallback. Tried it in Phase 2/4: `scripts/auth_x.py` opened a real headed browser against a persistent profile, but X's bot detection flagged that automated profile as "not secure" right at the login screen — the same wall the Parker Portal spike hit with Blackbaud's Google SSO. Decision: drop personal-feed reading entirely rather than fight bot detection; Claude's own web search covers the same sources (plus X) without needing Dom's session at all, and runs reliably unattended at 7am regardless of whether Dom is logged into anything. `scripts/auth_x.py` and `skills/_lib/browser.py` (and the `playwright-python` dependency, since nothing else used it) were removed as dead code.
 
 **2. `releases`** — monthly, 1st at 9:00 AM. Checks upcoming releases in all eight of Dom's categories: Pokémon set, One Piece TCG set, MTG set, major-artist album, hyped sneaker, hyped tech, revolutionary AI model/concept, hyped movie. Runs mostly inside one `claude -p` call with web search, returning a strict JSON schema (`item, category, date, confidence, source_url`). Results cached so repeat months only re-check what changed.
 
@@ -173,7 +171,7 @@ Rules enforced in `_lib/claude.py`: never pass raw HTML; always request `--outpu
 
 ## Dependencies (deliberately minimal)
 
-### Conda — **two packages**
+### Conda — **just Python itself**
 
 ```yaml
 # environment.yml
@@ -181,22 +179,18 @@ name: c_work
 channels: [conda-forge]
 dependencies:
   - python=3.11
-  - playwright
 ```
-
-Then once: `playwright install chromium`.
 
 Everything else uses the Python standard library:
 
 | Need | Stdlib module used |
 |---|---|
-| HTTP / JSON (Overpass, feeds, APIs) | `urllib.request` + `json` |
+| HTTP / JSON (Overpass) | `urllib.request` + `json` |
 | Storage | `sqlite3` |
-| RSS parsing (fallback path) | `xml.etree.ElementTree` |
 | CSV + templating | `csv`, `string.Template` |
 | Keychain, Claude CLI, notifications | `subprocess` |
 
-Playwright is used as the authenticated HTTP client for `concepts` (`page.request.get()` carries session cookies) — **unverified whether X's session outlives the same short-token problem found with the Parker Portal**; confirm this early in Phase 2 rather than assume it. If it doesn't hold up, `concepts` may need the same "read via a live, already-logged-in tab" approach that worked for the portal investigation, instead of a separate automated Playwright profile.
+`playwright-python` was in this list from Phase 0 through most of Phase 2, as the authenticated HTTP client for `concepts`'s planned X-session reading. Removed once that approach was tried and dropped (see the "Personal X login" note above) — nothing else in the codebase used it.
 
 **Optional extra**, installed only if/when Gmail drafting is wanted:
 
@@ -240,7 +234,7 @@ Given this goes on GitHub and does a lot of authenticated internet access:
 
 - **Electron hardening** — `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, strict CSP, all in-app navigation and `window.open` blocked, DevTools off in production.
 - **No arbitrary execution from the renderer.** IPC accepts a skill *id* only, validated against `app/registry.js`. Python is spawned with an argument array; `shell=True` appears nowhere.
-- **Secrets never touch the repo.** Playwright session state and the Gmail token live in `~/Library/Application Support/cwork/` at mode `0600`. Nothing is committed; `.gitignore` covers `data/`, `.auth/`, `*.env`, `contacts*.csv`.
+- **Secrets never touch the repo.** The Gmail token lives in `~/Library/Application Support/cwork/` at mode `0600`. Nothing is committed; `.gitignore` covers `data/`, `.auth/`, `*.env`, `contacts*.csv`.
 - **No API keys, no stored passwords** in the default configuration — the CLI-based Claude runtime and keyless Overpass choice mean there is nothing to leak. (This is also why the "store Dom's Google password for automated portal re-login" option was rejected — it would have been the one exception.)
 - **Outbound allowlist** in `_lib/net.py`; unexpected hosts raise rather than silently connect.
 - `SECURITY.md` documents the model; README setup uses placeholder data so the public repo contains none of Dom's personal information.
@@ -258,7 +252,7 @@ Each phase ends somewhere runnable.
 Main process, preload, registry, theme, `SkillOutput.jsx`, Home, the generic on-demand tab, and the Assignments tab (classes CRUD, assignment CRUD, due-date grouping). This phase needs no external auth at all and delivers a genuinely useful app on its own.
 
 **Phase 2 — Remaining skills**
-`concepts` (with `scripts/auth_x.py` — confirm X's session survives closing the browser before building further on it), `releases`, `places`, `meals`, `projects`, `cold_email`. Each is Python plus one registry line — no additional UI work.
+`concepts`, `releases`, `places`, `meals`, `projects`, `cold_email`. Each is Python plus one registry line — no additional UI work. (`concepts` originally planned a personal-X-login step here; tried and dropped in Phase 4 — see the note under "The six skills.")
 
 **Phase 3 — Scheduling, packaging, docs**
 `scripts/schedule.py` writes the launchd plists (for `concepts`/`releases`; Assignments needs no schedule, it's manual); `electron-builder` produces a signed-if-possible `.app` and DMG; README, SECURITY.md, screenshots.
@@ -272,7 +266,6 @@ Nothing here blocks starting — these come up at specific phases and each takes
 | When | What I need |
 |---|---|
 | Phase 1 | Your home address or neighborhood, for the `places` "near me" default. |
-| Phase 2 | You log into X once in the browser I open. Also: which X lists (if any) I should read besides your timeline. |
 | Phase 2 | Any changes to the default meal macros — the shipped defaults are protein ≥ 40 g, 500–900 cal, vitamins D/B12/Iron, no allergens. Also tell me any allergies. |
 | Phase 2 | For `cold_email`: your contacts CSV column names, and Gmail OAuth consent (one browser click). |
 

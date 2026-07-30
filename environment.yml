@@ -2,6 +2,3 @@ name: c_work
 channels: [conda-forge]
 dependencies:
   - python=3.11
-  # NB: conda-forge's `playwright` is the Node driver only. `playwright-python`
-  # is the Python binding and pulls the matching driver in as a dependency.
-  - playwright-python

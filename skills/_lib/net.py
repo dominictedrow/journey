@@ -6,10 +6,6 @@ from urllib.parse import urlparse
 
 ALLOWED_HOSTS = {
     "overpass-api.de",
-    "export.arxiv.org",
-    "hacker-news.firebaseio.com",
-    "api.github.com",
-    "huggingface.co",
 }
 
 _TIMEOUT = 15
