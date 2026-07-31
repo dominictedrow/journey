@@ -16,6 +16,7 @@ from ingest import load_records
 from model import SignLSTM, build_model
 
 BATCH_SIZE = 16
+PATIENCE = 5
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_landmarks"
 DEFAULT_CHECKPOINT = Path(__file__).parent.parent / "models" / "checkpoint.pt"
 
@@ -47,7 +48,7 @@ def ctc_greedy_predict(log_probs: torch.Tensor, blank: int) -> torch.Tensor:
     predictions = []
     for row in frame_preds:
         non_blank = row[row != blank]
-        predictions.append(non_blank.mode().values if non_blank.numel() else torch.tensor(blank))
+        predictions.append(non_blank.mode().values if non_blank.numel() else torch.tensor(blank, device=row.device))
     return torch.stack(predictions)
 
 
@@ -88,14 +89,22 @@ def run_epoch(model: SignLSTM, loader, vocab_size: int, device: torch.device, op
     return total_loss / len(targets), accuracy, precision, recall
 
 
+def _is_improvement(val_loss: float, val_acc: float, best_val_loss: float, best_val_acc: float) -> bool:
+    """True if this epoch beat the best val loss or val accuracy seen so far --
+    either one counts as real progress and resets the early-stop patience counter.
+    """
+    return val_loss < best_val_loss or val_acc > best_val_acc
+
+
 def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: float,
-          clip_norm: float, checkpoint_path: Path = DEFAULT_CHECKPOINT) -> SignLSTM:
+          clip_norm: float, batch_size: int = BATCH_SIZE, patience: int = PATIENCE,
+          checkpoint_path: Path = DEFAULT_CHECKPOINT) -> SignLSTM:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     vocab = load_vocab()
     model = build_model().to(device)
 
-    train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, BATCH_SIZE)
-    val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, BATCH_SIZE, shuffle=False)
+    train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size)
+    val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size, shuffle=False)
 
     # Adam has no literal "momentum" knob -- beta1 plays the same role,
     # controlling how much of the running gradient average carries over
@@ -103,6 +112,7 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(momentum, 0.999))
     scheduler = ExponentialLR(optimizer, gamma=lr_scaling)
 
+    best_val_loss, best_val_acc, stall_epochs = float("inf"), 0.0, 0
     for epoch in range(1, epochs + 1):
         train_loss, train_acc, train_prec, train_rec = run_epoch(
             model, train_loader, len(vocab), device, optimizer, clip_norm=clip_norm)
@@ -110,13 +120,24 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
         scheduler.step()
 
         print(f"epoch {epoch}/{epochs} "
-              f"train: loss={train_loss:.4f} acc={train_acc:.4f} precision={train_prec:.4f} recall={train_rec:.4f} | "
-              f"val: loss={val_loss:.4f} acc={val_acc:.4f} precision={val_prec:.4f} recall={val_rec:.4f}")
+              f"train: loss={train_loss:.4f} acc={train_acc:.2%} precision={train_prec:.2%} recall={train_rec:.2%} | "
+              f"val: loss={val_loss:.4f} acc={val_acc:.2%} precision={val_prec:.2%} recall={val_rec:.2%}")
 
         # Saved every epoch, not just at the end -- a crash or interrupt on a
         # long run should still leave the latest weights on disk.
         torch.save(model.state_dict(), checkpoint_path)
         print(f"saved checkpoint to {checkpoint_path}")
+
+        # Early stopping: stop once val loss AND val accuracy have both sat
+        # still for `patience` epochs in a row -- either one moving is real
+        # progress and resets the counter.
+        improved = _is_improvement(val_loss, val_acc, best_val_loss, best_val_acc)
+        best_val_loss = min(best_val_loss, val_loss)
+        best_val_acc = max(best_val_acc, val_acc)
+        stall_epochs = 0 if improved else stall_epochs + 1
+        if stall_epochs >= patience:
+            print(f"stopping early: val loss/accuracy hasn't improved in {patience} epochs")
+            break
 
     return model
 
@@ -130,7 +151,7 @@ def _self_check():
             landmarks = [{"x": 0.1 * label_idx + 0.01 * i, "y": 0.2, "z": 0.0} for i in range(21)]
             records.append({"video": label, "label": label, "frame": f, "handedness": "Right", "landmarks": landmarks})
 
-    loader = make_dataloader(records, vocab, sequence_length=6, batch_size=3, shuffle=False)
+    loader = make_dataloader(records, vocab, sequence_length=6, batch_size=3, shuffle=False, num_workers=0)
     model = SignLSTM(vocab_size=len(vocab))
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
 
@@ -148,8 +169,16 @@ def _self_check():
     pre_clip_norm = nn.utils.clip_grad_norm_([p], max_norm=1.0)
     assert pre_clip_norm > 1.0
     assert torch.allclose(p.grad.norm(), torch.tensor(1.0), atol=1e-4)
+
+    # early-stop trigger: loss improving, or accuracy improving, both count as
+    # progress; only "neither moved" should signal a stall.
+    assert _is_improvement(val_loss=0.5, val_acc=0.10, best_val_loss=1.0, best_val_acc=0.20)  # loss dropped
+    assert _is_improvement(val_loss=1.5, val_acc=0.30, best_val_loss=1.0, best_val_acc=0.20)  # acc rose
+    assert not _is_improvement(val_loss=1.0, val_acc=0.20, best_val_loss=1.0, best_val_acc=0.20)  # neither moved
+
     print("self-check passed: one train step + one eval step ran end-to-end with "
-          "CTC loss and accuracy/precision/recall all in range, gradient clipping caps norm as expected")
+          "CTC loss and accuracy/precision/recall all in range, gradient clipping caps norm as expected, "
+          "and the early-stop improvement check reacts to loss/accuracy correctly")
 
 
 if __name__ == "__main__":
@@ -158,10 +187,13 @@ if __name__ == "__main__":
                          help="folder of *_landmarks.json files, split via data/split.json (default: data/raw_landmarks)")
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--lr-scaling", type=float, default=1.0,
                          help="per-epoch multiplicative LR decay (ExponentialLR gamma); 1.0 = constant LR")
     parser.add_argument("--momentum", type=float, default=0.9, help="Adam's beta1")
     parser.add_argument("--clip-norm", type=float, default=5.0, help="max gradient norm (clips exploding gradients)")
+    parser.add_argument("--patience", type=int, default=PATIENCE,
+                         help="stop early if val loss/accuracy hasn't improved in this many epochs")
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT,
                          help="where to save trained weights (default: models/checkpoint.pt)")
     parser.add_argument("--self-test", action="store_true", help="run a synthetic smoke test instead of training")
@@ -172,4 +204,4 @@ if __name__ == "__main__":
         sys.exit(0)
 
     train(args.data_dir, args.epochs, args.lr, args.lr_scaling, args.momentum,
-          args.clip_norm, args.checkpoint)
+          args.clip_norm, args.batch_size, args.patience, args.checkpoint)

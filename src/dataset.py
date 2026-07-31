@@ -150,9 +150,13 @@ class SignSequenceDataset(Dataset):
 
 
 def make_dataloader(records: list[dict], vocab: list[str], sequence_length: int = SEQUENCE_LENGTH,
-                     batch_size: int = 16, shuffle: bool = True) -> DataLoader:
+                     batch_size: int = 16, shuffle: bool = True, num_workers: int = 4) -> DataLoader:
+    # num_workers spawns subprocesses that prepare upcoming batches (landmark
+    # normalization/resampling) while the GPU is busy on the current one --
+    # without this, that CPU work happens in-line on the main process and the
+    # GPU sits idle between batches instead of overlapping with it.
     dataset = SignSequenceDataset(records, vocab, sequence_length)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 
 def _self_check():
@@ -230,7 +234,7 @@ def _self_check():
     assert not np.allclose(go_seq[0, 63:], 0.0)   # left hand present too
     assert not np.allclose(go_seq[0, :63], go_seq[0, 63:])  # not the same values
 
-    loader = make_dataloader(records, vocab, sequence_length=3, batch_size=2, shuffle=False)
+    loader = make_dataloader(records, vocab, sequence_length=3, batch_size=2, shuffle=False, num_workers=0)
     x, y = next(iter(loader))
     assert x.shape == (2, 3, 126)
     assert y.shape[1] == len(vocab)

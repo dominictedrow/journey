@@ -42,7 +42,7 @@ def run_inference(test_dir: Path, checkpoint: Path, vocab_path: Path = None):
     preds, targets = torch.cat(all_preds), torch.cat(all_targets)
     accuracy = (preds == targets).float().mean().item()
     precision, recall = precision_recall_macro(preds, targets, len(vocab))
-    print(f"\ntest set: accuracy={accuracy:.4f} precision={precision:.4f} recall={recall:.4f}")
+    print(f"\ntest set: accuracy={accuracy:.2%} precision={precision:.2%} recall={recall:.2%}")
 
 
 def _self_check():
