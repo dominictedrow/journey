@@ -17,7 +17,7 @@ Run: python -m skills.gifts   (no CLI inputs, scheduled skill)
 
 import json
 import re
-from datetime import date, timedelta
+from datetime import date
 
 from .._lib import claude, envelope, store
 
@@ -29,17 +29,20 @@ _LOOKAHEAD_DAYS = 21
 
 
 def _next_occurrence(today, month, day):
-    """Next calendar date (>= today) matching (month, day), any year."""
-    try:
-        candidate = date(today.year, month, day)
-    except ValueError:
-        return None  # e.g. Feb 29 in a non-leap year
-    if candidate < today:
+    """Next calendar date (>= today) matching (month, day), any year.
+
+    Feb 29 only exists in leap years, which are up to 8 years apart across
+    a century boundary (e.g. 1896 -> 1904), so this has to search ahead
+    rather than give up after checking just this year and next.
+    """
+    for year in range(today.year, today.year + 9):
         try:
-            candidate = date(today.year + 1, month, day)
+            candidate = date(year, month, day)
         except ValueError:
-            return None
-    return candidate
+            continue  # e.g. Feb 29 in a non-leap year
+        if candidate >= today:
+            return candidate
+    return None
 
 
 def _upcoming_occasions(conn):
