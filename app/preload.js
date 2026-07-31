@@ -26,6 +26,17 @@ contextBridge.exposeInMainWorld('cwork', {
     setDone: (id, done) => ipcRenderer.invoke('assignments:setDone', id, done),
     delete: (id) => ipcRenderer.invoke('assignments:delete', id),
   },
+  people: {
+    list: () => ipcRenderer.invoke('people:list'),
+    add: (name) => ipcRenderer.invoke('people:add', name),
+    rename: (id, name) => ipcRenderer.invoke('people:rename', id, name),
+    delete: (id) => ipcRenderer.invoke('people:delete', id),
+  },
+  occasions: {
+    list: () => ipcRenderer.invoke('occasions:list'),
+    add: (input) => ipcRenderer.invoke('occasions:add', input),
+    delete: (id) => ipcRenderer.invoke('occasions:delete', id),
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     updateHome: (home) => ipcRenderer.invoke('settings:updateHome', home),

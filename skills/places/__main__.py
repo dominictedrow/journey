@@ -13,10 +13,9 @@ Flow (2 Claude calls, 1 Overpass call, per plan.md's token-discipline table):
 
 import argparse
 import json
-import math
 from pathlib import Path
 
-from .._lib import envelope, net, claude
+from .._lib import envelope, osm, claude
 
 SKILL_ID = "places"
 
@@ -121,71 +120,6 @@ def _get_tag_selectors(query):
     return selectors, soft_tags, quiet_leaning
 
 
-def _build_overpass_ql(selectors, lat, lon, radius_m):
-    clauses = []
-    for sel in selectors:
-        key, value = sel["key"], sel["value"]
-        clauses.append(f'node["{key}"="{value}"](around:{radius_m},{lat},{lon});')
-        clauses.append(f'way["{key}"="{value}"](around:{radius_m},{lat},{lon});')
-    body = "".join(clauses)
-    return f"[out:json][timeout:25];({body});out center 60;"
-
-
-def _query_overpass(selectors, lat, lon, radius_m):
-    import urllib.parse
-
-    ql = _build_overpass_ql(selectors, lat, lon, radius_m)
-    url = "https://overpass-api.de/api/interpreter?data=" + urllib.parse.quote(ql)
-    data = net.get_json(url)
-    return data.get("elements", [])
-
-
-def _haversine_m(lat1, lon1, lat2, lon2):
-    r = 6371000.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
-
-
-def _elements_to_pois(elements, origin_lat, origin_lon, soft_tags):
-    soft_keys = {t["key"] for t in soft_tags}
-    pois = []
-    for el in elements:
-        tags = el.get("tags", {})
-        name = tags.get("name")
-        if not name:
-            continue
-        if el.get("type") == "node":
-            lat, lon = el.get("lat"), el.get("lon")
-        else:
-            center = el.get("center", {})
-            lat, lon = center.get("lat"), center.get("lon")
-        if lat is None or lon is None:
-            continue
-        distance_m = _haversine_m(origin_lat, origin_lon, lat, lon)
-        matched_soft = {k: tags[k] for k in soft_keys if k in tags}
-        pois.append(
-            {
-                "name": name,
-                "lat": lat,
-                "lon": lon,
-                "distance_m": distance_m,
-                "amenity": tags.get("amenity") or tags.get("shop") or tags.get("leisure") or "place",
-                "soft_tags": matched_soft,
-            }
-        )
-    pois.sort(key=lambda p: p["distance_m"])
-    return pois[:CANDIDATE_LIMIT]
-
-
-def _format_distance(distance_m):
-    if distance_m >= 1000:
-        return f"{distance_m / 1000:.1f} km"
-    return f"{distance_m:.0f} m"
-
-
 def _rank_prompt(query, pois, quiet_leaning):
     lines = [
         f'Query: "{query}" (quiet-leaning preference: {quiet_leaning})',
@@ -194,7 +128,7 @@ def _rank_prompt(query, pois, quiet_leaning):
     for i, p in enumerate(pois):
         tag_str = ", ".join(f"{k}={v}" for k, v in p["soft_tags"].items()) or "none"
         lines.append(
-            f'{i}. {p["name"]} — {p["amenity"]} — {_format_distance(p["distance_m"])} — {tag_str}'
+            f'{i}. {p["name"]} — {p["amenity"]} — {osm.format_distance(p["distance_m"])} — {tag_str}'
         )
     lines.append(
         "\nRank the best matches for the query. Return ONLY strict JSON: "
@@ -213,10 +147,6 @@ def _rank_pois(query, pois, quiet_leaning):
         if isinstance(idx, int) and 0 <= idx < len(pois):
             picks.append({**pois[idx], "rationale": str(pick.get("rationale", "")).strip()})
     return picks
-
-
-def _map_link(lat, lon):
-    return f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}"
 
 
 def run(query):
@@ -247,10 +177,10 @@ def run(query):
         )
 
     envelope.progress(f"places: querying Overpass around {label} ({DEFAULT_RADIUS_M}m radius)")
-    elements = _query_overpass(selectors, lat, lon, DEFAULT_RADIUS_M)
+    elements = osm.query_overpass(selectors, lat, lon, DEFAULT_RADIUS_M)
 
     envelope.progress(f"places: {len(elements)} raw elements returned, filtering + ranking by distance")
-    pois = _elements_to_pois(elements, lat, lon, soft_tags)
+    pois = osm.elements_to_pois(elements, lat, lon, soft_tags, CANDIDATE_LIMIT)
     if not pois:
         return envelope.build(
             SKILL_ID,
@@ -271,7 +201,7 @@ def run(query):
         picks = [{**p, "rationale": "Closest match by distance"} for p in pois[:SHORTLIST_LIMIT]]
 
     rows = [
-        [p["name"], _format_distance(p["distance_m"]), p["rationale"], _map_link(p["lat"], p["lon"])]
+        [p["name"], osm.format_distance(p["distance_m"]), p["rationale"], osm.map_link(p["lat"], p["lon"])]
         for p in picks
     ]
 

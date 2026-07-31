@@ -92,6 +92,8 @@ def _render_plist(skill_id, schedule, conda_path):
     fields = {"Hour": schedule.get("hour"), "Minute": schedule.get("minute", 0)}
     if "day" in schedule:
         fields["Day"] = schedule["day"]
+    if "weekday" in schedule:
+        fields["Weekday"] = schedule["weekday"]
     calendar_entries = "\n".join(
         f"        <key>{k}</key>\n        <integer>{v}</integer>"
         for k, v in fields.items()

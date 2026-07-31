@@ -35,6 +35,21 @@ CREATE TABLE IF NOT EXISTS assignments (
     done        INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS people (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS occasions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id   INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    label       TEXT NOT NULL,
+    month       INTEGER NOT NULL,
+    day         INTEGER NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 function dbPath() {
@@ -118,6 +133,48 @@ function deleteAssignment(id) {
   getDb().prepare('DELETE FROM assignments WHERE id = ?').run(id);
 }
 
+// --- people ---
+
+function listPeople() {
+  return getDb().prepare('SELECT id, name, created_at FROM people ORDER BY name').all();
+}
+
+function addPerson(name) {
+  const result = getDb().prepare('INSERT INTO people (name) VALUES (?)').run(name);
+  return { id: Number(result.lastInsertRowid), name };
+}
+
+function renamePerson(id, name) {
+  getDb().prepare('UPDATE people SET name = ? WHERE id = ?').run(name, id);
+}
+
+function deletePerson(id) {
+  getDb().prepare('DELETE FROM people WHERE id = ?').run(id);
+}
+
+// --- occasions ---
+
+function listOccasions() {
+  return getDb()
+    .prepare(
+      `SELECT o.id, o.label, o.month, o.day, o.person_id, p.name AS person_name
+       FROM occasions o JOIN people p ON p.id = o.person_id
+       ORDER BY o.month, o.day`
+    )
+    .all();
+}
+
+function addOccasion({ personId, label, month, day }) {
+  const result = getDb()
+    .prepare('INSERT INTO occasions (person_id, label, month, day) VALUES (?, ?, ?, ?)')
+    .run(personId, label, month, day);
+  return { id: Number(result.lastInsertRowid) };
+}
+
+function deleteOccasion(id) {
+  getDb().prepare('DELETE FROM occasions WHERE id = ?').run(id);
+}
+
 module.exports = {
   recordSkillRun,
   listSkillRuns,
@@ -129,4 +186,11 @@ module.exports = {
   addAssignment,
   setAssignmentDone,
   deleteAssignment,
+  listPeople,
+  addPerson,
+  renamePerson,
+  deletePerson,
+  listOccasions,
+  addOccasion,
+  deleteOccasion,
 };

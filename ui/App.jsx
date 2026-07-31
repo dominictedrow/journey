@@ -3,6 +3,7 @@ import StatusDot from './components/StatusDot.jsx';
 import Home from './tabs/Home.jsx';
 import OnDemand from './tabs/OnDemand.jsx';
 import Assignments from './tabs/Assignments.jsx';
+import Gifts from './tabs/Gifts.jsx';
 import Settings from './tabs/Settings.jsx';
 
 export default function App() {
@@ -61,6 +62,13 @@ export default function App() {
           <span className="label">Assignments</span>
         </button>
 
+        <button
+          className={`sidebar-item ${tab === 'people' ? 'active' : ''}`}
+          onClick={() => setTab('people')}
+        >
+          <span className="label">People</span>
+        </button>
+
         <div style={{ flex: 1 }} />
 
         <button className={`sidebar-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}>
@@ -71,6 +79,7 @@ export default function App() {
       <div className="content">
         {tab === 'home' && <Home skills={skills} results={results} />}
         {tab === 'assignments' && <Assignments />}
+        {tab === 'people' && <Gifts />}
         {tab === 'settings' && <Settings />}
         {activeSkill && (
           <OnDemand

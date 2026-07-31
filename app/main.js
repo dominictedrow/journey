@@ -72,6 +72,13 @@ app.whenReady().then(() => {
     });
   });
 
+  // Packaged builds get their dock icon from build/icon.icns via
+  // electron-builder; in dev the app runs under Electron's own icon unless
+  // we set it explicitly.
+  if (isDev && process.platform === 'darwin') {
+    app.dock.setIcon(path.join(__dirname, '..', 'build', 'icon.png'));
+  }
+
   createWindow();
 
   app.on('activate', () => {
@@ -182,6 +189,53 @@ ipcMain.handle('assignments:setDone', (event, id, done) => {
 ipcMain.handle('assignments:delete', (event, id) => {
   if (!Number.isInteger(id)) throw new Error('assignment id must be an integer');
   db.deleteAssignment(id);
+});
+
+// --- people ---
+
+ipcMain.handle('people:list', () => db.listPeople());
+
+ipcMain.handle('people:add', (event, name) => {
+  if (typeof name !== 'string' || !name.trim()) throw new Error('person name must be a non-empty string');
+  return db.addPerson(name.trim());
+});
+
+ipcMain.handle('people:rename', (event, id, name) => {
+  if (!Number.isInteger(id)) throw new Error('person id must be an integer');
+  if (typeof name !== 'string' || !name.trim()) throw new Error('person name must be a non-empty string');
+  db.renamePerson(id, name.trim());
+});
+
+ipcMain.handle('people:delete', (event, id) => {
+  if (!Number.isInteger(id)) throw new Error('person id must be an integer');
+  db.deletePerson(id);
+});
+
+// --- occasions ---
+
+ipcMain.handle('occasions:list', () => db.listOccasions());
+
+ipcMain.handle('occasions:add', (event, input) => {
+  const { personId, label, month, day } = input || {};
+  if (!Number.isInteger(personId)) throw new Error('personId must be an integer');
+  if (typeof label !== 'string' || !label.trim()) throw new Error('label must be a non-empty string');
+  if (!Number.isInteger(month) || month < 1 || month > 12) throw new Error('month must be an integer 1-12');
+  if (!Number.isInteger(day) || day < 1 || day > 31) throw new Error('day must be an integer 1-31');
+  // Range-checking month and day independently lets through non-dates like
+  // Apr 31. Probe against a leap year (2000) so Feb 29 — a valid recurring
+  // occasion, see _next_occurrence in skills/gifts — still passes; JS Date
+  // silently rolls over out-of-range days into the next month, so a
+  // mismatch after construction means the (month, day) pair never occurs.
+  const probe = new Date(2000, month - 1, day);
+  if (probe.getMonth() !== month - 1 || probe.getDate() !== day) {
+    throw new Error(`${month}/${day} is not a valid calendar date`);
+  }
+  return db.addOccasion({ personId, label: label.trim(), month, day });
+});
+
+ipcMain.handle('occasions:delete', (event, id) => {
+  if (!Number.isInteger(id)) throw new Error('occasion id must be an integer');
+  db.deleteOccasion(id);
 });
 
 // --- settings ---

@@ -60,4 +60,27 @@ module.exports = [
     kind: 'on-demand',
     inputs: [{ name: 'item', label: 'Item', placeholder: 'e.g. PS5 Pro restock' }],
   },
+  {
+    id: 'trips',
+    label: 'Trips',
+    kind: 'on-demand',
+    inputs: [
+      { name: 'query', label: 'Query', placeholder: 'e.g. quiet beach town' },
+      { name: 'hours', label: 'Hours away (optional)', placeholder: 'e.g. 3' },
+    ],
+  },
+  {
+    id: 'gifts',
+    label: 'Gifts',
+    kind: 'scheduled',
+    schedule: { weekday: 0, hour: 8, minute: 0 }, // weekly, Sunday 8:00 AM
+    inputs: [],
+  },
+  {
+    id: 'reads',
+    label: 'Reads',
+    kind: 'scheduled',
+    schedule: { day: 1, hour: 10, minute: 0 }, // monthly, 1st at 10:00 AM, after releases at 9:00
+    inputs: [],
+  },
 ];

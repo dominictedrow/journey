@@ -32,6 +32,21 @@ CREATE TABLE IF NOT EXISTS assignments (
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS people (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS occasions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id   INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    label       TEXT NOT NULL,
+    month       INTEGER NOT NULL,
+    day         INTEGER NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS delivered_items (
     item_hash   TEXT PRIMARY KEY,
     skill       TEXT NOT NULL,
@@ -48,9 +63,10 @@ CREATE TABLE IF NOT EXISTS release_items (
     PRIMARY KEY (category, item)
 );
 """
-# `skill_runs`/`classes`/`assignments` are also created (idempotently) by
-# app/db.js, since the Electron main process talks to this same file directly
-# via node:sqlite rather than round-tripping through Python for plain reads/CRUD.
+# `skill_runs`/`classes`/`assignments`/`people`/`occasions` are also created
+# (idempotently) by app/db.js, since the Electron main process talks to this
+# same file directly via node:sqlite rather than round-tripping through
+# Python for plain reads/CRUD.
 
 
 def db_path():
