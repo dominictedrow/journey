@@ -14,6 +14,7 @@ import imageio_ffmpeg
 HERE = Path(__file__).parent
 VOCAB_PATH = HERE.parent.parent.parent / "vocab.txt"
 SYNONYM_PATH = HERE.parent.parent / "MS-ASL" / "MSASL_synonym.json"
+SAVETO = HERE.parent.parent / "raw_videos"
 YT_DLP = Path(sys.executable).parent / "Scripts" / "yt-dlp.exe"
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -127,7 +128,7 @@ def select_download_method(url):
         return download_others
 
 
-def download_nonyt_videos(content, saveto='raw_videos'):
+def download_nonyt_videos(content, saveto=SAVETO):
     if not os.path.exists(saveto):
         os.mkdir(saveto)
 
@@ -190,7 +191,7 @@ def iter_yt_targets(content, saveto, dead_ids):
             yield video_url, yt_id
 
 
-def download_yt_videos(content, saveto='raw_videos', dead_ids=None):
+def download_yt_videos(content, saveto=SAVETO, dead_ids=None):
     """One pass over the pending YouTube instances. Returns how many succeeded."""
     if not os.path.exists(saveto):
         os.mkdir(saveto)
@@ -233,7 +234,7 @@ def download_yt_videos(content, saveto='raw_videos', dead_ids=None):
     return downloaded
 
 
-def download_yt_videos_until_done(content, saveto='raw_videos'):
+def download_yt_videos_until_done(content, saveto=SAVETO):
     """Keep re-running the YouTube pass -- with backoff between passes -- until
     every instance is either downloaded or confirmed permanently unavailable,
     or MAX_NO_PROGRESS_PASSES pass in a row land zero new downloads (most

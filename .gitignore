@@ -1,8 +1,7 @@
 # Downloaded video data: regenerable from the *_downloader.py scripts, and
 # both MS-ASL and WLASL are distributed under a Computational Use of Data
 # Agreement that restricts redistribution -- don't put clips in git.
-data/MS-ASL/raw_videos/
-data/WLASL/start_kit/raw_videos/
+data/raw_videos/
 data/WLASL/start_kit/videos/
 
 __pycache__/

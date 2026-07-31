@@ -20,9 +20,26 @@ import imageio_ffmpeg
 
 HERE = Path(__file__).parent
 VOCAB_PATH = HERE.parent.parent / "vocab.txt"
-SAVETO = HERE / "raw_videos"
+SAVETO = HERE.parent / "raw_videos"
 YT_DLP = Path(sys.executable).parent / "Scripts" / "yt-dlp.exe"
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+
+# yt-dlp error text for videos that are gone for good -- retrying never helps,
+# unlike a bot-check or rate-limit block which can clear on its own.
+PERMANENT_FAILURE_MARKERS = (
+    'Video unavailable',
+    'This video is unavailable',
+    'Private video',
+    'has been removed',
+    'account associated with this video has been terminated',
+)
+DEAD_YT_IDS_PATH = HERE / 'dead_youtube_ids.txt'
+
+# Retry pacing: back off between passes so a bot-check block gets time to
+# clear instead of being hammered every few seconds.
+RETRY_BACKOFF_START = 120
+RETRY_BACKOFF_MAX = 900
+MAX_NO_PROGRESS_PASSES = 10
 
 logging.basicConfig(filename=str(HERE / 'msasl_download_{}.log'.format(int(time.time()))),
                      filemode='w', level=logging.DEBUG)
@@ -56,18 +73,52 @@ def extract_yt_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-def download_clip(sample: dict) -> None:
+def is_permanent_failure(stderr: str) -> bool:
+    return any(marker in stderr for marker in PERMANENT_FAILURE_MARKERS)
+
+
+def load_dead_yt_ids() -> set:
+    if DEAD_YT_IDS_PATH.exists():
+        return set(DEAD_YT_IDS_PATH.read_text().splitlines())
+    return set()
+
+
+def mark_dead(yt_id: str) -> None:
+    with open(DEAD_YT_IDS_PATH, 'a') as f:
+        f.write(yt_id + '\n')
+
+
+def clip_path(sample: dict) -> Path | None:
+    url = sample['url'] if sample['url'].startswith('http') else 'https://' + sample['url']
+    yt_id = extract_yt_id(url)
+    if not yt_id:
+        return None
+    return SAVETO / '{}_{}.mp4'.format(yt_id, int(sample['start_time'] * 1000))
+
+
+def iter_pending(samples, dead_ids: set):
+    """Yield samples not already downloaded and not confirmed permanently
+    unavailable.
+    """
+    for sample in samples:
+        url = sample['url'] if sample['url'].startswith('http') else 'https://' + sample['url']
+        yt_id = extract_yt_id(url)
+        if not yt_id or yt_id in dead_ids:
+            continue
+        if clip_path(sample).exists():
+            continue
+        yield sample
+
+
+def download_clip(sample: dict, dead_ids: set) -> bool:
+    """Attempt one download. Returns True if the clip is now on disk."""
     url = sample['url'] if sample['url'].startswith('http') else 'https://' + sample['url']
     yt_id = extract_yt_id(url)
     if not yt_id:
         logging.warning('Could not parse YouTube id from {}'.format(url))
-        return
+        return False
 
-    saveto = SAVETO / '{}_{}.mp4'.format(yt_id, int(sample['start_time'] * 1000))
-    if saveto.exists():
-        logging.info('{} exists at {}'.format(saveto.name, saveto))
-        return
-
+    saveto = clip_path(sample)
     section = '*{}-{}'.format(sample['start_time'], sample['end_time'])
     cmd = [
         str(YT_DLP), url,
@@ -87,12 +138,62 @@ def download_clip(sample: dict) -> None:
     logging.info('Requesting {} [{}-{}]'.format(url, sample['start_time'], sample['end_time']))
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        logging.error('Unsuccessful downloading - {} [{}-{}]: {}'.format(
-            url, sample['start_time'], sample['end_time'], result.stderr[-500:]))
-        return
+        stderr = result.stderr[-500:]
+        if is_permanent_failure(stderr):
+            logging.warning('Permanently unavailable, will not retry - {}: {}'.format(url, stderr))
+            dead_ids.add(yt_id)
+            mark_dead(yt_id)
+        else:
+            logging.error('Unsuccessful downloading - {} [{}-{}]: {}'.format(
+                url, sample['start_time'], sample['end_time'], stderr))
+        return False
 
     logging.info('Finished {}'.format(saveto.name))
     time.sleep(random.uniform(0.5, 1.5))
+    return True
+
+
+def download_clips_until_done(samples):
+    """Keep re-running the download pass -- with backoff between passes --
+    until every sample is either downloaded or confirmed permanently
+    unavailable, or MAX_NO_PROGRESS_PASSES pass in a row land zero new
+    downloads (most likely an active bot-check/rate-limit block; re-run
+    later).
+    """
+    dead_ids = load_dead_yt_ids()
+    backoff = RETRY_BACKOFF_START
+    no_progress_streak = 0
+
+    while True:
+        pending = list(iter_pending(samples, dead_ids))
+        if not pending:
+            logging.info('All MS-ASL clips downloaded or confirmed unavailable.')
+            break
+
+        downloaded = sum(download_clip(sample, dead_ids) for sample in pending)
+        pending = list(iter_pending(samples, dead_ids))
+
+        if not pending:
+            logging.info('All MS-ASL clips downloaded or confirmed unavailable.')
+            break
+
+        if downloaded == 0:
+            no_progress_streak += 1
+        else:
+            no_progress_streak = 0
+            backoff = RETRY_BACKOFF_START
+
+        if no_progress_streak >= MAX_NO_PROGRESS_PASSES:
+            logging.warning(
+                '{} MS-ASL clips still pending after {} passes with no progress '
+                '(likely still bot-check/rate-limit blocked). Stopping for now -- '
+                're-run this script later to keep going.'.format(len(pending), no_progress_streak))
+            break
+
+        logging.info('{} pending after this pass ({} downloaded). Waiting {:.0f}s before retrying.'.format(
+            len(pending), downloaded, backoff))
+        time.sleep(backoff)
+        backoff = min(backoff * 1.5, RETRY_BACKOFF_MAX)
 
 
 def _self_check():
@@ -105,7 +206,11 @@ def _self_check():
     assert {'father', 'dad', 'daddy', 'unrelated_word'} <= expanded
     assert 'mother' not in expanded  # only groups touching vocab get pulled in
 
-    print('self-check passed: YouTube id extraction handles both URL shapes and missing scheme, synonym expansion pulls in whole groups')
+    assert is_permanent_failure("ERROR: [youtube] xyz: Video unavailable")
+    assert not is_permanent_failure("ERROR: [youtube] xyz: Sign in to confirm you're not a bot")
+
+    print('self-check passed: YouTube id extraction handles both URL shapes and missing scheme, '
+          'synonym expansion pulls in whole groups, permanent-failure detection works as expected')
 
 
 if __name__ == '__main__':
@@ -118,5 +223,4 @@ if __name__ == '__main__':
     logging.info('{} MS-ASL samples match the {}-word vocab'.format(
         len(samples), len(set(VOCAB_PATH.read_text().splitlines()))))
 
-    for sample in samples:
-        download_clip(sample)
+    download_clips_until_done(samples)
