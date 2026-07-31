@@ -4,12 +4,6 @@
 
 module.exports = [
   {
-    id: 'hello',
-    label: 'Hello',
-    kind: 'on-demand', // 'scheduled' (lands on Home) | 'on-demand' (own tab, run button)
-    inputs: [], // [{ name, label, placeholder }] — on-demand skills only
-  },
-  {
     id: 'concepts',
     label: 'Concepts',
     kind: 'scheduled',

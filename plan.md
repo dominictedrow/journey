@@ -261,7 +261,7 @@ Given this goes on GitHub and does a lot of authenticated internet access:
 Each phase ends somewhere runnable.
 
 **Phase 0 — Foundation**
-`environment.yml`, `pyproject.toml`, `package.json`, `.gitignore`, `_lib/` (envelope, store, claude, net, secrets). Ship a trivial `skills/hello` proving the envelope round-trips end to end.
+`environment.yml`, `pyproject.toml`, `package.json`, `.gitignore`, `_lib/` (envelope, store, claude, net, secrets). Shipped a trivial `skills/hello` proving the envelope round-trips end to end — removed later once the pattern was proven out by every real skill built on top of it; it had no ongoing purpose sitting in the UI as a fake skill.
 
 **Phase 1 — Electron shell + UI, including Classes & Assignments**
 Main process, preload, registry, theme, `SkillOutput.jsx`, Home, the generic on-demand tab, and the Assignments tab (classes CRUD, assignment CRUD, due-date grouping). This phase needs no external auth at all and delivers a genuinely useful app on its own.
