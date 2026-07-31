@@ -4,6 +4,11 @@
 data/raw_videos/
 data/WLASL/start_kit/videos/
 
+# Extracted MediaPipe landmarks (multi-GB, regenerable via extract_raw_videos.py)
+# and the train/val/test split derived from them (regenerable via split_dataset.py).
+data/raw_landmarks/
+data/split.json
+
 __pycache__/
 *.pyc
 
@@ -12,3 +17,7 @@ data/MS-ASL/*.log
 data/WLASL/start_kit/*.log
 data/MS-ASL/resume*_stdout.log
 data/WLASL/start_kit/resume*_stdout.log
+
+# Run logs, and trained checkpoints -- both regenerable, not source.
+logs/
+models/*.pt
