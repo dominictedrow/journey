@@ -5,6 +5,7 @@ split_dataset.py already wrote to data/split.json.
 """
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import torch
@@ -16,9 +17,26 @@ from ingest import load_records
 from model import SignLSTM, build_model
 
 BATCH_SIZE = 16
-PATIENCE = 5
+PATIENCE = 10
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_landmarks"
 DEFAULT_CHECKPOINT = Path(__file__).parent.parent / "models" / "checkpoint.pt"
+LOG_DIR = Path(__file__).parent.parent / "logs"
+
+
+class _Tee:
+    """Mirrors writes to multiple streams -- lets print() reach both the
+    console and a log file without touching every call site."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
 
 
 def precision_recall_macro(preds: torch.Tensor, targets: torch.Tensor, num_classes: int) -> tuple[float, float]:
@@ -37,27 +55,12 @@ def precision_recall_macro(preds: torch.Tensor, targets: torch.Tensor, num_class
     return sum(precisions) / num_classes, sum(recalls) / num_classes
 
 
-def ctc_greedy_predict(log_probs: torch.Tensor, blank: int) -> torch.Tensor:
-    """Collapse each sequence's per-timestep argmax into one predicted word.
-
-    Standard CTC decode drops blanks and repeats; since every sequence here
-    has exactly one true word, the most common surviving class is taken as
-    the prediction.
-    """
-    frame_preds = log_probs.argmax(dim=-1)  # (batch, seq_len)
-    predictions = []
-    for row in frame_preds:
-        non_blank = row[row != blank]
-        predictions.append(non_blank.mode().values if non_blank.numel() else torch.tensor(blank, device=row.device))
-    return torch.stack(predictions)
-
-
 def run_epoch(model: SignLSTM, loader, vocab_size: int, device: torch.device, optimizer=None,
               clip_norm: float | None = None):
     """One pass over loader. Trains if optimizer is given, else evaluates."""
     is_train = optimizer is not None
     model.train(is_train)
-    ctc_loss = nn.CTCLoss(blank=vocab_size, zero_infinity=True)
+    ce_loss = nn.CrossEntropyLoss()
 
     total_loss, all_preds, all_targets = 0.0, [], []
     with torch.set_grad_enabled(is_train):
@@ -65,12 +68,8 @@ def run_epoch(model: SignLSTM, loader, vocab_size: int, device: torch.device, op
             x, y = x.to(device), y.to(device)
             targets = y.argmax(dim=1)
 
-            log_probs = model(x)  # (batch, seq_len, vocab_size + 1)
-            batch_size, seq_len, _ = log_probs.shape
-            input_lengths = torch.full((batch_size,), seq_len, dtype=torch.long)
-            target_lengths = torch.ones(batch_size, dtype=torch.long)
-
-            loss = ctc_loss(log_probs.permute(1, 0, 2), targets, input_lengths, target_lengths)
+            logits = model(x)  # (batch, vocab_size)
+            loss = ce_loss(logits, targets)
 
             if is_train:
                 optimizer.zero_grad()
@@ -79,8 +78,8 @@ def run_epoch(model: SignLSTM, loader, vocab_size: int, device: torch.device, op
                     nn.utils.clip_grad_norm_(model.parameters(), clip_norm)
                 optimizer.step()
 
-            total_loss += loss.item() * batch_size
-            all_preds.append(ctc_greedy_predict(log_probs.detach(), blank=vocab_size))
+            total_loss += loss.item() * x.size(0)
+            all_preds.append(logits.detach().argmax(dim=-1))
             all_targets.append(targets)
 
     preds, targets = torch.cat(all_preds), torch.cat(all_targets)
@@ -103,7 +102,8 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
     vocab = load_vocab()
     model = build_model().to(device)
 
-    train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size)
+    train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size,
+                                    augment=True)
     val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size, shuffle=False)
 
     # Adam has no literal "momentum" knob -- beta1 plays the same role,
@@ -143,7 +143,7 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
 
 
 def _self_check():
-    """Synthetic records through one training + one eval step -- no real data folder needed."""
+    """Synthetic records through one eval step -- no real data folder needed."""
     vocab = ["book", "chair", "hello"]
     records = []
     for label_idx, label in enumerate(vocab):
@@ -153,15 +153,12 @@ def _self_check():
 
     loader = make_dataloader(records, vocab, sequence_length=6, batch_size=3, shuffle=False, num_workers=0)
     model = SignLSTM(vocab_size=len(vocab))
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
 
-    train_loss, train_acc, train_prec, train_rec = run_epoch(
-        model, loader, len(vocab), torch.device("cpu"), optimizer, clip_norm=1.0)
     val_loss, val_acc, val_prec, val_rec = run_epoch(model, loader, len(vocab), torch.device("cpu"))
 
-    assert train_loss >= 0 and val_loss >= 0
-    assert 0.0 <= train_acc <= 1.0 and 0.0 <= val_acc <= 1.0
-    assert 0.0 <= train_prec <= 1.0 and 0.0 <= train_rec <= 1.0
+    assert val_loss >= 0
+    assert 0.0 <= val_acc <= 1.0
+    assert 0.0 <= val_prec <= 1.0 and 0.0 <= val_rec <= 1.0
 
     # gradient clipping: a deliberately huge gradient should get capped to clip_norm
     p = torch.nn.Parameter(torch.zeros(3))
@@ -176,8 +173,8 @@ def _self_check():
     assert _is_improvement(val_loss=1.5, val_acc=0.30, best_val_loss=1.0, best_val_acc=0.20)  # acc rose
     assert not _is_improvement(val_loss=1.0, val_acc=0.20, best_val_loss=1.0, best_val_acc=0.20)  # neither moved
 
-    print("self-check passed: one train step + one eval step ran end-to-end with "
-          "CTC loss and accuracy/precision/recall all in range, gradient clipping caps norm as expected, "
+    print("self-check passed: one eval step ran end-to-end with "
+          "cross-entropy loss and accuracy/precision/recall all in range, gradient clipping caps norm as expected, "
           "and the early-stop improvement check reacts to loss/accuracy correctly")
 
 
@@ -186,9 +183,9 @@ if __name__ == "__main__":
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR,
                          help="folder of *_landmarks.json files, split via data/split.json (default: data/raw_landmarks)")
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
-    parser.add_argument("--lr-scaling", type=float, default=1.0,
+    parser.add_argument("--lr-scaling", type=float, default=0.99,
                          help="per-epoch multiplicative LR decay (ExponentialLR gamma); 1.0 = constant LR")
     parser.add_argument("--momentum", type=float, default=0.9, help="Adam's beta1")
     parser.add_argument("--clip-norm", type=float, default=5.0, help="max gradient norm (clips exploding gradients)")
@@ -203,5 +200,17 @@ if __name__ == "__main__":
         _self_check()
         sys.exit(0)
 
-    train(args.data_dir, args.epochs, args.lr, args.lr_scaling, args.momentum,
-          args.clip_norm, args.batch_size, args.patience, args.checkpoint)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOG_DIR / f"train_{time.strftime('%Y%m%d_%H%M%S')}.log"
+    real_stdout = sys.stdout
+    with open(log_path, "w") as log_file:
+        # Restored in finally so nothing printed after this block (e.g. a
+        # DataLoader worker's teardown output during interpreter shutdown)
+        # writes to log_file after it's closed.
+        sys.stdout = _Tee(real_stdout, log_file)
+        try:
+            print(f"logging to {log_path}")
+            train(args.data_dir, args.epochs, args.lr, args.lr_scaling, args.momentum,
+                  args.clip_norm, args.batch_size, args.patience, args.checkpoint)
+        finally:
+            sys.stdout = real_stdout

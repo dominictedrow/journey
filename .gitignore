@@ -9,6 +9,11 @@ data/WLASL/start_kit/videos/
 data/raw_landmarks/
 data/split.json
 
+# Landmark files quarantined out of the dataset for data-quality reasons
+# (zero-detection clips, long multi-gloss WLASL source videos) -- see the
+# July 31 data-quality analysis. Same regenerable-multi-GB status as raw_landmarks/.
+data/excluded_landmarks/
+
 __pycache__/
 *.pyc
 

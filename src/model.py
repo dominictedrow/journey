@@ -9,8 +9,9 @@ Wraps it with dropout, a residual connection from the raw input, and a
 batchnorm + dense classifier head sized directly off the persisted vocab
 (dataset.load_vocab) rather than a hardcoded class count.
 
-Output size is len(vocab) + 1: the CTC loss this feeds (see train.py) needs
-one extra class for the "blank" symbol.
+Every sequence is one video with exactly one label, so the per-timestep
+hidden states get mean-pooled into a single vector before classifying --
+one prediction per sequence, fed to plain cross-entropy (see train.py).
 """
 import torch
 import torch.nn as nn
@@ -25,7 +26,7 @@ DROPOUT = 0.3
 
 
 class SignLSTM(nn.Module):
-    """Input (126) -> residual LSTM block -> batchnorm -> dense(vocab+1) log-probs per timestep."""
+    """Input (126) -> residual LSTM block -> batchnorm -> mean-pool -> dense(vocab) logits."""
 
     def __init__(self, vocab_size: int, hidden_size: int = HIDDEN_SIZE, dropout: float = DROPOUT):
         super().__init__()
@@ -38,7 +39,7 @@ class SignLSTM(nn.Module):
         # own contribution gets regularized.
         self.residual_proj = nn.Linear(INPUT_SIZE, hidden_size)
         self.batch_norm = nn.BatchNorm1d(hidden_size)
-        self.classifier = nn.Linear(hidden_size, vocab_size + 1)  # +1 = CTC blank class
+        self.classifier = nn.Linear(hidden_size, vocab_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len, _ = x.shape
@@ -51,8 +52,8 @@ class SignLSTM(nn.Module):
         normed = self.batch_norm(hidden_seq.reshape(-1, self.hidden_size))
         normed = normed.reshape(batch_size, seq_len, self.hidden_size)
 
-        logits = self.classifier(normed)
-        return torch.log_softmax(logits, dim=-1)  # CTCLoss expects log-probabilities
+        pooled = normed.mean(dim=1)  # one vector per video, averaged over the whole gesture
+        return self.classifier(pooled)  # (batch, vocab_size) raw logits for CrossEntropyLoss
 
 
 def build_model(vocab_path=None) -> SignLSTM:
@@ -70,16 +71,17 @@ def _self_check():
     assert x[:, :, RIGHT_HAND_SLICE].shape[-1] == 63
     assert x[:, :, LEFT_HAND_SLICE].shape[-1] == 63
 
-    log_probs = model(x)
-    assert log_probs.shape == (batch_size, seq_len, model.classifier.out_features)
-    assert torch.allclose(log_probs.exp().sum(dim=-1), torch.ones(batch_size, seq_len), atol=1e-4)
+    logits = model(x)
+    assert logits.shape == (batch_size, model.classifier.out_features)
+    probs = torch.softmax(logits, dim=-1)
+    assert torch.allclose(probs.sum(dim=-1), torch.ones(batch_size), atol=1e-4)
 
-    loss = -log_probs.sum()
+    loss = -logits.sum()
     loss.backward()
     assert model.lstm.weight_ih_l0.grad is not None
     assert model.residual_proj.weight.grad is not None
-    print(f"self-check passed: SignLSTM outputs valid log-probs over {model.classifier.out_features} "
-          f"classes and gradients flow through the LSTM + residual")
+    print(f"self-check passed: SignLSTM outputs one logit vector per sequence over "
+          f"{model.classifier.out_features} classes and gradients flow through the LSTM + residual")
 
 
 if __name__ == "__main__":

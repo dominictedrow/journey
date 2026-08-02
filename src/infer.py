@@ -11,7 +11,7 @@ import torch
 from dataset import load_vocab, make_dataloader
 from ingest import load_records
 from model import build_model
-from train import BATCH_SIZE, SEQUENCE_LENGTH, ctc_greedy_predict, precision_recall_macro
+from train import BATCH_SIZE, SEQUENCE_LENGTH, precision_recall_macro
 
 
 def run_inference(test_dir: Path, checkpoint: Path, vocab_path: Path = None):
@@ -29,12 +29,11 @@ def run_inference(test_dir: Path, checkpoint: Path, vocab_path: Path = None):
         for x, y in loader:
             x, y = x.to(device), y.to(device)
             targets = y.argmax(dim=1)
-            log_probs = model(x)
-            preds = ctc_greedy_predict(log_probs, blank=len(vocab))
+            logits = model(x)
+            preds = logits.argmax(dim=-1)
 
             for pred, target in zip(preds.tolist(), targets.tolist()):
-                predicted_word = vocab[pred] if pred < len(vocab) else "<blank>"
-                print(f"predicted={predicted_word} actual={vocab[target]}")
+                print(f"predicted={vocab[pred]} actual={vocab[target]}")
 
             all_preds.append(preds)
             all_targets.append(targets)

@@ -31,6 +31,13 @@ HAND_FEATURE_DIM = 21 * 3
 # clip gets resampled to in _build_sequences, short or long.
 SEQUENCE_LENGTH = 60
 
+# Train-only augmentation: small random rotation/scale/jitter around the
+# already-normalized coordinates, so the model sees many plausible variants
+# of each real clip instead of memorizing one fixed point-cloud per example.
+AUGMENT_ROTATION_DEG = 15.0
+AUGMENT_SCALE_RANGE = 0.1
+AUGMENT_JITTER_STD = 0.02
+
 
 def normalize_landmarks(landmarks: list[dict]) -> np.ndarray:
     """21 {x,y,z} dicts -> (21, 3) array: wrist-relative, scale-normalized, rotation-corrected."""
@@ -77,6 +84,34 @@ def fuse_hands(hand_records: list[dict]) -> np.ndarray:
         elif r["handedness"] == LEFT:
             fused[HAND_FEATURE_DIM:] = normalize_landmarks(r["landmarks"]).reshape(-1)
     return fused
+
+
+def augment_sequence(coords: np.ndarray) -> np.ndarray:
+    """Randomly perturb one (seq_len, 126) fused sequence: one shared random
+    rotation + scale for the whole clip (mimics a different camera angle/
+    distance), independent per-point noise per frame (mimics MediaPipe's own
+    detection jitter).
+
+    A hand's 63 slots are all-zero when fuse_hands found no hand that frame --
+    that zero means "absent", not "at the origin". Rotation/scale are linear
+    so they leave zero at zero, but additive noise would turn an absent hand
+    into a fake noisy one, so noise is masked out wherever a hand is absent.
+    """
+    coords = coords.reshape(coords.shape[0], 2, 21, 3).copy()  # (seq, hand, landmark, xyz)
+    present = np.abs(coords).sum(axis=(2, 3), keepdims=True) > 0  # (seq, hand, 1, 1)
+
+    angle = np.radians(np.random.uniform(-AUGMENT_ROTATION_DEG, AUGMENT_ROTATION_DEG))
+    cos_t, sin_t = np.cos(angle), np.sin(angle)
+    rotation = np.array([[cos_t, -sin_t], [sin_t, cos_t]], dtype=np.float32)
+    coords[..., :2] = coords[..., :2] @ rotation.T
+
+    scale = np.random.uniform(1 - AUGMENT_SCALE_RANGE, 1 + AUGMENT_SCALE_RANGE)
+    coords *= scale
+
+    noise = np.random.normal(0, AUGMENT_JITTER_STD, coords.shape).astype(np.float32)
+    coords += noise * present
+
+    return coords.reshape(coords.shape[0], 126)
 
 
 def load_vocab(path: Path = VOCAB_PATH) -> list[str]:
@@ -134,9 +169,11 @@ def _build_sequences(records: list[dict], sequence_length: int) -> list[tuple[np
 class SignSequenceDataset(Dataset):
     """One item = one video, resampled to (sequence_length, 126) + one-hot label."""
 
-    def __init__(self, records: list[dict], vocab: list[str], sequence_length: int = SEQUENCE_LENGTH):
+    def __init__(self, records: list[dict], vocab: list[str], sequence_length: int = SEQUENCE_LENGTH,
+                 augment: bool = False):
         self.vocab = vocab
         self.sequence_length = sequence_length
+        self.augment = augment
         self.sequences = _build_sequences(records, sequence_length)
 
     def __len__(self):
@@ -144,18 +181,21 @@ class SignSequenceDataset(Dataset):
 
     def __getitem__(self, idx):
         coords, label = self.sequences[idx]
+        if self.augment:
+            coords = augment_sequence(coords)
         x = torch.from_numpy(coords)
         y = torch.from_numpy(one_hot(label, self.vocab))
         return x, y
 
 
 def make_dataloader(records: list[dict], vocab: list[str], sequence_length: int = SEQUENCE_LENGTH,
-                     batch_size: int = 16, shuffle: bool = True, num_workers: int = 4) -> DataLoader:
+                     batch_size: int = 16, shuffle: bool = True, num_workers: int = 4,
+                     augment: bool = False) -> DataLoader:
     # num_workers spawns subprocesses that prepare upcoming batches (landmark
-    # normalization/resampling) while the GPU is busy on the current one --
-    # without this, that CPU work happens in-line on the main process and the
-    # GPU sits idle between batches instead of overlapping with it.
-    dataset = SignSequenceDataset(records, vocab, sequence_length)
+    # normalization/resampling/augmentation) while the GPU is busy on the
+    # current one -- without this, that CPU work happens in-line on the main
+    # process and the GPU sits idle between batches instead of overlapping with it.
+    dataset = SignSequenceDataset(records, vocab, sequence_length, augment=augment)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
 
@@ -238,7 +278,23 @@ def _self_check():
     x, y = next(iter(loader))
     assert x.shape == (2, 3, 126)
     assert y.shape[1] == len(vocab)
-    print("self-check passed: per-hand normalization, fixed right/left slot fusion, and per-video sequences all line up")
+
+    # augmentation: a present hand should move (rotation/scale/noise all
+    # apply), an absent hand must stay exactly zero -- not get hallucinated
+    # noise -- and the un-augmented dataset must be untouched (val/test path).
+    np.random.seed(0)
+    augmented = augment_sequence(book_seqs[0])
+    assert not np.allclose(augmented[0, :63], book_seqs[0][0, :63])   # right hand: perturbed
+    assert np.allclose(augmented[0, 63:], 0.0)                        # left hand: still absent -> still zero
+
+    plain_dataset = SignSequenceDataset(records, vocab, sequence_length=3, augment=False)
+    aug_dataset = SignSequenceDataset(records, vocab, sequence_length=3, augment=True)
+    plain_x, _ = plain_dataset[0]
+    aug_x, _ = aug_dataset[0]
+    assert not torch.allclose(plain_x, aug_x)  # augment=True actually perturbs __getitem__ output
+
+    print("self-check passed: per-hand normalization, fixed right/left slot fusion, per-video sequences, "
+          "and train-only augmentation (perturbs present hands, leaves absent hands zero) all line up")
 
 
 if __name__ == "__main__":

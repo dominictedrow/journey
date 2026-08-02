@@ -68,16 +68,13 @@ def run_live(checkpoint: Path, camera_index: int = 0):
             if len(window) == SEQUENCE_LENGTH:
                 x = torch.from_numpy(np.stack(window)).unsqueeze(0).to(device)
                 with torch.no_grad():
-                    log_probs = model(x)
-                frame_preds = log_probs[0].argmax(dim=-1)
-                non_blank = frame_preds[frame_preds != len(vocab)]
-                if non_blank.numel():
-                    predicted_word = vocab[non_blank.mode().values.item()]
-                    if predicted_word != last_spoken:
-                        # say blocks while it plays -- run it off the main
-                        # thread so the camera loop doesn't stall mid-word.
-                        threading.Thread(target=speak, args=(predicted_word,), daemon=True).start()
-                        last_spoken = predicted_word
+                    logits = model(x)
+                predicted_word = vocab[logits[0].argmax(dim=-1).item()]
+                if predicted_word != last_spoken:
+                    # say blocks while it plays -- run it off the main
+                    # thread so the camera loop doesn't stall mid-word.
+                    threading.Thread(target=speak, args=(predicted_word,), daemon=True).start()
+                    last_spoken = predicted_word
 
             cv2.putText(frame, predicted_word, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
             cv2.imshow("sign translator (press q to quit)", frame)
@@ -104,8 +101,8 @@ def _self_check():
     x = torch.from_numpy(np.stack(window)).unsqueeze(0)
     model = build_model()
     with torch.no_grad():
-        log_probs = model(x)
-    assert log_probs.shape == (1, SEQUENCE_LENGTH, model.classifier.out_features)
+        logits = model(x)
+    assert logits.shape == (1, model.classifier.out_features)
     print("self-check passed: camera-frame -> landmarks -> fused vector -> rolling window -> "
           "model forward pass all wired correctly")
 
