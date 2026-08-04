@@ -1,14 +1,19 @@
 """Map a data/raw_videos/ filename back to the word(s) it shows, using the
-WLASL/MS-ASL annotation JSON that the downloader scripts already read.
+WLASL/MS-ASL/ASL-Citizen annotation files the downloader/migration scripts
+already read.
 
-A raw file's name alone doesn't say what sign it is -- three different
+A raw file's name alone doesn't say what sign it is -- four different
 filename schemes are mixed together in data/raw_videos/ (see the July 30
 analysis): WLASL dictionary clips keyed by WLASL's own video_id, WLASL
-YouTube-sourced clips keyed by the raw YouTube id, and MS-ASL clips keyed by
-"{youtube_id}_{start_time_ms}". A single WLASL YouTube file can also carry
-more than one label: some are long source videos where several different
-glosses each occupy their own frame range inside the same file. lookup()
-always returns a list for that reason -- usually one instance, sometimes many.
+YouTube-sourced clips keyed by the raw YouTube id, MS-ASL clips keyed by
+"{youtube_id}_{start_time_ms}", and ASL-Citizen clips keyed by their own
+"{hash}-{GLOSS}.mp4" filename (the CSV's "Video file" column, not a filename
+parse -- ASL-Citizen glosses can contain a space the actual filename doesn't,
+e.g. filename "...-SOCCER 2.mp4" vs CSV Gloss "SOCCER2"). A single WLASL
+YouTube file can also carry more than one label: some are long source videos
+where several different glosses each occupy their own frame range inside the
+same file. lookup() always returns a list for that reason -- usually one
+instance, sometimes many.
 
 Labels are filtered (and, for synonyms, rewritten) against vocab.txt the same
 way the downloaders decided what to fetch, so every label lookup() returns is
@@ -16,7 +21,12 @@ guaranteed to already be a spelling that exists in vocab.txt -- e.g. a clip
 whose own JSON entry says "daddy" comes back labeled "father" if that's the
 vocab.txt word its synonym group matched on. Without that, dataset.one_hot
 would crash the moment it hit a synonym spelling vocab.txt doesn't have.
+ASL-Citizen glosses go through the same canonical map after stripping a
+trailing variant digit and lowercasing (e.g. "BACKPACK1" -> "backpack",
+"ABOUT2" -> "about") -- ASL-Citizen numbers repeat *takes* of the same sign,
+unlike WLASL/MS-ASL where no such suffix convention exists.
 """
+import csv
 import json
 import re
 from pathlib import Path
@@ -28,6 +38,9 @@ WLASL_JSON = HERE / "data" / "WLASL" / "start_kit" / "WLASL_v0.3.json"
 MSASL_DIR = HERE / "data" / "MS-ASL"
 MSASL_SPLIT_FILES = ("train", "val", "test")
 SYNONYM_PATH = MSASL_DIR / "MSASL_synonym.json"
+ASLCITIZEN_DIR = HERE / "data" / "ASL_Citizen"
+ASLCITIZEN_SPLIT_FILES = ("train", "val", "test")
+TRAILING_DIGIT_RE = re.compile(r'\d+$')
 
 YT_ID_RE = re.compile(r'(?:[?&]v=|youtu\.be/)([\w-]{11})')
 
@@ -111,7 +124,32 @@ def _load_msasl_index(canonical: dict) -> dict:
     return by_key
 
 
-_index = None  # (by_video_id, by_yt_id, by_msasl_key), built lazily on first lookup()
+def _load_aslcitizen_index(canonical: dict) -> dict:
+    '''"{hash}-{GLOSS}.mp4" (the CSV's own "Video file" column) -> [instance]
+    (always exactly one -- ASL-Citizen clips are pre-trimmed to just the sign).
+    '''
+    by_key = {}
+    for split in ASLCITIZEN_SPLIT_FILES:
+        path = ASLCITIZEN_DIR / "splits" / "{}.csv".format(split)
+        with open(path, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                gloss = TRAILING_DIGIT_RE.sub("", row["Gloss"]).strip().lower()
+                label = canonical.get(gloss)
+                if label is None:
+                    continue
+                by_key[row["Video file"]] = [{
+                    "label": label,
+                    "frame_start": 0,
+                    "frame_end": -1,
+                    "fps": None,
+                    "signer_id": row["Participant ID"],
+                    "split": split,
+                    "source": "ASL_Citizen",
+                }]
+    return by_key
+
+
+_index = None  # (by_video_id, by_yt_id, by_msasl_key, by_aslcitizen_key), built lazily on first lookup()
 
 
 def _ensure_index():
@@ -120,27 +158,30 @@ def _ensure_index():
         canonical = _load_vocab_with_synonyms()
         by_video_id, by_yt_id = _load_wlasl_index(canonical)
         by_msasl_key = _load_msasl_index(canonical)
-        _index = (by_video_id, by_yt_id, by_msasl_key)
+        by_aslcitizen_key = _load_aslcitizen_index(canonical)
+        _index = (by_video_id, by_yt_id, by_msasl_key, by_aslcitizen_key)
     return _index
 
 
 def lookup(filename: str) -> list[dict]:
     """filename is a bare name from data/raw_videos/ (e.g. "69241.mp4",
-    "1_jXxjd0lKE.mp4", "-0GelCb31wA_0.mp4"). Returns every labeled instance
-    that file contains -- usually one, sometimes many for a shared WLASL
-    YouTube source video. Empty list for anything not a recognized clip
-    (leftover .f137.mp4/.m4a partial-stream artifacts, or a word that isn't
-    in vocab.txt).
+    "1_jXxjd0lKE.mp4", "-0GelCb31wA_0.mp4", "15890366051589533-APPLE.mp4").
+    Returns every labeled instance that file contains -- usually one,
+    sometimes many for a shared WLASL YouTube source video. Empty list for
+    anything not a recognized clip (leftover .f137.mp4/.m4a partial-stream
+    artifacts, or a word that isn't in vocab.txt).
     """
     if not filename.endswith(".mp4"):
         return []
-    by_video_id, by_yt_id, by_msasl_key = _ensure_index()
+    by_video_id, by_yt_id, by_msasl_key, by_aslcitizen_key = _ensure_index()
     stem = filename[:-4]
     if stem in by_video_id:
         return by_video_id[stem]
     if stem in by_yt_id:
         return by_yt_id[stem]
-    return by_msasl_key.get(filename, [])
+    if filename in by_msasl_key:
+        return by_msasl_key[filename]
+    return by_aslcitizen_key.get(filename, [])
 
 
 def _self_check():
@@ -174,8 +215,21 @@ def _self_check():
     # (those are frame numbers in the original untrimmed source video).
     assert match[0]["frame_start"] == 0 and match[0]["frame_end"] == -1
 
-    print("self-check passed: all three raw_videos filename schemes resolve to "
-          "vocab.txt-canonical labels, multi-label WLASL source videos return every instance")
+    aslcitizen = lookup("15890366051589533-APPLE.mp4")  # ASL-Citizen clip, pre-trimmed
+    assert len(aslcitizen) == 1
+    assert aslcitizen[0]["source"] == "ASL_Citizen" and aslcitizen[0]["label"] == "apple"
+    assert aslcitizen[0]["frame_start"] == 0 and aslcitizen[0]["frame_end"] == -1
+    assert aslcitizen[0]["signer_id"] == "P1"
+
+    # ASL-Citizen's own trailing-digit variant-take suffix ("BACKPACK1")
+    # must canonicalize down to the plain vocab.txt spelling ("backpack"),
+    # not get rejected as an unrecognized word.
+    variant = lookup("4520498201410337-BACKPACK.mp4")
+    assert len(variant) == 1 and variant[0]["label"] == "backpack"
+
+    print("self-check passed: all four raw_videos filename schemes resolve to "
+          "vocab.txt-canonical labels, multi-label WLASL source videos return every instance, "
+          "and ASL-Citizen's trailing-digit variant takes canonicalize to the plain vocab spelling")
 
 
 if __name__ == "__main__":
