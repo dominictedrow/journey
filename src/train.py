@@ -96,7 +96,7 @@ def _is_improvement(val_loss: float, val_acc: float, best_val_loss: float, best_
 
 
 def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: float,
-          clip_norm: float, batch_size: int = BATCH_SIZE, patience: int = PATIENCE,
+          clip_norm: float, weight_decay: float, batch_size: int = BATCH_SIZE, patience: int = PATIENCE,
           checkpoint_path: Path = DEFAULT_CHECKPOINT) -> SignLSTM:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     vocab = load_vocab()
@@ -109,7 +109,10 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
     # Adam has no literal "momentum" knob -- beta1 plays the same role,
     # controlling how much of the running gradient average carries over
     # between steps.
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(momentum, 0.999))
+    # weight_decay is L2 regularization: it shrinks every weight toward zero
+    # a little each step, penalizing the large weights memorization tends to
+    # produce, so the model favors smaller weights that still fit the data.
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(momentum, 0.999), weight_decay=weight_decay)
     scheduler = ExponentialLR(optimizer, gamma=lr_scaling)
 
     best_val_loss, best_val_acc, stall_epochs = float("inf"), 0.0, 0
@@ -189,6 +192,8 @@ if __name__ == "__main__":
                          help="per-epoch multiplicative LR decay (ExponentialLR gamma); 1.0 = constant LR")
     parser.add_argument("--momentum", type=float, default=0.9, help="Adam's beta1")
     parser.add_argument("--clip-norm", type=float, default=5.0, help="max gradient norm (clips exploding gradients)")
+    parser.add_argument("--weight-decay", type=float, default=1e-4,
+                         help="Adam's L2 penalty on weights (regularization against overfitting)")
     parser.add_argument("--patience", type=int, default=PATIENCE,
                          help="stop early if val loss/accuracy hasn't improved in this many epochs")
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT,
@@ -211,6 +216,6 @@ if __name__ == "__main__":
         try:
             print(f"logging to {log_path}")
             train(args.data_dir, args.epochs, args.lr, args.lr_scaling, args.momentum,
-                  args.clip_norm, args.batch_size, args.patience, args.checkpoint)
+                  args.clip_norm, args.weight_decay, args.batch_size, args.patience, args.checkpoint)
         finally:
             sys.stdout = real_stdout
