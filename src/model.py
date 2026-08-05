@@ -1,10 +1,14 @@
-"""One residual LSTM block for isolated sign recognition.
+"""Stacked residual LSTM block for isolated sign recognition.
 
 Uses nn.LSTM (cuDNN's fused implementation) rather than a hand-written cell:
 same gate math (sigmoid forget/input/output gates, tanh candidate, cell-state
 recurrence), but cuDNN packs all 4 gates' weights into one matrix and runs the
 per-timestep loop inside its own optimized CUDA kernel instead of round-tripping
 through Python once per timestep -- far better GPU utilization for the same result.
+nn.LSTM's num_layers stacks NUM_LAYERS of these: layer 2 takes layer 1's
+per-timestep outputs as its input sequence, learning temporal patterns over
+layer 1's already-processed features instead of raw coordinates -- deeper,
+not wider, since hidden_size stays the same either way.
 Wraps it with dropout, a residual connection from the raw input, and a
 batchnorm + dense classifier head sized directly off the persisted vocab
 (dataset.load_vocab) rather than a hardcoded class count.
@@ -23,15 +27,21 @@ RIGHT_HAND_SLICE = slice(0, 63)
 LEFT_HAND_SLICE = slice(63, 126)
 HIDDEN_SIZE = 128
 DROPOUT = 0.3
+NUM_LAYERS = 2
 
 
 class SignLSTM(nn.Module):
-    """Input (126) -> residual LSTM block -> batchnorm -> mean-pool -> dense(vocab) logits."""
+    """Input (126) -> stacked residual LSTM block -> batchnorm -> mean-pool -> dense(vocab) logits."""
 
-    def __init__(self, vocab_size: int, hidden_size: int = HIDDEN_SIZE, dropout: float = DROPOUT):
+    def __init__(self, vocab_size: int, hidden_size: int = HIDDEN_SIZE, dropout: float = DROPOUT,
+                 num_layers: int = NUM_LAYERS):
         super().__init__()
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(INPUT_SIZE, hidden_size, batch_first=True)
+        # nn.LSTM's own dropout applies between stacked layers (not after the
+        # last one); it's a no-op and warns if num_layers is 1, so it's only
+        # passed when there's actually a second layer to regularize between.
+        self.lstm = nn.LSTM(INPUT_SIZE, hidden_size, num_layers=num_layers, batch_first=True,
+                             dropout=dropout if num_layers > 1 else 0.0)
         self.dropout = nn.Dropout(dropout)
         # Projects the raw input into hidden_size so it can be added back to
         # the LSTM's output. The residual path skips dropout on purpose: it
