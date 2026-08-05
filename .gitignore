@@ -23,6 +23,5 @@ data/WLASL/start_kit/*.log
 data/MS-ASL/resume*_stdout.log
 data/WLASL/start_kit/resume*_stdout.log
 
-# Run logs, and trained checkpoints -- both regenerable, not source.
+# Run logs -- regenerable, not source.
 logs/
-models/*.pt
