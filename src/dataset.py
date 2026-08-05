@@ -125,6 +125,15 @@ def one_hot(label: str, vocab: list[str]) -> np.ndarray:
     return vec
 
 
+def resample_sequence(coords: list[np.ndarray], sequence_length: int) -> np.ndarray:
+    """Uniformly resample a variable-length list of fused per-frame vectors down/up to
+    exactly sequence_length steps, spanning the whole list start to finish. Shared by
+    _build_sequences (training clips) and live inference (mac.py's segmented gestures)
+    so both go through the identical normalization."""
+    indices = np.linspace(0, len(coords) - 1, sequence_length).round().astype(int)
+    return np.stack([coords[i] for i in indices])
+
+
 def _build_sequences(records: list[dict], sequence_length: int) -> list[tuple[np.ndarray, str]]:
     """One sequence per video, not per label.
 
@@ -159,9 +168,7 @@ def _build_sequences(records: list[dict], sequence_length: int) -> list[tuple[np
         if not coords:
             continue
 
-        indices = np.linspace(0, len(coords) - 1, sequence_length).round().astype(int)
-        window = [coords[i] for i in indices]
-        sequences.append((np.stack(window), label))
+        sequences.append((resample_sequence(coords, sequence_length), label))
 
     return sequences
 

@@ -1,10 +1,12 @@
 """Live camera test of the sign translator.
 
 Connects process_video.py's MediaPipe HandLandmarker to a webcam feed instead
-of a video file, fuses each frame the same way dataset.py does, and feeds a
-rolling window of the last SEQUENCE_LENGTH frames through a trained SignLSTM
-checkpoint. This is the real-life usability check -- everywhere else in the
-pipeline only ever sees pre-recorded, pre-labeled clips.
+of a video file, fuses each frame the same way dataset.py does, and buffers
+frames for one gesture at a time (hands present -> absent), resampling each
+completed gesture to SEQUENCE_LENGTH steps the same way training clips were
+built before running it through a trained SignLSTM checkpoint. This is the
+real-life usability check -- everywhere else in the pipeline only ever sees
+pre-recorded, pre-labeled clips.
 """
 import argparse
 import sys
@@ -18,11 +20,16 @@ import mediapipe as mp
 import numpy as np
 import torch
 
-from dataset import HAND_FEATURE_DIM, fuse_hands, load_vocab
+from dataset import HAND_FEATURE_DIM, fuse_hands, load_vocab, resample_sequence
 from model import build_model
 from process_video import make_landmarker
 from speak import speak
 from train import SEQUENCE_LENGTH
+
+# dataset.py: "Clips run 14-384 frames (median ~80)" -- training never saw a
+# gesture outside that range, so live segmentation is bounded the same way.
+MIN_GESTURE_FRAMES = 14
+MAX_GESTURE_FRAMES = 384
 
 
 def frame_to_hand_records(result) -> list[dict]:
@@ -48,10 +55,9 @@ def run_live(checkpoint: Path, camera_index: int = 0):
     if not cap.isOpened():
         raise IOError(f"Could not open camera {camera_index}")
 
-    window = deque(maxlen=SEQUENCE_LENGTH)
     start_time = time.time()
     predicted_word = ""
-    last_spoken = ""
+    gesture_buffer: list[np.ndarray] = []
 
     try:
         while True:
@@ -63,18 +69,30 @@ def run_live(checkpoint: Path, camera_index: int = 0):
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB,
                                  data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            window.append(fuse_hands(frame_to_hand_records(result)))
 
-            if len(window) == SEQUENCE_LENGTH:
-                x = torch.from_numpy(np.stack(window)).unsqueeze(0).to(device)
-                with torch.no_grad():
-                    logits = model(x)
-                predicted_word = vocab[logits[0].argmax(dim=-1).item()]
-                if predicted_word != last_spoken:
+            # Segment the continuous stream into one-gesture-at-a-time chunks
+            # instead of classifying a raw fixed-size window every frame: the
+            # model only ever saw whole gestures resampled to SEQUENCE_LENGTH
+            # steps, never an arbitrary slice of continuous, unsegmented video.
+            hands_present = len(result.hand_landmarks) > 0
+            if hands_present:
+                gesture_buffer.append(fuse_hands(frame_to_hand_records(result)))
+
+            gesture_ended = not hands_present and gesture_buffer
+            gesture_overlong = hands_present and len(gesture_buffer) >= MAX_GESTURE_FRAMES
+            if gesture_ended or gesture_overlong:
+                if len(gesture_buffer) >= MIN_GESTURE_FRAMES:
+                    coords = resample_sequence(gesture_buffer, SEQUENCE_LENGTH)
+                    x = torch.from_numpy(coords).unsqueeze(0).to(device)
+                    with torch.no_grad():
+                        logits = model(x)
+                    predicted_word = vocab[logits[0].argmax(dim=-1).item()]
                     # say blocks while it plays -- run it off the main
                     # thread so the camera loop doesn't stall mid-word.
                     threading.Thread(target=speak, args=(predicted_word,), daemon=True).start()
-                    last_spoken = predicted_word
+                gesture_buffer = []
+            elif not hands_present:
+                predicted_word = ""
 
             cv2.putText(frame, predicted_word, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
             cv2.imshow("sign translator (press q to quit)", frame)
@@ -103,7 +121,7 @@ def _self_check():
     with torch.no_grad():
         logits = model(x)
     assert logits.shape == (1, model.classifier.out_features)
-    print("self-check passed: camera-frame -> landmarks -> fused vector -> rolling window -> "
+    print("self-check passed: camera-frame -> landmarks -> fused vector -> buffered gesture -> "
           "model forward pass all wired correctly")
 
 
