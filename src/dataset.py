@@ -37,6 +37,7 @@ SEQUENCE_LENGTH = 60
 AUGMENT_ROTATION_DEG = 15.0
 AUGMENT_SCALE_RANGE = 0.1
 AUGMENT_JITTER_STD = 0.02
+AUGMENT_TEMPORAL_MIN_KEEP = 0.7  # smallest fraction of timesteps kept before restretching back to seq_len
 
 
 def normalize_landmarks(landmarks: list[dict]) -> np.ndarray:
@@ -90,13 +91,25 @@ def augment_sequence(coords: np.ndarray) -> np.ndarray:
     """Randomly perturb one (seq_len, 126) fused sequence: one shared random
     rotation + scale for the whole clip (mimics a different camera angle/
     distance), independent per-point noise per frame (mimics MediaPipe's own
-    detection jitter).
+    detection jitter), and a random temporal resample (mimics a signer
+    performing faster, or MediaPipe dropping frames).
 
     A hand's 63 slots are all-zero when fuse_hands found no hand that frame --
     that zero means "absent", not "at the origin". Rotation/scale are linear
     so they leave zero at zero, but additive noise would turn an absent hand
     into a fake noisy one, so noise is masked out wherever a hand is absent.
     """
+    seq_len = coords.shape[0]
+    # Temporal: drop a random fraction of timesteps, then restretch back to
+    # seq_len via the same linspace resampling every sequence is already
+    # built with (resample_sequence). Fewer real frames stretched over the
+    # same length plays back like a faster performance, so the model sees
+    # speed variation instead of one fixed-speed resample per clip.
+    keep_frac = np.random.uniform(AUGMENT_TEMPORAL_MIN_KEEP, 1.0)
+    n_keep = max(2, round(seq_len * keep_frac))
+    keep_idx = np.sort(np.random.choice(seq_len, n_keep, replace=False))
+    coords = resample_sequence(list(coords[keep_idx]), seq_len)
+
     coords = coords.reshape(coords.shape[0], 2, 21, 3).copy()  # (seq, hand, landmark, xyz)
     present = np.abs(coords).sum(axis=(2, 3), keepdims=True) > 0  # (seq, hand, 1, 1)
 
@@ -196,14 +209,19 @@ class SignSequenceDataset(Dataset):
 
 
 def make_dataloader(records: list[dict], vocab: list[str], sequence_length: int = SEQUENCE_LENGTH,
-                     batch_size: int = 16, shuffle: bool = True, num_workers: int = 4,
+                     batch_size: int = 16, shuffle: bool = True, num_workers: int = 8,
                      augment: bool = False) -> DataLoader:
     # num_workers spawns subprocesses that prepare upcoming batches (landmark
     # normalization/resampling/augmentation) while the GPU is busy on the
     # current one -- without this, that CPU work happens in-line on the main
     # process and the GPU sits idle between batches instead of overlapping with it.
+    # persistent_workers keeps those subprocesses alive across epochs instead
+    # of respawning them every epoch (Windows' spawn start method makes that
+    # respawn expensive). pin_memory lets the host->GPU copy for the next
+    # batch happen asynchronously instead of blocking the training step.
     dataset = SignSequenceDataset(records, vocab, sequence_length, augment=augment)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
+                       persistent_workers=num_workers > 0, pin_memory=True)
 
 
 def _self_check():

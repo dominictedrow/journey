@@ -25,8 +25,8 @@ from dataset import load_vocab
 INPUT_SIZE = 126  # 63 right-hand coords + 63 left-hand coords, see dataset.fuse_hands
 RIGHT_HAND_SLICE = slice(0, 63)
 LEFT_HAND_SLICE = slice(63, 126)
-HIDDEN_SIZE = 128
-DROPOUT = 0.3
+HIDDEN_SIZE = 256
+DROPOUT = 0.5
 NUM_LAYERS = 2
 
 
@@ -44,9 +44,7 @@ class SignLSTM(nn.Module):
                              dropout=dropout if num_layers > 1 else 0.0)
         self.dropout = nn.Dropout(dropout)
         # Projects the raw input into hidden_size so it can be added back to
-        # the LSTM's output. The residual path skips dropout on purpose: it
-        # should keep passing the input through untouched, only the LSTM's
-        # own contribution gets regularized.
+        # the LSTM's output.
         self.residual_proj = nn.Linear(INPUT_SIZE, hidden_size)
         self.batch_norm = nn.BatchNorm1d(hidden_size)
         self.classifier = nn.Linear(hidden_size, vocab_size)
@@ -55,7 +53,7 @@ class SignLSTM(nn.Module):
         batch_size, seq_len, _ = x.shape
 
         hidden_seq, _ = self.lstm(x)  # (batch, seq_len, hidden_size); h_0/c_0 default to zero
-        hidden_seq = self.dropout(hidden_seq) + self.residual_proj(x)
+        hidden_seq = self.dropout(hidden_seq + self.residual_proj(x))
 
         # BatchNorm1d normalizes per feature over the batch dim, so timesteps
         # get folded into the batch axis for the norm and split back after.

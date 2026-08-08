@@ -10,6 +10,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+from torch.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import ExponentialLR
 
 from dataset import SEQUENCE_LENGTH, load_vocab, make_dataloader
@@ -18,6 +19,10 @@ from model import SignLSTM, build_model
 
 BATCH_SIZE = 16
 PATIENCE = 10
+# Val only runs once per epoch and is far shorter than a train pass, so it
+# doesn't need train's worker count -- fewer workers here means fewer
+# persistent processes each paying the Windows spawn/pickle cost up front.
+VAL_NUM_WORKERS = 2
 DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_landmarks"
 DEFAULT_CHECKPOINT = Path(__file__).parent.parent / "models" / "checkpoint.pt"
 LOG_DIR = Path(__file__).parent.parent / "logs"
@@ -56,27 +61,35 @@ def precision_recall_macro(preds: torch.Tensor, targets: torch.Tensor, num_class
 
 
 def run_epoch(model: SignLSTM, loader, vocab_size: int, device: torch.device, optimizer=None,
-              clip_norm: float | None = None):
+              clip_norm: float | None = None, scaler: GradScaler | None = None):
     """One pass over loader. Trains if optimizer is given, else evaluates."""
     is_train = optimizer is not None
     model.train(is_train)
     ce_loss = nn.CrossEntropyLoss()
+    amp_enabled = scaler is not None and scaler.is_enabled()
 
     total_loss, all_preds, all_targets = 0.0, [], []
     with torch.set_grad_enabled(is_train):
         for x, y in loader:
-            x, y = x.to(device), y.to(device)
+            x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             targets = y.argmax(dim=1)
 
-            logits = model(x)  # (batch, vocab_size)
-            loss = ce_loss(logits, targets)
+            with autocast(device_type=device.type, enabled=amp_enabled):
+                logits = model(x)  # (batch, vocab_size)
+                loss = ce_loss(logits, targets)
 
             if is_train:
                 optimizer.zero_grad()
-                loss.backward()
+                # GradScaler multiplies the loss up before backward so small
+                # fp16 gradients don't underflow to zero, then unscales them
+                # back down before clipping/stepping so clip_norm and the
+                # optimizer see real gradient magnitudes.
+                scaler.scale(loss).backward()
                 if clip_norm is not None:
+                    scaler.unscale_(optimizer)
                     nn.utils.clip_grad_norm_(model.parameters(), clip_norm)
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
 
             total_loss += loss.item() * x.size(0)
             all_preds.append(logits.detach().argmax(dim=-1))
@@ -97,14 +110,15 @@ def _is_improvement(val_loss: float, val_acc: float, best_val_loss: float, best_
 
 def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: float,
           clip_norm: float, weight_decay: float, batch_size: int = BATCH_SIZE, patience: int = PATIENCE,
-          checkpoint_path: Path = DEFAULT_CHECKPOINT) -> SignLSTM:
+          checkpoint_path: Path = DEFAULT_CHECKPOINT, num_workers: int = 8) -> SignLSTM:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     vocab = load_vocab()
     model = build_model().to(device)
 
     train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size,
-                                    augment=True)
-    val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size, shuffle=False)
+                                    augment=True, num_workers=num_workers)
+    val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size,
+                                  shuffle=False, num_workers=min(num_workers, VAL_NUM_WORKERS))
 
     # Adam has no literal "momentum" knob -- beta1 plays the same role,
     # controlling how much of the running gradient average carries over
@@ -114,12 +128,15 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
     # produce, so the model favors smaller weights that still fit the data.
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(momentum, 0.999), weight_decay=weight_decay)
     scheduler = ExponentialLR(optimizer, gamma=lr_scaling)
+    # fp16 autocast + gradient scaling only pay off on CUDA's tensor cores --
+    # enabled=False makes GradScaler a no-op on CPU.
+    scaler = GradScaler(device.type, enabled=(device.type == "cuda"))
 
     best_val_loss, best_val_acc, stall_epochs = float("inf"), 0.0, 0
     for epoch in range(1, epochs + 1):
         train_loss, train_acc, train_prec, train_rec = run_epoch(
-            model, train_loader, len(vocab), device, optimizer, clip_norm=clip_norm)
-        val_loss, val_acc, val_prec, val_rec = run_epoch(model, val_loader, len(vocab), device)
+            model, train_loader, len(vocab), device, optimizer, clip_norm=clip_norm, scaler=scaler)
+        val_loss, val_acc, val_prec, val_rec = run_epoch(model, val_loader, len(vocab), device, scaler=scaler)
         scheduler.step()
 
         print(f"epoch {epoch}/{epochs} "
@@ -198,6 +215,8 @@ if __name__ == "__main__":
                          help="stop early if val loss/accuracy hasn't improved in this many epochs")
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT,
                          help="where to save trained weights (default: models/checkpoint.pt)")
+    parser.add_argument("--num-workers", type=int, default=8,
+                         help="DataLoader subprocesses preparing batches (raise on more CPU cores to keep the GPU fed)")
     parser.add_argument("--self-test", action="store_true", help="run a synthetic smoke test instead of training")
     args = parser.parse_args()
 
@@ -216,6 +235,7 @@ if __name__ == "__main__":
         try:
             print(f"logging to {log_path}")
             train(args.data_dir, args.epochs, args.lr, args.lr_scaling, args.momentum,
-                  args.clip_norm, args.weight_decay, args.batch_size, args.patience, args.checkpoint)
+                  args.clip_norm, args.weight_decay, args.batch_size, args.patience, args.checkpoint,
+                  args.num_workers)
         finally:
             sys.stdout = real_stdout
