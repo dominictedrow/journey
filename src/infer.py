@@ -8,8 +8,8 @@ from pathlib import Path
 
 import torch
 
-from dataset import load_vocab, make_dataloader
-from ingest import load_records
+from dataset import load_vocab, make_lazy_dataloader
+from ingest import list_video_files
 from model import build_model
 from train import BATCH_SIZE, SEQUENCE_LENGTH, precision_recall_macro
 
@@ -22,7 +22,7 @@ def run_inference(test_dir: Path, checkpoint: Path, vocab_path: Path = None):
     model.load_state_dict(torch.load(checkpoint, map_location=device))
     model.eval()
 
-    loader = make_dataloader(load_records(test_dir), vocab, SEQUENCE_LENGTH, BATCH_SIZE, shuffle=False)
+    loader = make_lazy_dataloader(list_video_files(test_dir), vocab, SEQUENCE_LENGTH, BATCH_SIZE, shuffle=False)
 
     all_preds, all_targets = [], []
     with torch.no_grad():

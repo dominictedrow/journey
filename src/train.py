@@ -13,8 +13,8 @@ import torch.nn as nn
 from torch.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import ExponentialLR
 
-from dataset import SEQUENCE_LENGTH, load_vocab, make_dataloader
-from ingest import load_records
+from dataset import SEQUENCE_LENGTH, load_vocab, make_dataloader, make_lazy_dataloader
+from ingest import list_video_files
 from model import SignLSTM, build_model
 
 BATCH_SIZE = 16
@@ -115,10 +115,10 @@ def train(data_dir: Path, epochs: int, lr: float, lr_scaling: float, momentum: f
     vocab = load_vocab()
     model = build_model().to(device)
 
-    train_loader = make_dataloader(load_records(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size,
-                                    augment=True, num_workers=num_workers)
-    val_loader = make_dataloader(load_records(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size,
-                                  shuffle=False, num_workers=min(num_workers, VAL_NUM_WORKERS))
+    train_loader = make_lazy_dataloader(list_video_files(data_dir, split="train"), vocab, SEQUENCE_LENGTH, batch_size,
+                                         augment=True, num_workers=num_workers)
+    val_loader = make_lazy_dataloader(list_video_files(data_dir, split="val"), vocab, SEQUENCE_LENGTH, batch_size,
+                                       shuffle=False, num_workers=min(num_workers, VAL_NUM_WORKERS))
 
     # Adam has no literal "momentum" knob -- beta1 plays the same role,
     # controlling how much of the running gradient average carries over

@@ -1,25 +1,18 @@
 """Split data/raw_landmarks/ into train/val/test, grouped by signer.
 
-Splitting per word alone isn't enough: many WLASL/MS-ASL clips share a
-source recording -- one YouTube video where a single signer performs dozens
-of different words in one sitting. A per-word file shuffle scatters those
-clips across splits with no regard for that, so the same signer's hand
-geometry, background, and camera setup end up on both sides of the
-train/test boundary -- a model can partly learn to recognize the *signer*
-instead of the *sign*, and val/test accuracy overstates how well it'll
-generalize to someone new.
+Splitting per word alone isn't enough: one signer contributes many clips
+across many different words. A per-word file shuffle scatters those clips
+across splits with no regard for that, so the same signer's hand geometry,
+background, and camera setup end up on both sides of the train/test boundary
+-- a model can partly learn to recognize the *signer* instead of the *sign*,
+and val/test accuracy overstates how well it'll generalize to someone new.
 
-Every clip is grouped by signer_id (namespaced by source -- WLASL and
-MS-ASL each start their own signer_id numbering at 0, so signer 0 in one
-isn't signer 0 in the other) via label_lookup, which already resolves a
-clip back to the WLASL/MS-ASL metadata that recorded it. Whole signer
-groups, never individual clips, are then handed to one split, so no
-signer's clips ever appear in more than one of train/val/test. Where
-signer_id isn't recorded (doesn't happen in the current corpus, but
-label_lookup treats it as optional), the clip's source video is used as the
-grouping key instead -- weaker (two different videos of the same signer
-could still land in different splits) but still keeps a single recording
-session from being split apart.
+Every clip is grouped by participant_id, which extract_kaggle_landmarks.py
+already bakes into the filename (Kaggle's train.csv tags every sequence with
+its own participant_id directly -- no separate metadata lookup needed to
+recover it). Whole signer groups, never individual clips, are then handed to
+one split, so no signer's clips ever appear in more than one of
+train/val/test.
 
 ponytail: exact per-word 60/20/20 balance isn't possible once splitting is
 signer-disjoint -- a word signed by only one or two people necessarily lands
@@ -32,44 +25,21 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from label_lookup import lookup
-
 DATA_DIR = Path(__file__).parent.parent / "data" / "raw_landmarks"
 SPLIT_PATH = Path(__file__).parent.parent / "data" / "split.json"
 TRAIN_FRAC = 0.6
 VAL_FRAC = 0.2
 SEED = 42
 
-# extract_raw_videos.py's naming: "{label}__{video_id}_landmarks.json", where
-# video_id is "{source_video_stem}__{instance_index}" for a multi-label
-# source video, or just the bare source_video_stem for a single-label one.
-FILENAME_RE = re.compile(r"^(.+?)__(.+)_landmarks\.json$")
-MULTI_INSTANCE_RE = re.compile(r"^(.+)__(\d+)$")
+# extract_kaggle_landmarks.py's naming: "{sign}__{participant_id}-{sequence_id}_landmarks.json"
+FILENAME_RE = re.compile(r"^(.+?)__(\d+)-(\d+)_landmarks\.json$")
 
 
 def _signer_key(filename: str) -> tuple:
-    """landmarks filename -> (source, "signer", signer_id), or a same-source-
-    video fallback key when signer_id is unavailable. Also double-checks the
-    label recovered from label_lookup against the one in the filename itself
-    -- if those ever disagree, the video_id/instance-index parsing above has
-    drifted out of sync with extract_raw_videos.py's naming and the split
-    would silently group the wrong clips.
-    """
+    """landmarks filename -> ("Kaggle", "signer", participant_id)."""
     m = FILENAME_RE.match(filename)
-    label, video_id = m.group(1), m.group(2)
-
-    multi = MULTI_INSTANCE_RE.match(video_id)
-    raw_stem, index = (multi.group(1), int(multi.group(2))) if multi else (video_id, 0)
-
-    inst = lookup(raw_stem + ".mp4")[index]
-    assert inst["label"] == label, (
-        f"{filename}: filename says label={label!r}, but label_lookup resolved "
-        f"instance {index} of {raw_stem!r} to {inst['label']!r}"
-    )
-
-    if inst["signer_id"] is not None:
-        return (inst["source"], "signer", inst["signer_id"])
-    return (inst["source"], "video", raw_stem)
+    participant_id = m.group(2)
+    return ("Kaggle", "signer", participant_id)
 
 
 def _split_groups(groups: dict[tuple, list[str]], train_frac: float = TRAIN_FRAC,
@@ -141,31 +111,22 @@ def _self_check():
     uneven_total = sum(uneven_counts.values())
     assert 0.45 < uneven_counts["train"] / uneven_total < 0.75
 
-    # --- _signer_key against real WLASL/MS-ASL metadata (same clips
-    # label_lookup._self_check already exercises), proving the
-    # filename<->lookup mapping actually lines up. ---
-    book_key = _signer_key("book__69241_landmarks.json")
-    assert book_key[:2] == ("WLASL", "signer")
+    # --- _signer_key against extract_kaggle_landmarks.py's filename convention. ---
+    assert _signer_key("book__16069-100015657_landmarks.json") == ("Kaggle", "signer", "16069")
 
-    # a real WLASL source video known (see label_lookup._self_check) to carry
-    # more than one gloss -- each instance must resolve to whatever signer_id
-    # label_lookup itself reports for that instance, not silently swapped.
-    shared = lookup("1_jXxjd0lKE.mp4")
-    assert len(shared) >= 2
-    for i, inst in enumerate(shared):
-        fname = "{}__1_jXxjd0lKE__{}_landmarks.json".format(inst["label"], i)
-        assert _signer_key(fname) == ("WLASL", "signer", inst["signer_id"])
+    # two clips from the same participant (different signs/sequences) must
+    # share a signer key -- that's what keeps a signer's clips together.
+    key_a = _signer_key("book__16069-100015657_landmarks.json")
+    key_b = _signer_key("cloud__16069-1002113535_landmarks.json")
+    assert key_a == key_b
 
-    # a mismatched label must be caught, not silently mis-grouped
-    try:
-        _signer_key("not_the_real_label__69241_landmarks.json")
-        assert False, "expected an AssertionError on label mismatch"
-    except AssertionError as e:
-        assert "filename says label" in str(e)
+    # a different participant must get a different key.
+    key_c = _signer_key("book__28656-1000106739_landmarks.json")
+    assert key_c != key_a
 
     print("self-check passed: signer groups never get split across train/val/test, "
           "greedy fill lands close to target ratios for both even and uneven group sizes, "
-          "and signer_key's filename<->metadata mapping matches real WLASL data")
+          "and signer_key parses participant_id straight out of the Kaggle filename convention")
 
 
 if __name__ == "__main__":

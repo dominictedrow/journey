@@ -20,7 +20,7 @@ import mediapipe as mp
 import numpy as np
 import torch
 
-from dataset import HAND_FEATURE_DIM, fuse_hands, load_vocab, resample_sequence
+from dataset import TOTAL_FEATURE_DIM, fuse_landmarks, load_vocab, resample_sequence
 from model import build_model
 from process_video import make_landmarker
 from speak import speak
@@ -76,7 +76,11 @@ def run_live(checkpoint: Path, camera_index: int = 0):
             # steps, never an arbitrary slice of continuous, unsegmented video.
             hands_present = len(result.hand_landmarks) > 0
             if hands_present:
-                gesture_buffer.append(fuse_hands(frame_to_hand_records(result)))
+                # This still only ever runs MediaPipe HandLandmarker, not
+                # Holistic, so fuse_landmarks' face/pose slots stay zero here
+                # -- live inference won't see those features until this
+                # capture is upgraded to Holistic too.
+                gesture_buffer.append(fuse_landmarks(frame_to_hand_records(result)))
 
             gesture_ended = not hands_present and gesture_buffer
             gesture_overlong = hands_present and len(gesture_buffer) >= MAX_GESTURE_FRAMES
@@ -112,8 +116,8 @@ def _self_check():
     result = landmarker.detect_for_video(mp_image, 0)
     landmarker.close()
 
-    fused = fuse_hands(frame_to_hand_records(result))
-    assert fused.shape == (2 * HAND_FEATURE_DIM,)
+    fused = fuse_landmarks(frame_to_hand_records(result))
+    assert fused.shape == (TOTAL_FEATURE_DIM,)  # face/pose slots zero -- HandLandmarker only
 
     window = deque([fused] * SEQUENCE_LENGTH, maxlen=SEQUENCE_LENGTH)
     x = torch.from_numpy(np.stack(window)).unsqueeze(0)

@@ -11,36 +11,78 @@ RAW_LANDMARKS_DIR = Path(__file__).parent.parent / "data" / "raw_landmarks"
 SPLIT_PATH = Path(__file__).parent.parent / "data" / "split.json"
 
 
-def load_records(data_dir: Path = DATA_DIR, split: str | None = None) -> list[dict]:
-    """Load every *_landmarks.json file in data_dir and tag each detection with its label.
+def load_video(path: Path, label: str) -> list[dict]:
+    """Read one *_landmarks.json file and tag each detection with its label.
 
     Two record shapes exist depending on who wrote the file:
     - process_video.py (personal recordings in data/) writes bare detections
       with no "video"/"label" -- those get inferred from the filename, one
       video/word per file (e.g. "hello_landmarks.json" -> "hello").
-    - extract_raw_videos.py (the bulk WLASL/MS-ASL corpus in
+    - extract_kaggle_landmarks.py (the bulk Kaggle asl-signs corpus in
       data/raw_landmarks/) already tags every detection with its own "video"
       and "label", since a source file's own name doesn't encode the word
       the way a personal recording's does. Those pass through unchanged.
-    Returns one dict per detected hand per frame: video, label, frame, timestamp_ms, handedness, landmarks, world_landmarks.
+    Returns one dict per detected body part per frame: video, label, frame, landmarks, plus
+    either "part" (extract_kaggle_landmarks.py: "right_hand"/"left_hand"/"face"/"pose") or
+    "handedness" (process_video.py: "Right"/"Left"/None -- hands only, see dataset.fuse_landmarks)
+    depending on the source, plus timestamp_ms/world_landmarks when the source is a live
+    MediaPipe run.
+    """
+    records = []
+    for detection in json.loads(path.read_text()):
+        if "label" in detection:
+            records.append(detection)
+        else:
+            records.append({"video": label, "label": label, **detection})
+    return records
+
+
+def load_records(data_dir: Path = DATA_DIR, split: str | None = None) -> list[dict]:
+    """Load every *_landmarks.json file in data_dir and tag each detection with its label.
 
     split: "train"/"val"/"test" to load only the files split_dataset.py
     assigned to that split (data/split.json). Files with no entry there
     (e.g. personal recordings, which aren't part of the split) are skipped
     whenever a split filter is given.
+
+    Eagerly reads and json.loads's every matching file into memory -- fine
+    for a small corpus, but not the full Kaggle-scale one. For that, use
+    list_video_files + dataset.LazySignVideoDataset instead, which reads and
+    fuses one video at a time.
     """
     split_map = json.loads(SPLIT_PATH.read_text()) if split else {}
     records = []
     for path in sorted(Path(data_dir).glob("*_landmarks.json")):
         if split and split_map.get(path.name) != split:
             continue
-        label = path.stem.removesuffix("_landmarks")
-        for detection in json.loads(path.read_text()):
-            if "label" in detection:
-                records.append(detection)
-            else:
-                records.append({"video": label, "label": label, **detection})
+        label = path.stem.removesuffix("_landmarks").split("__", 1)[0]
+        records.extend(load_video(path, label))
     return records
+
+
+def list_video_files(data_dir: Path = DATA_DIR, split: str | None = None) -> list[tuple[Path, str]]:
+    """Same file discovery + split filtering as load_records, but returns
+    (path, label) pairs without reading any file contents -- no
+    path.read_text() or json.loads() here, that's the whole point. Lets a
+    caller build a per-video lazy Dataset (dataset.LazySignVideoDataset)
+    whose memory use doesn't scale with corpus size.
+    """
+    split_map = json.loads(SPLIT_PATH.read_text()) if split else {}
+    files = []
+    for path in sorted(Path(data_dir).glob("*_landmarks.json")):
+        if split and split_map.get(path.name) != split:
+            continue
+        label = path.stem.removesuffix("_landmarks").split("__", 1)[0]
+        files.append((path, label))
+    return files
+
+
+def cache_path_for(path: Path) -> Path:
+    """A *_landmarks.json file's sibling .npy cache path (same directory,
+    same stem) -- shared by build_landmark_cache.py (writer) and
+    dataset.LazySignVideoDataset (reader) so the two never disagree on where
+    a video's cached array lives."""
+    return path.with_suffix(".npy")
 
 
 def _self_check():
@@ -65,9 +107,10 @@ def _self_check():
         assert len(records[0]["landmarks"]) == 21
 
     # raw_landmarks-style files: detections already carry "video"/"label"
-    # (extract_raw_videos.py tags them) -- must pass through as-is, not get
-    # re-tagged from the filename (which would wreck a multi-instance name
-    # like "about__jPn0FQxkdBc__5_landmarks.json").
+    # (extract_kaggle_landmarks.py tags them) -- must pass through as-is, not
+    # get re-tagged from the filename (which would wreck a name like
+    # "about__16069-100015657_landmarks.json", where the label is only the
+    # part before the first "__").
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         tagged = [{"video": "about__abc123__0", "label": "about", "frame": 0,
@@ -79,9 +122,23 @@ def _self_check():
         assert records[0]["video"] == "about__abc123__0"
         assert records[0]["label"] == "about"
 
+    # list_video_files must never touch file contents -- garbage JSON that
+    # would blow up json.loads has to still yield the correct (path, label)
+    # pair, for both filename conventions (personal-recording: whole stem is
+    # the label; Kaggle: label is only the part before the first "__").
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        (tmp_path / "hello_landmarks.json").write_text("not valid json{{{")
+        (tmp_path / "book__1-1_landmarks.json").write_text("also not valid json")
+
+        files = dict(list_video_files(tmp_path))
+        assert files[tmp_path / "hello_landmarks.json"] == "hello"
+        assert files[tmp_path / "book__1-1_landmarks.json"] == "book"
+        assert cache_path_for(tmp_path / "hello_landmarks.json") == tmp_path / "hello_landmarks.npy"
+
     # split filtering: only files data/split.json assigns to the requested
     # split load, the rest (including files split.json doesn't mention at
-    # all) are skipped.
+    # all) are skipped. list_video_files must filter identically.
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         for name, video in [("cat__1_landmarks.json", "cat__1"), ("cat__2_landmarks.json", "cat__2"),
@@ -103,11 +160,16 @@ def _self_check():
             test_records = load_records(tmp_path, split="test")
             assert [r["video"] for r in test_records] == ["cat__2"]
             assert load_records(tmp_path) != train_records  # no split filter -> everything, unaffected by split.json
+
+            assert list_video_files(tmp_path, split="train") == [(tmp_path / "cat__1_landmarks.json", "cat")]
+            assert list_video_files(tmp_path, split="test") == [(tmp_path / "cat__2_landmarks.json", "cat")]
+            assert len(list_video_files(tmp_path)) == 3  # no split filter -> everything
         finally:
             SPLIT_PATH = original_split_path
 
     print("self-check passed: records load with correct label and shape, raw_landmarks "
-          "pre-tagged detections pass through unchanged, and split filtering only loads "
+          "pre-tagged detections pass through unchanged, list_video_files matches load_records' "
+          "label/split logic without ever reading file contents, and split filtering only loads "
           "files split.json assigns to the requested split")
 
 

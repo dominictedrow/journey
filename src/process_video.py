@@ -60,7 +60,7 @@ def process_video(video_path: str) -> list[dict]:
             if not result.hand_landmarks:
                 # No hand detected at all this frame -- still record the frame
                 # (handedness=None, no landmarks) so it isn't silently dropped
-                # from the sequence. dataset.fuse_hands treats a record with no
+                # from the sequence. dataset.fuse_landmarks treats a record with no
                 # matching handedness as a no-op, i.e. zero-filled -- the same
                 # outcome mac.py's live path already gets for a handless frame.
                 results.append({
@@ -130,7 +130,7 @@ def _self_check():
 
     # A blank (handless) frame must still show up in process_video's output --
     # as a handedness=None placeholder -- instead of being silently dropped.
-    # Every frame surviving is what lets dataset.fuse_hands zero-fill it
+    # Every frame surviving is what lets dataset.fuse_landmarks zero-fill it
     # instead of the sequence quietly losing a timestep.
     import tempfile
     NUM_FRAMES = 5
