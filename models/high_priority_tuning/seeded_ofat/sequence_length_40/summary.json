@@ -1,0 +1,12 @@
+{
+  "name": "sequence_length_40",
+  "family": "sequence_length",
+  "value": "40",
+  "best_val_acc": 0.5884238566075218,
+  "best_val_loss": 1.709530726030097,
+  "best_epoch": 12,
+  "final_val_acc": 0.5857149306966455,
+  "final_val_loss": 1.7346687816869562,
+  "parameters": 3030011,
+  "elapsed_seconds": 26492.21751642227
+}

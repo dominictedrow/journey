@@ -1,0 +1,12 @@
+{
+  "name": "dropout_0.3",
+  "family": "dropout",
+  "value": "0.3",
+  "best_val_acc": 0.60255542010926,
+  "best_val_loss": 1.7387659048907234,
+  "best_epoch": 13,
+  "final_val_acc": 0.601065510858278,
+  "final_val_loss": 1.7465651406132399,
+  "parameters": 3030011,
+  "elapsed_seconds": 2222.829356431961
+}

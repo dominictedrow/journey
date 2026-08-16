@@ -1,0 +1,20 @@
+[
+  {
+    "val_acc": 0.6143843965867534,
+    "val_loss": 1.8430130289355122,
+    "epoch": 25,
+    "variant": "baseline",
+    "final_val_acc": 0.5962797417490632,
+    "final_val_loss": 2.111321594603277,
+    "elapsed_seconds": 1363.7268137931824
+  },
+  {
+    "val_acc": 0.6095986274775385,
+    "val_loss": 1.8269286799890483,
+    "epoch": 23,
+    "variant": "presence",
+    "final_val_acc": 0.5980405435911328,
+    "final_val_loss": 2.1189368908343624,
+    "elapsed_seconds": 1370.0468611717224
+  }
+]

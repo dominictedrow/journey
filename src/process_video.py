@@ -1,8 +1,10 @@
-"""Run MediaPipe HandLandmarker over a video file, frame by frame, in VIDEO mode.
+"""Run MediaPipe HolisticLandmarker over a video file, frame by frame, in VIDEO mode.
 
-Outputs one JSON record per detected hand per frame: frame index, timestamp,
-handedness, and 21 landmark (x, y, z) coordinates. Does not classify signs --
-that's a separate downstream step.
+Outputs one JSON record per detected body part per frame: frame index,
+timestamp, part ("right_hand"/"left_hand"/"face"/"pose", same tagging
+extract_kaggle_landmarks.py uses for the bulk Kaggle corpus), and that part's
+landmark (x, y, z) coordinates. Does not classify signs -- that's a separate
+downstream step.
 """
 import argparse
 import json
@@ -16,17 +18,33 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-MODEL_PATH = Path(__file__).parent.parent / "models" / "hand_landmarker.task"
+MODEL_PATH = Path(__file__).parent.parent / "models" / "holistic_landmarker.task"
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def make_landmarker():
-    options = vision.HandLandmarkerOptions(
+    options = vision.HolisticLandmarkerOptions(
         base_options=python.BaseOptions(model_asset_path=str(MODEL_PATH)),
         running_mode=vision.RunningMode.VIDEO,
-        num_hands=2,
     )
-    return vision.HandLandmarker.create_from_options(options)
+    return vision.HolisticLandmarker.create_from_options(options)
+
+
+def frame_to_part_records(result) -> list[dict]:
+    """HolisticLandmarkerResult -> one {"part", "landmarks"} dict per detected
+    part. Holistic already splits hands into left/right and tracks at most one
+    of each (one person), unlike HandLandmarker's per-detection handedness list."""
+    parts = {
+        "right_hand": result.right_hand_landmarks,
+        "left_hand": result.left_hand_landmarks,
+        "face": result.face_landmarks,
+        "pose": result.pose_landmarks,
+    }
+    return [
+        {"part": part, "landmarks": [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in landmarks]}
+        for part, landmarks in parts.items()
+        if landmarks
+    ]
 
 
 def process_video(video_path: str) -> list[dict]:
@@ -48,28 +66,17 @@ def process_video(video_path: str) -> list[dict]:
                                  data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
-            for hand_landmarks, world_landmarks, handedness in zip(
-                    result.hand_landmarks, result.hand_world_landmarks, result.handedness):
-                results.append({
-                    "frame": frame_idx,
-                    "timestamp_ms": timestamp_ms,
-                    "handedness": handedness[0].category_name,
-                    "landmarks": [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hand_landmarks],
-                    "world_landmarks": [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in world_landmarks],
-                })
-            if not result.hand_landmarks:
-                # No hand detected at all this frame -- still record the frame
-                # (handedness=None, no landmarks) so it isn't silently dropped
-                # from the sequence. dataset.fuse_landmarks treats a record with no
-                # matching handedness as a no-op, i.e. zero-filled -- the same
-                # outcome mac.py's live path already gets for a handless frame.
-                results.append({
-                    "frame": frame_idx,
-                    "timestamp_ms": timestamp_ms,
-                    "handedness": None,
-                    "landmarks": [],
-                    "world_landmarks": [],
-                })
+            part_records = frame_to_part_records(result)
+            if part_records:
+                for record in part_records:
+                    results.append({"frame": frame_idx, "timestamp_ms": timestamp_ms, **record})
+            else:
+                # Nothing detected at all this frame -- still record the frame
+                # (part=None, no landmarks) so it isn't silently dropped from
+                # the sequence. dataset.fuse_landmarks treats a record naming
+                # no known part as a no-op, i.e. zero-filled -- the same
+                # outcome mac.py's live path already gets for an empty frame.
+                results.append({"frame": frame_idx, "timestamp_ms": timestamp_ms, "part": None, "landmarks": []})
             frame_idx += 1
     finally:
         cap.release()
@@ -124,14 +131,16 @@ def _self_check():
     blank = np.zeros((224, 224, 3), dtype=np.uint8)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=blank)
     result = landmarker.detect_for_video(mp_image, 0)
-    assert hasattr(result, "hand_landmarks")
-    assert hasattr(result, "hand_world_landmarks")
+    assert hasattr(result, "face_landmarks")
+    assert hasattr(result, "pose_landmarks")
+    assert hasattr(result, "left_hand_landmarks")
+    assert hasattr(result, "right_hand_landmarks")
     landmarker.close()
 
-    # A blank (handless) frame must still show up in process_video's output --
-    # as a handedness=None placeholder -- instead of being silently dropped.
-    # Every frame surviving is what lets dataset.fuse_landmarks zero-fill it
-    # instead of the sequence quietly losing a timestep.
+    # A blank (nothing-detected) frame must still show up in process_video's
+    # output -- as a part=None placeholder -- instead of being silently
+    # dropped. Every frame surviving is what lets dataset.fuse_landmarks
+    # zero-fill it instead of the sequence quietly losing a timestep.
     import tempfile
     NUM_FRAMES = 5
     with tempfile.TemporaryDirectory() as tmp:
@@ -144,7 +153,7 @@ def _self_check():
         results = process_video(video_path)
         assert len(results) == NUM_FRAMES
         assert [r["frame"] for r in results] == list(range(NUM_FRAMES))
-        assert all(r["handedness"] is None and r["landmarks"] == [] for r in results)
+        assert all(r["part"] is None and r["landmarks"] == [] for r in results)
 
     # _pending_videos: a video with an existing landmarks JSON should be skipped,
     # one without should show up as pending -- this is the logic that makes
@@ -158,7 +167,7 @@ def _self_check():
         pending = _pending_videos(tmp_path, tmp_path)
         assert [p.name for p in pending] == ["todo.mp4"]
 
-    print("self-check passed: pipeline wiring OK (no hands expected in a blank frame), "
+    print("self-check passed: pipeline wiring OK (nothing expected detected in a blank frame), "
           "pending-video resume logic skips already-processed videos")
 
 
@@ -188,4 +197,4 @@ if __name__ == "__main__":
         DATA_DIR.mkdir(exist_ok=True)
         out_path = DATA_DIR / (Path(args.video).stem + "_landmarks.json")
     out_path.write_text(json.dumps(data, indent=2))
-    print(f"wrote {len(data)} hand detections to {out_path}")
+    print(f"wrote {len(data)} part detections to {out_path}")

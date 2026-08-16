@@ -1,6 +1,8 @@
 """One-time offline conversion of every *_landmarks.json into a per-video
-.npy cache of its already-fused+resampled (SEQUENCE_LENGTH, TOTAL_FEATURE_DIM)
-array (see ingest.cache_path_for for the naming), so dataset.LazySignVideoDataset
+.npy cache of its already-fused+resampled (SEQUENCE_LENGTH, COORD_DIM) array
+-- dataset.py's blocks A+B; velocity and presence are derived at load time by
+dataset.finalize_sequence, so changing those needs no rebuild here (see
+ingest.cache_path_for for the naming), so dataset.LazySignVideoDataset
 stops re-parsing multi-MB JSON text every training epoch -- np.load on a flat
 binary array is far cheaper than json.loads + fuse_landmarks/resample_sequence
 on the same video's text. Read-only with respect to the source *_landmarks.json
@@ -17,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-from dataset import SEQUENCE_LENGTH, _video_to_sequence
+from dataset import COORD_DIM, SEQUENCE_LENGTH, _video_to_sequence
 from ingest import RAW_LANDMARKS_DIR, cache_path_for, list_video_files, load_video
 
 
@@ -76,7 +78,11 @@ def _self_check():
         cache_path = tmp_path / "book__1-1_landmarks.npy"
         assert cache_path.exists()
         cached = np.load(cache_path)
-        assert cached.shape == (3, 1629)  # TOTAL_FEATURE_DIM avoided as an import just for this shape check
+        # Imported, not restated as a literal: dataset.py owns the feature
+        # layout, and a hardcoded width here would keep passing after the
+        # layout changes -- exactly the silent-staleness failure the cache
+        # guard in LazySignVideoDataset exists to prevent.
+        assert cached.shape == (3, COORD_DIM)
         expected = _video_to_sequence(load_video(tmp_path / "book__1-1_landmarks.json", "book"), sequence_length=3)
         assert np.allclose(cached, expected)
 

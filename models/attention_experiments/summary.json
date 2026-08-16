@@ -1,0 +1,56 @@
+[
+  {
+    "val_acc": 0.6029166102307102,
+    "val_loss": 1.69047040408301,
+    "epoch": 14,
+    "variant": "baseline",
+    "final_val_acc": 0.6004785769109214,
+    "final_val_loss": 1.71702605017938,
+    "elapsed_seconds": 534.6869564056396
+  },
+  {
+    "val_acc": 0.593435369542643,
+    "val_loss": 1.8010998312578153,
+    "epoch": 14,
+    "variant": "nonlinear",
+    "final_val_acc": 0.5817869881258747,
+    "final_val_loss": 1.8346713651176005,
+    "elapsed_seconds": 544.6681098937988
+  },
+  {
+    "val_acc": 0.5940674522551809,
+    "val_loss": 1.7903136144352205,
+    "epoch": 15,
+    "variant": "multihead",
+    "final_val_acc": 0.5940674522551809,
+    "final_val_loss": 1.7903136144352205,
+    "elapsed_seconds": 549.8242862224579
+  },
+  {
+    "val_acc": 0.5320781976612939,
+    "val_loss": 2.004515481719616,
+    "epoch": 14,
+    "variant": "statistics",
+    "final_val_acc": 0.5274730236128042,
+    "final_val_loss": 1.9947138920805139,
+    "elapsed_seconds": 557.6576750278473
+  },
+  {
+    "val_acc": 0.5997110479028399,
+    "val_loss": 1.7363049131889388,
+    "epoch": 15,
+    "variant": "presence",
+    "final_val_acc": 0.5997110479028399,
+    "final_val_loss": 1.7363049131889388,
+    "elapsed_seconds": 537.9732649326324
+  },
+  {
+    "val_acc": 0.6012009571538218,
+    "val_loss": 1.6927032200303798,
+    "epoch": 12,
+    "variant": "entropy",
+    "final_val_acc": 0.5865727572350896,
+    "final_val_loss": 1.7765878491506302,
+    "elapsed_seconds": 510.27615451812744
+  }
+]

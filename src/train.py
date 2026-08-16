@@ -17,7 +17,7 @@ from dataset import SEQUENCE_LENGTH, load_vocab, make_dataloader, make_lazy_data
 from ingest import list_video_files
 from model import SignLSTM, build_model
 
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 PATIENCE = 10
 # Val only runs once per epoch and is far shorter than a train pass, so it
 # doesn't need train's worker count -- fewer workers here means fewer

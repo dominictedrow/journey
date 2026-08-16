@@ -1,0 +1,16 @@
+{
+  "data_dir": "data\\raw_landmarks",
+  "output_dir": "models\\attention_experiments_40ep",
+  "epochs": 40,
+  "batch_size": 64,
+  "num_workers": 8,
+  "lr": 0.0005,
+  "seed": 20260813,
+  "variants": [
+    "baseline",
+    "presence"
+  ],
+  "device": "cuda",
+  "train_examples": 54669,
+  "val_examples": 22149
+}

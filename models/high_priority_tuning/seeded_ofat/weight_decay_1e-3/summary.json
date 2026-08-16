@@ -1,0 +1,12 @@
+{
+  "name": "weight_decay_1e-3",
+  "family": "weight_decay",
+  "value": "1e-3",
+  "best_val_acc": 0.5348322723373515,
+  "best_val_loss": 1.8817782597706718,
+  "best_epoch": 13,
+  "final_val_acc": 0.5197074360016254,
+  "final_val_loss": 1.9874587062707771,
+  "parameters": 3030011,
+  "elapsed_seconds": 3040.3690226078033
+}

@@ -1,0 +1,12 @@
+{
+  "name": "hidden_512",
+  "family": "hidden",
+  "value": "512",
+  "best_val_acc": 0.5914939726398483,
+  "best_val_loss": 1.7208845387615963,
+  "best_epoch": 13,
+  "final_val_acc": 0.586798501060996,
+  "final_val_loss": 1.7705844906822052,
+  "parameters": 5219579,
+  "elapsed_seconds": 1508.5819594860077
+}

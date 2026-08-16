@@ -1,0 +1,12 @@
+{
+  "name": "depth_2",
+  "family": "depth",
+  "value": "2",
+  "best_val_acc": 0.6069348503318435,
+  "best_val_loss": 1.686536269764571,
+  "best_epoch": 14,
+  "final_val_acc": 0.6044968170120547,
+  "final_val_loss": 1.6782798814506605,
+  "parameters": 2141435,
+  "elapsed_seconds": 1074.5229768753052
+}

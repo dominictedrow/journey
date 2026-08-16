@@ -8,6 +8,7 @@ data/WLASL/start_kit/videos/
 # and the train/val/test split derived from them (regenerable via split_dataset.py).
 data/raw_landmarks/
 data/split.json
+data/kaggle_raw/
 
 # Landmark files quarantined out of the dataset for data-quality reasons
 # (zero-detection clips, long multi-gloss WLASL source videos) -- see the
@@ -25,3 +26,17 @@ data/WLASL/start_kit/resume*_stdout.log
 
 # Run logs -- regenerable, not source.
 logs/
+.gstack/
+
+# Experiment checkpoints and console logs are large, reproducible artifacts.
+# Keep their compact metrics/configuration files available for versioning.
+models/attention_experiments/*_best.pt
+models/attention_experiments/*_latest.pt
+models/attention_experiments_40ep/*_best.pt
+models/attention_experiments_40ep/*_latest.pt
+models/high_priority_tuning/**/*.pt
+models/high_priority_tuning/*.log
+models/high_priority_tuning/*.pid
+models/checkpoint_gelu.pt
+models/checkpoint_gelu_forget_bias1_15ep.pt
+models/checkpoint_relu_forget_bias1_15ep.pt

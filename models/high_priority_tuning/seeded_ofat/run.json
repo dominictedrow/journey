@@ -1,0 +1,8 @@
+{
+  "device": "cuda",
+  "epochs": 15,
+  "train_examples": 54669,
+  "val_examples": 22149,
+  "test_split_used": false,
+  "note": "sequence-length variants parse source JSON; caches are not rebuilt"
+}

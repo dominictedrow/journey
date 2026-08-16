@@ -1,0 +1,12 @@
+{
+  "name": "lr_1e-3",
+  "family": "lr",
+  "value": "1e-3",
+  "best_val_acc": 0.5649916474784414,
+  "best_val_loss": 1.7840311482089213,
+  "best_epoch": 13,
+  "final_val_acc": 0.5455325296853131,
+  "final_val_loss": 1.8709964738593876,
+  "parameters": 3030011,
+  "elapsed_seconds": 1208.8625710010529
+}

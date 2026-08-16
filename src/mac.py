@@ -1,12 +1,19 @@
 """Live camera test of the sign translator.
 
-Connects process_video.py's MediaPipe HandLandmarker to a webcam feed instead
-of a video file, fuses each frame the same way dataset.py does, and buffers
-frames for one gesture at a time (hands present -> absent), resampling each
-completed gesture to SEQUENCE_LENGTH steps the same way training clips were
-built before running it through a trained SignLSTM checkpoint. This is the
+Connects MediaPipe HolisticLandmarker to a webcam feed instead of a video
+file, fuses each frame the same way dataset.py does, and buffers frames for
+one gesture at a time (hands present -> absent), resampling each completed
+gesture to SEQUENCE_LENGTH steps the same way training clips were built
+before running it through a trained SignLSTM checkpoint. This is the
 real-life usability check -- everywhere else in the pipeline only ever sees
 pre-recorded, pre-labeled clips.
+
+Uses Holistic, not process_video.py's hand-only HandLandmarker, and that is now
+load-bearing rather than merely nice: dataset.fuse_landmarks normalizes every
+part into one shared body reference frame anchored on the pose shoulders (or,
+failing that, the face). Hand-only capture resolves no such frame, so the whole
+body-frame block -- hand position, lip shape, pose -- would come through as
+zeros at inference time while the model was trained on real values.
 """
 import argparse
 import sys
@@ -19,12 +26,16 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import torch
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
-from dataset import TOTAL_FEATURE_DIM, fuse_landmarks, load_vocab, resample_sequence
+from dataset import COORD_DIM, finalize_sequence, fuse_landmarks, load_vocab, resample_sequence
 from model import build_model
-from process_video import make_landmarker
 from speak import speak
 from train import SEQUENCE_LENGTH
+
+MODEL_PATH = Path(__file__).parent.parent / "models" / "holistic_landmarker.task"
+DEFAULT_CHECKPOINT = Path(__file__).parent.parent / "models" / "checkpoint.pt"
 
 # dataset.py: "Clips run 14-384 frames (median ~80)" -- training never saw a
 # gesture outside that range, so live segmentation is bounded the same way.
@@ -32,14 +43,31 @@ MIN_GESTURE_FRAMES = 14
 MAX_GESTURE_FRAMES = 384
 
 
-def frame_to_hand_records(result) -> list[dict]:
-    """Same per-hand shape process_video.py writes, minus frame/timestamp bookkeeping."""
+def make_landmarker():
+    options = vision.HolisticLandmarkerOptions(
+        base_options=python.BaseOptions(model_asset_path=str(MODEL_PATH)),
+        running_mode=vision.RunningMode.VIDEO,
+    )
+    return vision.HolisticLandmarker.create_from_options(options)
+
+
+def frame_to_holistic_records(result) -> list[dict]:
+    """HolisticLandmarkerResult -> the same "part"-tagged shape
+    extract_kaggle_landmarks.py produces from the Kaggle corpus, so
+    fuse_landmarks treats live frames and training clips identically. Unlike
+    HandLandmarker's hand_landmarks/handedness (one entry per detected hand),
+    Holistic returns one flat landmark list per part, already split into
+    left_hand/right_hand -- no handedness lookup needed."""
+    parts = {
+        "face": result.face_landmarks,
+        "pose": result.pose_landmarks,
+        "left_hand": result.left_hand_landmarks,
+        "right_hand": result.right_hand_landmarks,
+    }
     return [
-        {
-            "handedness": handedness[0].category_name,
-            "landmarks": [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in hand_landmarks],
-        }
-        for hand_landmarks, handedness in zip(result.hand_landmarks, result.handedness)
+        {"part": part, "landmarks": [{"x": lm.x, "y": lm.y, "z": lm.z} for lm in landmarks]}
+        for part, landmarks in parts.items()
+        if landmarks
     ]
 
 
@@ -47,7 +75,7 @@ def run_live(checkpoint: Path, camera_index: int = 0):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     vocab = load_vocab()
     model = build_model().to(device)
-    model.load_state_dict(torch.load(checkpoint, map_location=device))
+    model.load_state_dict(torch.load(checkpoint, map_location=device, weights_only=True))
     model.eval()
 
     landmarker = make_landmarker()
@@ -74,19 +102,22 @@ def run_live(checkpoint: Path, camera_index: int = 0):
             # instead of classifying a raw fixed-size window every frame: the
             # model only ever saw whole gestures resampled to SEQUENCE_LENGTH
             # steps, never an arbitrary slice of continuous, unsegmented video.
-            hands_present = len(result.hand_landmarks) > 0
+            # Gesture boundaries are still keyed on hands specifically (not
+            # face/pose, which can stay visible with hands at rest) -- same
+            # segmentation signal as before, now alongside the richer per-frame
+            # feature vector.
+            hands_present = bool(result.left_hand_landmarks) or bool(result.right_hand_landmarks)
             if hands_present:
-                # This still only ever runs MediaPipe HandLandmarker, not
-                # Holistic, so fuse_landmarks' face/pose slots stay zero here
-                # -- live inference won't see those features until this
-                # capture is upgraded to Holistic too.
-                gesture_buffer.append(fuse_landmarks(frame_to_hand_records(result)))
+                gesture_buffer.append(fuse_landmarks(frame_to_holistic_records(result)))
 
             gesture_ended = not hands_present and gesture_buffer
             gesture_overlong = hands_present and len(gesture_buffer) >= MAX_GESTURE_FRAMES
             if gesture_ended or gesture_overlong:
                 if len(gesture_buffer) >= MIN_GESTURE_FRAMES:
-                    coords = resample_sequence(gesture_buffer, SEQUENCE_LENGTH)
+                    # finalize_sequence (velocity + presence blocks) is the
+                    # same call the training datasets make, so live inference
+                    # and training cannot drift apart on feature layout.
+                    coords = finalize_sequence(resample_sequence(gesture_buffer, SEQUENCE_LENGTH))
                     x = torch.from_numpy(coords).unsqueeze(0).to(device)
                     with torch.no_grad():
                         logits = model(x)
@@ -116,11 +147,12 @@ def _self_check():
     result = landmarker.detect_for_video(mp_image, 0)
     landmarker.close()
 
-    fused = fuse_landmarks(frame_to_hand_records(result))
-    assert fused.shape == (TOTAL_FEATURE_DIM,)  # face/pose slots zero -- HandLandmarker only
+    fused = fuse_landmarks(frame_to_holistic_records(result))
+    assert fused.shape == (COORD_DIM,)  # blank frame -> nothing detected -> all slots zero
 
     window = deque([fused] * SEQUENCE_LENGTH, maxlen=SEQUENCE_LENGTH)
-    x = torch.from_numpy(np.stack(window)).unsqueeze(0)
+    coords = finalize_sequence(resample_sequence(list(window), SEQUENCE_LENGTH))
+    x = torch.from_numpy(coords).unsqueeze(0)
     model = build_model()
     with torch.no_grad():
         logits = model(x)
@@ -131,12 +163,13 @@ def _self_check():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, default=None, help="path to a checkpoint saved by train.py")
+    parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT,
+                        help="checkpoint to use (default: models/checkpoint.pt)")
     parser.add_argument("--camera", type=int, default=0, help="camera device index")
     parser.add_argument("--self-test", action="store_true", help="run wiring smoke test instead of opening the camera")
     args = parser.parse_args()
 
-    if args.self_test or not args.checkpoint:
+    if args.self_test:
         _self_check()
         sys.exit(0)
 

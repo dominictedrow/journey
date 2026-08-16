@@ -1,0 +1,21 @@
+{
+  "name": "hidden_512",
+  "family": "hidden",
+  "value": "512",
+  "seed": 20260814,
+  "dropout": 0.5,
+  "hidden_size": 512,
+  "num_layers": 3,
+  "lr": 0.0005,
+  "optimizer": "adam",
+  "weight_decay": 0.0001,
+  "batch_size": 16,
+  "sequence_length": 60,
+  "jitter_std": 0.02,
+  "temporal_min_keep": 0.7,
+  "label_smoothing": 0.0,
+  "imbalance": "none",
+  "pooling": "baseline",
+  "backbone": "lstm",
+  "features": "all"
+}

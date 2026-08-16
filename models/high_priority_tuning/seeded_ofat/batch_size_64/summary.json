@@ -1,0 +1,12 @@
+{
+  "name": "batch_size_64",
+  "family": "batch_size",
+  "value": "64",
+  "best_val_acc": 0.6129396361009526,
+  "best_val_loss": 1.630342219302582,
+  "best_epoch": 13,
+  "final_val_acc": 0.6097792225382636,
+  "final_val_loss": 1.6861704489765945,
+  "parameters": 3030011,
+  "elapsed_seconds": 997.4967172145844
+}

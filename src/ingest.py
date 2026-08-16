@@ -22,11 +22,10 @@ def load_video(path: Path, label: str) -> list[dict]:
       data/raw_landmarks/) already tags every detection with its own "video"
       and "label", since a source file's own name doesn't encode the word
       the way a personal recording's does. Those pass through unchanged.
-    Returns one dict per detected body part per frame: video, label, frame, landmarks, plus
-    either "part" (extract_kaggle_landmarks.py: "right_hand"/"left_hand"/"face"/"pose") or
-    "handedness" (process_video.py: "Right"/"Left"/None -- hands only, see dataset.fuse_landmarks)
-    depending on the source, plus timestamp_ms/world_landmarks when the source is a live
-    MediaPipe run.
+    Returns one dict per detected body part per frame: video, label, frame, part
+    ("right_hand"/"left_hand"/"face"/"pose", or None if nothing was detected
+    that frame -- see dataset.fuse_landmarks), landmarks, plus timestamp_ms
+    when the source is a live MediaPipe run (process_video.py/mac.py).
     """
     records = []
     for detection in json.loads(path.read_text()):
@@ -92,9 +91,8 @@ def _self_check():
         sample = [{
             "frame": 0,
             "timestamp_ms": 0,
-            "handedness": "Right",
+            "part": "right_hand",
             "landmarks": [{"x": 0.1, "y": 0.2, "z": 0.0}] * 21,
-            "world_landmarks": [{"x": 0.01, "y": 0.02, "z": 0.0}] * 21,
         }]
         (tmp_path / "hello_landmarks.json").write_text(json.dumps(sample))
 
@@ -103,7 +101,7 @@ def _self_check():
         assert len(records) == 1
         assert records[0]["video"] == "hello"
         assert records[0]["label"] == "hello"
-        assert records[0]["handedness"] == "Right"
+        assert records[0]["part"] == "right_hand"
         assert len(records[0]["landmarks"]) == 21
 
     # raw_landmarks-style files: detections already carry "video"/"label"

@@ -1,0 +1,12 @@
+{
+  "name": "temporal_keep_0.5",
+  "family": "temporal_keep",
+  "value": "0.5",
+  "best_val_acc": 0.5973633121134136,
+  "best_val_loss": 1.6884284005261332,
+  "best_epoch": 13,
+  "final_val_acc": 0.5949704275588062,
+  "final_val_loss": 1.7409385249541411,
+  "parameters": 3030011,
+  "elapsed_seconds": 1272.3265719413757
+}

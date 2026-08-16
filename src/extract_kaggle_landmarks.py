@@ -7,8 +7,9 @@ Kaggle's Holistic parquet mixes face/pose/hand rows per frame; all four are
 kept now (previously only left_hand/right_hand). landmark_index 0-20 for a
 hand matches MediaPipe HandLandmarker's own numbering (wrist=0, middle-finger
 MCP=9), landmark_index 0-32 for pose matches BlazePose's, and 0-467 for face
-matches FaceMesh's, so dataset.py's normalize_landmarks/normalize_pose/
-normalize_face need no changes here -- this file only reshapes. A part not
+matches FaceMesh's, so dataset.py's normalization and its LIP_INDICES/POSE_KEEP
+subsets need no changes here -- this file only reshapes, and stores all 468 face
+points even though only the 40 lip ones survive fusion. A part not
 detected in a frame comes through as all-NaN rows rather than being absent,
 so a (frame, part) group is only kept when every one of its landmarks is
 present; a part that's NaN a given frame simply produces no record for that

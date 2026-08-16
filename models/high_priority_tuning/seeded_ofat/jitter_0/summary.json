@@ -1,0 +1,12 @@
+{
+  "name": "jitter_0",
+  "family": "jitter",
+  "value": "0",
+  "best_val_acc": 0.5933450720122805,
+  "best_val_loss": 1.6898268538081187,
+  "best_epoch": 13,
+  "final_val_acc": 0.5896880220325974,
+  "final_val_loss": 1.7601306529875356,
+  "parameters": 3030011,
+  "elapsed_seconds": 2231.0498399734497
+}
