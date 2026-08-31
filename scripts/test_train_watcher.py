@@ -1,6 +1,9 @@
 import ast
+import json
 import random
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -9,6 +12,7 @@ from sklearn.svm import LinearSVC
 import counterfactual_dataset as cd
 import shared_features as sf
 import train_watcher as tw
+import watcher_config as wc
 
 
 N_FEATURES = len(sf.FEATURE_ORDER)
@@ -22,7 +26,7 @@ def make_features(rng, offset=0.0, dim=0):
 
 def make_row(rng, label, split, strategy_family="fam_a", output_id="product:WHEAT:increase",
              sample_weight=1.0, accepted=True, schema_hash=None, feature_order=None,
-             features=None, offset_dim=0):
+             features=None, offset_dim=0, seed=1):
     if features is None:
         offset = {1: 3.0, -1: -3.0, 0: 0.0}[label]
         features = make_features(rng, offset, offset_dim)
@@ -35,6 +39,9 @@ def make_row(rng, label, split, strategy_family="fam_a", output_id="product:WHEA
         "label": label,
         "accepted": accepted,
         "strategy_family": strategy_family,
+        "seed": seed,
+        "seed_group": str(seed),
+        "intervention_audit": {"execution_verified": True},
     }
     if split is not None:
         row["split"] = split
@@ -91,6 +98,27 @@ class SplitResolutionTests(unittest.TestCase):
         self.assertEqual(rejected, [])
         self.assertEqual(kept[0]["_split"], "test")
 
+    def test_seed_group_leakage_rejects_entire_group(self):
+        rng = random.Random(31)
+        rows = [make_row(rng, 1, "train"), make_row(rng, -1, "test")]
+        for row in rows:
+            row["seed_group"] = 99
+            row["_split"] = row["split"]
+        kept, rejected = tw.reject_seed_split_leakage(rows)
+        self.assertEqual(kept, [])
+        self.assertEqual(len(rejected), 2)
+
+    def test_same_raw_seed_across_family_qualified_groups_is_rejected(self):
+        rng = random.Random(32)
+        rows = [make_row(rng, 1, "train", strategy_family="fam_a", seed=7),
+                make_row(rng, -1, "train", strategy_family="fam_b", seed=7)]
+        rows[0]["seed_group"], rows[1]["seed_group"] = "fam_a:7", "fam_b:7"
+        for row in rows:
+            row["_split"] = row["split"]
+        kept, rejected = tw.reject_seed_split_leakage(rows)
+        self.assertEqual(kept, [])
+        self.assertEqual(len(rejected), 2)
+
 
 class PartitionTests(unittest.TestCase):
     def test_partition_never_reshuffles_rows_across_splits(self):
@@ -106,24 +134,36 @@ class PartitionTests(unittest.TestCase):
         self.assertEqual([r["_split"] for r in partitions["test"]], ["test"])
 
 
+def full_partitions(rng, per_class, splits=wc.SPLITS):
+    return {name: ([make_row(rng, 1, name) for _ in range(per_class)] +
+                   [make_row(rng, -1, name) for _ in range(per_class)])
+            for name in splits}
+
+
 class SplitAdequacyTests(unittest.TestCase):
     def test_check_split_adequacy_marks_degenerate_output_unavailable(self):
         rng = random.Random(5)
-        partitions = {
-            "train": [make_row(rng, 1, "train") for _ in range(3)] + [make_row(rng, -1, "train") for _ in range(3)],
-            "val": [make_row(rng, 1, "val")],
-            "test": [make_row(rng, 1, "test") for _ in range(3)] + [make_row(rng, -1, "test") for _ in range(3)],
-        }
+        partitions = full_partitions(rng, 3)
+        partitions["val"] = [make_row(rng, 1, "val")]
 
         ok, reason = tw.check_split_adequacy(partitions, min_per_class=2)
 
         self.assertFalse(ok)
         self.assertEqual(reason, "val_insufficient_class_counts")
 
+    def test_check_split_adequacy_requires_the_confirm_split(self):
+        rng = random.Random(51)
+        partitions = full_partitions(rng, 3)
+        partitions["confirm"] = []
+
+        ok, reason = tw.check_split_adequacy(partitions, min_per_class=2)
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "confirm_insufficient_class_counts")
+
     def test_check_split_adequacy_passes_when_all_splits_meet_minimum(self):
         rng = random.Random(6)
-        partitions = {name: [make_row(rng, 1, name) for _ in range(2)] + [make_row(rng, -1, name) for _ in range(2)]
-                      for name in ("train", "val", "test")}
+        partitions = full_partitions(rng, 2)
 
         ok, reason = tw.check_split_adequacy(partitions, min_per_class=2)
 
@@ -182,11 +222,57 @@ class MarginScoreTests(unittest.TestCase):
 
 
 class GateTests(unittest.TestCase):
-    def test_gate_is_boundary_inclusive(self):
-        self.assertTrue(tw.gate({"balanced_accuracy_unweighted": 0.60, "majority_baseline_unweighted": 0.50}))
-        self.assertFalse(tw.gate({"balanced_accuracy_unweighted": 0.59, "majority_baseline_unweighted": 0.50}))
-        self.assertTrue(tw.gate({"balanced_accuracy_unweighted": 0.70, "majority_baseline_unweighted": 0.60}))
-        self.assertFalse(tw.gate({"balanced_accuracy_unweighted": 0.69, "majority_baseline_unweighted": 0.60}))
+    def test_gate_reads_the_bootstrap_ci_lower_bound_not_a_point_estimate(self):
+        floor = wc.ACCEPT_MIN_BALANCED_ACC_CI_LOWER
+        # A high point estimate with a CI lower bound below the floor fails --
+        # the whole point of the change is that a lucky partition no longer passes.
+        self.assertFalse(tw.gate({"balanced_accuracy_unweighted": 0.82,
+                                   "bootstrap_balanced_accuracy": {
+                                       "point": 0.82, "ci_lower": floor - 0.05, "ci_upper": 0.95}}))
+        self.assertTrue(tw.gate({"balanced_accuracy_unweighted": 0.65,
+                                  "bootstrap_balanced_accuracy": {
+                                      "point": 0.65, "ci_lower": floor, "ci_upper": 0.78}}))
+        # No bootstrap CI at all (e.g. an empty test split) can never pass.
+        self.assertFalse(tw.gate({"balanced_accuracy_unweighted": 0.99}))
+
+    def test_gate_cv_reads_selected_c_mean(self):
+        per_c = {0.1: {"cv_mean_balanced_accuracy": wc.ACCEPT_MIN_CV_MEAN - 0.01},
+                 1.0: {"cv_mean_balanced_accuracy": wc.ACCEPT_MIN_CV_MEAN + 0.03}}
+        self.assertTrue(tw.gate_cv(1.0, per_c))
+        self.assertFalse(tw.gate_cv(0.1, per_c))
+        self.assertFalse(tw.gate_cv(None, per_c))
+
+    def test_gate_confirm_allows_within_ci_width_and_rejects_beyond(self):
+        test_metrics = {"bootstrap_balanced_accuracy": {"point": 0.70, "ci_lower": 0.60, "ci_upper": 0.80}}
+        self.assertTrue(tw.gate_confirm(test_metrics, {"balanced_accuracy_unweighted": 0.62}))
+        self.assertFalse(tw.gate_confirm(test_metrics, {"balanced_accuracy_unweighted": 0.45}))
+        self.assertFalse(tw.gate_confirm(test_metrics, {}))
+
+    def test_pooled_leave_one_family_out_gate(self):
+        good = {"status": "evaluated",
+                "pooled_balanced_accuracy": wc.ACCEPT_MIN_LOFO_POOLED + 0.02, "n_pooled": 80}
+        weak = dict(good, pooled_balanced_accuracy=wc.ACCEPT_MIN_LOFO_POOLED - 0.05)
+        self.assertTrue(tw.gate_leave_one_family_out(good))
+        self.assertFalse(tw.gate_leave_one_family_out(weak))
+        self.assertFalse(tw.gate_leave_one_family_out({"status": "not_evaluable",
+                                                        "pooled_balanced_accuracy": None}))
+
+
+class BootstrapTests(unittest.TestCase):
+    def test_bootstrap_ci_brackets_point_and_lower_le_upper(self):
+        y_true = [1] * 30 + [-1] * 30
+        y_pred = [1] * 25 + [-1] * 5 + [-1] * 25 + [1] * 5   # ~0.83 bacc
+        ci = tw.bootstrap_balanced_accuracy_ci(y_true, y_pred, iterations=500)
+        self.assertLessEqual(ci["ci_lower"], ci["point"])
+        self.assertLessEqual(ci["point"], ci["ci_upper"])
+        self.assertGreater(ci["n_resamples"], 400)
+
+    def test_bootstrap_ci_of_a_coin_flip_predictor_has_a_low_lower_bound(self):
+        rng = random.Random(0)
+        y_true = [rng.choice((1, -1)) for _ in range(40)]
+        y_pred = [rng.choice((1, -1)) for _ in range(40)]
+        ci = tw.bootstrap_balanced_accuracy_ci(y_true, y_pred, iterations=500)
+        self.assertLess(ci["ci_lower"], wc.ACCEPT_MIN_BALANCED_ACC_CI_LOWER)
 
 
 class ExportRoundTripTests(unittest.TestCase):
@@ -247,33 +333,104 @@ class OutputGroupingTests(unittest.TestCase):
 
 
 class LeaveOneFamilyOutTests(unittest.TestCase):
-    def test_leave_one_family_out_only_ever_sees_train_and_val_rows(self):
+    @staticmethod
+    def _clean(rng, label, split, family):
+        # Only dim 4 varies; every other feature is a constant the scaler zeroes
+        # out, so the target is cleanly cross-family separable at tiny n.
+        vec = [0.0] * N_FEATURES
+        vec[4] = (5.0 if label == 1 else -5.0) + rng.gauss(0.0, 0.3)
+        return make_row(rng, label, split, strategy_family=family, features=vec)
+
+    def _separable(self, rng, n, family, split):
+        return ([self._clean(rng, 1, split, family) for _ in range(n)] +
+                [self._clean(rng, -1, split, family) for _ in range(n)])
+
+    def test_pooled_metric_covers_train_and_val_only(self):
         rng = random.Random(12)
-        train_rows = ([make_row(rng, 1, "train", strategy_family="fam_a") for _ in range(5)] +
-                      [make_row(rng, -1, "train", strategy_family="fam_a") for _ in range(5)] +
-                      [make_row(rng, 1, "train", strategy_family="fam_b") for _ in range(5)] +
-                      [make_row(rng, -1, "train", strategy_family="fam_b") for _ in range(5)])
-        val_rows = ([make_row(rng, 1, "val", strategy_family="fam_a") for _ in range(3)] +
-                    [make_row(rng, -1, "val", strategy_family="fam_a") for _ in range(3)])
+        train_rows = self._separable(rng, 8, "fam_a", "train") + self._separable(rng, 8, "fam_b", "train")
+        val_rows = self._separable(rng, 3, "fam_a", "val") + self._separable(rng, 3, "fam_b", "val")
 
-        # leave_one_family_out(train_rows, val_rows, c, min_per_class) has no
-        # parameter through which test-split rows could reach it at all.
-        results = tw.leave_one_family_out(train_rows, val_rows, 1.0, min_per_class=2)
+        lofo = tw.leave_one_family_out(train_rows, val_rows, 1.0, min_per_class=2)
 
-        self.assertEqual(results["fam_a"]["status"], "evaluated")
-        self.assertEqual(results["fam_b"]["status"], "evaluated")
-        self.assertEqual(results["fam_a"]["n_held_out"], 16)
-        self.assertEqual(results["fam_b"]["n_held_out"], 10)
+        self.assertEqual(lofo["status"], "evaluated")
+        self.assertEqual(lofo["n_pooled"], 44)  # 22 fam_a binary + 22 fam_b binary
+        self.assertGreater(lofo["pooled_balanced_accuracy"], 0.8)
+        self.assertEqual(lofo["per_family"]["fam_a"]["status"], "evaluated")
 
-    def test_leave_one_family_out_skips_families_below_min_per_class(self):
+    def test_single_sign_family_is_scored_without_its_own_per_family_bacc(self):
         rng = random.Random(13)
-        train_rows = ([make_row(rng, 1, "train", strategy_family="fam_a") for _ in range(5)] +
-                      [make_row(rng, -1, "train", strategy_family="fam_a") for _ in range(5)] +
-                      [make_row(rng, 1, "train", strategy_family="fam_c") for _ in range(1)])
+        pool = (self._separable(rng, 8, "fam_a", "train") + self._separable(rng, 8, "fam_b", "train") +
+                [self._clean(rng, 1, "train", "fam_c")])
 
-        results = tw.leave_one_family_out(train_rows, [], 1.0, min_per_class=2)
+        lofo = tw.leave_one_family_out(pool, [], 1.0, min_per_class=2)
 
-        self.assertEqual(results["fam_c"]["status"], "skipped")
+        # fam_c's lone +1 row is still predicted and pooled; it just has no
+        # two-class per-family balanced accuracy of its own.
+        self.assertEqual(lofo["per_family"]["fam_c"]["status"], "evaluated")
+        self.assertIsNone(lofo["per_family"]["fam_c"]["balanced_accuracy_unweighted"])
+        self.assertEqual(lofo["n_pooled"], 33)
+
+    def test_pure_noise_target_does_not_clear_the_pooled_gate(self):
+        rng = random.Random(14)
+        # label carries no signal: features are drawn the same regardless of sign
+        def noise(n, family, split):
+            return [make_row(rng, sign, split, strategy_family=family,
+                             features=make_features(rng))
+                    for _ in range(n) for sign in (1, -1)]
+        train_rows = noise(12, "fam_a", "train") + noise(12, "fam_b", "train")
+        val_rows = noise(4, "fam_a", "val") + noise(4, "fam_b", "val")
+
+        lofo = tw.leave_one_family_out(train_rows, val_rows, 1.0, min_per_class=2)
+
+        self.assertFalse(tw.gate_leave_one_family_out(lofo))
+
+
+class RunEndToEndTests(unittest.TestCase):
+    OUTPUT = "product:MELON:increase"
+    # (family, split): (n_pos, n_neg) -- fam_c is deliberately sign-imbalanced,
+    # the shape that made the old per-family LOFO gate structurally unpassable.
+    LAYOUT = {
+        ("fam_a", "train"): (20, 20), ("fam_a", "val"): (6, 6),
+        ("fam_a", "test"): (8, 8), ("fam_a", "confirm"): (6, 6),
+        ("fam_b", "train"): (12, 12), ("fam_b", "val"): (4, 4),
+        ("fam_b", "test"): (6, 6), ("fam_b", "confirm"): (5, 5),
+        ("fam_c", "train"): (10, 2), ("fam_c", "val"): (3, 0),
+        ("fam_c", "test"): (2, 2), ("fam_c", "confirm"): (2, 2),
+    }
+
+    def _corpus(self, path, separable):
+        rng = random.Random(2024)
+        seed = 500_000
+        with open(path, "w") as fh:
+            for (family, split), (n_pos, n_neg) in self.LAYOUT.items():
+                for label, count in ((1, n_pos), (-1, n_neg)):
+                    for _ in range(count):
+                        feats = None if separable else make_features(rng)
+                        row = make_row(rng, label, split, strategy_family=family,
+                                       output_id=self.OUTPUT, features=feats,
+                                       offset_dim=4, seed=seed)
+                        seed += 1
+                        fh.write(json.dumps(row) + "\n")
+
+    def test_separable_target_with_an_imbalanced_family_is_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            corpus = Path(tmp) / "corpus.jsonl"
+            self._corpus(corpus, separable=True)
+            report = tw.run([corpus], output_path=Path(tmp) / "watcher_model.py")
+        result = report["outputs"][self.OUTPUT]
+        self.assertEqual(result["status"], "accepted", msg=json.dumps(result, default=str)[:2000])
+        self.assertEqual(result["usable_strategy_families"], ["fam_a", "fam_b"])
+        self.assertTrue(result["leave_one_family_out_gate_passed"])
+        self.assertTrue(result["confirm_gate_passed"])
+
+    def test_noise_target_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            corpus = Path(tmp) / "corpus.jsonl"
+            self._corpus(corpus, separable=False)
+            report = tw.run([corpus], output_path=Path(tmp) / "watcher_model.py")
+        result = report["outputs"][self.OUTPUT]
+        self.assertIn(result["status"], ("rejected", "unavailable"))
+        self.assertNotEqual(result.get("reason"), None)
 
 
 class GeneratedModuleTests(unittest.TestCase):
@@ -291,8 +448,10 @@ class GeneratedModuleTests(unittest.TestCase):
 
         record = tw.export_record(
             "product:WHEAT:increase", model, scaler, margin, 1.0, 0.9,
-            {"balanced_accuracy_unweighted": 0.9, "majority_baseline_unweighted": 0.5},
-            {"train": 40, "val": 10, "test": 10})
+            {"balanced_accuracy_unweighted": 0.9, "accuracy_unweighted": 0.9,
+             "bootstrap_balanced_accuracy": {"point": 0.9, "ci_lower": 0.7, "ci_upper": 0.98}},
+            {"balanced_accuracy_unweighted": 0.88},
+            {"train": 40, "val": 10, "test": 10, "confirm": 8})
         metadata = {
             "schema_version": sf.SCHEMA_VERSION, "schema_hash": sf.SCHEMA_HASH,
             "feature_order": list(sf.FEATURE_ORDER), "generated_at": "2026-01-01T00:00:00+00:00",

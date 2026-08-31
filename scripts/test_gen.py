@@ -17,6 +17,7 @@ Usage:
 """
 
 import json
+import ast
 import re
 import subprocess
 import sys
@@ -61,10 +62,15 @@ def generate(name, overrides, n_episodes=N_EPISODES, episode_steps=EPISODE_STEPS
     text = SOURCE.read_text()
     body = text[: text.index(_CUT_MARKER)]
     for const_name, value in overrides.items():
-        pattern = re.compile(rf"^{re.escape(const_name)} = .*$", re.MULTILINE)
-        body, n_subs = pattern.subn(f"{const_name} = {value!r}", body, count=1)
-        if n_subs == 0:
+        tree = ast.parse(body)
+        assignment = next((node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign))
+                           and any(isinstance(target, ast.Name) and target.id == const_name
+                                   for target in (node.targets if isinstance(node, ast.Assign) else [node.target]))), None)
+        if assignment is None:
             raise ValueError(f"constant {const_name!r} not found in {SOURCE}")
+        lines = body.splitlines()
+        lines[assignment.lineno - 1:assignment.end_lineno] = [f"{const_name} = {value!r}"]
+        body = "\n".join(lines) + "\n"
     body += _RUN_BLOCK.format(opponents=opponents, n_episodes=n_episodes, episode_steps=episode_steps, name=name)
     OUT_DIR.mkdir(exist_ok=True)
     path = OUT_DIR / f"{name}.py"

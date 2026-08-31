@@ -29,7 +29,7 @@ class SharedFeatureTests(unittest.TestCase):
     def test_schema_contract_is_stable(self):
         self.assertEqual(len(sf.FEATURE_ORDER), 129)
         self.assertEqual(sf.SCHEMA_HASH,
-                         "2b905e14c6122dc2506b1c7fb2cc5a47c9a44603bc7941cbdb51e51c9b70277e")
+                         "ac1487d70ff7df007d3ba7414e0fa4de4db4a4f31be9296534c570a86f2210c9")
 
     def test_opponent_private_sentinels_do_not_affect_features(self):
         base = observation()

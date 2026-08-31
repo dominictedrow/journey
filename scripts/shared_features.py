@@ -7,7 +7,7 @@ import json
 from collections import Counter
 
 
-SCHEMA_VERSION = "counterfactual-v1"
+SCHEMA_VERSION = "counterfactual-v2"
 CROPS = ("WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON")
 ANIMALS = ("GOOSE", "COW", "SHEEP")
 PRODUCTS = CROPS + ("EGG", "MILK", "WOOL")
