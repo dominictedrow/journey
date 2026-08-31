@@ -49,3 +49,32 @@ LOFO_MIN_POOLED_ROWS = 20                 # too few pooled rows -> not evaluable
 REQUIRE_CONFIRM_SPLIT = True
 
 SPLITS = ("train", "val", "test", "confirm")
+
+# ---- Phase 2 label + execution-verification windows ----
+
+TURNS_PER_DAY = 24
+
+# Execution verification (counterfactual_dataset._execution_verified) checks the
+# intended state delta over a window rather than a single env step, so an
+# immediately-planted seed or a hire with onboarding travel still counts.
+EXEC_VERIFY_WINDOW_STEPS = 4 * TURNS_PER_DAY
+
+# The label is a bounded-horizon outcome, not a season-end money delta: a single
+# one-shot deviation over a 30-day season is dominated by weed/shop RNG and
+# opponent variance by day 30. A "plant 2 more X" nudge has no measurable
+# revenue effect until X actually yields, so slow crops/animals need a longer
+# window than the ~6-8 day deterministic forecast horizon.
+LABEL_HORIZON_DAYS_PRODUCT = 7
+LABEL_HORIZON_DAYS_CAPACITY = 11
+PRODUCT_HORIZON_DAYS = {
+    "WHEAT": 7, "CARROT": 7, "EGG": 8,
+    "TOMATO": 13, "MELON": 13, "STRAWBERRY": 16, "MILK": 13, "WOOL": 13,
+}
+
+# product:X:{increase,avoid} rows get a signed label only when the near-term
+# total-money delta and the X-scoped value-flow delta agree in sign -- so a
+# signed row is causally about exposure to X, not about where freed capital
+# happened to land. Capacity rows (land/labor) have no X-flow gate.
+LABEL_NEUTRAL_BAND_FRACTION = 0.08
+LABEL_NEUTRAL_BAND_FLOOR_PRODUCT = 120.0
+LABEL_NEUTRAL_BAND_FLOOR_CAPACITY = 350.0

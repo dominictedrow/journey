@@ -7,7 +7,12 @@ import json
 from collections import Counter
 
 
-SCHEMA_VERSION = "counterfactual-v2"
+# v3: the row contract changed in repair-plan Phase 2 -- the label is now a
+# bounded-horizon outcome (blend of near-term money delta and X value-flow),
+# not a season-end money delta, and safety is split into hard rejects vs.
+# recorded soft flags. Features are unchanged; Phase 3 will bump again for the
+# feature-matrix audit.
+SCHEMA_VERSION = "counterfactual-v3"
 CROPS = ("WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON")
 ANIMALS = ("GOOSE", "COW", "SHEEP")
 PRODUCTS = CROPS + ("EGG", "MILK", "WOOL")

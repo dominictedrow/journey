@@ -21,12 +21,16 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from kaggle_environments import make
+import kaggle_environments.envs.kaggriculture.kaggriculture as _kenv
 from shared_features import FEATURE_ORDER, SCHEMA_HASH, SCHEMA_VERSION, extract_features
+import watcher_config as wc
 
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+TURNS_PER_DAY = wc.TURNS_PER_DAY
 
 
 CROPS = ("WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON")
@@ -101,7 +105,7 @@ class RecordingAgent:
         self.audit["attempted"] += 1
         market = action.setdefault("market", [])
         before = copy.deepcopy(action)
-        reason = _intervention_eligibility(kind, item, action, obs, remaining)
+        reason = _intervention_eligibility(kind, item, action, obs, remaining, target)
         if reason is not None:
             counts = self.audit.setdefault("ineligible_reason_counts", {})
             counts[reason] = counts.get(reason, 0) + 1
@@ -122,11 +126,23 @@ class RecordingAgent:
                     else: market.pop(i)
                     self.deviation["remaining"] -= qty; break
         elif kind == "crop_redirect_two":
-            for order in market:
-                if order and order[0] == "BUY_SEED" and order[1] == item:
-                    qty = min(remaining, order[2]); order[1] = target
-                    if qty < order[2]: order[2] = qty
-                    self.deviation["remaining"] -= qty; break
+            for i, order in enumerate(market):
+                if (order and order[0] == "BUY_SEED" and len(order) > 2
+                        and order[1] != target and (item is None or order[1] == item)):
+                    qty = min(remaining, order[2])
+                    remainder = order[2] - qty
+                    if remainder == 0:
+                        order[1] = target
+                    elif len(market) < 10:
+                        # Only part of the order is redirected: keep the
+                        # un-redirected units as their own order instead of
+                        # silently dropping them.
+                        order[2] = remainder
+                        market.insert(i + 1, ["BUY_SEED", target, qty])
+                    else:
+                        continue  # no room to split without losing units
+                    self.deviation["remaining"] -= qty
+                    break
         if action != before:
             self.audit["applied"] += 1
             self.audit["events"].append({"step": obs.get("step"), "before": before, "after": copy.deepcopy(action)})
@@ -182,7 +198,7 @@ def _committed_spend(market, obs):
     return spend
 
 
-def _intervention_eligibility(kind, item, action, obs, remaining):
+def _intervention_eligibility(kind, item, action, obs, remaining, target=None):
     """Return None only when the altered order is legal and actionable now."""
     market = action.get("market", [])
     farm = _farm(obs)
@@ -207,38 +223,89 @@ def _intervention_eligibility(kind, item, action, obs, remaining):
               "hand_remove_one": "HIRE", "land_defer": "BUY_LAND"}[kind]
         if not any(o and o[0] == op and (op != "BUY_SEED" or o[1] == item) for o in market):
             return "no_matching_future_purchase"
+    elif kind == "crop_redirect_two":
+        if not any(o and o[0] == "BUY_SEED" and len(o) > 2 and o[1] != target
+                   and (item is None or o[1] == item) for o in market):
+            return "no_redirectable_purchase"
     return None
 
 
-def _execution_verified(kind, item, baseline_obs, intervention_obs):
-    """Verify the intended state delta in the observation after the order."""
-    if baseline_obs is None or intervention_obs is None:
-        return False, {"reason": "missing_post_checkpoint_observation"}
-    bf, inf = _farm(baseline_obs), _farm(intervention_obs)
-    if kind in ("crop_add_two", "crop_remove_two"):
-        before = _private_count(baseline_obs, "seeds", item)
-        after = _private_count(intervention_obs, "seeds", item)
-        ok = after > before if kind == "crop_add_two" else after < before
-        return ok, {"metric": f"seeds:{item}", "baseline": before, "intervention": after}
-    if kind in ("animal_add_one", "animal_defer_one"):
-        before = _private_count(baseline_obs, "shed", item)
-        after = _private_count(intervention_obs, "shed", item)
-        ok = after > before if kind == "animal_add_one" else after < before
-        return ok, {"metric": f"shed:{item}", "baseline": before, "intervention": after}
-    if kind in ("hand_add_one", "hand_remove_one"):
-        before, after = len(bf.get("hands", [])), len(inf.get("hands", []))
-        ok = after > before if kind == "hand_add_one" else after < before
-        return ok, {"metric": "hands", "baseline": before, "intervention": after}
-    if kind in ("land_advance", "land_defer"):
-        before = len(bf.get("unlocked_quadrants", []))
-        after = len(inf.get("unlocked_quadrants", []))
-        ok = after > before if kind == "land_advance" else after < before
-        return ok, {"metric": "unlocked_quadrants", "baseline": before, "intervention": after}
-    return False, {"reason": "unknown_deviation_kind", "kind": kind}
+def _obs_at(env, step, idx):
+    if step < 0 or step >= len(env.steps):
+        return None
+    return env.steps[step][idx].observation
+
+
+def _crop_units(obs, item):
+    """Seeds on hand plus tiles already planted with the crop -- 'seeds acquired
+    to date'. A seed that is bought and immediately planted leaves the seed
+    count unchanged, so the raw seed count alone misses the purchase."""
+    farm = _farm(obs)
+    planted = sum(1 for row in farm.get("tiles", []) for tile in row
+                  if isinstance(tile, dict) and tile.get("crop") == item)
+    return _private_count(obs, "seeds", item) + planted
+
+
+def _animal_units(obs, item):
+    farm = _farm(obs)
+    placed = sum(1 for row in farm.get("tiles", []) for tile in row
+                 if isinstance(tile, dict) and tile.get("animal") == item)
+    return _private_count(obs, "shed", item) + placed
+
+
+def _hand_count(obs):
+    return len(_farm(obs).get("hands", []))
+
+
+def _quadrant_count(obs):
+    return len(_farm(obs).get("unlocked_quadrants", []))
+
+
+_VERIFY_METRICS = {
+    "crop_add_two": ("crop_units", True),
+    "crop_remove_two": ("crop_units", False),
+    "crop_redirect_two": ("crop_units", True),
+    "animal_add_one": ("animal_units", True),
+    "animal_defer_one": ("animal_units", False),
+    "hand_add_one": ("hands", True),
+    "hand_remove_one": ("hands", False),
+    "land_advance": ("quadrants", True),
+    "land_defer": ("quadrants", False),
+}
+_VERIFY_EXTRACTORS = {
+    "crop_units": _crop_units, "animal_units": _animal_units,
+    "hands": lambda obs, _item: _hand_count(obs),
+    "quadrants": lambda obs, _item: _quadrant_count(obs),
+}
+
+
+def _execution_verified(kind, item, benv, ienv, idx, applied_step, window_steps):
+    """Verify the intended state delta held at *any* env step in a window after
+    the order, not at a single fixed step. The window absorbs planting lag,
+    onboarding travel and land-unlock lag that a one-step check trips over."""
+    if not isinstance(applied_step, int):
+        return False, {"reason": "intervention_never_applied"}
+    spec = _VERIFY_METRICS.get(kind)
+    if spec is None:
+        return False, {"reason": "unknown_deviation_kind", "kind": kind}
+    metric, want_increase = spec
+    extract = _VERIFY_EXTRACTORS[metric]
+    start = applied_step + 1
+    end = min(start + window_steps, len(benv.steps), len(ienv.steps))
+    for step in range(start, end):
+        bv = extract(_obs_at(benv, step, idx), item)
+        iv = extract(_obs_at(ienv, step, idx), item)
+        if (iv > bv) if want_increase else (iv < bv):
+            return True, {"metric": metric, "step": step, "window": [start, end],
+                          "baseline": bv, "intervention": iv}
+    last = max(start, end - 1)
+    return False, {"metric": metric, "window": [start, end],
+                   "baseline_end": extract(_obs_at(benv, last, idx), item),
+                   "intervention_end": extract(_obs_at(ienv, last, idx), item)}
 
 
 def _metrics(env, idx):
-    feed = water = cap = overflow = missed = noops = 0
+    feed = water = cap = missed = noops = 0
     escaped = 0
     previous_tiles = None
     for pair in env.steps:
@@ -272,29 +339,181 @@ def _metrics(env, idx):
             "shed_overflow_indicators": overflow, "ending_saleable_inventory": ending,
             "invalid_noop_purchase_indicators": noops, "market_order_cap_violations": cap,
             "episode_status_failures": int(final_state.status != "DONE"),
-            "bankruptcy_indicators": int(bool(money_curve) and min(money_curve) <= 0)}
+            "cash_trough_touched": int(bool(money_curve) and min(money_curve) <= 0)}
 
 
-def safety_regression(baseline, intervention):
-    """True when any collected lower-is-better operational metric worsens."""
-    metrics = (
-        "feed_risk_tile_turns", "water_risk_tile_turns", "escaped_animals",
-        "missed_watering_deaths", "shed_overflow_indicators",
-        "ending_saleable_inventory", "invalid_noop_purchase_indicators",
-        "market_order_cap_violations", "episode_status_failures",
-        "bankruptcy_indicators",
-    )
-    return any(intervention.get(key, 0) > baseline.get(key, 0) for key in metrics)
+# Hard rejects are genuine causal-validity failures: the intervention broke the
+# game in a way that makes the pair a bad example of *either* class -- an animal
+# starved, plants died of thirst, the episode aborted. Soft flags are recorded
+# on the row but never reject it -- a profitable-but-messy pair (a few extra
+# unsold units, a deeper early cash dip, a turn that over-fills the order queue
+# the env silently truncates anyway) is a legitimate example, and the follower
+# clamps by cash / deadline capacity at runtime.
+HARD_SAFETY_METRICS = ("escaped_animals", "missed_watering_deaths",
+                       "episode_status_failures")
+SOFT_SAFETY_METRICS = ("feed_risk_tile_turns", "water_risk_tile_turns",
+                       "shed_overflow_indicators", "ending_saleable_inventory",
+                       "invalid_noop_purchase_indicators", "cash_trough_touched",
+                       "market_order_cap_violations")
+
+
+def safety_split(baseline, intervention):
+    """Return (hard_fail, soft_flags). hard_fail rejects the pair; soft_flags is
+    a dict of the lower-is-better metrics that worsened without rejecting it."""
+    hard_fail = any(intervention.get(key, 0) > baseline.get(key, 0)
+                    for key in HARD_SAFETY_METRICS)
+    soft_flags = {key: {"baseline": baseline.get(key, 0), "intervention": intervention.get(key, 0)}
+                  for key in SOFT_SAFETY_METRICS
+                  if intervention.get(key, 0) > baseline.get(key, 0)}
+    return hard_fail, soft_flags
 
 
 def label_delta(delta):
-    """Profitability signal only. A safety regression is a separate,
-    causal-validity rejection reason (see ``generate_pair``'s ``accepted``),
-    not a reason to flip this label -- a money-positive but unsafe pair is
-    not a valid example of either class and must not be trained on."""
+    """Season-end money classifier, kept only for the recorded ``season_end_label``
+    audit field. The trained label is the bounded-horizon blend below."""
     if delta < -250: return -1
     if delta > 250: return 1
     return 0
+
+
+def _held_product_value(obs, item):
+    """Sellable X plus X still accruing on a plant or animal (yield_units), at
+    the current price. Counting work-in-progress lets a short window still see
+    the value of a slow crop that was planted but has not yielded yet."""
+    if obs is None:
+        return 0.0
+    private = obs.get("private", {})
+    units = private.get("shed", {}).get(item, 0)
+    units += sum(inv.get(item, 0) for inv in private.get("inventories", []))
+    farm = _farm(obs)
+    animal = next((a for a, p in ANIMAL_PRODUCT.items() if p == item), None)
+    for row in farm.get("tiles", []):
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            if item in CROPS and tile.get("crop") == item:
+                units += tile.get("yield_units", 0)
+            elif animal is not None and tile.get("animal") == animal:
+                units += tile.get("yield_units", 0)
+    price = obs.get("market", {}).get("prices", {}).get(item, BASE_PRICE.get(item, 0.0))
+    return units * price
+
+
+def _window_revenue(sales_log, item, start_step, end_step):
+    return sum(entry["sold"].get(item, {}).get("revenue", 0.0)
+               for entry in sales_log if start_step <= entry["step"] < end_step)
+
+
+def _money_at(env, step, idx):
+    obs = _obs_at(env, step, idx)
+    return float(_farm(obs).get("money", 0.0)) if obs is not None else 0.0
+
+
+def label_product(product, checkpoint_step, horizon_days, benv, ienv, idx,
+                  baseline_sales, intervention_sales):
+    """Signed only when the near-term total-money delta and the X-scoped
+    value-flow delta agree in sign and the money delta clears the band. A signed
+    row is then causally about exposure to X, not about where freed capital
+    happened to land."""
+    end = min(checkpoint_step + horizon_days * TURNS_PER_DAY, len(benv.steps) - 1)
+    d_money_b = _money_at(benv, end, idx) - _money_at(benv, checkpoint_step, idx)
+    d_money_i = _money_at(ienv, end, idx) - _money_at(ienv, checkpoint_step, idx)
+    money_delta = d_money_i - d_money_b
+
+    b_rev = _window_revenue(baseline_sales, product, checkpoint_step, end)
+    i_rev = _window_revenue(intervention_sales, product, checkpoint_step, end)
+    b_flow = b_rev + _held_product_value(_obs_at(benv, end, idx), product)
+    i_flow = i_rev + _held_product_value(_obs_at(ienv, end, idx), product)
+    x_flow_delta = i_flow - b_flow
+
+    band = max(wc.LABEL_NEUTRAL_BAND_FRACTION * abs(b_rev),
+               wc.LABEL_NEUTRAL_BAND_FLOOR_PRODUCT)
+    components = {"basis": "product_blend", "horizon_days": horizon_days,
+                 "window": [checkpoint_step, end], "money_delta": money_delta,
+                 "x_flow_delta": x_flow_delta, "band": band,
+                 "baseline_window_revenue": b_rev,
+                 "baseline_window_money_delta": d_money_b}
+    if abs(money_delta) <= band or x_flow_delta == 0:
+        return 0, components
+    if (money_delta > 0) == (x_flow_delta > 0):
+        return (1 if money_delta > 0 else -1), components
+    return 0, components
+
+
+def label_capacity(checkpoint_step, horizon_days, benv, ienv, idx):
+    """land_expansion / labor_expansion: near-term total-money delta. The
+    intervention already carries the up-front cost as a negative, so a capacity
+    buy that merely earns its keep lands neutral."""
+    end = min(checkpoint_step + horizon_days * TURNS_PER_DAY, len(benv.steps) - 1)
+    d_money_b = _money_at(benv, end, idx) - _money_at(benv, checkpoint_step, idx)
+    d_money_i = _money_at(ienv, end, idx) - _money_at(ienv, checkpoint_step, idx)
+    money_delta = d_money_i - d_money_b
+    band = max(wc.LABEL_NEUTRAL_BAND_FRACTION * abs(d_money_b),
+               wc.LABEL_NEUTRAL_BAND_FLOOR_CAPACITY)
+    components = {"basis": "capacity_money", "horizon_days": horizon_days,
+                 "window": [checkpoint_step, end], "money_delta": money_delta,
+                 "band": band, "baseline_window_money_delta": d_money_b}
+    return (1 if money_delta > band else -1 if money_delta < -band else 0), components
+
+
+def compute_label(output_id, checkpoint_step, benv, ienv, idx,
+                  baseline_sales, intervention_sales):
+    if output_id in ("land_expansion", "labor_expansion"):
+        return label_capacity(checkpoint_step, wc.LABEL_HORIZON_DAYS_CAPACITY,
+                              benv, ienv, idx)
+    product = output_id.split(":")[1]
+    horizon = wc.PRODUCT_HORIZON_DAYS.get(product, wc.LABEL_HORIZON_DAYS_PRODUCT)
+    return label_product(product, checkpoint_step, horizon,
+                         benv, ienv, idx, baseline_sales, intervention_sales)
+
+
+def _install_sales_probe(focal_idx):
+    """Wrap the env's per-step market phase to record the focal player's realised
+    sell volume and revenue by product. During the market phase only SELL reduces
+    a player's shed (BUY_PRODUCT adds WHEAT/FERTILIZER only), so the per-step shed
+    decrease is exactly units sold; revenue uses the mean of the pre/post-refresh
+    price. Returns (log, original) -- the caller must restore ``original``."""
+    log = []
+    original = _kenv._process_market
+
+    def wrapped(state, env):
+        obs0 = state[0].observation
+        step = int(_kenv.get(obs0, "step", 0))
+        shed_before = dict(state[focal_idx].observation.private.get("shed", {}))
+        prices_before = dict(obs0.market["prices"])
+        original(state, env)
+        shed_after = state[focal_idx].observation.private.get("shed", {})
+        prices_after = obs0.market["prices"]
+        sold = {}
+        for item in PRODUCTS:
+            units = shed_before.get(item, 0) - shed_after.get(item, 0)
+            if units > 0:
+                px = 0.5 * (prices_before.get(item, BASE_PRICE[item]) +
+                            prices_after.get(item, BASE_PRICE[item]))
+                sold[item] = {"units": units, "revenue": units * px}
+        if sold:
+            log.append({"step": step, "sold": sold})
+
+    _kenv._process_market = wrapped
+    return log, original
+
+
+def _order_emission_days(env, idx, kind, item):
+    """Days on which the focal actually emits the order this removal/defer
+    deviation cancels. Drives the intervention checkpoint off day 0."""
+    op = {"crop_remove_two": "BUY_SEED", "animal_defer_one": "BUY_ANIMAL",
+          "hand_remove_one": "HIRE", "land_defer": "BUY_LAND"}[kind]
+    days = set()
+    for step, pair in enumerate(env.steps):
+        action = pair[idx].action
+        orders = action.get("market", []) if isinstance(action, dict) else []
+        for order in orders:
+            if not order or order[0] != op:
+                continue
+            if op == "BUY_SEED" and (len(order) < 2 or order[1] != item):
+                continue
+            days.add(step // TURNS_PER_DAY)
+    return sorted(days)
 
 
 def _run(base, opponent, idx, seed, steps, checkpoint, deviation=None):
@@ -305,9 +524,16 @@ def _run(base, opponent, idx, seed, steps, checkpoint, deviation=None):
         return wrapped(observation)
     agents = [focal, opponent] if idx == 0 else [opponent, focal]
     env = make("kaggriculture", configuration={"episodeSteps": steps, "seed": seed}, debug=False)
-    env.run(agents)
+    sales_log, original_market = _install_sales_probe(idx)
+    try:
+        env.run(agents)
+    finally:
+        _kenv._process_market = original_market
+    if checkpoint < steps and wrapped.checkpoint_obs is None:
+        raise RuntimeError(f"recorder never observed checkpoint step {checkpoint}; "
+                           f"the env may have copied the focal callable")
     money = env.steps[-1][idx].observation["farms"][idx]["money"]
-    return wrapped, env, money, _metrics(env, idx)
+    return wrapped, env, money, _metrics(env, idx), sales_log
 
 
 def random_deviation(rng):
@@ -331,19 +557,38 @@ def deviation_for_output(output_id, rng):
         raise ValueError(f"unsupported output_id: {output_id}")
     product, direction = parts[1], parts[2]
     if product in CROPS:
-        kind = "crop_add_two" if direction == "increase" else "crop_remove_two"
-        return {"kind": kind, "item": product, "target": None, "remaining": 2}
+        if direction == "avoid":
+            return {"kind": "crop_remove_two", "item": product, "target": None, "remaining": 2}
+        # Half the increase rows come from redirecting whatever crop the focal is
+        # already buying, so product:X:increase is supervised by both the add and
+        # the redirect path (repair-plan 2.6). item=None -> redirect the first
+        # non-target BUY_SEED, so this does not need the focal to buy one
+        # specific source crop.
+        if rng.random() < 0.5:
+            return {"kind": "crop_redirect_two", "item": None, "target": product, "remaining": 2}
+        return {"kind": "crop_add_two", "item": product, "target": None, "remaining": 2}
     animal = next(key for key, value in ANIMAL_PRODUCT.items() if value == product)
     kind = "animal_add_one" if direction == "increase" else "animal_defer_one"
     return {"kind": kind, "item": animal, "target": None, "remaining": 1}
+
+
+REMOVAL_KINDS = ("crop_remove_two", "animal_defer_one", "hand_remove_one", "land_defer")
 
 
 def checkpoint_for_deviation(rng, deviation, episode_steps, preferred_days=None):
     """Schedule interventions early enough to affect an actionable future slot."""
     specs = checkpoint_specs(episode_steps)
     kind = deviation["kind"]
-    if kind in ("crop_remove_two", "animal_defer_one", "hand_remove_one", "land_defer"):
-        return specs[0]
+    if kind in REMOVAL_KINDS:
+        # A removal/defer only registers if it is active before the focal emits
+        # the matching purchase. preferred_days is that emission set (from a
+        # probe run). Pick from its earlier half: early enough to still catch a
+        # later multi-unit emission, varied enough for split/family diversity.
+        # Day 0 is only right when the focal buys on day 0.
+        usable = sorted(d for d in (preferred_days or []) if 0 <= d <= len(specs) - 1)
+        if not usable:
+            return specs[0]
+        return specs[rng.choice(usable[:max(1, (len(usable) + 1) // 2)])]
     last_day = min(len(specs) - 1, 12 if kind.startswith(("crop", "animal")) else 18)
     eligible = specs[:last_day + 1]
     preferred = [spec for spec in eligible if preferred_days and spec["day"] in preferred_days]
@@ -385,49 +630,70 @@ def generate_pair(base, opponent, opponent_name, seed, pair_index, episode_steps
     rng = random.Random((seed << 16) ^ pair_index)
     deviation = (deviation_for_output(target_output, rng) if target_output
                  else random_deviation(rng))
-    spec = checkpoint_for_deviation(rng, deviation, episode_steps, checkpoint_days)
     idx = pair_index % 2
-    b, benv, bm, bs = _run(base, opponent, idx, seed, episode_steps, spec["step"])
-    i, ienv, im, ins = _run(base, opponent, idx, seed, episode_steps, spec["step"], deviation)
+    kind = deviation["kind"]
+
+    probe_days = None
+    if kind in REMOVAL_KINDS and not checkpoint_days:
+        # One extra baseline replay to learn which days the focal actually emits
+        # the order this removal/defer cancels. Without it the checkpoint pins to
+        # day 0 and interventions against a focal that buys later never register
+        # (repair-plan C1).
+        probe = _run(base, opponent, idx, seed, episode_steps, episode_steps + 1)
+        probe_days = _order_emission_days(probe[1], idx, kind, deviation.get("item"))
+
+    spec = checkpoint_for_deviation(rng, deviation, episode_steps, checkpoint_days or probe_days)
+    checkpoint_step = spec["step"]
+
+    b, benv, bm, bs, b_sales = _run(base, opponent, idx, seed, episode_steps, checkpoint_step)
+    i, ienv, im, ins, i_sales = _run(base, opponent, idx, seed, episode_steps, checkpoint_step, deviation)
     state_match = b.checkpoint_obs is not None and _hash(b.checkpoint_obs) == _hash(i.checkpoint_obs)
     # Replay actions cover both players, including named built-in opponents.
     # Keep the wrapper-side focal audit too, as a guard against replay layout
     # changes in kaggle-environments.
-    baseline_all_actions = [[state.action for state in pair] for pair in benv.steps[:spec["step"]]]
-    intervention_all_actions = [[state.action for state in pair] for pair in ienv.steps[:spec["step"]]]
+    baseline_all_actions = [[state.action for state in pair] for pair in benv.steps[:checkpoint_step]]
+    intervention_all_actions = [[state.action for state in pair] for pair in ienv.steps[:checkpoint_step]]
     action_match = (_hash(b.pre_actions) == _hash(i.pre_actions) and
                     _hash(baseline_all_actions) == _hash(intervention_all_actions))
-    safety = safety_regression(bs, ins)
+    hard_fail, soft_flags = safety_split(bs, ins)
     applied = i.audit["applied"] > 0
     applied_step = i.audit["events"][0]["step"] if i.audit["events"] else None
-    baseline_post = intervention_post = None
-    if isinstance(applied_step, int) and applied_step + 1 < len(benv.steps):
-        baseline_post = benv.steps[applied_step + 1][idx].observation
-        intervention_post = ienv.steps[applied_step + 1][idx].observation
-    executed, evidence = _execution_verified(deviation["kind"], deviation.get("item"),
-                                              baseline_post, intervention_post)
+    # crop_redirect_two verifies the *target* crop rose (item is None -- it
+    # redirects whatever the focal was buying).
+    verify_item = deviation.get("target") if kind == "crop_redirect_two" else deviation.get("item")
+    executed, evidence = _execution_verified(kind, verify_item, benv, ienv,
+                                             idx, applied_step, wc.EXEC_VERIFY_WINDOW_STEPS)
     evidence["applied_step"] = applied_step
     i.audit["execution_verified"] = executed
     i.audit["execution_evidence"] = evidence
-    delta = im - bm
+
+    output_id = modeled_output_id(deviation)
+    label, label_components = compute_label(output_id, checkpoint_step, benv, ienv,
+                                            idx, b_sales, i_sales)
+    season_end_delta = im - bm
+    eligible = i.audit["eligible"]
+    accepted = bool(state_match and action_match and applied and eligible
+                    and executed and not hard_fail)
     return {"schema_version": SCHEMA_VERSION, "schema_hash": SCHEMA_HASH,
-            "feature_order": list(FEATURE_ORDER), "features": extract_features(b.checkpoint_obs, episode_steps) if b.checkpoint_obs else None,
+            "feature_order": list(FEATURE_ORDER),
+            "features": extract_features(b.checkpoint_obs, episode_steps) if b.checkpoint_obs else None,
             "seed_group": str(seed), "seed": seed, "player_order": idx, "opponent": opponent_name,
             "strategy_family": strategy_family, "split": split_for_seed_group(seed),
             "sample_weight": 1.0,
-            "checkpoint": spec, "deviation": deviation,
-            "output_id": modeled_output_id(deviation), "intervention_audit": i.audit,
-            "baseline_money": bm, "intervention_money": im, "delta": delta,
-            "baseline_safety": bs, "intervention_safety": ins, "safety_failure": safety,
-            "label": label_delta(delta),
-            "accepted": bool(state_match and action_match and applied and i.audit["eligible"] and
-                             executed and not safety),
+            "checkpoint": spec, "deviation": deviation, "probe_order_days": probe_days,
+            "output_id": output_id, "intervention_audit": i.audit,
+            "baseline_money": bm, "intervention_money": im,
+            "season_end_delta": season_end_delta, "season_end_label": label_delta(season_end_delta),
+            "label": label, "label_components": label_components,
+            "baseline_safety": bs, "intervention_safety": ins,
+            "hard_safety_failure": hard_fail, "soft_safety_flags": soft_flags,
+            "accepted": accepted,
             "rejection_reasons": [name for name, ok in (("checkpoint_state_mismatch", state_match),
                                                           ("pre_checkpoint_action_mismatch", action_match),
-                                                          ("intervention_ineligible", i.audit["eligible"]),
+                                                          ("intervention_ineligible", eligible),
                                                           ("unapplied_intervention", applied),
                                                           ("execution_not_verified", executed),
-                                                          ("safety_regression", not safety)) if not ok]}
+                                                          ("hard_safety_regression", not hard_fail)) if not ok]}
 
 
 def resolve_opponent(name):
@@ -452,7 +718,10 @@ def _generate_task(task):
 def summarize_rows(rows):
     labels, outputs, rejections = Counter(), Counter(), Counter()
     split_labels, family_labels = Counter(), Counter()
+    soft_flags, verify_fail_metrics = Counter(), Counter()
     for row in rows:
+        for key in row.get("soft_safety_flags", {}):
+            soft_flags[key] += 1
         if row["accepted"]:
             labels[str(row["label"])] += 1
             outputs[f"{row['output_id']}|{row['label']}"] += 1
@@ -460,6 +729,9 @@ def summarize_rows(rows):
             family_labels[f"{row['output_id']}|{row.get('strategy_family')}|{row['label']}"] += 1
         else:
             rejections.update(row["rejection_reasons"])
+            if "execution_not_verified" in row["rejection_reasons"]:
+                metric = row.get("intervention_audit", {}).get("execution_evidence", {}).get("metric")
+                verify_fail_metrics[f"{row['output_id']}|{metric}"] += 1
     return {"schema_version": SCHEMA_VERSION, "schema_hash": SCHEMA_HASH,
             "pairs": len(rows), "accepted": sum(r["accepted"] for r in rows),
             "rejected": sum(not r["accepted"] for r in rows),
@@ -467,7 +739,9 @@ def summarize_rows(rows):
             "output_class_counts": dict(sorted(outputs.items())),
             "output_split_class_counts": dict(sorted(split_labels.items())),
             "output_family_class_counts": dict(sorted(family_labels.items())),
-            "rejection_counts": dict(sorted(rejections.items()))}
+            "rejection_counts": dict(sorted(rejections.items())),
+            "soft_flag_counts": dict(sorted(soft_flags.items())),
+            "execution_verify_failure_metrics": dict(sorted(verify_fail_metrics.items()))}
 
 
 def main(argv=None):

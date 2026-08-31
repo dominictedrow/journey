@@ -28,8 +28,9 @@ class SharedFeatureTests(unittest.TestCase):
 
     def test_schema_contract_is_stable(self):
         self.assertEqual(len(sf.FEATURE_ORDER), 129)
+        self.assertEqual(sf.SCHEMA_VERSION, "counterfactual-v3")
         self.assertEqual(sf.SCHEMA_HASH,
-                         "ac1487d70ff7df007d3ba7414e0fa4de4db4a4f31be9296534c570a86f2210c9")
+                         "f31101e405fe8f33bf0a299c34110b53550443af35fa3eec9be857472299caf8")
 
     def test_opponent_private_sentinels_do_not_affect_features(self):
         base = observation()
