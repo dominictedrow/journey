@@ -1,0 +1,22 @@
+{
+  "phase4_control_workload": {
+    "HIRING_RAMP_MODE": "workload",
+    "HIRING_CEILING": 8
+  },
+  "phase4_calendar_c8": {
+    "HIRING_RAMP_MODE": "calendar",
+    "HIRING_CEILING": 8
+  },
+  "phase4_workload_c7": {
+    "HIRING_RAMP_MODE": "workload",
+    "HIRING_CEILING": 7
+  },
+  "phase4_cash_workload_c8": {
+    "HIRING_RAMP_MODE": "cash_workload",
+    "HIRING_CEILING": 8
+  },
+  "phase4_cash_workload_c9": {
+    "HIRING_RAMP_MODE": "cash_workload",
+    "HIRING_CEILING": 9
+  }
+}

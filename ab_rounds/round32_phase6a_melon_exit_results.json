@@ -1,0 +1,6 @@
+{
+  "round": "round32_phase6a_melon_exit",
+  "status": "not_run",
+  "promotion_decision": "retain_permanent_melon_control",
+  "reason": "The custom kaggriculture module 1.32.7 required for seeded paired gameplay remains unavailable. Candidates are implemented but cannot be promoted from static validation."
+}

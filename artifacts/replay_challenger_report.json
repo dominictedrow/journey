@@ -1,0 +1,74 @@
+{
+  "causal_labels": false,
+  "clusters": [
+    {
+      "members": [
+        "Arman Tuganbaev",
+        "Excluding",
+        "Izzoudine Mohamed KANTA",
+        "Kobe BRYANT",
+        "Ryo Hasegawa",
+        "peikopon",
+        "tetsuya",
+        "\u30ab\u30ef\u30b7\u30ae"
+      ],
+      "player_episodes": 1353,
+      "representative": "\u30ab\u30ef\u30b7\u30ae"
+    },
+    {
+      "members": [
+        "MiMi"
+      ],
+      "player_episodes": 83,
+      "representative": "MiMi"
+    },
+    {
+      "members": [
+        "Subramanya N"
+      ],
+      "player_episodes": 166,
+      "representative": "Subramanya N"
+    }
+  ],
+  "held_out_validation": {
+    "MiMi": {
+      "exact_action_rate": 0.32592592592592595,
+      "farmer_action_rate": 0.5370370370370371,
+      "held_out_rows": 810,
+      "market_action_rate": 0.5864197530864198,
+      "state_feature_rmse_mean": 90.60888861450435,
+      "trajectory_metric": "nearest same-day/hour state RMSE; gameplay trajectory pending runtime"
+    },
+    "Subramanya N": {
+      "exact_action_rate": 0.2467948717948718,
+      "farmer_action_rate": 0.4096153846153846,
+      "held_out_rows": 1560,
+      "market_action_rate": 0.4378205128205128,
+      "state_feature_rmse_mean": 32.62620738528428,
+      "trajectory_metric": "nearest same-day/hour state RMSE; gameplay trajectory pending runtime"
+    },
+    "\u30ab\u30ef\u30b7\u30ae": {
+      "exact_action_rate": 0.4266666666666667,
+      "farmer_action_rate": 0.5964705882352941,
+      "held_out_rows": 2550,
+      "market_action_rate": 0.5101960784313726,
+      "state_feature_rmse_mean": 24.428188470109383,
+      "trajectory_metric": "nearest same-day/hour state RMSE; gameplay trajectory pending runtime"
+    }
+  },
+  "names": [
+    "Arman Tuganbaev",
+    "Excluding",
+    "Izzoudine Mohamed KANTA",
+    "Kobe BRYANT",
+    "MiMi",
+    "Ryo Hasegawa",
+    "Subramanya N",
+    "peikopon",
+    "tetsuya",
+    "\u30ab\u30ef\u30b7\u30ae"
+  ],
+  "promotion_status": "not_added_to_promotion_opponents",
+  "source_kind": "observational_replay_challenger",
+  "validation_status": "offline_action_and_state_similarity_complete_gameplay_trajectory_pending"
+}

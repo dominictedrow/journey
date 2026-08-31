@@ -6,6 +6,7 @@ should use to score itself against a baseline opponent.
 
 import os
 import statistics
+import math
 from concurrent.futures import ProcessPoolExecutor
 
 from kaggle_environments import make
@@ -29,6 +30,17 @@ def _run_episode(agent, opponent, agent_idx, episode_steps, seed=None):
     env = make("kaggriculture", configuration=config, debug=False)
     env.run(agents)
     return _final_money(env, agent_idx)
+
+
+def _run_episode_instrumented(agent, opponent, agent_idx, episode_steps, seed=None):
+    from evaluation_metrics import episode_metrics
+    agents = [agent, opponent] if agent_idx == 0 else [opponent, agent]
+    config = {"episodeSteps": episode_steps}
+    if seed is not None:
+        config["seed"] = seed
+    env = make("kaggriculture", configuration=config, debug=False)
+    env.run(agents)
+    return episode_metrics(env, agent_idx)
 
 
 def run_matches(agent, opponent, n_episodes, episode_steps=720, n_workers=None, seeds=None):
@@ -89,13 +101,38 @@ def compare_paired(agent_a, agent_b, opponent, n_episodes, episode_steps=720, n_
         moneys_a = [f.result() for f in futs_a]
         moneys_b = [f.result() for f in futs_b]
     diffs = [a - b for a, b in zip(moneys_a, moneys_b)]
+    diff_stdev = statistics.stdev(diffs) if len(diffs) > 1 else 0.0
+    margin = 1.96 * diff_stdev / math.sqrt(n_episodes) if n_episodes else 0.0
     return {
         "a": _stats(moneys_a),
         "b": _stats(moneys_b),
         "diff_mean": statistics.mean(diffs),
-        "diff_stdev": statistics.stdev(diffs) if len(diffs) > 1 else 0.0,
+        "diff_stdev": diff_stdev,
+        "diff_min": min(diffs),
+        "diff_max": max(diffs),
+        "diff_ci95": [statistics.mean(diffs) - margin, statistics.mean(diffs) + margin],
+        "wins": sum(diff > 0 for diff in diffs),
+        "ties": sum(diff == 0 for diff in diffs),
+        "losses": sum(diff < 0 for diff in diffs),
         "n": n_episodes,
     }
+
+
+def run_matches_instrumented(agent, opponent, n_episodes, episode_steps=720,
+                             n_workers=None, seeds=None):
+    """Run matches and return both raw and aggregated phase-3 telemetry."""
+    from evaluation_metrics import summarize_episodes
+    if seeds is not None and len(seeds) != n_episodes:
+        raise ValueError("seeds must have length n_episodes")
+    workers = min(n_workers or os.cpu_count(), n_episodes)
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = [
+            pool.submit(_run_episode_instrumented, agent, opponent, i % 2,
+                        episode_steps, seeds[i] if seeds is not None else None)
+            for i in range(n_episodes)
+        ]
+        episodes = [future.result() for future in futures]
+    return {"summary": summarize_episodes(episodes), "episodes": episodes}
 
 
 def run_causal_triplet(*args, **kwargs):

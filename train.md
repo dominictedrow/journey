@@ -1,167 +1,247 @@
-# Preparing the watcher data for SVM training
+# Getting the watcher SVM fully online
 
 ## Current state
 
-The current local counterfactual dataset is structurally valid but is not yet
-ready for `LinearSVC` training.
+The phase-10/11 infrastructure is ready, but no SVM output currently qualifies
+for training or export. `artifacts/watcher_readiness_report.json` is the
+authoritative quota audit.
 
-- 300 attempted pairs produced 205 accepted rows.
-- Accepted labels contain 71 negative, 107 neutral, and 27 positive examples.
-- All accepted rows have the expected 129-feature order, matching schema hash,
-  and finite feature values.
-- None of the accepted rows currently contains `strategy_family`, `split`, or
-  `sample_weight`.
-- No modeled output meets the required per-output class quotas.
+The checked-in/local prepared corpus is obsolete `counterfactual-v1` data. The
+runtime feature schema is `counterfactual-v2`, expansion has since been split
+into `land_expansion` and `labor_expansion`, and phase 10 now requires multiple
+usable focal families. Old rows are retained as historical evidence but are
+rejected rather than migrated or relabeled.
 
-Generated datasets live under `data/` and are excluded from Git. The current
-full dataset is `data/counterfactual_dataset.jsonl`.
+- The prepared corpus contains 540 attempted pairs and 444 accepted rows.
+- Every prepared row has an explicit `strategy_family`, deterministic
+  seed-group-safe `split`, and positive finite `sample_weight`.
+- Seed groups use a deterministic 70/15/15 train/validation/test allocation.
+- The generator supports targeted output generation and actionable checkpoint
+  scheduling.
+- The trainer validates schema, 129-feature order, finite values and weights,
+  accepted rows, labels, quotas, and seed isolation.
+- All 36 watcher-related tests pass.
+- No `scripts/watcher_model.py` has been promoted, so runtime remains on rules.
+- Seed groups now include the focal-family identity and the trainer rejects a
+  group crossing either splits or families.
+- Replay-guided checkpoint days can be supplied with `--checkpoint-days`.
+- Generation enforces the 2,000-attempt cap per targeted output.
+- Margin scale is calculated from signed training decisions only.
 
-## Readiness process
+`competitive_expansion` is the only output that meets the overall data quota.
+It failed the model gate:
 
-### 1. Add provenance and weighting fields
+- validation balanced accuracy: `0.420`;
+- untouched-test balanced accuracy: `0.474`;
+- untouched-test majority baseline: `0.684`.
 
-Every accepted row supplied to `scripts/train_watcher.py` must contain:
+The other 15 observed outputs lack the required accepted and signed-label
+coverage. Generated datasets and reports are ignored local artifacts and must
+not be committed.
 
-- `strategy_family`: the focal strategy family that produced the state;
-- `split`: exactly `train`, `val`, or `test`;
-- `sample_weight`: a finite positive number using the documented replay or
-  family-weighting policy.
+## Remaining work
 
-The trainer rejects rows without `strategy_family` or a resolvable split.
-Although a missing weight currently defaults to `1.0`, training data should
-carry explicit weights so the weighting policy is auditable.
+### 1. Make interventions causally valid
 
-### 2. Split by seed group
+Strengthen acceptance beyond checking that a submitted action changed. Confirm
+that each intervention is legal, affordable, executes in the environment, and
+changes the intended state.
 
-Assign the split deterministically from `seed_group`. Every checkpoint or row
-derived from the same simulation seed must remain in the same split. Never
-split individual rows from one seed across train, validation, and test.
+- Crop additions need an affordable purchase and applicable future crop slot.
+- Crop removals and redirects need a matching future seed purchase.
+- Animal additions need an affordable purchase and available structure.
+- Animal deferrals need a matching future animal purchase.
+- Hand changes need a valid hire or removal opportunity.
+- Land changes need an affordable, actionable purchase checkpoint.
+- Premium exits or retention need current or planned product exposure.
 
-A 70/15/15 or 60/20/20 allocation is acceptable if chosen before model
-selection and applied consistently. `strategy_family` remains a separate field
-for leave-one-family-out evaluation; it must not replace seed-group isolation.
+Reject a pair when the action is merely emitted but cannot execute or affect
+the intended decision. Record execution evidence in `intervention_audit`.
 
-### 3. Generate adequate signed class coverage
+### 2. Rework the competitive-expansion target
 
-For every modeled output, continue deterministic generation until it has:
+More examples alone are unlikely to repair its current performance. The target
+combines land and hand interventions that may represent different decisions.
+Evaluate splitting it into coherent outputs such as `land_expansion` and
+`labor_expansion`. Retain a combined output only if evidence shows a shared,
+learnable decision boundary. Regenerate its data after semantics are finalized.
 
-- at least 150 accepted examples;
+### 3. Add multiple focal strategy families
+
+The current corpus uses only `strategy_follower`. Generate compatible states
+from multiple genuine focal strategy variants so leave-one-family-out results
+are meaningful. `strategy_family` identifies the focal strategy that produced
+the state, not its opponent, and remains separate from the seed-group split.
+
+### 4. Generate targeted class coverage
+
+For every modeled output, generate deterministic targeted batches until it has:
+
+- at least 150 accepted rows;
 - at least 40 positive labels;
 - at least 40 negative labels.
 
 Stop after 2,000 attempted pairs for an output if these requirements remain
-unavailable. Leave unsupported outputs on the deterministic rules backend.
-Neutral rows may be used when fitting the feature scaler, but they are excluded
-from binary SVM fitting and evaluation.
+unavailable. Leave that output on deterministic rules.
 
-### 4. Improve intervention feasibility
+After every batch report attempts, acceptance, rejection reasons, all three
+label counts, signed counts per split, and counts by focal strategy family.
+Size later batches from measured acceptance and signed-label rates rather than
+continuing a uniform mixture.
 
-The current run rejected 95 of 300 pairs as unapplied or infeasible. Schedule
-each deviation only at checkpoints where it can take effect:
+```bash
+PYTHONPATH=scripts /tmp/agric-watcher-venv/bin/python \
+  scripts/counterfactual_dataset.py \
+  --output data/counterfactual_dataset.prepared.jsonl \
+  --append \
+  --pairs <batch-size> \
+  --seed-base <unused-first-seed> \
+  --workers <worker-count> \
+  --target-output <output-id> \
+  --strategy-family <focal-family>
+```
 
-- crop changes require an applicable future crop slot;
-- animal changes require a valid purchase or defer opportunity;
-- hand changes require a valid hire/removal opportunity;
-- land changes require an actionable purchase checkpoint;
-- premium-product exits require current or planned exposure.
+Never reuse a seed group with a different split or strategy family. Do not run
+multiple generator commands concurrently; each already uses multiprocessing.
 
-Track acceptance and signed-label counts per `output_id` after every batch.
-Prefer targeted generation for deficient outputs rather than continuing a
-uniform random mixture.
+### 5. Verify final corpus readiness
 
-### 5. Verify every split is usable
+Before fitting, require:
 
-After neutral labels are removed, every trained output must have both positive
-and negative examples in train, validation, and test. Set
-`--min-per-class` to a meaningful value for the final corpus; the trainer's
-default of `1` is only suitable for smoke tests.
-
-Before fitting, validate:
-
-- schema version and schema hash;
-- exact feature order and 129-value feature length;
-- finite feature values and positive finite weights;
+- expected schema version and hash;
+- exact feature order and 129 finite feature values;
+- explicit positive finite sample weights;
 - labels restricted to `-1`, `0`, and `1`;
-- accepted causal pairs only;
-- seed groups isolated to one split;
-- required class counts for each output and split.
+- accepted, execution-verified causal pairs only;
+- every seed group isolated to one split;
+- the overall 150/40/40 quota for each eligible output;
+- both signed classes in train, validation, and test;
+- at least five examples of each signed class in every split;
+- multiple usable focal strategy families.
 
-### 6. Install development-only dependencies
+Increase the per-split threshold if the final corpus supports it. The trainer's
+default of one is only suitable for smoke tests.
 
-The training environment needs Python 3.11 with:
+### 6. Train without leakage
 
-- `numpy`;
-- `scikit-learn`;
-- `kaggle-environments` for dataset generation and related tests.
+For each eligible output:
 
-These libraries are development dependencies. The exported Kaggle inference
-artifact must remain pure Python and must not import NumPy or scikit-learn.
+1. Fit `StandardScaler` on the train u val pool. Neutral rows may be included in
+   scaler fitting; they are excluded from binary fitting and evaluation.
+2. Renormalize fit-pool weights to mean `1.0` when using the documented mode.
+3. Select `C` by mean balanced accuracy under grouped stratified k-fold CV
+   (group = seed group) over train u val, breaking ties with smaller `C`.
+4. Refit one `LinearSVC` on the full signed train u val pool at the chosen `C`;
+   calculate margin scale from that model's training decision margins only.
+5. Run the pooled leave-one-family-out diagnostic with train and validation rows
+   only.
+6. Evaluate exactly once on the untouched test split (with a bootstrap CI), then
+   exactly once on the untouched `confirm` split.
 
-### 7. Fit without leakage
+Never derive scaling, weights, hyperparameters, thresholds, or revisions from
+test or confirm outcomes.
 
-For each eligible `output_id`:
+All quotas and thresholds come from `scripts/watcher_config.py`. `--min-per-class`
+**defaults to 5**; `--min-per-class 1` is a smoke-test-only setting and prints a
+loud warning -- a model trained that way must never be promoted.
 
-1. Fit `StandardScaler` using training rows only.
-2. Fit candidate `LinearSVC` models on non-neutral training rows.
-3. Select `C` using validation balanced accuracy, breaking ties with the
-   smaller `C`.
-4. Calculate the margin scale from training decision margins only.
-5. Evaluate exactly once on the untouched test split.
-6. Run leave-one-strategy-family-out diagnostics using train and validation
-   rows only.
+```bash
+PYTHONPATH=scripts /tmp/agric-watcher-venv/bin/python \
+  scripts/train_watcher.py \
+  --rows data/counterfactual_dataset.prepared.jsonl \
+  --output /tmp/watcher_model_candidate.py \
+  --report watcher_training_report
+  # --min-per-class / --min-accepted / --min-signed / --min-families all
+  # default to watcher_config; pass them only to tighten, never to loosen.
+```
 
-Weights may be renormalized to mean `1.0` over training rows. Never calculate
-scaling, weights, hyperparameters, or thresholds from test outcomes.
+Use a temporary model output while evaluating so a rejected candidate cannot
+replace the active runtime model.
 
-### 8. Apply the model acceptance gate
+### 7. Apply the offline acceptance gate
 
-An output is exportable only when its untouched-test performance satisfies
-both conditions:
+`train_watcher.py` exports an output only when all four gates pass (see
+`MD files/tune.md` for the rationale and `scripts/watcher_config.py` for values):
 
-- balanced accuracy is at least `0.60`;
-- balanced accuracy is at least `0.10` above the majority baseline.
+- grouped-CV mean balanced accuracy `>= ACCEPT_MIN_CV_MEAN`;
+- bootstrap test balanced-accuracy CI lower bound `>= ACCEPT_MIN_BALANCED_ACC_CI_LOWER`;
+- pooled leave-one-family-out balanced accuracy `>= ACCEPT_MIN_LOFO_POOLED`;
+- untouched `confirm` split within the test CI width of the test point estimate.
 
-Review the generated JSON and Markdown reports before runtime evaluation.
-Rejected or unavailable outputs must remain absent from the exported model so
-runtime inference falls back to deterministic rules.
+Review the JSON and Markdown reports before export. Rejected and unavailable
+outputs remain absent so runtime inference falls back to deterministic rules.
 
-### 9. Export and validate runtime behavior
+### 8. Export and validate the pure-Python model
 
-Export accepted scaler parameters, coefficients, intercepts, feature order,
-schema hash, and margin scales to `scripts/watcher_model.py`. Verify that:
+When at least one output passes, export only accepted records to
+`scripts/watcher_model.py`. Verify:
 
 - pure-Python scores match scikit-learn decision scores;
-- all scores are finite and clipped to `[-1, 1]`;
-- schema mismatch, malformed features, missing outputs, and non-finite values
+- scores are finite and clipped to `[-1, 1]`;
+- feature order and schema hash match runtime extraction;
+- malformed features, missing outputs, schema mismatch, and non-finite values
   fall back safely;
-- Kaggle runtime code imports neither NumPy nor scikit-learn.
-
-### 10. Run gameplay acceptance testing
-
-After offline acceptance, compare the SVM watcher against the preceding rules
-watcher with paired seeds and alternating player order. Promote it only if the
-project's paired-money, safety, regression, and operational gates pass.
-
-## Expected commands
-
-Generate local data directly under the ignored data directory:
+- runtime imports neither NumPy nor scikit-learn.
 
 ```bash
-PYTHONPATH=scripts python scripts/counterfactual_dataset.py \
-  --output data/counterfactual_dataset.jsonl \
-  --pairs <batch-size> \
-  --seed-base <first-seed>
+PYTHONPATH=scripts /tmp/agric-watcher-venv/bin/python \
+  -m unittest discover -s scripts -p 'test_*.py'
+
+python3.11 -m py_compile \
+  scripts/shared_features.py \
+  scripts/watcher_model.py \
+  scripts/strategy_follower.py \
+  scripts/main.py
 ```
 
-After preprocessing adds provenance, seed-safe splits, and weights, train with:
+### 9. Enable the backend and build the submission
 
-```bash
-PYTHONPATH=scripts python scripts/train_watcher.py \
-  --rows data/counterfactual_dataset.jsonl \
-  --output scripts/watcher_model.py \
-  --report watcher_training_report \
-  --min-per-class <final-threshold>
-```
+Only after export validation:
 
-Do not commit JSONL datasets, replay caches, generated reports, fitted model
-artifacts that have not passed acceptance, or local virtual environments.
+- set `WATCHER_BACKEND = "linear_svm"` in the editable strategy;
+- preserve deterministic fallback for missing or rejected outputs;
+- update the final artifact through the established source-to-submission flow;
+- keep `agent(obs)` as the last top-level callable;
+- verify the action shape and absence of NumPy/scikit-learn runtime imports.
+
+Do not enable the backend merely because an export exists. At least one output
+must have passed the complete offline gate.
+
+### 10. Run paired gameplay promotion testing
+
+Compare the SVM watcher with the preceding rules watcher using identical seeds
+and alternating player order.
+
+- Use at least 20 episodes per side initially.
+- Use at least 30 per opponent for a promotion-quality conclusion.
+- Test representative competitive opponents.
+- Report paired money difference, sample size, variance or range, safety,
+  regressions, and operational failures.
+
+Promote only if the paired-money, safety, regression, and operational gates
+pass. If no output passes offline acceptance, skip gameplay testing because
+there is no valid SVM candidate.
+
+## Environment
+
+Use Python 3.11 with development-only `numpy`, `scikit-learn`, and
+`kaggle-environments`.
+
+AppleDouble `._*` metadata on this external volume can break pip environments
+created inside the repository. A disposable environment under `/tmp` works.
+Never package a development environment or scientific dependencies with the
+Kaggle submission.
+
+## Definition of fully online
+
+The watcher SVM is fully online only when:
+
+1. At least one coherent output has execution-verified, quota-complete,
+   seed-isolated data across multiple focal strategy families.
+2. It passes the untouched-test acceptance gate.
+3. Its pure-Python export passes score-parity and fallback tests.
+4. The editable strategy and final submission enable it safely.
+5. Paired gameplay testing passes all promotion gates.
+
+Until then, deterministic rules remain active for every rejected, unavailable,
+or missing output.

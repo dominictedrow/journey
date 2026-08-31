@@ -1,0 +1,11 @@
+{
+  "phase5_control": {
+    "LIVESTOCK_SPECIALISTS": 0
+  },
+  "phase5_one_specialist": {
+    "LIVESTOCK_SPECIALISTS": 1
+  },
+  "phase5_two_specialists": {
+    "LIVESTOCK_SPECIALISTS": 2
+  }
+}

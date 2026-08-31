@@ -1,0 +1,6 @@
+{
+  "sale_legacy": {"SALE_POLICY_MODE": "legacy"},
+  "sale_wheat_1": {"SALE_POLICY_MODE": "product_specific", "SALE_MAX_BATCH_BY_PRODUCT": {"WHEAT": 1, "FERTILIZER": 3, "CARROT": null, "TOMATO": null, "STRAWBERRY": 8, "MELON": 8, "EGG": 8, "MILK": 8, "WOOL": 8}},
+  "sale_wheat_3": {"SALE_POLICY_MODE": "product_specific"},
+  "sale_wheat_6": {"SALE_POLICY_MODE": "product_specific", "SALE_MAX_BATCH_BY_PRODUCT": {"WHEAT": 6, "FERTILIZER": 3, "CARROT": null, "TOMATO": null, "STRAWBERRY": 8, "MELON": 8, "EGG": 8, "MILK": 8, "WOOL": 8}}
+}

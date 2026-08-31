@@ -171,6 +171,10 @@ TOWN_MAX_CROP_REDIRECT = 1            # best bounded township candidate from the
 OPPONENT_SIGNAL_WEIGHT = 4.0          # confirmed crop-only forecast strength (round27/28)
 OPPONENT_EXPANSION_THRESHOLD = 0.0    # require non-negative competitive case before buying more land
 DEADLINE_CAPACITY_MARGIN = 0.20       # leave this fraction of daily unit-turns for travel/recovery
+HIRING_RAMP_MODE = "workload"        # fixed, calendar, workload, or cash_workload
+HIRING_CEILING = 8                    # conservative phase-4 ceiling; never exceeds configured crew
+HIRING_PAYBACK_DAYS = 4.0             # minimum remaining productive days per marginal hire
+LIVESTOCK_SPECIALISTS = 0             # phase-5 candidate: stable hand slots devoted to compact zones
 
 ANIMAL_MIX = {"COW": 11, "SHEEP": 6}   # pass 3 value -- pass 4's 15/8 AB-confirmed worse (see docstring), reverted
 ANIMAL_COST = {"COW": 400, "SHEEP": 500}
@@ -189,7 +193,37 @@ LAND_TARGET_QUADRANTS = 2              # pass 3 value: NW+NE only (was BUY_NE_LA
 LAND_MIN_DAY = 0                       # earliest day to attempt BUY_LAND -- 0 = as soon as affordable (swept, best default)
 MAX_ANIMAL_BUY_PER_DAY = None          # None = uncapped -- buy every affordable animal every day (swept, best default)
 SELL_MIN_PRICE_FRAC = 0.4              # hold melon/milk/wool instead of dumping while price is below 40% of base --
-                                        # confirmed win over dump-immediate (round12/14/15) once production volume is high enough to move the price
+                                        # confirmed win over dump-immediate (round12/14/15) once production volume is high enough to move the price.
+                                        # The sell gate is intentionally STATIC: the watcher SVM never modulates it. An
+                                        # earlier experiment wired a model-driven `_svm_sell_frac` here; it was reverted
+                                        # and the watcher now only influences production/expansion signals, not sales.
+SALE_POLICY_MODE = "legacy"            # legacy or product_specific; phase-7 candidates remain gated
+SALE_MIN_PRICE_FRAC_BY_PRODUCT = {      # independent routine-sale gates; decay toward zero before liquidation
+    "WHEAT": 0.0, "CARROT": 0.35, "TOMATO": 0.45, "STRAWBERRY": 0.50,
+    "MELON": 0.40, "EGG": 0.35, "MILK": 0.40, "WOOL": 0.45,
+    "FERTILIZER": 0.0,
+}
+SALE_MAX_BATCH_BY_PRODUCT = {           # None means sell the full eligible quantity
+    "WHEAT": 3, "FERTILIZER": 3, "CARROT": None, "TOMATO": None,
+    "STRAWBERRY": 8, "MELON": 8, "EGG": 8, "MILK": 8, "WOOL": 8,
+}
+SALE_OVERFLOW_QUANTITY = 90             # cheap sale is preferable to shed-cap output loss
+SALE_THRESHOLD_DECAY_START_DAY = 22
+SALE_ROUTINE_ORDER_BUDGET = 3           # purchases are queued first; routine sales cannot consume every slot
+LAND_EXPANSION_MODE = "legacy"          # legacy or conditional; phase-8 candidates remain gated
+LAND_UTILIZATION_THRESHOLD = 0.80       # occupied fraction required before buying quadrant three
+LAND_MIN_REPAY_DAYS = 8                 # conservative remaining-season payback window
+LAND_OPERATING_RESERVE = 500            # retained in addition to adaptive feed/cash reserve
+CROP_TRANSITION_MODE = "off"          # off or fixed; candidates stay gated until phase-6 promotion
+MELON_LAST_SEED_DAY = 999              # stop buying melon seed independently from planting
+MELON_LAST_PLANT_DAY = 999             # existing melon always matures; only vacant slots transition
+TRANSITION_EMPTY_POLICY = "hold"       # hold, wheat, or strawberry after melon exit
+STRAWBERRY_START_DAY = 10
+STRAWBERRY_TILES = 0
+STRAWBERRY_LAST_PLANT_DAY = 19          # first yield is age 10; day 19 is the last productive start
+LATE_WHEAT_START_DAY = 999
+LATE_WHEAT_TILES = 0
+WHEAT_LAST_PLANT_DAY = 25               # peak harvest at age 4 before day-29 liquidation
 _BASE_PRICE = {"WHEAT": 25, "CARROT": 35, "TOMATO": 60, "STRAWBERRY": 120,
                "MELON": 250, "EGG": 50, "MILK": 160, "WOOL": 200}
 _SEED_COST = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
@@ -512,6 +546,45 @@ def _fib_hire_cost(n_hands):
     return total
 
 
+def _marginal_hire_cost(n_hands):
+    """Cost of the next hand after ``n_hands`` have already been hired."""
+    a, b = 1, 1
+    for _ in range(n_hands):
+        a, b = b, a + b
+    return a
+
+
+def _daily_hand_target(day, estimated_load, money, cash_reserve, remaining_days):
+    """Bounded phase-4 hiring target using observation-only information."""
+    workload = max(0, int((estimated_load + 19.1) // 19.2) - 1)
+    ceiling = min(N_HIRES, HIRING_CEILING)
+    if HIRING_RAMP_MODE == "fixed":
+        return ceiling
+    if HIRING_RAMP_MODE == "calendar":
+        # Replay-family shape: four hands in the opening, five around day 6,
+        # then the conservative experimental ceiling from day 9 onward.
+        replay_target = 4 if day < 6 else 5 if day < 9 else ceiling
+        return min(ceiling, replay_target)
+    target = min(ceiling, workload)
+    if HIRING_RAMP_MODE != "cash_workload":
+        return target
+
+    spendable = max(0.0, money - cash_reserve)
+    affordable = 0
+    spent = 0
+    while affordable < target:
+        marginal = _marginal_hire_cost(affordable)
+        # A hand supplies at most 24 actions/day. Value the work conservatively
+        # at wheat's base price and require time for the hire to repay itself.
+        useful_actions = min(24.0, max(0.0, estimated_load - affordable * 19.2))
+        if (spent + marginal > spendable or remaining_days < HIRING_PAYBACK_DAYS
+                or useful_actions * _BASE_PRICE["WHEAT"] < marginal * HIRING_PAYBACK_DAYS):
+            break
+        spent += marginal
+        affordable += 1
+    return affordable
+
+
 def _adaptive_targets(obs, me, tiles, prices, signals=None):
     """Return bounded targets derived from workload, cash, and live payback."""
     day = obs["day"]
@@ -593,13 +666,26 @@ def _adaptive_targets(obs, me, tiles, prices, signals=None):
     target_animals = sum(animal_targets.values())
     target_crops = sum(product_tiles.values())
     estimated_load = target_animals * 4.0 + target_crops * 1.75
-    daily_hands = min(N_HIRES, max(0, int((estimated_load + 19.1) // 19.2) - 1))
     cash_reserve = sum(animal_counts.values()) * wheat_price * 2
-    quadrants = min(LAND_TARGET_QUADRANTS, max(1, (target_animals + target_crops + 24) // 25))
+    daily_hands = _daily_hand_target(
+        day, estimated_load, me.get("money", 0), cash_reserve, remaining_days
+    )
+    if signals is not None and signals.get("backend") == "linear_svm":
+        labor_score = signals.get("labor_expansion_pressure", 0.0)
+        labor_delta = 1 if labor_score > 0.25 else -1 if labor_score < -0.25 else 0
+        daily_hands = max(0, min(N_HIRES, daily_hands + labor_delta))
+    # A conditional land experiment deliberately keeps production targets
+    # separate from the purchase decision.  Its stricter utilization/layout
+    # gate below decides whether the configured extra quadrant is justified.
+    if LAND_EXPANSION_MODE == "conditional":
+        quadrants = LAND_TARGET_QUADRANTS
+    else:
+        quadrants = min(LAND_TARGET_QUADRANTS, max(1, (target_animals + target_crops + 24) // 25))
     if signals is not None and ENABLE_OPPONENT_WATCHER:
         quadrants = min(quadrants, signals["recommended_limits"]["quadrants"])
 
     return {
+        "day": day,
         "product_tiles": product_tiles,
         "animal_counts": animal_targets,
         "daily_hands": daily_hands,
@@ -608,6 +694,12 @@ def _adaptive_targets(obs, me, tiles, prices, signals=None):
         "replant_cutoffs": replant_cutoffs,
         "crop_scores": crop_scores,
         "animal_scores": animal_scores,
+        "watcher_adjustments": {
+            "labor_hand_delta": (daily_hands - _daily_hand_target(
+                day, estimated_load, me.get("money", 0), cash_reserve, remaining_days
+            )) if signals is not None and signals.get("backend") == "linear_svm" else 0,
+            "land_target": quadrants,
+        },
     }
 
 
@@ -674,8 +766,10 @@ def watcher_signals(obs, backend):
     svm_ready = bool(
         backend == "linear_svm" and
         _watcher_features is not None and _watcher_model is not None and
+        getattr(_watcher_model, "SCHEMA_VERSION", None) == _watcher_features.SCHEMA_VERSION and
         getattr(_watcher_model, "SCHEMA_HASH", None) == _watcher_features.SCHEMA_HASH and
-        tuple(getattr(_watcher_model, "FEATURE_ORDER", ())) == tuple(_watcher_features.FEATURE_ORDER)
+        tuple(getattr(_watcher_model, "FEATURE_ORDER", ())) == tuple(_watcher_features.FEATURE_ORDER) and
+        bool(getattr(_watcher_model, "MODELS", {}))
     )
     if backend == "linear_svm" and not svm_ready:
         backend = "rules"
@@ -688,6 +782,8 @@ def watcher_signals(obs, backend):
             "opponent_supply_pressure": dict(zeros),
             "market_glut_risk": dict(zeros),
             "competitive_expansion_pressure": 0.0,
+            "land_expansion_pressure": 0.0,
+            "labor_expansion_pressure": 0.0,
             "recommended_limits": {
                 "product_exposure": {product: 0 for product in _PRODUCTS},
                 "hands": 0, "quadrants": 1, "cash_reserve": 0.0,
@@ -763,37 +859,66 @@ def watcher_signals(obs, backend):
         1 for row in opponent_farm.get("tiles", []) for tile in row
         if isinstance(tile, dict) and (tile.get("crop") or tile.get("animal"))
     )
+    rule_attractiveness = dict(attractiveness)
     unmet_pressure = max(attractiveness.values()) if attractiveness else 0.0
     scale_gap = (opponent_assets - own_assets) / 25.0
-    expansion = max(-1.0, min(1.0, 0.65 * unmet_pressure + 0.35 * scale_gap))
+    rule_expansion = max(-1.0, min(1.0, 0.65 * unmet_pressure + 0.35 * scale_gap))
+    land_expansion = rule_expansion
+    labor_expansion = rule_expansion
+    model_scores = {}
+    fallback_reasons = {}
+    changed_outputs = []
     if svm_ready:
         try:
             features = _watcher_features.extract_features(obs)
-            used_model = False
+            if (len(features) != len(_watcher_features.FEATURE_ORDER) or
+                    not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                            and value == value and abs(value) != float("inf") for value in features)):
+                raise ValueError("invalid_features")
+
+            def valid_score(output_id):
+                try:
+                    value = _watcher_model.score(output_id, features)
+                except (KeyError, TypeError, ValueError, ArithmeticError):
+                    fallback_reasons[output_id] = "model_error"
+                    return None
+                if (not isinstance(value, (int, float)) or isinstance(value, bool) or
+                        value != value or abs(value) == float("inf")):
+                    fallback_reasons[output_id] = "missing_or_invalid_output"
+                    return None
+                value = max(-1.0, min(1.0, float(value)))
+                model_scores[output_id] = value
+                return value
+
             for product in _PRODUCTS:
-                increase = _watcher_model.score(f"product:{product}:increase", features)
-                avoid = _watcher_model.score(f"product:{product}:avoid", features)
-                increase = increase if isinstance(increase, (int, float)) and not isinstance(increase, bool) and increase == increase and abs(increase) != float("inf") else None
-                avoid = avoid if isinstance(avoid, (int, float)) and not isinstance(avoid, bool) and avoid == avoid and abs(avoid) != float("inf") else None
+                increase = valid_score(f"product:{product}:increase")
+                avoid = valid_score(f"product:{product}:avoid")
                 if increase is not None or avoid is not None:
                     attractiveness[product] = max(
                         -1.0, min(1.0, (increase or 0.0) - (avoid or 0.0))
                     )
-                    used_model = True
-            svm_expansion = _watcher_model.score("competitive_expansion", features)
-            svm_expansion = svm_expansion if isinstance(svm_expansion, (int, float)) and not isinstance(svm_expansion, bool) and svm_expansion == svm_expansion and abs(svm_expansion) != float("inf") else None
-            if svm_expansion is not None:
-                expansion = max(-1.0, min(1.0, svm_expansion))
-                used_model = True
-            backend = "linear_svm" if used_model else "rules"
+                    changed_outputs.append(f"product:{product}")
+            model_land = valid_score("land_expansion")
+            model_labor = valid_score("labor_expansion")
+            if model_land is not None:
+                land_expansion = model_land
+                changed_outputs.append("land_expansion")
+            if model_labor is not None:
+                labor_expansion = model_labor
+                changed_outputs.append("labor_expansion")
+            backend = "linear_svm" if changed_outputs else "rules"
         except (KeyError, TypeError, ValueError, ArithmeticError):
             backend = "rules"
+            fallback_reasons["features"] = "extraction_or_validation_failed"
+    expansion = land_expansion
     return {
         "product_attractiveness": attractiveness,
         "town_demand_pressure": town_pressure,
         "opponent_supply_pressure": opponent_pressure,
         "market_glut_risk": glut_risk,
         "competitive_expansion_pressure": expansion,
+        "land_expansion_pressure": land_expansion,
+        "labor_expansion_pressure": labor_expansion,
         "recommended_limits": {
             "product_exposure": exposure,
             "hands": min(N_HIRES, len(me.get("hands", [])) or N_HIRES),
@@ -802,6 +927,29 @@ def watcher_signals(obs, backend):
             "cash_reserve": cash_reserve,
         },
         "backend": backend if requested_backend != "off" else "off",
+        "watcher_trace": {
+            "rule_scores": {
+                "product_attractiveness": rule_attractiveness,
+                "land_expansion": rule_expansion,
+                "labor_expansion": rule_expansion,
+            },
+            "model_scores": model_scores,
+            "final_scores": {
+                "product_attractiveness": dict(attractiveness),
+                "land_expansion": land_expansion,
+                "labor_expansion": labor_expansion,
+            },
+            "changed_outputs": changed_outputs,
+            "changed_signals": [
+                output_id for output_id in changed_outputs
+                if ((output_id == "land_expansion" and land_expansion != rule_expansion) or
+                    (output_id == "labor_expansion" and labor_expansion != rule_expansion) or
+                    (output_id.startswith("product:") and
+                     attractiveness[output_id.split(":", 1)[1]] !=
+                     rule_attractiveness[output_id.split(":", 1)[1]]))
+            ],
+            "fallback_reasons": fallback_reasons,
+        },
     }
 
 
@@ -842,6 +990,14 @@ def _adaptive_crop_slots(tiles, targets):
         tile = tiles[y][x]
         if pos in assignments or (isinstance(tile, dict) and tile.get("kind") not in ("WEED",)):
             continue
+        if CROP_TRANSITION_MODE == "fixed":
+            scheduled = _fixed_transition_crop(targets["day"], crop_pool.index(pos))
+            if scheduled is None:
+                continue
+            assignments[pos] = scheduled
+            if scheduled in remaining:
+                remaining[scheduled] = max(0, remaining[scheduled] - 1)
+            continue
         choices = [crop for crop, deficit in remaining.items() if deficit > 0]
         if not choices:
             break
@@ -851,12 +1007,34 @@ def _adaptive_crop_slots(tiles, targets):
     return assignments
 
 
+def _planned_tile_positions():
+    """Unique coordinates the configured production layout can occupy."""
+    return set(LIVESTOCK_POSITIONS) | set(MELON_POSITIONS) | set(WHEAT_POSITIONS) | set(CARROT_POSITIONS)
+
+
+def _fixed_transition_crop(day, slot_index):
+    """Crop for a vacant phase-6 slot; living plants are never dug early."""
+    if day <= MELON_LAST_PLANT_DAY:
+        return "MELON"
+    if (day >= LATE_WHEAT_START_DAY and day <= WHEAT_LAST_PLANT_DAY
+            and slot_index < LATE_WHEAT_TILES):
+        return "WHEAT"
+    if (TRANSITION_EMPTY_POLICY == "strawberry" and day >= STRAWBERRY_START_DAY
+            and day <= STRAWBERRY_LAST_PLANT_DAY and slot_index < STRAWBERRY_TILES):
+        return "STRAWBERRY"
+    if TRANSITION_EMPTY_POLICY == "wheat" and day <= WHEAT_LAST_PLANT_DAY:
+        return "WHEAT"
+    return None
+
+
 # ---- Deadline-safe global planner ------------------------------------------
 
 def _planner_crop_name(day, pos, crop_assignments=None):
     if crop_assignments is not None:
         return crop_assignments.get(pos)
     if pos in MELON_POSITIONS:
+        if CROP_TRANSITION_MODE == "fixed":
+            return _fixed_transition_crop(day, MELON_POSITIONS.index(pos))
         return "MELON" if day < MELON_EXIT_DAY else "WHEAT"
     if pos in WHEAT_POSITIONS:
         return "WHEAT"
@@ -985,6 +1163,12 @@ def _deadline_actions(me, private, day, hour, tiles, shed, seeds, targets=None):
         animal_load = len(LIVESTOCK_POSITIONS) * 4.0
         crop_load = MAX_MELON_TILES * 1.75
         animal_units = max(1, min(len(positions) - 1, round(len(positions) * animal_load / max(1.0, animal_load + crop_load))))
+    specialist_count = min(LIVESTOCK_SPECIALISTS, max(0, animal_units - 1))
+    specialist_zones = _chunk_indices(len(LIVESTOCK_POSITIONS), specialist_count + 1)
+    specialist_owner = {}
+    for specialist_offset, zone in enumerate(specialist_zones[1:], start=1):
+        for idx in zone:
+            specialist_owner[LIVESTOCK_POSITIONS[idx]] = specialist_offset
 
     for priority, target, operation, item in tasks:
         if not free_units:
@@ -1013,6 +1197,13 @@ def _deadline_actions(me, private, day, hour, tiles, shed, seeds, targets=None):
                 livestock_task = target in animal_zone
                 if livestock_task != (unit < animal_units):
                     continue
+                owner = specialist_owner.get(target)
+                emergency = priority <= 1
+                if not emergency:
+                    if 1 <= unit <= specialist_count and owner != unit:
+                        continue
+                    if owner is not None and unit != owner:
+                        continue
             inv = invs[unit]
             carried_item = item if operation != "PLANT" else None
             if carried_item is not None and inv.get(carried_item, 0) <= 0 and shed.get(carried_item, 0) <= reserved_items.get(carried_item, 0):
@@ -1071,6 +1262,7 @@ def agent(obs):
 
     buy_orders = []
     sell_orders = []
+    liquidating = day >= 29
 
     # Only HIRE truly needs hour 0 (hands are hired for the whole day, once).
     # Every other purchase type is spread across its own hour instead of all
@@ -1083,27 +1275,45 @@ def agent(obs):
     signals = watcher_signals(obs, WATCHER_BACKEND) if ENABLE_TOWN_WATCHER or ENABLE_OPPONENT_WATCHER else None
     targets = _adaptive_targets(obs, me, tiles, prices, signals) if ENABLE_ADAPTIVE_TARGETS else None
 
-    for item, n in list(shed.items()):
-        if n <= 0 or item == "WHEAT":
-            continue
-        base = _BASE_PRICE.get(item)
-        cur = prices.get(item)
-        # Hold instead of dumping while the price is depressed below the
-        # gate -- but never past shedCapacity (100): losing product to
-        # overflow is strictly worse than selling it cheap.
-        if SELL_MIN_PRICE_FRAC > 0 and base and cur is not None and cur < SELL_MIN_PRICE_FRAC * base and n < 90:
-            continue
-        sell_orders.append(["SELL", item, n])
-
-    # Wheat barely reacts to glut (RULES.md Price Function table), so any
-    # surplus beyond a 2-day feed reserve is free money to sell, not just a
-    # cost saved on feed. Not gated on WHEAT_TILES (0 by default) because
-    # MELON_EXIT_DAY routes ex-melon tiles into WHEAT too -- this check is
-    # self-gating (wheat_surplus > 0) regardless of the source.
-    wheat_reserve = (sum(targets["animal_counts"].values()) if targets else len(LIVESTOCK_TYPES)) * 2
-    wheat_surplus = shed.get("WHEAT", 0) - wheat_reserve
-    if wheat_surplus > 0:
-        sell_orders.append(["SELL", "WHEAT", wheat_surplus])
+    wheat_reserve = 0 if liquidating else (
+        sum(targets["animal_counts"].values()) if targets else len(LIVESTOCK_TYPES)
+    ) * 2
+    if SALE_POLICY_MODE == "product_specific":
+        # Product-specific gates distinguish high-volume staples from premium
+        # goods. Thresholds decay late, overflow bypasses them, and day 29
+        # liquidates every product regardless of the normal policy.
+        for item, n in sorted(shed.items()):
+            eligible = n - (wheat_reserve if item == "WHEAT" else 0)
+            if eligible <= 0:
+                continue
+            base = _BASE_PRICE.get(item)
+            cur = prices.get(item)
+            threshold = SALE_MIN_PRICE_FRAC_BY_PRODUCT.get(item, SELL_MIN_PRICE_FRAC)
+            if day >= SALE_THRESHOLD_DECAY_START_DAY and not liquidating:
+                span = max(1, 29 - SALE_THRESHOLD_DECAY_START_DAY)
+                threshold *= max(0.0, (29 - day) / span)
+            if (not liquidating and n < SALE_OVERFLOW_QUANTITY and base and cur is not None
+                    and cur < threshold * base):
+                continue
+            batch = SALE_MAX_BATCH_BY_PRODUCT.get(item)
+            quantity = eligible if liquidating or batch is None else min(eligible, batch)
+            if quantity > 0:
+                sell_orders.append(["SELL", item, quantity])
+        if not liquidating:
+            sell_orders = sell_orders[:SALE_ROUTINE_ORDER_BUDGET]
+    else:
+        for item, n in list(shed.items()):
+            if n <= 0 or item == "WHEAT":
+                continue
+            base = _BASE_PRICE.get(item)
+            cur = prices.get(item)
+            if (not liquidating and SELL_MIN_PRICE_FRAC > 0 and base and cur is not None
+                    and cur < SELL_MIN_PRICE_FRAC * base and n < 90):
+                continue
+            sell_orders.append(["SELL", item, n])
+        wheat_surplus = shed.get("WHEAT", 0) - wheat_reserve
+        if wheat_surplus > 0:
+            sell_orders.append(["SELL", "WHEAT", wheat_surplus])
 
     if (targets and hour <= 3) or (not targets and hour == 0):
         daily_hands = targets["daily_hands"] if targets else N_HIRES
@@ -1198,7 +1408,21 @@ def agent(obs):
     intended_hands = targets["daily_hands"] if targets else N_HIRES
     unlocked_count = len(me.get("unlocked_quadrants", ["NW"]))
     next_land_cost = {1: 1000, 2: 2000, 3: 4000}.get(unlocked_count, 999999)
-    if hour == 3 and day >= LAND_MIN_DAY and unlocked_count < target_quadrants and (
+    land_allowed = True
+    if LAND_EXPANSION_MODE == "conditional" and unlocked_count >= 2:
+        occupied = sum(
+            1 for row in tiles for tile in row
+            if isinstance(tile, dict) and (tile.get("crop") or tile.get("animal") or tile.get("kind"))
+        )
+        utilization = occupied / max(1, 25 * unlocked_count)
+        reserve = (targets["cash_reserve"] if targets else 0) + LAND_OPERATING_RESERVE
+        enough_time = (29 - day) >= LAND_MIN_REPAY_DAYS
+        # Transition crops replace occupants of the melon pool; count unique
+        # coordinates rather than phase-specific crop counts.
+        concrete_layout = len(_planned_tile_positions()) > 25 * unlocked_count
+        land_allowed = (utilization >= LAND_UTILIZATION_THRESHOLD and enough_time and
+                        money - next_land_cost >= reserve and concrete_layout)
+    if hour == 3 and day >= LAND_MIN_DAY and unlocked_count < target_quadrants and land_allowed and (
         not (ENABLE_DEADLINE_PLANNER or ENABLE_ADAPTIVE_TARGETS) or _planner_has_capacity(tiles, 1 + max(len(me.get("hands", [])), intended_hands))
     ) and (
         not targets or money - next_land_cost >= targets["cash_reserve"]
@@ -1219,6 +1443,12 @@ def agent(obs):
                     needed_seeds[crop] = needed_seeds.get(crop, 0) + 1
             cash = money
             for crop in sorted(needed_seeds, key=lambda name: (-targets["crop_scores"][name], name)):
+                if crop == "MELON" and CROP_TRANSITION_MODE == "fixed" and day > MELON_LAST_SEED_DAY:
+                    continue
+                if crop == "STRAWBERRY" and day > STRAWBERRY_LAST_PLANT_DAY:
+                    continue
+                if crop == "WHEAT" and day > WHEAT_LAST_PLANT_DAY:
+                    continue
                 need = max(0, needed_seeds[crop] - seeds.get(crop, 0))
                 cost = _SEED_COST[crop]
                 spendable = max(0, cash - targets["cash_reserve"])
@@ -1260,7 +1490,9 @@ def agent(obs):
         if empty_carrot > have_seeds:
             buy_orders.append(["BUY_SEED", "CARROT", empty_carrot - have_seeds])
 
-    market = buy_orders + sell_orders
+    # Closing sales take precedence; always enforce the engine's silent
+    # maxMarketOrdersPerTurn=10 truncation explicitly.
+    market = (sell_orders + buy_orders if liquidating else buy_orders + sell_orders)[:10]
 
     if ENABLE_DEADLINE_PLANNER or ENABLE_ADAPTIVE_TARGETS:
         farmer_action, hands_actions = _deadline_actions(me, private, day, hour, tiles, shed, seeds, targets)

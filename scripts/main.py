@@ -149,46 +149,105 @@ land cost are the leading suspects, both competing with the same cash pool
 BUY_LAND and HIRE already contend for. Reverted to pass 3's values below;
 if a future pass wants this lever again, isolate and AB-confirm each of
 the three changes independently rather than bundling.
-
-Current replay-driven revision: expansion is now isolated from the earlier
-herd-size experiment. It can expand through NW+NE+SW when the land purchase is
-affordable, assigns the overflow crop slice in SW, stops melon/wheat planting
-when the remaining season cannot repay them, and liquidates on day 29. Routing
-now uses owned-cell paths, including recovery from a hand's locked spawn tile.
-These are behavior/correctness changes requested from replay review; they are
-not yet a paired-performance claim.
 """
 
-try:
-    import shared_features
-    import watcher_model
-except ImportError:
-    shared_features = None
-    watcher_model = None
+_watcher_features = None
+_watcher_model = None
 
 # ---- Constants (the "easy to change" knobs) --------------------------------
+
+ENABLE_DEADLINE_PLANNER = True        # step 1 layer; False preserves the legacy unit chunks exactly
+ENABLE_ADAPTIVE_TARGETS = True        # step 2 layer; intended cumulatively with the deadline planner
+ENABLE_TOWN_WATCHER = True            # step 3 layer; exact unlocked-shop demand signals
+ENABLE_OPPONENT_WATCHER = True        # step 4 layer; six-day public-farm supply forecast
+WATCHER_BACKEND = "rules"             # set to "linear_svm" after exporting a compatible watcher_model.py
+TOWN_EXPOSURE_MULTIPLIER = 2.0        # production capacity relative to exact observed town demand
+TOWN_WATCHER_START_DAY = 10           # preserve the profitable opening through melon's first harvest
+TOWN_MAX_CROP_REDIRECT = 1            # best bounded township candidate from the n=60 tuning expansion
+OPPONENT_SIGNAL_WEIGHT = 4.0          # confirmed crop-only forecast strength (round27/28)
+OPPONENT_EXPANSION_THRESHOLD = 0.0    # require non-negative competitive case before buying more land
+DEADLINE_CAPACITY_MARGIN = 0.20       # leave this fraction of daily unit-turns for travel/recovery
+HIRING_RAMP_MODE = "workload"        # fixed, calendar, workload, or cash_workload
+HIRING_CEILING = 8                    # conservative phase-4 ceiling; never exceeds configured crew
+HIRING_PAYBACK_DAYS = 4.0             # minimum remaining productive days per marginal hire
+LIVESTOCK_SPECIALISTS = 0             # phase-5 candidate: stable hand slots devoted to compact zones
 
 ANIMAL_MIX = {"COW": 11, "SHEEP": 6}   # pass 3 value -- pass 4's 15/8 AB-confirmed worse (see docstring), reverted
 ANIMAL_COST = {"COW": 400, "SHEEP": 500}
 LIVESTOCK_HANDS = 6                    # pass 3 value -- pass 4's 7 (N_HIRES 8->9) AB-confirmed worse, reverted
-MELON_HANDS = 3                        # scale crop labor with the third quadrant: 45 tiles split 15/hand keeps each route
-                                        # below the known-bad 19-tile single-hand load while holding total hires at the
-                                        # documented safe ceiling of 9 (6 livestock + 3 crop)
-MAX_MELON_TILES = 45                   # 8 NW + 25 NE + 12 SW: the $2k third quadrant now adds a meaningful production
-                                        # block instead of only three tiles; MELON_EXIT_DAY still limits late exposure
+MELON_HANDS = 2                        # splitting the 19 melon tiles across 2 units beat 1 hand at this scale --
+                                        # a single melon hand couldn't service the tiles fast enough (round5/6/7);
+                                        # a 3rd hand was tried and reliably broke the economics (round11/13) -- not used
+MAX_MELON_TILES = 19                   # melon's own T=300 / 0.55 yield-per-tile-day / 30 days ~= 18 tiles -- keep near that;
+                                        # expanding to 26 tiles under NE tested statistically tied, not worth the complexity (round14);
+                                        # unchanged in pass 4 -- MELON_EXIT_DAY caps season exposure instead of tile count
 MELON_YIELD_DAY = 10                   # melon: first_yield_day == max_yield_day == 10 (RULES.md Object Types)
-MELON_EXIT_DAY = 19                    # switch away from melon on day 19; later plantings cannot close cleanly
-WHEAT_EXIT_DAY = 26                    # day 25 is the last wheat planting day that can mature before season end
-LIQUIDATION_DAY = 29                   # stop routine work, bank carried goods, and force final sales
-LAND_TARGET_QUADRANTS = 3              # NW+NE+SW; SW is represented by the overflow crop slice above
-LAND_UTILIZATION_TRIGGER = 0.65        # observed baseline fills 68% of NW; expand only once that capacity is reached
+MELON_EXIT_DAY = 999                   # pass 3 value (effectively off, day never reaches this) -- pass 4's day-10 exit
+                                        # AB-confirmed worse alongside its other two changes (see docstring), reverted
+LAND_TARGET_QUADRANTS = 2              # pass 3 value: NW+NE only (was BUY_NE_LAND) -- pass 4's 3rd quadrant (NW+NE+SW)
+                                        # AB-confirmed worse alongside its other two changes (see docstring), reverted
 LAND_MIN_DAY = 0                       # earliest day to attempt BUY_LAND -- 0 = as soon as affordable (swept, best default)
 MAX_ANIMAL_BUY_PER_DAY = None          # None = uncapped -- buy every affordable animal every day (swept, best default)
 SELL_MIN_PRICE_FRAC = 0.4              # hold melon/milk/wool instead of dumping while price is below 40% of base --
-                                        # confirmed win over dump-immediate (round12/14/15) once production volume is high enough to move the price
-_BASE_PRICE = {"MELON": 250, "MILK": 160, "WOOL": 200, "CARROT": 35}  # RULES.md Object Types table -- for the sell-gate check above
-SELLABLE_PRODUCTS = {"WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON",
-                     "EGG", "MILK", "WOOL", "FERTILIZER"}
+                                        # confirmed win over dump-immediate (round12/14/15) once production volume is high enough to move the price.
+                                        # The sell gate is intentionally STATIC: the watcher SVM never modulates it. An
+                                        # earlier experiment wired a model-driven `_svm_sell_frac` here; it was reverted
+                                        # and the watcher now only influences production/expansion signals, not sales.
+SALE_POLICY_MODE = "legacy"            # legacy or product_specific; phase-7 candidates remain gated
+SALE_MIN_PRICE_FRAC_BY_PRODUCT = {      # independent routine-sale gates; decay toward zero before liquidation
+    "WHEAT": 0.0, "CARROT": 0.35, "TOMATO": 0.45, "STRAWBERRY": 0.50,
+    "MELON": 0.40, "EGG": 0.35, "MILK": 0.40, "WOOL": 0.45,
+    "FERTILIZER": 0.0,
+}
+SALE_MAX_BATCH_BY_PRODUCT = {           # None means sell the full eligible quantity
+    "WHEAT": 3, "FERTILIZER": 3, "CARROT": None, "TOMATO": None,
+    "STRAWBERRY": 8, "MELON": 8, "EGG": 8, "MILK": 8, "WOOL": 8,
+}
+SALE_OVERFLOW_QUANTITY = 90             # cheap sale is preferable to shed-cap output loss
+SALE_THRESHOLD_DECAY_START_DAY = 22
+SALE_ROUTINE_ORDER_BUDGET = 3           # purchases are queued first; routine sales cannot consume every slot
+LAND_EXPANSION_MODE = "legacy"          # legacy or conditional; phase-8 candidates remain gated
+LAND_UTILIZATION_THRESHOLD = 0.80       # occupied fraction required before buying quadrant three
+LAND_MIN_REPAY_DAYS = 8                 # conservative remaining-season payback window
+LAND_OPERATING_RESERVE = 500            # retained in addition to adaptive feed/cash reserve
+CROP_TRANSITION_MODE = "off"          # off or fixed; candidates stay gated until phase-6 promotion
+MELON_LAST_SEED_DAY = 999              # stop buying melon seed independently from planting
+MELON_LAST_PLANT_DAY = 999             # existing melon always matures; only vacant slots transition
+TRANSITION_EMPTY_POLICY = "hold"       # hold, wheat, or strawberry after melon exit
+STRAWBERRY_START_DAY = 10
+STRAWBERRY_TILES = 0
+STRAWBERRY_LAST_PLANT_DAY = 19          # first yield is age 10; day 19 is the last productive start
+LATE_WHEAT_START_DAY = 999
+LATE_WHEAT_TILES = 0
+WHEAT_LAST_PLANT_DAY = 25               # peak harvest at age 4 before day-29 liquidation
+_BASE_PRICE = {"WHEAT": 25, "CARROT": 35, "TOMATO": 60, "STRAWBERRY": 120,
+               "MELON": 250, "EGG": 50, "MILK": 160, "WOOL": 200}
+_SEED_COST = {"WHEAT": 10, "CARROT": 20, "TOMATO": 50, "STRAWBERRY": 100, "MELON": 80}
+_CROP_FIRST_YIELD = {"WHEAT": 2, "CARROT": 2, "TOMATO": 8, "STRAWBERRY": 10, "MELON": 10}
+_CROP_MAX_DAY = {"WHEAT": 4, "CARROT": 3, "TOMATO": 11, "STRAWBERRY": 16, "MELON": 10}
+_CROP_DAILY_YIELD = {"WHEAT": 0.80, "CARROT": 0.75, "TOMATO": 0.33, "STRAWBERRY": 0.24, "MELON": 0.55}
+_ANIMAL_PRODUCT = {"GOOSE": "EGG", "COW": "MILK", "SHEEP": "WOOL"}
+_ANIMAL_DAILY_YIELD = {"GOOSE": 1.0, "COW": 0.5, "SHEEP": 1.0 / 3.0}
+_PRODUCT_DAILY_YIELD = dict(_CROP_DAILY_YIELD)
+_PRODUCT_DAILY_YIELD.update({"EGG": 1.0, "MILK": 0.5, "WOOL": 1.0 / 3.0})
+_ANIMAL_COST_ALL = {"GOOSE": 300, "COW": 400, "SHEEP": 500}
+_ANIMAL_CAP = {"GOOSE": 17, "COW": 11, "SHEEP": 6}
+_ANIMAL_FIRST_YIELD = {"GOOSE": 4, "COW": 8, "SHEEP": 6}
+_ANIMAL_INTERVAL = {"GOOSE": 1, "COW": 2, "SHEEP": 3}
+_ONGOING_CROP_INTERVAL = {"TOMATO": 1, "STRAWBERRY": 2}
+_PRODUCTS = tuple(_BASE_PRICE)
+_THROUGHPUT = {"WHEAT": 400, "CARROT": 450, "TOMATO": 200, "STRAWBERRY": 100,
+               "MELON": 300, "EGG": 332, "MILK": 122, "WOOL": 105}
+_SHOP_PRODUCTS = {
+    "BAKERY": ("EGG", "WHEAT"),
+    "PIZZA_SHOP": ("MILK", "TOMATO", "WHEAT"),
+    "BRUNCH_SPOT": ("EGG", "WHEAT", "STRAWBERRY"),
+    "YARN_STORE": ("WOOL",),
+    "ICE_CREAM_SHOP": ("STRAWBERRY", "MILK", "WHEAT"),
+    "PET_CAFE": ("CARROT",),
+    "SMOOTHIE_SHOP": ("STRAWBERRY", "MILK"),
+    "FARMERS_MARKET": ("WHEAT", "CARROT", "TOMATO", "STRAWBERRY"),
+}
 
 # ---- Crop diversification knobs --------------------------------------------
 # Wheat's price barely reacts to glut (T=400, above_target=0.2 -- RULES.md
@@ -200,7 +259,7 @@ WHEAT_TILES = 0                        # self-grow feed wheat (and sell any surp
 WHEAT_HANDS = 0
 CARROT_TILES = 0                       # secondary cash crop, separate price pool from melon; 0 = off
 CARROT_HANDS = 0
-CROP_MAX_YIELD_DAY = {"MELON": MELON_YIELD_DAY, "WHEAT": 4, "CARROT": 3}  # RULES.md Object Types table
+CROP_MAX_YIELD_DAY = dict(_CROP_MAX_DAY)
 
 ANIMAL_STRUCTURE = "PASTURE"
 SHED_ADJACENT = {(4, 4), (5, 4), (4, 5), (5, 5)}
@@ -226,17 +285,16 @@ def _livestock_type_sequence():
 LIVESTOCK_TYPES = _livestock_type_sequence()
 LIVESTOCK_POSITIONS = _LIVESTOCK_POOL[: len(LIVESTOCK_TYPES)]
 
-# Crop pool: NW forward scan minus livestock's tiles, then NE and SW forward
-# scans. The final twelve melon positions are in SW and remain locked until the
-# third land purchase succeeds; the third crop hand then has the capacity to
-# bring that new block into production without overloading the original crew.
+# Crop pool: NW forward scan minus livestock's tiles, then NE forward scan
+# (only reachable once LAND_TARGET_QUADRANTS unlocks it -- locked tiles are
+# passable but PLANT no-ops on them, so listing them early is harmless, not
+# incorrect).
 # Melon claims the first MAX_MELON_TILES; wheat and carrot split whatever's
 # left, in that order.
 _claimed = set(LIVESTOCK_POSITIONS)
 _NW_FREE = [(x, y) for y in range(0, 5) for x in range(0, 5) if (x, y) not in _claimed]
 _NE_FORWARD = [(x, y) for y in range(0, 5) for x in range(5, 10)]
-_SW_FORWARD = [(x, y) for y in range(5, 10) for x in range(0, 5)]
-_ALL_FREE = _NW_FREE + _NE_FORWARD + _SW_FORWARD
+_ALL_FREE = _NW_FREE + _NE_FORWARD
 MELON_POSITIONS = _ALL_FREE[:MAX_MELON_TILES]
 _SPARE = _ALL_FREE[MAX_MELON_TILES:]
 WHEAT_POSITIONS = _SPARE[:WHEAT_TILES]
@@ -289,92 +347,35 @@ def _step_toward(pos, target):
     return None
 
 
-def _owned_step_toward(pos, targets, tiles):
-    """Shortest next step that stays on owned land.
-
-    A newly hired hand may spawn on a locked shed tile; that starting square
-    is allowed, but every square entered by the route must be owned.
-    """
-    targets = set(targets)
-    if not targets or pos in targets:
-        return None
-    height, width = len(tiles), len(tiles[0])
-    queue = [pos]
-    first_step = {pos: None}
-    for cur in queue:
-        x, y = cur
-        for action, nx, ny in (("WEST", x - 1, y), ("EAST", x + 1, y),
-                               ("NORTH", x, y - 1), ("SOUTH", x, y + 1)):
-            nxt = (nx, ny)
-            if not (0 <= nx < width and 0 <= ny < height) or nxt in first_step:
-                continue
-            # A hand can spawn on any of the four shed-adjacent squares,
-            # including a locked one. Permit locked shed squares only as the
-            # short escape bridge; normal routing remains owned-land-only.
-            if tiles[ny][nx] == "LOCKED" and nxt not in SHED_ADJACENT:
-                continue
-            first_step[nxt] = action if cur == pos else first_step[cur]
-            if nxt in targets:
-                return first_step[nxt]
-            queue.append(nxt)
-    return None
-
-
 def _is_shed_adjacent(pos):
     return pos in SHED_ADJACENT
 
 
-def _nearest_step(pos, positions, tiles):
+def _nearest_step(pos, positions):
     """Step toward the closest of `positions` (Manhattan), not just the
     first one found -- every wasted step here is an action turn not spent
     watering/feeding/harvesting.
     """
     if not positions:
         return None
-    owned = [p for p in positions if tiles[p[1]][p[0]] != "LOCKED"]
-    return _owned_step_toward(pos, owned, tiles)
-
-
-def _return_to_shed(pos, inv, tiles):
-    if not any(n > 0 for n in inv.values()):
-        return None
-    if _is_shed_adjacent(pos):
-        return ["DROP"]
-    owned_shed = [p for p in SHED_ADJACENT if tiles[p[1]][p[0]] != "LOCKED"]
-    step = _owned_step_toward(pos, owned_shed, tiles)
-    return [step] if step else ["PASS"]
+    ux, uy = pos
+    target = min(positions, key=lambda p: abs(p[0] - ux) + abs(p[1] - uy))
+    return _step_toward(pos, target)
 
 
 # ---- Livestock unit action (adapted from agent_lib.py::_unit_action, ------
 # simplified since both COW and SHEEP use PASTURE -- no COOP branching) -----
 
-def _livestock_action(pos, inv, tiles, shed, idxs, liquidation=False):
+def _livestock_action(pos, inv, tiles, shed, idxs):
     ux, uy = pos
-    if liquidation:
-        returning = _return_to_shed(pos, inv, tiles)
-        if returning:
-            return returning
-        ready = []
-        for i in idxs:
-            x, y = LIVESTOCK_POSITIONS[i]
-            t = tiles[y][x]
-            if isinstance(t, dict) and t.get("animal") and t.get("yield_units", 0) > 0:
-                ready.append((x, y))
-        if (ux, uy) in ready:
-            return ["HARVEST"]
-        step = _nearest_step(pos, ready, tiles)
-        return [step] if step else ["PASS"]
-
     cur_idx = next((i for i in idxs if LIVESTOCK_POSITIONS[i] == (ux, uy)), None)
     if cur_idx is not None:
         atype = LIVESTOCK_TYPES[cur_idx]
         x, y = LIVESTOCK_POSITIONS[cur_idx]
         tile = tiles[y][x]
-        if tile == "LOCKED":
-            pass
-        elif tile is None:
+        if tile is None:
             return ["BUILD_PASTURE"]
-        elif tile.get("kind") == ANIMAL_STRUCTURE and not tile.get("animal"):
+        if tile.get("kind") == ANIMAL_STRUCTURE and not tile.get("animal"):
             if inv.get(atype, 0) > 0:
                 return ["PLACE", atype]
         elif tile.get("animal") == atype:
@@ -423,8 +424,8 @@ def _livestock_action(pos, inv, tiles, shed, idxs, liquidation=False):
                 if inv.get(atype, 0) == 0:
                     missing_animal = True
         if unfed_remaining > inv.get("WHEAT", 0) or missing_animal:
-            owned_shed = [p for p in SHED_ADJACENT if tiles[p[1]][p[0]] != "LOCKED"]
-            step = _owned_step_toward((ux, uy), owned_shed, tiles)
+            target = min(SHED_ADJACENT, key=lambda p: abs(p[0] - ux) + abs(p[1] - uy))
+            step = _step_toward((ux, uy), target)
             if step:
                 return [step]
 
@@ -452,7 +453,7 @@ def _livestock_action(pos, inv, tiles, shed, idxs, liquidation=False):
                 other_needy.append((x, y))
             elif t["fed_today"] and not t["cared_today"]:
                 other_needy.append((x, y))
-    step = _nearest_step((ux, uy), feed_needy, tiles) or _nearest_step((ux, uy), other_needy, tiles)
+    step = _nearest_step((ux, uy), feed_needy) or _nearest_step((ux, uy), other_needy)
     if step:
         return [step]
     return ["PASS"]
@@ -464,28 +465,13 @@ def _livestock_action(pos, inv, tiles, shed, idxs, liquidation=False):
 # with different max_yield_day and seed price. Ongoing crops (tomato,
 # strawberry) would need a different function -- not used here.
 
-def _crop_action(crop, max_yield_day, pos, inv, day, tiles, idxs, positions, plant_allowed=True, liquidation=False):
+def _crop_action(crop, max_yield_day, pos, day, tiles, idxs, positions):
     ux, uy = pos
-    if liquidation:
-        returning = _return_to_shed(pos, inv, tiles)
-        if returning:
-            return returning
-        ready = []
-        for i in idxs:
-            x, y = positions[i]
-            t = tiles[y][x]
-            if isinstance(t, dict) and t.get("kind") == "PLANT" and t.get("yield_units", 0) > 0:
-                ready.append((x, y))
-        if (ux, uy) in ready:
-            return ["HARVEST"]
-        step = _nearest_step(pos, ready, tiles)
-        return [step] if step else ["PASS"]
-
     cur_idx = next((i for i in idxs if positions[i] == (ux, uy)), None)
     if cur_idx is not None:
         x, y = positions[cur_idx]
         tile = tiles[y][x]
-        if tile is None and plant_allowed:
+        if tile is None:
             return ["PLANT", crop]
         # A crop tile pool can reach into NE before land is bought (locked
         # tiles are passable, so a unit can end up standing on one); "LOCKED"
@@ -495,10 +481,8 @@ def _crop_action(crop, max_yield_day, pos, inv, day, tiles, idxs, positions, pla
             if tile.get("kind") == "WEED":
                 return ["DIG"]
             if tile.get("kind") == "PLANT":
-                tile_crop = tile.get("crop", crop)
-                tile_max_yield_day = CROP_MAX_YIELD_DAY.get(tile_crop, max_yield_day)
                 age = day - tile["planted_day"]
-                if age >= tile_max_yield_day and tile["yield_units"] > 0:
+                if age >= max_yield_day and tile["yield_units"] > 0:
                     return ["HARVEST"]
                 if not tile["watered_today"]:
                     return ["WATER"]
@@ -511,25 +495,23 @@ def _crop_action(crop, max_yield_day, pos, inv, day, tiles, idxs, positions, pla
     for i in idxs:
         x, y = positions[i]
         t = tiles[y][x]
-        if t is None and plant_allowed:
+        if t is None:
             other_needy.append((x, y))
         elif isinstance(t, dict) and t.get("kind") == "WEED":
             other_needy.append((x, y))
         elif isinstance(t, dict) and t.get("kind") == "PLANT":
-            tile_crop = t.get("crop", crop)
-            tile_max_yield_day = CROP_MAX_YIELD_DAY.get(tile_crop, max_yield_day)
             age = day - t["planted_day"]
-            if age >= tile_max_yield_day and t["yield_units"] > 0:
+            if age >= max_yield_day and t["yield_units"] > 0:
                 other_needy.append((x, y))
             elif not t["watered_today"]:
                 water_needy.append((x, y))
-    step = _nearest_step((ux, uy), water_needy, tiles) or _nearest_step((ux, uy), other_needy, tiles)
+    step = _nearest_step((ux, uy), water_needy) or _nearest_step((ux, uy), other_needy)
     if step:
         return [step]
     return ["PASS"]
 
 
-def _melon_action(pos, inv, day, tiles, idxs):
+def _melon_action(pos, day, tiles, idxs):
     # Past MELON_EXIT_DAY, empty tiles in this same pool get WHEAT instead --
     # no crew restructuring needed, the hand just keeps working its assigned
     # tiles. Already-growing melon is unaffected: HARVEST only fires once the
@@ -538,43 +520,730 @@ def _melon_action(pos, inv, day, tiles, idxs):
     # actually still-growing melon can't trigger a premature harvest -- it
     # just keeps falling through to WATER, same as before.
     if day < MELON_EXIT_DAY:
-        return _crop_action("MELON", MELON_YIELD_DAY, pos, inv, day, tiles, idxs, MELON_POSITIONS)
-    return _crop_action("WHEAT", CROP_MAX_YIELD_DAY["WHEAT"], pos, inv, day, tiles, idxs,
-                        MELON_POSITIONS, plant_allowed=day < WHEAT_EXIT_DAY,
-                        liquidation=day >= LIQUIDATION_DAY)
+        return _crop_action("MELON", MELON_YIELD_DAY, pos, day, tiles, idxs, MELON_POSITIONS)
+    return _crop_action("WHEAT", CROP_MAX_YIELD_DAY["WHEAT"], pos, day, tiles, idxs, MELON_POSITIONS)
 
 
-def _wheat_crop_action(pos, inv, day, tiles, idxs):
-    return _crop_action("WHEAT", CROP_MAX_YIELD_DAY["WHEAT"], pos, inv, day, tiles, idxs, WHEAT_POSITIONS,
-                        plant_allowed=day < WHEAT_EXIT_DAY, liquidation=day >= LIQUIDATION_DAY)
+def _wheat_crop_action(pos, day, tiles, idxs):
+    return _crop_action("WHEAT", CROP_MAX_YIELD_DAY["WHEAT"], pos, day, tiles, idxs, WHEAT_POSITIONS)
 
 
-def _carrot_action(pos, inv, day, tiles, idxs):
-    return _crop_action("CARROT", CROP_MAX_YIELD_DAY["CARROT"], pos, inv, day, tiles, idxs, CARROT_POSITIONS,
-                        plant_allowed=day < 27, liquidation=day >= LIQUIDATION_DAY)
+def _carrot_action(pos, day, tiles, idxs):
+    return _crop_action("CARROT", CROP_MAX_YIELD_DAY["CARROT"], pos, day, tiles, idxs, CARROT_POSITIONS)
 
 
-def _svm_sell_frac(item, features):
-    """Blend SELL_MIN_PRICE_FRAC toward the exported watcher's per-product
-    increase/avoid scores: hold longer (raise the gate) when it favors
-    growing `item`, sell sooner (lower the gate) when it favors avoiding it.
-    Falls back to the static SELL_MIN_PRICE_FRAC on any missing/invalid signal.
+# ---- Adaptive runtime targets ----------------------------------------------
+
+def _fib_hire_cost(n_hands):
+    a, b, total = 1, 1, 0
+    for _ in range(n_hands):
+        total += a
+        a, b = b, a + b
+    return total
+
+
+def _marginal_hire_cost(n_hands):
+    """Cost of the next hand after ``n_hands`` have already been hired."""
+    a, b = 1, 1
+    for _ in range(n_hands):
+        a, b = b, a + b
+    return a
+
+
+def _daily_hand_target(day, estimated_load, money, cash_reserve, remaining_days):
+    """Bounded phase-4 hiring target using observation-only information."""
+    workload = max(0, int((estimated_load + 19.1) // 19.2) - 1)
+    ceiling = min(N_HIRES, HIRING_CEILING)
+    if HIRING_RAMP_MODE == "fixed":
+        return ceiling
+    if HIRING_RAMP_MODE == "calendar":
+        # Replay-family shape: four hands in the opening, five around day 6,
+        # then the conservative experimental ceiling from day 9 onward.
+        replay_target = 4 if day < 6 else 5 if day < 9 else ceiling
+        return min(ceiling, replay_target)
+    target = min(ceiling, workload)
+    if HIRING_RAMP_MODE != "cash_workload":
+        return target
+
+    spendable = max(0.0, money - cash_reserve)
+    affordable = 0
+    spent = 0
+    while affordable < target:
+        marginal = _marginal_hire_cost(affordable)
+        # A hand supplies at most 24 actions/day. Value the work conservatively
+        # at wheat's base price and require time for the hire to repay itself.
+        useful_actions = min(24.0, max(0.0, estimated_load - affordable * 19.2))
+        if (spent + marginal > spendable or remaining_days < HIRING_PAYBACK_DAYS
+                or useful_actions * _BASE_PRICE["WHEAT"] < marginal * HIRING_PAYBACK_DAYS):
+            break
+        spent += marginal
+        affordable += 1
+    return affordable
+
+
+def _adaptive_targets(obs, me, tiles, prices, signals=None):
+    """Return bounded targets derived from workload, cash, and live payback."""
+    day = obs["day"]
+    remaining_days = max(0.0, 30.0 - day - obs.get("hour", 0) / 24.0)
+    wheat_price = max(1.0, prices.get("WHEAT", _BASE_PRICE["WHEAT"]))
+    crop_counts = {crop: 0 for crop in _SEED_COST}
+    animal_counts = {animal: 0 for animal in _ANIMAL_PRODUCT}
+    for row in tiles:
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            crop = tile.get("crop")
+            animal = tile.get("animal")
+            if crop in crop_counts:
+                crop_counts[crop] += 1
+            if animal in animal_counts:
+                animal_counts[animal] += 1
+
+    crop_scores = {}
+    replant_cutoffs = {}
+    for crop, seed_cost in _SEED_COST.items():
+        daily_gross = _CROP_DAILY_YIELD[crop] * prices.get(crop, _BASE_PRICE[crop])
+        cycle_days = max(1, _CROP_MAX_DAY[crop])
+        daily_profit = daily_gross - seed_cost / cycle_days
+        payback = seed_cost / daily_profit if daily_profit > 0 else 999.0
+        replant_cutoffs[crop] = max(0, int(30 - _CROP_FIRST_YIELD[crop] - payback))
+        watcher_factor = 1.0
+        if signals is not None:
+            watcher_factor += 0.35 * signals["product_attractiveness"].get(crop, 0.0)
+        crop_scores[crop] = daily_profit * max(0.5, min(1.35, watcher_factor)) if day <= replant_cutoffs[crop] else -1.0
+
+    product_tiles = dict(crop_counts)
+    open_crop_slots = max(0, MAX_MELON_TILES - sum(crop_counts.values()))
+    ranked_crops = sorted(crop_scores, key=lambda name: (-crop_scores[name], name))
+    if signals is not None and day >= TOWN_WATCHER_START_DAY and ranked_crops:
+        profit_leader = ranked_crops[0]
+        existing_redirects = sum(count for crop, count in crop_counts.items() if crop != profit_leader)
+        redirect_budget = max(0, TOWN_MAX_CROP_REDIRECT - existing_redirects)
+        town_ranked = sorted(
+            (crop for crop in crop_scores if crop != profit_leader),
+            key=lambda name: (-signals["product_attractiveness"].get(name, 0.0), -crop_scores[name], name),
+        )
+        for crop in town_ranked:
+            if crop_scores[crop] <= 0 or open_crop_slots <= 0 or redirect_budget <= 0:
+                continue
+            exposure = signals["recommended_limits"]["product_exposure"].get(crop, 0)
+            add = min(open_crop_slots, redirect_budget, max(0, exposure - product_tiles[crop]))
+            product_tiles[crop] += add
+            open_crop_slots -= add
+            redirect_budget -= add
+    for crop in ranked_crops:
+        if crop_scores[crop] <= 0 or open_crop_slots <= 0:
+            continue
+        room = open_crop_slots
+        product_tiles[crop] += room
+        open_crop_slots -= room
+
+    animal_scores = {}
+    for animal, product in _ANIMAL_PRODUCT.items():
+        daily_profit = _ANIMAL_DAILY_YIELD[animal] * prices.get(product, _BASE_PRICE[product]) - wheat_price
+        payback = _ANIMAL_COST_ALL[animal] / daily_profit if daily_profit > 0 else 999.0
+        watcher_factor = 1.0
+        if signals is not None:
+            watcher_factor += 0.35 * signals["product_attractiveness"].get(product, 0.0)
+        animal_scores[animal] = daily_profit * max(0.5, min(1.35, watcher_factor)) if payback < remaining_days else -1.0
+
+    animal_targets = dict(animal_counts)
+    open_animal_slots = max(0, len(LIVESTOCK_POSITIONS) - sum(animal_counts.values()))
+    for animal in sorted(animal_scores, key=lambda name: (-animal_scores[name], name)):
+        room = max(0, _ANIMAL_CAP[animal] - animal_targets[animal])
+        if signals is not None:
+            product = _ANIMAL_PRODUCT[animal]
+            exposure = signals["recommended_limits"]["product_exposure"].get(product, 0)
+            room = min(room, max(0, exposure - animal_targets[animal]))
+        add = min(open_animal_slots, room) if animal_scores[animal] > 0 else 0
+        animal_targets[animal] += add
+        open_animal_slots -= add
+
+    target_animals = sum(animal_targets.values())
+    target_crops = sum(product_tiles.values())
+    estimated_load = target_animals * 4.0 + target_crops * 1.75
+    cash_reserve = sum(animal_counts.values()) * wheat_price * 2
+    daily_hands = _daily_hand_target(
+        day, estimated_load, me.get("money", 0), cash_reserve, remaining_days
+    )
+    if signals is not None and signals.get("backend") == "linear_svm":
+        labor_score = signals.get("labor_expansion_pressure", 0.0)
+        labor_delta = 1 if labor_score > 0.25 else -1 if labor_score < -0.25 else 0
+        daily_hands = max(0, min(N_HIRES, daily_hands + labor_delta))
+    # A conditional land experiment deliberately keeps production targets
+    # separate from the purchase decision.  Its stricter utilization/layout
+    # gate below decides whether the configured extra quadrant is justified.
+    if LAND_EXPANSION_MODE == "conditional":
+        quadrants = LAND_TARGET_QUADRANTS
+    else:
+        quadrants = min(LAND_TARGET_QUADRANTS, max(1, (target_animals + target_crops + 24) // 25))
+    if signals is not None and ENABLE_OPPONENT_WATCHER:
+        quadrants = min(quadrants, signals["recommended_limits"]["quadrants"])
+
+    return {
+        "day": day,
+        "product_tiles": product_tiles,
+        "animal_counts": animal_targets,
+        "daily_hands": daily_hands,
+        "quadrants": quadrants,
+        "cash_reserve": cash_reserve,
+        "replant_cutoffs": replant_cutoffs,
+        "crop_scores": crop_scores,
+        "animal_scores": animal_scores,
+        "watcher_adjustments": {
+            "labor_hand_delta": (daily_hands - _daily_hand_target(
+                day, estimated_load, me.get("money", 0), cash_reserve, remaining_days
+            )) if signals is not None and signals.get("backend") == "linear_svm" else 0,
+            "land_target": quadrants,
+        },
+    }
+
+
+# ---- Reversible watcher ----------------------------------------------------
+
+def _scheduled_outputs(age, first_day, interval, horizon):
+    """Count scheduled outputs strictly after now through the horizon."""
+    count = 0
+    for offset in range(1, horizon + 1):
+        future_age = age + offset
+        if future_age >= first_day and (future_age - first_day) % interval == 0:
+            count += 1
+    return count
+
+
+def _forecast_opponent_supply(obs, horizon=6):
+    """Forecast visible opponent output arriving over the next `horizon` days."""
+    forecast = {product: 0.0 for product in _PRODUCTS}
+    farms = obs.get("farms", [])
+    player = obs.get("player", 0)
+    opponent = 1 - player
+    if opponent >= len(farms):
+        return forecast
+    day = obs.get("day", 0)
+    for row in farms[opponent].get("tiles", []):
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            crop = tile.get("crop")
+            animal = tile.get("animal")
+            ready = max(0.0, float(tile.get("yield_units", 0)))
+            if crop in forecast:
+                forecast[crop] += ready
+                age = max(0, day - tile.get("planted_day", day))
+                if crop in _ONGOING_CROP_INTERVAL:
+                    forecast[crop] += _scheduled_outputs(
+                        age, _CROP_FIRST_YIELD[crop], _ONGOING_CROP_INTERVAL[crop], horizon
+                    )
+                elif ready <= 0 and age < _CROP_MAX_DAY[crop] <= age + horizon:
+                    # At peak, an unfertilized one-time crop holds roughly
+                    # daily_yield * occupancy output; current ready yield is
+                    # used instead whenever it is already public.
+                    forecast[crop] += max(1.0, _CROP_DAILY_YIELD[crop] * _CROP_MAX_DAY[crop])
+            elif animal in _ANIMAL_PRODUCT:
+                product = _ANIMAL_PRODUCT[animal]
+                forecast[product] += ready
+                age = max(0, day - tile.get("placed_day", day))
+                forecast[product] += _scheduled_outputs(
+                    age, _ANIMAL_FIRST_YIELD[animal], _ANIMAL_INTERVAL[animal], horizon
+                )
+    return forecast
+
+
+def watcher_signals(obs, backend):
+    """Return bounded, observation-only watcher recommendations.
+
+    Phase 3 enables exact township demand. Opponent forecasts remain neutral
+    until their independent layer is enabled. Compatible exported SVM models
+    override individual signals; missing/invalid outputs retain rule values.
     """
-    if watcher_model is None or features is None:
-        return SELL_MIN_PRICE_FRAC
-    increase = watcher_model.score(f"product:{item}:increase", features)
-    avoid = watcher_model.score(f"product:{item}:avoid", features)
-    if increase is None and avoid is None:
-        return SELL_MIN_PRICE_FRAC
-    attractiveness = max(-1.0, min(1.0, (increase or 0.0) - (avoid or 0.0)))
-    return max(0.0, min(1.0, SELL_MIN_PRICE_FRAC * (1.0 - attractiveness)))
+    requested_backend = backend
+    if backend not in ("off", "rules", "linear_svm"):
+        backend = "rules"
+    svm_ready = bool(
+        backend == "linear_svm" and
+        _watcher_features is not None and _watcher_model is not None and
+        getattr(_watcher_model, "SCHEMA_VERSION", None) == _watcher_features.SCHEMA_VERSION and
+        getattr(_watcher_model, "SCHEMA_HASH", None) == _watcher_features.SCHEMA_HASH and
+        tuple(getattr(_watcher_model, "FEATURE_ORDER", ())) == tuple(_watcher_features.FEATURE_ORDER) and
+        bool(getattr(_watcher_model, "MODELS", {}))
+    )
+    if backend == "linear_svm" and not svm_ready:
+        backend = "rules"
+
+    zeros = {product: 0.0 for product in _PRODUCTS}
+    if backend == "off":
+        return {
+            "product_attractiveness": dict(zeros),
+            "town_demand_pressure": dict(zeros),
+            "opponent_supply_pressure": dict(zeros),
+            "market_glut_risk": dict(zeros),
+            "competitive_expansion_pressure": 0.0,
+            "land_expansion_pressure": 0.0,
+            "labor_expansion_pressure": 0.0,
+            "recommended_limits": {
+                "product_exposure": {product: 0 for product in _PRODUCTS},
+                "hands": 0, "quadrants": 1, "cash_reserve": 0.0,
+            },
+            "backend": "off",
+        }
+
+    demand_per_day = {product: 1.0 for product in _PRODUCTS}  # town center
+    if ENABLE_TOWN_WATCHER:
+        for shop in obs.get("town", {}).get("unlocked_shops", []):
+            products = _SHOP_PRODUCTS.get(shop, ())
+            rate = 12.0 if len(products) == 1 else 6.0
+            for product in products:
+                demand_per_day[product] += rate
+    else:
+        demand_per_day = dict(zeros)
+
+    town_pressure = {
+        product: max(0.0, min(1.0, demand_per_day[product] / (_THROUGHPUT[product] / 24.0)))
+        for product in _PRODUCTS
+    }
+    opponent_forecast = _forecast_opponent_supply(obs) if ENABLE_OPPONENT_WATCHER else dict(zeros)
+    opponent_pressure = {
+        product: max(0.0, min(1.0, opponent_forecast[product] / (_THROUGHPUT[product] * 6.0 / 24.0)))
+        for product in _PRODUCTS
+    }
+    market = obs.get("market", {})
+    prices = market.get("prices", {})
+    inventory = market.get("inventory", {})
+    glut_risk = {}
+    attractiveness = {}
+    for product in _PRODUCTS:
+        price_ratio = prices.get(product, _BASE_PRICE[product]) / float(_BASE_PRICE[product])
+        displacement = max(0.0, inventory.get(product, 10000) - 10000) / float(_THROUGHPUT[product])
+        glut = max(0.0, min(1.0, 0.45 * max(0.0, 1.0 - price_ratio) +
+                            0.35 * min(1.0, displacement) + 0.20 * opponent_pressure[product]))
+        glut_risk[product] = glut
+        score = (0.55 * town_pressure[product] +
+                 0.45 * max(-1.0, min(1.0, price_ratio - 1.0)) -
+                 0.65 * glut - OPPONENT_SIGNAL_WEIGHT * opponent_pressure[product])
+        attractiveness[product] = max(-1.0, min(1.0, score))
+
+    player = obs.get("player", 0)
+    farms = obs.get("farms", [])
+    me = farms[player] if player < len(farms) else {}
+    live_animals = sum(
+        1 for row in me.get("tiles", []) for tile in row
+        if isinstance(tile, dict) and tile.get("animal")
+    )
+    cash_reserve = live_animals * prices.get("WHEAT", _BASE_PRICE["WHEAT"]) * 2.0
+    exposure = {}
+    for product in _PRODUCTS:
+        # Existing herd economics and structures are sunk commitments. Phase
+        # 4 may redirect future crop vacancies, but it must not strand the
+        # phase-3 livestock build merely because the opponent shows supply.
+        competing_supply = opponent_forecast[product] / 6.0 if product in _SEED_COST else 0.0
+        units_per_day = max(0.0, demand_per_day[product] - competing_supply)
+        assets = units_per_day * TOWN_EXPOSURE_MULTIPLIER / _PRODUCT_DAILY_YIELD[product]
+        exposure[product] = max(0, int(assets + 0.999999))
+    if obs.get("day", 0) < TOWN_WATCHER_START_DAY:
+        # The watcher redirects future vacancies; it does not suppress the
+        # proven opening build before township demand has differentiated.
+        for crop in _SEED_COST:
+            exposure[crop] = MAX_MELON_TILES
+        for animal, product in _ANIMAL_PRODUCT.items():
+            exposure[product] = _ANIMAL_CAP[animal]
+    own_assets = sum(
+        1 for row in me.get("tiles", []) for tile in row
+        if isinstance(tile, dict) and (tile.get("crop") or tile.get("animal"))
+    )
+    opponent_farm = farms[1 - player] if len(farms) > 1 else {}
+    opponent_assets = sum(
+        1 for row in opponent_farm.get("tiles", []) for tile in row
+        if isinstance(tile, dict) and (tile.get("crop") or tile.get("animal"))
+    )
+    rule_attractiveness = dict(attractiveness)
+    unmet_pressure = max(attractiveness.values()) if attractiveness else 0.0
+    scale_gap = (opponent_assets - own_assets) / 25.0
+    rule_expansion = max(-1.0, min(1.0, 0.65 * unmet_pressure + 0.35 * scale_gap))
+    land_expansion = rule_expansion
+    labor_expansion = rule_expansion
+    model_scores = {}
+    fallback_reasons = {}
+    changed_outputs = []
+    if svm_ready:
+        try:
+            features = _watcher_features.extract_features(obs)
+            if (len(features) != len(_watcher_features.FEATURE_ORDER) or
+                    not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                            and value == value and abs(value) != float("inf") for value in features)):
+                raise ValueError("invalid_features")
+
+            def valid_score(output_id):
+                try:
+                    value = _watcher_model.score(output_id, features)
+                except (KeyError, TypeError, ValueError, ArithmeticError):
+                    fallback_reasons[output_id] = "model_error"
+                    return None
+                if (not isinstance(value, (int, float)) or isinstance(value, bool) or
+                        value != value or abs(value) == float("inf")):
+                    fallback_reasons[output_id] = "missing_or_invalid_output"
+                    return None
+                value = max(-1.0, min(1.0, float(value)))
+                model_scores[output_id] = value
+                return value
+
+            for product in _PRODUCTS:
+                increase = valid_score(f"product:{product}:increase")
+                avoid = valid_score(f"product:{product}:avoid")
+                if increase is not None or avoid is not None:
+                    attractiveness[product] = max(
+                        -1.0, min(1.0, (increase or 0.0) - (avoid or 0.0))
+                    )
+                    changed_outputs.append(f"product:{product}")
+            model_land = valid_score("land_expansion")
+            model_labor = valid_score("labor_expansion")
+            if model_land is not None:
+                land_expansion = model_land
+                changed_outputs.append("land_expansion")
+            if model_labor is not None:
+                labor_expansion = model_labor
+                changed_outputs.append("labor_expansion")
+            backend = "linear_svm" if changed_outputs else "rules"
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            backend = "rules"
+            fallback_reasons["features"] = "extraction_or_validation_failed"
+    expansion = land_expansion
+    return {
+        "product_attractiveness": attractiveness,
+        "town_demand_pressure": town_pressure,
+        "opponent_supply_pressure": opponent_pressure,
+        "market_glut_risk": glut_risk,
+        "competitive_expansion_pressure": expansion,
+        "land_expansion_pressure": land_expansion,
+        "labor_expansion_pressure": labor_expansion,
+        "recommended_limits": {
+            "product_exposure": exposure,
+            "hands": min(N_HIRES, len(me.get("hands", [])) or N_HIRES),
+            "quadrants": min(LAND_TARGET_QUADRANTS, len(me.get("unlocked_quadrants", ["NW"])) +
+                             (1 if expansion > OPPONENT_EXPANSION_THRESHOLD else 0)),
+            "cash_reserve": cash_reserve,
+        },
+        "backend": backend if requested_backend != "off" else "off",
+        "watcher_trace": {
+            "rule_scores": {
+                "product_attractiveness": rule_attractiveness,
+                "land_expansion": rule_expansion,
+                "labor_expansion": rule_expansion,
+            },
+            "model_scores": model_scores,
+            "final_scores": {
+                "product_attractiveness": dict(attractiveness),
+                "land_expansion": land_expansion,
+                "labor_expansion": labor_expansion,
+            },
+            "changed_outputs": changed_outputs,
+            "changed_signals": [
+                output_id for output_id in changed_outputs
+                if ((output_id == "land_expansion" and land_expansion != rule_expansion) or
+                    (output_id == "labor_expansion" and labor_expansion != rule_expansion) or
+                    (output_id.startswith("product:") and
+                     attractiveness[output_id.split(":", 1)[1]] !=
+                     rule_attractiveness[output_id.split(":", 1)[1]]))
+            ],
+            "fallback_reasons": fallback_reasons,
+        },
+    }
 
 
-# Kaggle's real submission loader (kaggle_environments/agent.py::get_last_callable)
-# execs this file and picks the LAST top-level callable defined, not something
-# named "agent" specifically -- so nothing may be defined below this function,
-# or that (0-arg, non-observation-taking) callable silently becomes "the agent"
-# instead, called with no args every turn.
+def _adaptive_animal_slots(tiles, targets):
+    """Keep every existing animal; allocate only currently vacant slots."""
+    assignments = {}
+    remaining = dict(targets["animal_counts"])
+    for pos in LIVESTOCK_POSITIONS:
+        x, y = pos
+        tile = tiles[y][x]
+        if isinstance(tile, dict) and tile.get("animal") in remaining:
+            animal = tile["animal"]
+            assignments[pos] = animal
+            remaining[animal] = max(0, remaining[animal] - 1)
+    sequence = []
+    for animal in sorted(remaining, key=lambda name: (-targets["animal_scores"][name], name)):
+        sequence.extend([animal] * remaining[animal])
+    for pos in LIVESTOCK_POSITIONS:
+        if pos not in assignments and sequence:
+            assignments[pos] = sequence.pop(0)
+    return assignments
+
+
+def _adaptive_crop_slots(tiles, targets):
+    """Healthy crops keep their type; empty slots take the largest deficit."""
+    assignments = {}
+    remaining = dict(targets["product_tiles"])
+    crop_pool = _ALL_FREE[:MAX_MELON_TILES]
+    for pos in crop_pool:
+        x, y = pos
+        tile = tiles[y][x]
+        if isinstance(tile, dict) and tile.get("kind") == "PLANT" and tile.get("crop") in remaining:
+            crop = tile["crop"]
+            assignments[pos] = crop
+            remaining[crop] = max(0, remaining[crop] - 1)
+    for pos in crop_pool:
+        x, y = pos
+        tile = tiles[y][x]
+        if pos in assignments or (isinstance(tile, dict) and tile.get("kind") not in ("WEED",)):
+            continue
+        if CROP_TRANSITION_MODE == "fixed":
+            scheduled = _fixed_transition_crop(targets["day"], crop_pool.index(pos))
+            if scheduled is None:
+                continue
+            assignments[pos] = scheduled
+            if scheduled in remaining:
+                remaining[scheduled] = max(0, remaining[scheduled] - 1)
+            continue
+        choices = [crop for crop, deficit in remaining.items() if deficit > 0]
+        if not choices:
+            break
+        crop = max(choices, key=lambda name: (remaining[name], targets["crop_scores"][name], name))
+        assignments[pos] = crop
+        remaining[crop] -= 1
+    return assignments
+
+
+def _planned_tile_positions():
+    """Unique coordinates the configured production layout can occupy."""
+    return set(LIVESTOCK_POSITIONS) | set(MELON_POSITIONS) | set(WHEAT_POSITIONS) | set(CARROT_POSITIONS)
+
+
+def _fixed_transition_crop(day, slot_index):
+    """Crop for a vacant phase-6 slot; living plants are never dug early."""
+    if day <= MELON_LAST_PLANT_DAY:
+        return "MELON"
+    if (day >= LATE_WHEAT_START_DAY and day <= WHEAT_LAST_PLANT_DAY
+            and slot_index < LATE_WHEAT_TILES):
+        return "WHEAT"
+    if (TRANSITION_EMPTY_POLICY == "strawberry" and day >= STRAWBERRY_START_DAY
+            and day <= STRAWBERRY_LAST_PLANT_DAY and slot_index < STRAWBERRY_TILES):
+        return "STRAWBERRY"
+    if TRANSITION_EMPTY_POLICY == "wheat" and day <= WHEAT_LAST_PLANT_DAY:
+        return "WHEAT"
+    return None
+
+
+# ---- Deadline-safe global planner ------------------------------------------
+
+def _planner_crop_name(day, pos, crop_assignments=None):
+    if crop_assignments is not None:
+        return crop_assignments.get(pos)
+    if pos in MELON_POSITIONS:
+        if CROP_TRANSITION_MODE == "fixed":
+            return _fixed_transition_crop(day, MELON_POSITIONS.index(pos))
+        return "MELON" if day < MELON_EXIT_DAY else "WHEAT"
+    if pos in WHEAT_POSITIONS:
+        return "WHEAT"
+    if pos in CARROT_POSITIONS:
+        return "CARROT"
+    return None
+
+
+def _planner_daily_load(tiles, extra_animals=0, extra_crops=0):
+    """Conservative action estimate for assets that must be serviced daily.
+
+    Animals need feed and care, normally offer fertilizer, and periodically
+    need harvest. Crops need water plus amortized harvest/replant work. The
+    final term prices in local travel even when every tile action succeeds.
+    """
+    animals = 0
+    crops = 0
+    for row in tiles:
+        for tile in row:
+            if not isinstance(tile, dict):
+                continue
+            if tile.get("animal"):
+                animals += 1
+            elif tile.get("kind") == "PLANT":
+                crops += 1
+    animals += extra_animals
+    crops += extra_crops
+    obligations = animals * 3.5 + crops * 1.25
+    travel = (animals + crops) * 0.50
+    return obligations + travel
+
+
+def _planner_has_capacity(tiles, unit_count, extra_animals=0, extra_crops=0):
+    usable_turns = max(1, unit_count) * 24 * (1.0 - DEADLINE_CAPACITY_MARGIN)
+    return _planner_daily_load(tiles, extra_animals, extra_crops) <= usable_turns
+
+
+def _planner_tasks(day, tiles, seeds, targets=None):
+    """Build the ordered, global task board for the current observation."""
+    tasks = []
+    animal_assignments = _adaptive_animal_slots(tiles, targets) if targets else dict(zip(LIVESTOCK_POSITIONS, LIVESTOCK_TYPES))
+    crop_assignments = _adaptive_crop_slots(tiles, targets) if targets else None
+    livestock_set = set(animal_assignments)
+    crop_positions = list(crop_assignments) if crop_assignments is not None else MELON_POSITIONS + WHEAT_POSITIONS + CARROT_POSITIONS
+
+    for pos, atype in animal_assignments.items():
+        x, y = pos
+        tile = tiles[y][x]
+        if tile is None:
+            structure = "BUILD_COOP" if atype == "GOOSE" else "BUILD_PASTURE"
+            tasks.append((6, pos, structure, None))
+        elif isinstance(tile, dict) and tile.get("kind") in ("COOP", "PASTURE") and not tile.get("animal"):
+            wanted_structure = "COOP" if atype == "GOOSE" else "PASTURE"
+            if tile.get("kind") == wanted_structure:
+                tasks.append((4, pos, "PLACE", atype))
+            else:
+                tasks.append((6, pos, "DIG", None))
+        elif isinstance(tile, dict) and tile.get("animal"):
+            if not tile.get("fed_today", False):
+                priority = 0 if tile.get("consecutive_unfed", 0) >= 1 else 2
+                tasks.append((priority, pos, "FEED", "WHEAT"))
+            if tile.get("yield_units", 0) > 0:
+                tasks.append((3, pos, "HARVEST", None))
+            if tile.get("fertilizer_available", False):
+                tasks.append((4, pos, "COLLECT_FERTILIZER", None))
+            if tile.get("fed_today", False) and not tile.get("cared_today", False):
+                tasks.append((5, pos, "CARE", None))
+
+    for pos in crop_positions:
+        if pos in livestock_set:
+            continue
+        x, y = pos
+        tile = tiles[y][x]
+        crop = _planner_crop_name(day, pos, crop_assignments)
+        if crop is None:
+            continue
+        if tile is None:
+            tasks.append((6, pos, "PLANT", crop))
+        elif not isinstance(tile, dict):
+            continue
+        elif tile.get("kind") == "WEED":
+            tasks.append((6, pos, "DIG", None))
+        elif tile.get("kind") == "PLANT":
+            actual_crop = tile.get("crop", crop)
+            max_day = CROP_MAX_YIELD_DAY.get(actual_crop, MELON_YIELD_DAY)
+            age = day - tile.get("planted_day", day)
+            if not tile.get("watered_today", False):
+                missed = tile.get("consecutive_unwatered", 0) >= 1 or tile.get("planted_day") == day
+                tasks.append((1 if missed else 2, pos, "WATER", None))
+            if tile.get("yield_units", 0) > 0 and age >= max_day:
+                tasks.append((3, pos, "HARVEST", None))
+
+    # Stable sorting preserves the configured contiguous zone order inside a
+    # priority, while assignment below still chooses the nearest unit.
+    tasks.sort(key=lambda task: task[0])
+    return tasks
+
+
+def _planner_distance(pos, target, required_item, inv):
+    direct = abs(pos[0] - target[0]) + abs(pos[1] - target[1])
+    if required_item is None or inv.get(required_item, 0) > 0:
+        return direct
+    via_shed = min(abs(pos[0] - sx) + abs(pos[1] - sy) for sx, sy in SHED_ADJACENT)
+    shed_to_target = min(abs(target[0] - sx) + abs(target[1] - sy) for sx, sy in SHED_ADJACENT)
+    return via_shed + 1 + shed_to_target
+
+
+def _deadline_actions(me, private, day, hour, tiles, shed, seeds, targets=None):
+    """Greedily assign each target once, in deadline order, to its cheapest unit."""
+    positions = [tuple(me["farmer"])] + [tuple(p) for p in me.get("hands", [])]
+    inventories = private.get("inventories", [{}])
+    invs = [inventories[i] if i < len(inventories) else {} for i in range(len(positions))]
+    tasks = _planner_tasks(day, tiles, seeds, targets)
+    feed_tasks = sum(1 for task in tasks if task[2] == "FEED")
+    actions = [["PASS"] for _ in positions]
+    free_units = set(range(len(positions)))
+    claimed_targets = set()
+    reserved_items = {}
+    reserved_seeds = {}
+    animal_zone = set(LIVESTOCK_POSITIONS)
+    animal_units = len(positions)
+    if targets and len(positions) > 1:
+        # Base the split on fixed maximum workloads, not live prices or
+        # partially completed purchases, so hand-slot roles cannot drift
+        # during a day as targets are recomputed.
+        animal_load = len(LIVESTOCK_POSITIONS) * 4.0
+        crop_load = MAX_MELON_TILES * 1.75
+        animal_units = max(1, min(len(positions) - 1, round(len(positions) * animal_load / max(1.0, animal_load + crop_load))))
+    specialist_count = min(LIVESTOCK_SPECIALISTS, max(0, animal_units - 1))
+    specialist_zones = _chunk_indices(len(LIVESTOCK_POSITIONS), specialist_count + 1)
+    specialist_owner = {}
+    for specialist_offset, zone in enumerate(specialist_zones[1:], start=1):
+        for idx in zone:
+            specialist_owner[LIVESTOCK_POSITIONS[idx]] = specialist_offset
+
+    for priority, target, operation, item in tasks:
+        if not free_units:
+            break
+        if target in claimed_targets:
+            continue
+        if operation == "PLANT":
+            if reserved_seeds.get(item, 0) >= seeds.get(item, 0):
+                continue
+            if not _planner_has_capacity(tiles, len(positions), extra_crops=reserved_seeds.get("_new", 0) + 1):
+                continue
+        if operation == "PLACE":
+            total_item = shed.get(item, 0) + sum(inv.get(item, 0) for inv in invs)
+            if reserved_items.get(item, 0) >= total_item:
+                continue
+            if not _planner_has_capacity(tiles, len(positions), extra_animals=reserved_items.get("_animals", 0) + 1):
+                continue
+        if operation == "FEED":
+            total_wheat = shed.get("WHEAT", 0) + sum(inv.get("WHEAT", 0) for inv in invs)
+            if reserved_items.get("WHEAT", 0) >= total_wheat:
+                continue
+
+        candidates = []
+        for unit in free_units:
+            if targets:
+                livestock_task = target in animal_zone
+                if livestock_task != (unit < animal_units):
+                    continue
+                owner = specialist_owner.get(target)
+                emergency = priority <= 1
+                if not emergency:
+                    if 1 <= unit <= specialist_count and owner != unit:
+                        continue
+                    if owner is not None and unit != owner:
+                        continue
+            inv = invs[unit]
+            carried_item = item if operation != "PLANT" else None
+            if carried_item is not None and inv.get(carried_item, 0) <= 0 and shed.get(carried_item, 0) <= reserved_items.get(carried_item, 0):
+                continue
+            if operation == "PLANT":
+                direct = abs(positions[unit][0] - target[0]) + abs(positions[unit][1] - target[1])
+                if hour + direct + 2 > 24:  # travel, plant, then water before refresh
+                    continue
+            candidates.append((_planner_distance(positions[unit], target, carried_item, inv), unit))
+        if not candidates:
+            continue
+        _, unit = min(candidates)
+        free_units.remove(unit)
+        claimed_targets.add(target)
+        pos = positions[unit]
+        inv = invs[unit]
+
+        if item is not None and operation != "PLANT" and inv.get(item, 0) <= 0:
+            pickup_n = 1
+            if operation == "FEED":
+                pickup_n = max(1, (feed_tasks + len(positions) - 1) // len(positions))
+            pickup_n = min(pickup_n, max(0, shed.get(item, 0) - reserved_items.get(item, 0)))
+            if _is_shed_adjacent(pos):
+                actions[unit] = ["PICKUP", item, pickup_n]
+            else:
+                shed_target = min(SHED_ADJACENT, key=lambda p: abs(p[0] - pos[0]) + abs(p[1] - pos[1]))
+                actions[unit] = [_step_toward(pos, shed_target)]
+            reserved_items[item] = reserved_items.get(item, 0) + pickup_n
+        elif pos == target:
+            actions[unit] = [operation, item] if operation in ("PLACE", "PLANT") else [operation]
+            if operation == "PLANT":
+                reserved_seeds[item] = reserved_seeds.get(item, 0) + 1
+                reserved_seeds["_new"] = reserved_seeds.get("_new", 0) + 1
+            elif operation == "PLACE":
+                reserved_items[item] = reserved_items.get(item, 0) + 1
+                reserved_items["_animals"] = reserved_items.get("_animals", 0) + 1
+            elif operation == "FEED":
+                reserved_items["WHEAT"] = reserved_items.get("WHEAT", 0) + 1
+        else:
+            actions[unit] = [_step_toward(pos, target)]
+
+    return actions[0], actions[1:]
+
+
 def agent(obs):
     player = obs["player"]
     me = obs["farms"][player]
@@ -589,7 +1258,7 @@ def agent(obs):
 
     buy_orders = []
     sell_orders = []
-    liquidating = day >= LIQUIDATION_DAY
+    liquidating = day >= 29
 
     # Only HIRE truly needs hour 0 (hands are hired for the whole day, once).
     # Every other purchase type is spread across its own hour instead of all
@@ -599,64 +1268,87 @@ def agent(obs):
     # all queued at hour 0 too. One purchase category per hour sidesteps the
     # cap entirely regardless of how many hands/crops are configured.
     prices = obs.get("market", {}).get("prices", {})
+    signals = watcher_signals(obs, WATCHER_BACKEND) if ENABLE_TOWN_WATCHER or ENABLE_OPPONENT_WATCHER else None
+    targets = _adaptive_targets(obs, me, tiles, prices, signals) if ENABLE_ADAPTIVE_TARGETS else None
 
-    svm_features = None
-    if (shared_features is not None and watcher_model is not None and
-            getattr(watcher_model, "SCHEMA_HASH", None) == shared_features.SCHEMA_HASH):
-        try:
-            svm_features = shared_features.extract_features(obs)
-        except Exception:
-            svm_features = None
+    wheat_reserve = 0 if liquidating else (
+        sum(targets["animal_counts"].values()) if targets else len(LIVESTOCK_TYPES)
+    ) * 2
+    if SALE_POLICY_MODE == "product_specific":
+        # Product-specific gates distinguish high-volume staples from premium
+        # goods. Thresholds decay late, overflow bypasses them, and day 29
+        # liquidates every product regardless of the normal policy.
+        for item, n in sorted(shed.items()):
+            eligible = n - (wheat_reserve if item == "WHEAT" else 0)
+            if eligible <= 0:
+                continue
+            base = _BASE_PRICE.get(item)
+            cur = prices.get(item)
+            threshold = SALE_MIN_PRICE_FRAC_BY_PRODUCT.get(item, SELL_MIN_PRICE_FRAC)
+            if day >= SALE_THRESHOLD_DECAY_START_DAY and not liquidating:
+                span = max(1, 29 - SALE_THRESHOLD_DECAY_START_DAY)
+                threshold *= max(0.0, (29 - day) / span)
+            if (not liquidating and n < SALE_OVERFLOW_QUANTITY and base and cur is not None
+                    and cur < threshold * base):
+                continue
+            batch = SALE_MAX_BATCH_BY_PRODUCT.get(item)
+            quantity = eligible if liquidating or batch is None else min(eligible, batch)
+            if quantity > 0:
+                sell_orders.append(["SELL", item, quantity])
+        if not liquidating:
+            sell_orders = sell_orders[:SALE_ROUTINE_ORDER_BUDGET]
+    else:
+        for item, n in list(shed.items()):
+            if n <= 0 or item == "WHEAT":
+                continue
+            base = _BASE_PRICE.get(item)
+            cur = prices.get(item)
+            if (not liquidating and SELL_MIN_PRICE_FRAC > 0 and base and cur is not None
+                    and cur < SELL_MIN_PRICE_FRAC * base and n < 90):
+                continue
+            sell_orders.append(["SELL", item, n])
+        wheat_surplus = shed.get("WHEAT", 0) - wheat_reserve
+        if wheat_surplus > 0:
+            sell_orders.append(["SELL", "WHEAT", wheat_surplus])
 
-    for item, n in list(shed.items()):
-        if n <= 0 or item == "WHEAT" or item not in SELLABLE_PRODUCTS:
-            continue
-        base = _BASE_PRICE.get(item)
-        cur = prices.get(item)
-        sell_frac = _svm_sell_frac(item, svm_features)
-        # Hold instead of dumping while the price is depressed below the
-        # gate -- but never past shedCapacity (100): losing product to
-        # overflow is strictly worse than selling it cheap.
-        if not liquidating and sell_frac > 0 and base and cur is not None and cur < sell_frac * base and n < 90:
-            continue
-        sell_orders.append(["SELL", item, n])
-
-    # Wheat barely reacts to glut (RULES.md Price Function table), so any
-    # surplus beyond a 2-day feed reserve is free money to sell, not just a
-    # cost saved on feed. Not gated on WHEAT_TILES (0 by default) because
-    # MELON_EXIT_DAY routes ex-melon tiles into WHEAT too -- this check is
-    # self-gating (wheat_surplus > 0) regardless of the source.
-    wheat_reserve = 0 if liquidating else len(LIVESTOCK_TYPES) * 2
-    wheat_surplus = shed.get("WHEAT", 0) - wheat_reserve
-    if wheat_surplus > 0:
-        sell_orders.append(["SELL", "WHEAT", wheat_surplus])
-
-    # A static crew plan can include work in the next quadrant. Hire only the
-    # usable prefix, preserving hand-slot/job alignment while avoiding wages
-    # for a hand whose entire assignment is still locked.
-    active_hires = 0
-    for job, idxs in _CREW_PLAN:
-        positions = LIVESTOCK_POSITIONS if job == "LIVESTOCK" else {
-            "MELON": MELON_POSITIONS, "WHEAT": WHEAT_POSITIONS,
-            "CARROT": CARROT_POSITIONS,
-        }[job]
-        if any(tiles[positions[i][1]][positions[i][0]] != "LOCKED" for i in idxs):
-            active_hires += 1
+    if (targets and hour <= 3) or (not targets and hour == 0):
+        daily_hands = targets["daily_hands"] if targets else N_HIRES
+        if targets:
+            live_animals = sum(
+                1 for row in tiles for tile in row
+                if isinstance(tile, dict) and tile.get("animal")
+            )
+            wheat_on_hand = shed.get("WHEAT", 0) + sum(inv.get("WHEAT", 0) for inv in inventories)
+            today_feed_reserve = max(0, live_animals - wheat_on_hand) * prices.get("WHEAT", _BASE_PRICE["WHEAT"])
+            hires_today = me.get("hires_today", len(me.get("hands", [])))
+            a, b = 1, 1
+            for _ in range(hires_today):
+                a, b = b, a + b
+            spent = 0
+            for _ in range(max(0, daily_hands - hires_today)):
+                if money - spent - a < today_feed_reserve:
+                    break
+                buy_orders.append(["HIRE"])
+                spent += a
+                a, b = b, a + b
         else:
-            break
+            for _ in range(daily_hands):
+                buy_orders.append(["HIRE"])
 
-    if hour == 0:
-        for _ in range(active_hires):
-            buy_orders.append(["HIRE"])
-
-    if hour == 1 and not liquidating:
+    if hour == 1:
         # Wheat feed is funded before any other spend, at the live market
         # price -- an existing herd starving because some other purchase ate
         # the day's cash is an unrecoverable death spiral (2 unfed days =
         # animal escapes for good), so feeding what's alive always wins.
         # Self-grown wheat (if any) already lowered `wheat_have`, so this
         # naturally only tops up whatever the wheat plot didn't cover.
-        wheat_needed = len(LIVESTOCK_TYPES)
+        if targets:
+            wheat_needed = sum(
+                1 for row in tiles for tile in row
+                if isinstance(tile, dict) and tile.get("animal")
+            )
+        else:
+            wheat_needed = len(LIVESTOCK_TYPES)
         wheat_have = shed.get("WHEAT", 0)
         for inv in inventories:
             wheat_have += inv.get("WHEAT", 0)
@@ -668,15 +1360,23 @@ def agent(obs):
             if n_buy > 0:
                 buy_orders.append(["BUY_PRODUCT", "WHEAT", n_buy])
 
-    if hour == 2 and day < 21:
+    if hour == 2:
         # Buy missing COW/SHEEP up to ANIMAL_MIX, capped by affordability
         # and (if set) a per-day purchase cap.
         needed_counts = {}
-        for i, atype in enumerate(LIVESTOCK_TYPES):
-            x, y = LIVESTOCK_POSITIONS[i]
-            t = tiles[y][x]
-            if not (isinstance(t, dict) and t.get("animal") == atype):
-                needed_counts[atype] = needed_counts.get(atype, 0) + 1
+        if targets:
+            assignments = _adaptive_animal_slots(tiles, targets)
+            for pos, atype in assignments.items():
+                x, y = pos
+                t = tiles[y][x]
+                if not (isinstance(t, dict) and t.get("animal") == atype):
+                    needed_counts[atype] = needed_counts.get(atype, 0) + 1
+        else:
+            for i, atype in enumerate(LIVESTOCK_TYPES):
+                x, y = LIVESTOCK_POSITIONS[i]
+                t = tiles[y][x]
+                if not (isinstance(t, dict) and t.get("animal") == atype):
+                    needed_counts[atype] = needed_counts.get(atype, 0) + 1
         remaining_cap = MAX_ANIMAL_BUY_PER_DAY if MAX_ANIMAL_BUY_PER_DAY is not None else sum(needed_counts.values())
         cash = money
         for atype, need in needed_counts.items():
@@ -686,21 +1386,43 @@ def agent(obs):
             for inv in inventories:
                 have += inv.get(atype, 0)
             to_buy = max(0, need - have)
-            cost_each = ANIMAL_COST[atype]
-            afford = int(cash // cost_each)
+            cost_each = _ANIMAL_COST_ALL[atype] if targets else ANIMAL_COST[atype]
+            spendable = max(0, cash - (targets["cash_reserve"] if targets else 0))
+            afford = int(spendable // cost_each)
             n_buy = min(to_buy, afford, remaining_cap)
+            if ENABLE_DEADLINE_PLANNER or ENABLE_ADAPTIVE_TARGETS:
+                intended_hands = targets["daily_hands"] if targets else N_HIRES
+                unit_count = 1 + max(len(me.get("hands", [])), intended_hands)
+                while n_buy > 0 and not _planner_has_capacity(tiles, unit_count, extra_animals=n_buy):
+                    n_buy -= 1
             if n_buy > 0:
                 buy_orders.append(["BUY_ANIMAL", atype, n_buy])
                 cash -= n_buy * cost_each
                 remaining_cap -= n_buy
 
-    owned_tiles = [t for row in tiles for t in row if t != "LOCKED"]
-    occupied_owned = sum(t is not None for t in owned_tiles)
-    land_utilization = occupied_owned / len(owned_tiles) if owned_tiles else 0
+    target_quadrants = targets["quadrants"] if targets else LAND_TARGET_QUADRANTS
+    intended_hands = targets["daily_hands"] if targets else N_HIRES
     unlocked_count = len(me.get("unlocked_quadrants", ["NW"]))
-    expansion_ready = unlocked_count == 1 or land_utilization >= LAND_UTILIZATION_TRIGGER
-    if (hour == 3 and not liquidating and day >= LAND_MIN_DAY
-            and unlocked_count < LAND_TARGET_QUADRANTS and expansion_ready):
+    next_land_cost = {1: 1000, 2: 2000, 3: 4000}.get(unlocked_count, 999999)
+    land_allowed = True
+    if LAND_EXPANSION_MODE == "conditional" and unlocked_count >= 2:
+        occupied = sum(
+            1 for row in tiles for tile in row
+            if isinstance(tile, dict) and (tile.get("crop") or tile.get("animal") or tile.get("kind"))
+        )
+        utilization = occupied / max(1, 25 * unlocked_count)
+        reserve = (targets["cash_reserve"] if targets else 0) + LAND_OPERATING_RESERVE
+        enough_time = (29 - day) >= LAND_MIN_REPAY_DAYS
+        # Transition crops replace occupants of the melon pool; count unique
+        # coordinates rather than phase-specific crop counts.
+        concrete_layout = len(_planned_tile_positions()) > 25 * unlocked_count
+        land_allowed = (utilization >= LAND_UTILIZATION_THRESHOLD and enough_time and
+                        money - next_land_cost >= reserve and concrete_layout)
+    if hour == 3 and day >= LAND_MIN_DAY and unlocked_count < target_quadrants and land_allowed and (
+        not (ENABLE_DEADLINE_PLANNER or ENABLE_ADAPTIVE_TARGETS) or _planner_has_capacity(tiles, 1 + max(len(me.get("hands", [])), intended_hands))
+    ) and (
+        not targets or money - next_land_cost >= targets["cash_reserve"]
+    ):
         # No money precheck: the engine silently no-ops an unaffordable
         # BUY_LAND, and re-issuing it every day until it lands is the exact
         # idiom every top-10 leaderboard agent uses (report.md) -- it
@@ -708,46 +1430,80 @@ def agent(obs):
         # no risk of a stale one-shot check missing the window.
         buy_orders.append(["BUY_LAND"])
 
-    if hour == 4 and day < WHEAT_EXIT_DAY:
-        empty_positions = [(x, y) for x, y in MELON_POSITIONS if tiles[y][x] is None]
-        if day < MELON_EXIT_DAY:
-            have_seeds = seeds.get("MELON", 0)
-            if len(empty_positions) > have_seeds:
-                buy_orders.append(["BUY_SEED", "MELON", len(empty_positions) - have_seeds])
+    if hour == 4:
+        if targets:
+            assignments = _adaptive_crop_slots(tiles, targets)
+            needed_seeds = {}
+            for (x, y), crop in assignments.items():
+                if tiles[y][x] is None:
+                    needed_seeds[crop] = needed_seeds.get(crop, 0) + 1
+            cash = money
+            for crop in sorted(needed_seeds, key=lambda name: (-targets["crop_scores"][name], name)):
+                if crop == "MELON" and CROP_TRANSITION_MODE == "fixed" and day > MELON_LAST_SEED_DAY:
+                    continue
+                if crop == "STRAWBERRY" and day > STRAWBERRY_LAST_PLANT_DAY:
+                    continue
+                if crop == "WHEAT" and day > WHEAT_LAST_PLANT_DAY:
+                    continue
+                need = max(0, needed_seeds[crop] - seeds.get(crop, 0))
+                cost = _SEED_COST[crop]
+                spendable = max(0, cash - targets["cash_reserve"])
+                n_buy = min(need, int(spendable // cost))
+                if n_buy > 0:
+                    buy_orders.append(["BUY_SEED", crop, n_buy])
+                    cash -= n_buy * cost
         else:
-            # Past the exit day, _melon_action plants WHEAT on this same
-            # pool instead -- keep its seed supply matched here too.
-            have_seeds = seeds.get("WHEAT", 0)
-            if len(empty_positions) > have_seeds:
-                buy_orders.append(["BUY_SEED", "WHEAT", len(empty_positions) - have_seeds])
+            empty_positions = [(x, y) for x, y in MELON_POSITIONS if tiles[y][x] is None]
+            if ENABLE_DEADLINE_PLANNER:
+                unit_count = 1 + max(len(me.get("hands", [])), N_HIRES)
+                empty_positions = empty_positions[:max(0, int((unit_count * 24 * (1.0 - DEADLINE_CAPACITY_MARGIN) - _planner_daily_load(tiles)) // 1.75))]
+            if day < MELON_EXIT_DAY:
+                have_seeds = seeds.get("MELON", 0)
+                if len(empty_positions) > have_seeds:
+                    buy_orders.append(["BUY_SEED", "MELON", len(empty_positions) - have_seeds])
+            else:
+                have_seeds = seeds.get("WHEAT", 0)
+                if len(empty_positions) > have_seeds:
+                    buy_orders.append(["BUY_SEED", "WHEAT", len(empty_positions) - have_seeds])
 
-    if hour == 5 and WHEAT_TILES > 0 and day < WHEAT_EXIT_DAY:
+    if not targets and hour == 5 and WHEAT_TILES > 0:
         empty_wheat = sum(1 for x, y in WHEAT_POSITIONS if tiles[y][x] is None)
+        if ENABLE_DEADLINE_PLANNER:
+            unit_count = 1 + max(len(me.get("hands", [])), N_HIRES)
+            spare = max(0, int((unit_count * 24 * (1.0 - DEADLINE_CAPACITY_MARGIN) - _planner_daily_load(tiles)) // 1.75))
+            empty_wheat = min(empty_wheat, spare)
         have_seeds = seeds.get("WHEAT", 0)
         if empty_wheat > have_seeds:
             buy_orders.append(["BUY_SEED", "WHEAT", empty_wheat - have_seeds])
 
-    if hour == 6 and CARROT_TILES > 0 and day < 27:
+    if not targets and hour == 6 and CARROT_TILES > 0:
         empty_carrot = sum(1 for x, y in CARROT_POSITIONS if tiles[y][x] is None)
+        if ENABLE_DEADLINE_PLANNER:
+            unit_count = 1 + max(len(me.get("hands", [])), N_HIRES)
+            spare = max(0, int((unit_count * 24 * (1.0 - DEADLINE_CAPACITY_MARGIN) - _planner_daily_load(tiles)) // 1.75))
+            empty_carrot = min(empty_carrot, spare)
         have_seeds = seeds.get("CARROT", 0)
         if empty_carrot > have_seeds:
             buy_orders.append(["BUY_SEED", "CARROT", empty_carrot - have_seeds])
 
-    # Closing sales take precedence; at other times leave enough room after
-    # buys and explicitly enforce the engine's silent 10-order limit.
+    # Closing sales take precedence; always enforce the engine's silent
+    # maxMarketOrdersPerTurn=10 truncation explicitly.
     market = (sell_orders + buy_orders if liquidating else buy_orders + sell_orders)[:10]
+
+    if ENABLE_DEADLINE_PLANNER or ENABLE_ADAPTIVE_TARGETS:
+        farmer_action, hands_actions = _deadline_actions(me, private, day, hour, tiles, shed, seeds, targets)
+        return {"farmer": farmer_action, "hands": hands_actions, "market": market}
 
     fx, fy = me["farmer"]
     farmer_inv = inventories[0] if inventories else {}
     farmer_idxs = LIVESTOCK_GROUPS[0] if LIVESTOCK_GROUPS else []
-    farmer_action = (_livestock_action((fx, fy), farmer_inv, tiles, shed, farmer_idxs, liquidating)
-                     if farmer_idxs else ["PASS"])
+    farmer_action = _livestock_action((fx, fy), farmer_inv, tiles, shed, farmer_idxs) if farmer_idxs else ["PASS"]
 
     _DISPATCH = {
-        "LIVESTOCK": lambda pos, inv, idxs: _livestock_action(pos, inv, tiles, shed, idxs, liquidating),
-        "MELON": lambda pos, inv, idxs: _melon_action(pos, inv, day, tiles, idxs),
-        "WHEAT": lambda pos, inv, idxs: _wheat_crop_action(pos, inv, day, tiles, idxs),
-        "CARROT": lambda pos, inv, idxs: _carrot_action(pos, inv, day, tiles, idxs),
+        "LIVESTOCK": lambda pos, inv, idxs: _livestock_action(pos, inv, tiles, shed, idxs),
+        "MELON": lambda pos, inv, idxs: _melon_action(pos, day, tiles, idxs),
+        "WHEAT": lambda pos, inv, idxs: _wheat_crop_action(pos, day, tiles, idxs),
+        "CARROT": lambda pos, inv, idxs: _carrot_action(pos, day, tiles, idxs),
     }
 
     hands = me.get("hands", [])

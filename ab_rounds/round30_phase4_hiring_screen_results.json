@@ -1,0 +1,11 @@
+{
+  "round": "round30_phase4_hiring_screen",
+  "status": "not_run",
+  "promotion_decision": "retain_control",
+  "reason": "The public kaggle-environments 1.18.0 package does not contain the custom kaggriculture runtime required for seeded gameplay evaluation.",
+  "required_runtime_from_replay": {
+    "name": "kaggriculture",
+    "module_version": "1.32.7",
+    "environment_version": "0.1.0"
+  }
+}

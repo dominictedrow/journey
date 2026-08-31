@@ -1,0 +1,5 @@
+{
+  "sale_wheat_3": {"SALE_POLICY_MODE": "product_specific"},
+  "sale_premium_loose": {"SALE_POLICY_MODE": "product_specific", "SALE_MIN_PRICE_FRAC_BY_PRODUCT": {"WHEAT": 0.0, "CARROT": 0.3, "TOMATO": 0.35, "STRAWBERRY": 0.4, "MELON": 0.35, "EGG": 0.3, "MILK": 0.35, "WOOL": 0.4, "FERTILIZER": 0.0}},
+  "sale_premium_strict": {"SALE_POLICY_MODE": "product_specific", "SALE_MIN_PRICE_FRAC_BY_PRODUCT": {"WHEAT": 0.0, "CARROT": 0.4, "TOMATO": 0.55, "STRAWBERRY": 0.6, "MELON": 0.5, "EGG": 0.4, "MILK": 0.5, "WOOL": 0.55, "FERTILIZER": 0.0}}
+}

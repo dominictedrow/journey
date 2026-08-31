@@ -1,0 +1,11 @@
+{
+  "round": "round31_phase5_specialists_screen",
+  "status": "not_run",
+  "promotion_decision": "retain_control",
+  "reason": "Phase 5 must follow a promoted phase-4 control, and the custom kaggriculture runtime needed for both seeded screens is unavailable.",
+  "required_runtime_from_replay": {
+    "name": "kaggriculture",
+    "module_version": "1.32.7",
+    "environment_version": "0.1.0"
+  }
+}

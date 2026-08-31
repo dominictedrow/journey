@@ -1,0 +1,40 @@
+{
+  "phase6_strawberry_control": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 6
+  },
+  "phase6_wheat_d22_n6": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 6,
+    "LATE_WHEAT_START_DAY": 22,
+    "LATE_WHEAT_TILES": 6
+  },
+  "phase6_wheat_d24_n6": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 6,
+    "LATE_WHEAT_START_DAY": 24,
+    "LATE_WHEAT_TILES": 6
+  },
+  "phase6_wheat_d24_n12": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 6,
+    "LATE_WHEAT_START_DAY": 24,
+    "LATE_WHEAT_TILES": 12
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "round": "round34_phase6c_late_wheat",
+  "status": "blocked_by_predecessor",
+  "promotion_decision": "retain_control",
+  "reason": "Stage C must follow promoted melon and strawberry schedules. Its candidates are ready, but neither predecessor can receive gameplay promotion without the custom kaggriculture runtime."
+}

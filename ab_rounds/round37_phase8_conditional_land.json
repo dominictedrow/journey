@@ -1,0 +1,6 @@
+{
+  "two_land_control": {"LAND_TARGET_QUADRANTS": 2, "LAND_EXPANSION_MODE": "legacy"},
+  "third_land_u70": {"LAND_TARGET_QUADRANTS": 3, "LAND_EXPANSION_MODE": "conditional", "LAND_UTILIZATION_THRESHOLD": 0.7},
+  "third_land_u80": {"LAND_TARGET_QUADRANTS": 3, "LAND_EXPANSION_MODE": "conditional", "LAND_UTILIZATION_THRESHOLD": 0.8},
+  "third_land_u90": {"LAND_TARGET_QUADRANTS": 3, "LAND_EXPANSION_MODE": "conditional", "LAND_UTILIZATION_THRESHOLD": 0.9}
+}

@@ -1,0 +1,6 @@
+{
+  "round": "round37_phase8_conditional_land",
+  "status": "ineligible_current_footprint",
+  "promotion_decision": "retain_two_land_control",
+  "reason": "The current promoted 17-animal plus 19-crop footprint claims only 36 of 50 two-quadrant cells and has no concrete third-quadrant layout. Conditional expansion therefore correctly remains inactive; gameplay is also unavailable."
+}

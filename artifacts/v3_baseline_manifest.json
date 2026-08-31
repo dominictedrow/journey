@@ -1,0 +1,45 @@
+{
+  "date": "2026-08-21",
+  "source": {
+    "path": "scripts/strategy_follower.py",
+    "sha256": "e4ee0a7cadf1cb0eea58eed5bb95f888838426f3d38f50e480b136e6ba52fbe7"
+  },
+  "submission": {
+    "path": "scripts/main.py",
+    "sha256": "29c6bfdf750b5376a379a27b9ba1854eb2274e92551f589d5e47046a69831c00",
+    "generated_by": "scripts/build_submission.py",
+    "watcher_embedded": false
+  },
+  "archived_expanded_artifact": {
+    "path": "artifacts/submissions/2026-08-21/expanded-main.py",
+    "sha256": "ac75ef7b278512baa0f7806520affcf991a1881b4b472f10fbdd426578edad48"
+  },
+  "watcher_model": null,
+  "kaggle_provenance": {
+    "submission_id": null,
+    "public_score": null,
+    "private_score": null,
+    "upload_time": null,
+    "episode_ids": [],
+    "executed_file_confirmed": false,
+    "reason": "No downloaded copy.py or Kaggle submission metadata is present in the workspace."
+  },
+  "constants": {
+    "ANIMAL_MIX": {"COW": 11, "SHEEP": 6},
+    "LIVESTOCK_HANDS": 6,
+    "MELON_HANDS": 2,
+    "MAX_MELON_TILES": 19,
+    "MELON_EXIT_DAY": 999,
+    "WHEAT_HANDS": 0,
+    "WHEAT_TILES": 0,
+    "CARROT_HANDS": 0,
+    "CARROT_TILES": 0,
+    "LAND_TARGET_QUADRANTS": 2,
+    "SELL_MIN_PRICE_FRAC": 0.4,
+    "ENABLE_DEADLINE_PLANNER": true,
+    "ENABLE_ADAPTIVE_TARGETS": true,
+    "ENABLE_TOWN_WATCHER": true,
+    "ENABLE_OPPONENT_WATCHER": true,
+    "WATCHER_BACKEND": "rules"
+  }
+}

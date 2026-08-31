@@ -1,0 +1,6 @@
+{
+  "round": "round33_phase6b_strawberry",
+  "status": "blocked_by_predecessor",
+  "promotion_decision": "retain_control",
+  "reason": "Stage B must use the promoted Stage-A melon exit, but Stage A cannot be evaluated without the custom kaggriculture runtime. Day-11 is only a replay-guided provisional configuration, not a promotion."
+}

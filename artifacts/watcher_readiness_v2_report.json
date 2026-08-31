@@ -1,0 +1,847 @@
+{
+  "dataset_files": [
+    "data/counterfactual_dataset.v2.jsonl"
+  ],
+  "dataset_hashes": {
+    "data/counterfactual_dataset.v2.jsonl": "5ec36b61a7edd3c879d77fafae4fccae5d42be27d95c4b57f407c63d00ef74eb"
+  },
+  "eligible_outputs": [
+    "labor_expansion",
+    "land_expansion",
+    "product:CARROT:increase",
+    "product:MELON:increase",
+    "product:MILK:increase",
+    "product:STRAWBERRY:increase",
+    "product:TOMATO:increase",
+    "product:WHEAT:increase"
+  ],
+  "feature_count": 129,
+  "input_schema_versions": {
+    "counterfactual-v2": 26067
+  },
+  "outputs": {
+    "labor_expansion": {
+      "accepted_execution_verified": 1505,
+      "attempts": 1511,
+      "attempts_remaining": 489,
+      "class_counts": {
+        "-1": 762,
+        "0": 690,
+        "1": 53
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 479,
+          "0": 8,
+          "1": 12
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 204,
+          "0": 294,
+          "1": 8
+        },
+        "strategy_follower": {
+          "-1": 79,
+          "0": 388,
+          "1": 33
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 6,
+        "not_accepted": 6
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 115,
+          "0": 97,
+          "1": 6
+        },
+        "train": {
+          "-1": 534,
+          "0": 475,
+          "1": 38
+        },
+        "val": {
+          "-1": 113,
+          "0": 118,
+          "1": 9
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "land_expansion": {
+      "accepted_execution_verified": 513,
+      "attempts": 517,
+      "attempts_remaining": 1483,
+      "class_counts": {
+        "-1": 361,
+        "0": 66,
+        "1": 86
+      },
+      "family_class_counts": {
+        "strategies_v2.ring.agent": {
+          "-1": 13,
+          "0": 2,
+          "1": 2
+        },
+        "strategy_follower": {
+          "-1": 348,
+          "0": 64,
+          "1": 84
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 4,
+        "not_accepted": 4
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 55,
+          "0": 7,
+          "1": 12
+        },
+        "train": {
+          "-1": 243,
+          "0": 48,
+          "1": 57
+        },
+        "val": {
+          "-1": 63,
+          "0": 11,
+          "1": 17
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:CARROT:avoid": {
+      "accepted_execution_verified": 463,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 4,
+        "0": 458,
+        "1": 1
+      },
+      "family_class_counts": {
+        "strategy_follower": {
+          "-1": 4,
+          "0": 458,
+          "1": 1
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 1537,
+        "not_accepted": 1537
+      },
+      "split_class_counts": {
+        "test": {
+          "0": 73
+        },
+        "train": {
+          "-1": 2,
+          "0": 316,
+          "1": 1
+        },
+        "val": {
+          "-1": 2,
+          "0": 69
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:CARROT:increase": {
+      "accepted_execution_verified": 1000,
+      "attempts": 1000,
+      "attempts_remaining": 1000,
+      "class_counts": {
+        "-1": 682,
+        "0": 248,
+        "1": 70
+      },
+      "family_class_counts": {
+        "strategies_v2.ring.agent": {
+          "-1": 375,
+          "0": 102,
+          "1": 23
+        },
+        "strategy_follower": {
+          "-1": 307,
+          "0": 146,
+          "1": 47
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {},
+      "split_class_counts": {
+        "test": {
+          "-1": 113,
+          "0": 38,
+          "1": 10
+        },
+        "train": {
+          "-1": 459,
+          "0": 178,
+          "1": 49
+        },
+        "val": {
+          "-1": 110,
+          "0": 32,
+          "1": 11
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:EGG:avoid": {
+      "accepted_execution_verified": 0,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {},
+      "family_class_counts": {},
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 2000,
+        "not_accepted": 2000
+      },
+      "split_class_counts": {
+        "test": {},
+        "train": {},
+        "val": {}
+      },
+      "status": "deterministic_rules",
+      "usable_families": []
+    },
+    "product:EGG:increase": {
+      "accepted_execution_verified": 193,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 83,
+        "0": 71,
+        "1": 39
+      },
+      "family_class_counts": {
+        "strategy_follower": {
+          "-1": 83,
+          "0": 71,
+          "1": 39
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 1807,
+        "not_accepted": 1807
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 16,
+          "0": 14,
+          "1": 5
+        },
+        "train": {
+          "-1": 52,
+          "0": 43,
+          "1": 23
+        },
+        "val": {
+          "-1": 15,
+          "0": 14,
+          "1": 11
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:MELON:avoid": {
+      "accepted_execution_verified": 501,
+      "attempts": 503,
+      "attempts_remaining": 1497,
+      "class_counts": {
+        "-1": 258,
+        "0": 6,
+        "1": 237
+      },
+      "family_class_counts": {
+        "strategies_v2.ring.agent": {
+          "0": 1
+        },
+        "strategy_follower": {
+          "-1": 258,
+          "0": 5,
+          "1": 237
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 2,
+        "not_accepted": 2
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 48,
+          "1": 26
+        },
+        "train": {
+          "-1": 172,
+          "0": 4,
+          "1": 175
+        },
+        "val": {
+          "-1": 38,
+          "0": 2,
+          "1": 36
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:MELON:increase": {
+      "accepted_execution_verified": 1503,
+      "attempts": 1507,
+      "attempts_remaining": 493,
+      "class_counts": {
+        "-1": 763,
+        "0": 686,
+        "1": 54
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 317,
+          "0": 175,
+          "1": 8
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 217,
+          "0": 272,
+          "1": 14
+        },
+        "strategy_follower": {
+          "-1": 229,
+          "0": 239,
+          "1": 32
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 4,
+        "not_accepted": 4
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 121,
+          "0": 95,
+          "1": 6
+        },
+        "train": {
+          "-1": 533,
+          "0": 488,
+          "1": 43
+        },
+        "val": {
+          "-1": 109,
+          "0": 103,
+          "1": 5
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:MILK:avoid": {
+      "accepted_execution_verified": 502,
+      "attempts": 505,
+      "attempts_remaining": 1495,
+      "class_counts": {
+        "-1": 366,
+        "0": 4,
+        "1": 132
+      },
+      "family_class_counts": {
+        "strategies_v2.ring.agent": {
+          "-1": 2
+        },
+        "strategy_follower": {
+          "-1": 364,
+          "0": 4,
+          "1": 132
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 3,
+        "not_accepted": 3
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 68,
+          "1": 19
+        },
+        "train": {
+          "-1": 246,
+          "0": 3,
+          "1": 88
+        },
+        "val": {
+          "-1": 52,
+          "0": 1,
+          "1": 25
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:MILK:increase": {
+      "accepted_execution_verified": 983,
+      "attempts": 1009,
+      "attempts_remaining": 991,
+      "class_counts": {
+        "-1": 572,
+        "0": 360,
+        "1": 51
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 340,
+          "0": 125,
+          "1": 11
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 7,
+          "0": 2
+        },
+        "strategy_follower": {
+          "-1": 225,
+          "0": 233,
+          "1": 40
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 26,
+        "not_accepted": 26
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 74,
+          "0": 41,
+          "1": 6
+        },
+        "train": {
+          "-1": 425,
+          "0": 265,
+          "1": 36
+        },
+        "val": {
+          "-1": 73,
+          "0": 54,
+          "1": 9
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:STRAWBERRY:avoid": {
+      "accepted_execution_verified": 918,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 200,
+        "0": 716,
+        "1": 2
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 200,
+          "0": 68,
+          "1": 2
+        },
+        "strategy_follower": {
+          "0": 648
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 1082,
+        "not_accepted": 1082
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 17,
+          "0": 100,
+          "1": 2
+        },
+        "train": {
+          "-1": 157,
+          "0": 523
+        },
+        "val": {
+          "-1": 26,
+          "0": 93
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent"
+      ]
+    },
+    "product:STRAWBERRY:increase": {
+      "accepted_execution_verified": 1501,
+      "attempts": 1508,
+      "attempts_remaining": 492,
+      "class_counts": {
+        "-1": 1162,
+        "0": 271,
+        "1": 68
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 395,
+          "0": 100,
+          "1": 5
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 442,
+          "0": 34,
+          "1": 25
+        },
+        "strategy_follower": {
+          "-1": 325,
+          "0": 137,
+          "1": 38
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 7,
+        "not_accepted": 7
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 159,
+          "0": 55,
+          "1": 7
+        },
+        "train": {
+          "-1": 803,
+          "0": 180,
+          "1": 49
+        },
+        "val": {
+          "-1": 200,
+          "0": 36,
+          "1": 12
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:TOMATO:avoid": {
+      "accepted_execution_verified": 162,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 1,
+        "0": 161
+      },
+      "family_class_counts": {
+        "strategy_follower": {
+          "-1": 1,
+          "0": 161
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 1838,
+        "not_accepted": 1838
+      },
+      "split_class_counts": {
+        "test": {
+          "0": 21
+        },
+        "train": {
+          "-1": 1,
+          "0": 117
+        },
+        "val": {
+          "0": 23
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": []
+    },
+    "product:TOMATO:increase": {
+      "accepted_execution_verified": 1501,
+      "attempts": 1501,
+      "attempts_remaining": 499,
+      "class_counts": {
+        "-1": 1263,
+        "0": 170,
+        "1": 68
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 468,
+          "0": 20,
+          "1": 12
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 424,
+          "0": 46,
+          "1": 31
+        },
+        "strategy_follower": {
+          "-1": 371,
+          "0": 104,
+          "1": 25
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {},
+      "split_class_counts": {
+        "test": {
+          "-1": 187,
+          "0": 27,
+          "1": 9
+        },
+        "train": {
+          "-1": 868,
+          "0": 111,
+          "1": 50
+        },
+        "val": {
+          "-1": 208,
+          "0": 32,
+          "1": 9
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:WHEAT:avoid": {
+      "accepted_execution_verified": 813,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 1,
+        "0": 812
+      },
+      "family_class_counts": {
+        "strategy_follower": {
+          "-1": 1,
+          "0": 812
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 1187,
+        "not_accepted": 1187
+      },
+      "split_class_counts": {
+        "test": {
+          "0": 121
+        },
+        "train": {
+          "-1": 1,
+          "0": 570
+        },
+        "val": {
+          "0": 121
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": []
+    },
+    "product:WHEAT:increase": {
+      "accepted_execution_verified": 1997,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {
+        "-1": 794,
+        "0": 1163,
+        "1": 40
+      },
+      "family_class_counts": {
+        "strategies_v2.leader_clone.agent": {
+          "-1": 186,
+          "0": 708,
+          "1": 2
+        },
+        "strategies_v2.ring.agent": {
+          "-1": 322,
+          "0": 159,
+          "1": 20
+        },
+        "strategy_follower": {
+          "-1": 286,
+          "0": 296,
+          "1": 18
+        }
+      },
+      "quota_complete": true,
+      "rejection_counts": {
+        "execution_not_verified": 3,
+        "not_accepted": 3
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 123,
+          "0": 154,
+          "1": 10
+        },
+        "train": {
+          "-1": 577,
+          "0": 842,
+          "1": 21
+        },
+        "val": {
+          "-1": 94,
+          "0": 167,
+          "1": 9
+        }
+      },
+      "status": "ready_for_training",
+      "usable_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ]
+    },
+    "product:WOOL:avoid": {
+      "accepted_execution_verified": 0,
+      "attempts": 2000,
+      "attempts_remaining": 0,
+      "class_counts": {},
+      "family_class_counts": {},
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 2000,
+        "not_accepted": 2000
+      },
+      "split_class_counts": {
+        "test": {},
+        "train": {},
+        "val": {}
+      },
+      "status": "deterministic_rules",
+      "usable_families": []
+    },
+    "product:WOOL:increase": {
+      "accepted_execution_verified": 503,
+      "attempts": 506,
+      "attempts_remaining": 1494,
+      "class_counts": {
+        "-1": 252,
+        "0": 181,
+        "1": 70
+      },
+      "family_class_counts": {
+        "strategies_v2.ring.agent": {
+          "-1": 1,
+          "0": 5
+        },
+        "strategy_follower": {
+          "-1": 251,
+          "0": 176,
+          "1": 70
+        }
+      },
+      "quota_complete": false,
+      "rejection_counts": {
+        "execution_not_verified": 3,
+        "not_accepted": 3
+      },
+      "split_class_counts": {
+        "test": {
+          "-1": 28,
+          "0": 28,
+          "1": 10
+        },
+        "train": {
+          "-1": 174,
+          "0": 133,
+          "1": 49
+        },
+        "val": {
+          "-1": 50,
+          "0": 20,
+          "1": 11
+        }
+      },
+      "status": "deterministic_rules",
+      "usable_families": [
+        "strategy_follower"
+      ]
+    }
+  },
+  "phase_11_status": "train_eligible_outputs",
+  "recognized_output_attempts": {
+    "labor_expansion": 1511,
+    "land_expansion": 517,
+    "product:CARROT:avoid": 2000,
+    "product:CARROT:increase": 1000,
+    "product:EGG:avoid": 2000,
+    "product:EGG:increase": 2000,
+    "product:MELON:avoid": 503,
+    "product:MELON:increase": 1507,
+    "product:MILK:avoid": 505,
+    "product:MILK:increase": 1009,
+    "product:STRAWBERRY:avoid": 2000,
+    "product:STRAWBERRY:increase": 1508,
+    "product:TOMATO:avoid": 2000,
+    "product:TOMATO:increase": 1501,
+    "product:WHEAT:avoid": 2000,
+    "product:WHEAT:increase": 2000,
+    "product:WOOL:avoid": 2000,
+    "product:WOOL:increase": 506
+  },
+  "rows_loaded": 26067,
+  "schema_hash": "ac1487d70ff7df007d3ba7414e0fa4de4db4a4f31be9296534c570a86f2210c9",
+  "schema_version": "counterfactual-v2",
+  "thresholds": {
+    "accepted": 150,
+    "attempt_cap": 2000,
+    "negative": 40,
+    "per_split_per_signed_class": 5,
+    "positive": 40,
+    "usable_families": 2
+  },
+  "unrecognized_output_attempts": {}
+}

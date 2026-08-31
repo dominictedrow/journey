@@ -1,0 +1,6 @@
+{
+  "round": "round35_phase7a_sale_batches",
+  "status": "blocked_runtime_unavailable",
+  "promotion_decision": "retain_legacy_sale_control",
+  "reason": "Candidates compile and contract tests pass, but the installed environment lacks Kaggriculture 1.32.7; paired gameplay and realized-price evidence cannot be produced."
+}

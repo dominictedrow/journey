@@ -1,0 +1,17 @@
+{
+  "phase6_permanent_melon_control": {
+    "CROP_TRANSITION_MODE": "off"
+  },
+  "phase6_seed_exit_d9": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 9
+  },
+  "phase6_seed_exit_d11": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11
+  },
+  "phase6_seed_exit_d13": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 13
+  }
+}

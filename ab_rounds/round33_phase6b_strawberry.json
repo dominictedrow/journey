@@ -1,0 +1,32 @@
+{
+  "phase6_exit_hold_control": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "hold"
+  },
+  "phase6_strawberry_3": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 3
+  },
+  "phase6_strawberry_6": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 6
+  },
+  "phase6_strawberry_9": {
+    "CROP_TRANSITION_MODE": "fixed",
+    "MELON_LAST_SEED_DAY": 11,
+    "MELON_LAST_PLANT_DAY": 11,
+    "TRANSITION_EMPTY_POLICY": "strawberry",
+    "STRAWBERRY_START_DAY": 12,
+    "STRAWBERRY_TILES": 9
+  }
+}

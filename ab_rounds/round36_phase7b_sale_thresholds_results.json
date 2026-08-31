@@ -1,0 +1,6 @@
+{
+  "round": "round36_phase7b_sale_thresholds",
+  "status": "blocked_by_predecessor",
+  "promotion_decision": "retain_legacy_sale_control",
+  "reason": "Product-specific thresholds must follow a promoted batching candidate; round35 cannot be promoted without paired gameplay."
+}
