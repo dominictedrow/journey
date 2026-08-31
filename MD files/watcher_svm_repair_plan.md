@@ -182,7 +182,11 @@ Phases are ordered by dependency. Phase 0 and Phase 1 are cheap and unblock
 everything. Phase 2-3 are the real work. Phase 4-5 decide whether the SVM ships
 at all. Phase 6 is promotion.
 
-### Phase 0 — Reconnect the submission (0.5 day)
+> **Status (see the Progress log at the end for detail):**
+> Phase 0 ✅ landed · Phase 1 ✅ landed · Phase 2 ✅ landed (2.5 + one 2.4
+> optimisation deferred) · Phases 3-6 not started.
+
+### Phase 0 — Reconnect the submission (0.5 day) — ✅ landed
 
 **Purpose:** make the SVM path in `main.py` real, so any later model actually
 affects the score, and lock it with a test so it cannot silently revert again.
@@ -225,7 +229,7 @@ like `test_train_watcher.py:332-364` already does for the model.
 of `main.agent` shows the toy scores changing actions; removing the file falls
 back to rules cleanly; all watcher tests pass.
 
-### Phase 1 — Make the gates reachable and honest (1 day)
+### Phase 1 — Make the gates reachable and honest (1 day) — ✅ landed
 
 **Purpose:** a genuinely skillful model should be able to pass; a lucky one
 should not.
@@ -283,7 +287,7 @@ than the CI width, do not export.
 synthetic families where the *old* LOFO gate fails and the *new* pooled gate
 passes for a genuinely separable target and fails for a noise target.
 
-### Phase 2 — Open the data funnel (3-5 days, the core work)
+### Phase 2 — Open the data funnel (3-5 days, the core work) — ✅ landed
 
 **Purpose:** get from ~27 signed rows/output to ≥ 150 accepted / ≥ 40 per sign
 for a meaningful set of *coherent* outputs, without manufacturing fake signal.
@@ -530,3 +534,126 @@ The watcher is fully repaired when:
    CI, with no safety regression.
 5. Whatever ships is the one that won that comparison — not "the SVM because we
    built it."
+
+---
+
+## 6. Progress log
+
+### 2026-08-30 — Phases 0-2
+
+**Phase 0 — ✅ landed (verified present this pass, not re-audited line by line).**
+The submission is reconnected at build time rather than in `scripts/main.py`:
+`build_submission.py:_replace_watcher_import` swaps the `_watcher_features =
+None` / `_watcher_model = None` literals for the embedded feature + model
+namespaces (or leaves them `None` when no model is supplied).
+`scripts/strategy_follower.py` keeps the guarded `import shared_features` /
+`import watcher_model` for dev runs. Tests: `test_main_watcher_integration.py`
+(stub model moves `product_attractiveness` / `land_expansion_pressure`, `None`
+model falls back to rules) and `test_build_submission.py` (packaged artifact
+imports no numpy/sklearn) — 8 tests, passing. 0.3 decided: the sell gate is
+intentionally static; the `6bd3ac9` `_svm_sell_frac` experiment is reverted and
+documented in both `main.py` and `strategy_follower.py`.
+
+**Phase 1 — ✅ landed (verified present this pass).**
+`scripts/watcher_config.py` is the single source of truth for
+`MIN_ACCEPTED` / `MIN_SIGNED` / `MIN_PER_CLASS` / `MIN_FAMILIES` and the gate
+constants. `train_watcher.py` has: pooled leave-one-family-out
+(`leave_one_family_out`, one balanced accuracy over the pooled held-out signed
+rows, gated at `ACCEPT_MIN_LOFO_POOLED`); one "usable family" predicate
+(`usable_families`, ≥ `MIN_PER_CLASS` of both signs in train ∪ val only);
+grouped k-fold CV for `C` selection (`select_c_grouped_kfold`); a percentile
+bootstrap CI on the test balanced accuracy gated on the 5th-percentile
+(`bootstrap_balanced_accuracy_ci`, `gate`); and a `confirm` split
+(`gate_confirm`, `REQUIRE_CONFIRM_SPLIT`). `MIN_PER_CLASS` default is 5. Not
+re-verified: the `--min-per-class 1` "SMOKE TEST ONLY" warning text and whether
+`train.md` step 6 names the flag.
+
+**Phase 2 — ✅ landed.** One mixed generation run went from ~12% accepted to
+~75%. Commit `5c6608a`.
+
+- **2.1 execution verification** — `_execution_verified(kind, item, benv, ienv,
+  idx, applied_step, window_steps)` now scans a window
+  (`wc.EXEC_VERIFY_WINDOW_STEPS`, 4 days) and accepts if the intended delta
+  holds at *any* step. Crop checks use `_crop_units` = seeds on hand + planted
+  tiles ("seeds acquired to date"), so an immediately-planted seed still
+  counts. The failure evidence (metric, window, end values) is recorded in
+  `intervention_audit.execution_evidence` and `summarize_rows` aggregates it
+  under `execution_verify_failure_metrics`.
+- **2.2 safety** — `safety_regression` → `safety_split(baseline, intervention)`
+  returning `(hard_fail, soft_flags)`. Hard: `escaped_animals`,
+  `missed_watering_deaths`, `episode_status_failures`. Soft (recorded on the
+  row as `soft_safety_flags`, never rejecting): `feed_risk_tile_turns`,
+  `water_risk_tile_turns`, `shed_overflow_indicators`,
+  `ending_saleable_inventory`, `invalid_noop_purchase_indicators`,
+  `cash_trough_touched` (renamed from `bankruptcy_indicators`), and
+  **`market_order_cap_violations`**. *Deviation from the plan:* the plan lists
+  `market_order_cap_violations` as hard. The smoke showed it rejecting most
+  otherwise-usable `ring`-family rows for queue over-fill the engine silently
+  truncates (`queues.append(q[:max_orders])`), and the `ring` focal already
+  violates it in the baseline. Moved to soft. Revisit if a later phase shows a
+  case where the intervention's own appended order truncates a *meaningful*
+  focal order.
+- **2.3 label** — season-end money delta → bounded-horizon **blend**
+  (`compute_label` → `label_product` / `label_capacity`):
+  - Primary signal: near-term total-money delta,
+    `Δmoney_i − Δmoney_b` over the horizon.
+  - `product:X:{increase,avoid}` gets a signed label only when that money
+    delta clears the band **and** agrees in sign with an X-scoped value-flow
+    delta: `Σ(units of X sold × price) + (work-in-progress + shed X value)`,
+    intervention vs baseline. Sold volume and price come from an instrumented
+    market phase (`_install_sales_probe` wraps `kaggriculture._process_market`
+    — during that phase only SELL reduces a player's shed). This keeps signed
+    rows causally about exposure to X, at the cost of yield (Dom's call).
+  - Per-product horizon (`wc.PRODUCT_HORIZON_DAYS`: 7d wheat/carrot/egg …
+    13d melon/tomato/milk/wool, 16d strawberry) so a slow crop's outcome is
+    actually inside the window. `_held_product_value` counts `yield_units`
+    still on the plant/animal so a planted-but-unharvested crop shows value.
+  - Band = `max(8% × baseline window X revenue, $120)` for products,
+    `max(8% × |Δmoney_b|, $350)` for capacity.
+  - Capacity outputs (`land_expansion` / `labor_expansion`) use money delta
+    only, no X-flow gate.
+  - `season_end_delta` + `season_end_label` kept as recorded audit fields.
+- **2.4 checkpoints off day 0** — for removal/defer deviations `generate_pair`
+  runs one probe replay, `_order_emission_days` finds the days the focal
+  actually emits the cancelled order, and `checkpoint_for_deviation` picks from
+  the earlier half of that set. *Not done:* precomputing these days in
+  `generate_until_quota` and passing them in, so the probe replay is currently
+  one extra episode per removal/defer pair.
+- **2.5 add interventions without pre-existing slack — NOT done.** Needs
+  farmer-action injection (BUILD_COOP / BUILD_PASTURE / PLANT are unit actions,
+  not market orders) and a design decision from Dom on how a bounded deviation
+  overrides `action["farmer"]` / `action["hands"]` without fighting the focal's
+  own plan. `animal_add_one` / `crop_add_two` against build-and-fill focals
+  still fail here.
+- **2.6 crop_redirect_two** — partial redirect now splits the order (keeps the
+  un-redirected units as their own `BUY_SEED`) instead of shrinking and losing
+  them. Wired into `product:X:increase` with `item=None` (redirect the first
+  non-target `BUY_SEED` the focal emits), so it does not need the focal to buy
+  one specific source crop. `_intervention_eligibility` gained
+  `no_redirectable_purchase`.
+- **2.7 recorder identity** — `_run` raises `RuntimeError` if
+  `wrapped.checkpoint_obs is None` after a run whose checkpoint was in range.
+  The per-worker-file alternative was not needed.
+
+**Schema:** `shared_features.SCHEMA_VERSION` → `counterfactual-v3` (and so
+`SCHEMA_HASH`). The row *contract* changed (label semantics, safety fields), so
+the existing `data/counterfactual_dataset.v3.jsonl` rows are now schema-skipped
+by `train_watcher.py` and **the corpus must be regenerated**. Phase 3.3 will
+bump again for the feature-matrix audit.
+
+**Tests:** `test_counterfactual_dataset.py` +11 (windowed verification, soft vs
+hard safety, redirect unit conservation, blend label sign-agreement, capacity
+label, recorder-identity RuntimeError, end-to-end `generate_pair`). 89 pass.
+
+**Smoke (not the Phase 2 exit criterion — that is a 2000-pair run):** a 60-pair
+mixed run accepted 45/60 (75% vs 12.6% on the old v3 corpus); rejection buckets
+flattened (execution_not_verified 8, hard_safety 7, ineligible 7, unapplied 7).
+Signed-row yield against `strategy_follower` is thin (~11%) because that focal
+re-plans around the nudge; weaker families do better
+(`ring` / `land_expansion`: 3 signed of 9 accepted). The blend's low signed
+yield is expected and leans on Phase 5's glutter opponents.
+
+**Next:** run the 2000-pair regeneration (`generate_until_quota.py`) and check
+it against the Phase 2 exit bar (≥ 150 accepted / ≥ 40 per sign / ≥ 2 usable
+families for `land_expansion`, `labor_expansion`, `product:MELON:*`,
+`product:MILK:*`). Then Phase 3.
