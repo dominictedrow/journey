@@ -1,0 +1,406 @@
+{
+  "metadata": {
+    "c_grid": [
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "dataset_snapshot": {
+      "families_manifest": null,
+      "row_file_hashes": {
+        "data/counterfactual_dataset.v4.jsonl": "e0bb77477f33031c7aefd44d9b555f7c56f2b0e0128c146ca77f9c275883ffdb"
+      },
+      "row_files": [
+        "data/counterfactual_dataset.v4.jsonl"
+      ]
+    },
+    "feature_order": [
+      "remaining_fraction",
+      "phase_opening",
+      "phase_midgame",
+      "phase_endgame",
+      "own_money",
+      "own_hands",
+      "own_quadrants",
+      "own_weeds",
+      "own_empty",
+      "own_ready_yield",
+      "own_feed_risk",
+      "own_water_risk",
+      "own_structure_COOP",
+      "own_structure_PASTURE",
+      "own_animal_GOOSE",
+      "own_animal_COW",
+      "own_animal_SHEEP",
+      "own_crop_WHEAT",
+      "own_crop_WHEAT_age_0_2",
+      "own_crop_WHEAT_age_3_7",
+      "own_crop_WHEAT_age_8_plus",
+      "own_crop_CARROT",
+      "own_crop_CARROT_age_0_2",
+      "own_crop_CARROT_age_3_7",
+      "own_crop_CARROT_age_8_plus",
+      "own_crop_TOMATO",
+      "own_crop_TOMATO_age_0_2",
+      "own_crop_TOMATO_age_3_7",
+      "own_crop_TOMATO_age_8_plus",
+      "own_crop_STRAWBERRY",
+      "own_crop_STRAWBERRY_age_0_2",
+      "own_crop_STRAWBERRY_age_3_7",
+      "own_crop_STRAWBERRY_age_8_plus",
+      "own_crop_MELON",
+      "own_crop_MELON_age_0_2",
+      "own_crop_MELON_age_3_7",
+      "own_crop_MELON_age_8_plus",
+      "opponent_money",
+      "opponent_hands",
+      "opponent_quadrants",
+      "opponent_weeds",
+      "opponent_empty",
+      "opponent_ready_yield",
+      "opponent_feed_risk",
+      "opponent_water_risk",
+      "opponent_structure_COOP",
+      "opponent_structure_PASTURE",
+      "opponent_animal_GOOSE",
+      "opponent_animal_COW",
+      "opponent_animal_SHEEP",
+      "opponent_crop_WHEAT",
+      "opponent_crop_WHEAT_age_0_2",
+      "opponent_crop_WHEAT_age_3_7",
+      "opponent_crop_WHEAT_age_8_plus",
+      "opponent_crop_CARROT",
+      "opponent_crop_CARROT_age_0_2",
+      "opponent_crop_CARROT_age_3_7",
+      "opponent_crop_CARROT_age_8_plus",
+      "opponent_crop_TOMATO",
+      "opponent_crop_TOMATO_age_0_2",
+      "opponent_crop_TOMATO_age_3_7",
+      "opponent_crop_TOMATO_age_8_plus",
+      "opponent_crop_STRAWBERRY",
+      "opponent_crop_STRAWBERRY_age_0_2",
+      "opponent_crop_STRAWBERRY_age_3_7",
+      "opponent_crop_STRAWBERRY_age_8_plus",
+      "opponent_crop_MELON",
+      "opponent_crop_MELON_age_0_2",
+      "opponent_crop_MELON_age_3_7",
+      "opponent_crop_MELON_age_8_plus",
+      "own_shed_WHEAT",
+      "own_shed_CARROT",
+      "own_shed_TOMATO",
+      "own_shed_STRAWBERRY",
+      "own_shed_MELON",
+      "own_shed_EGG",
+      "own_shed_MILK",
+      "own_shed_WOOL",
+      "own_shed_GOOSE",
+      "own_shed_COW",
+      "own_shed_SHEEP",
+      "own_shed_FERTILIZER",
+      "own_carried_WHEAT",
+      "own_carried_CARROT",
+      "own_carried_TOMATO",
+      "own_carried_STRAWBERRY",
+      "own_carried_MELON",
+      "own_carried_EGG",
+      "own_carried_MILK",
+      "own_carried_WOOL",
+      "own_carried_GOOSE",
+      "own_carried_COW",
+      "own_carried_SHEEP",
+      "own_carried_FERTILIZER",
+      "own_seed_WHEAT",
+      "own_seed_CARROT",
+      "own_seed_TOMATO",
+      "own_seed_STRAWBERRY",
+      "own_seed_MELON",
+      "shop_BAKERY",
+      "shop_PIZZA_SHOP",
+      "shop_BRUNCH_SPOT",
+      "shop_YARN_STORE",
+      "shop_ICE_CREAM_SHOP",
+      "shop_PET_CAFE",
+      "shop_SMOOTHIE_SHOP",
+      "shop_FARMERS_MARKET",
+      "price_ratio_WHEAT",
+      "market_displacement_WHEAT",
+      "price_ratio_CARROT",
+      "market_displacement_CARROT",
+      "price_ratio_TOMATO",
+      "market_displacement_TOMATO",
+      "price_ratio_STRAWBERRY",
+      "market_displacement_STRAWBERRY",
+      "price_ratio_MELON",
+      "market_displacement_MELON",
+      "price_ratio_EGG",
+      "market_displacement_EGG",
+      "price_ratio_MILK",
+      "market_displacement_MILK",
+      "price_ratio_WOOL",
+      "market_displacement_WOOL",
+      "capacity_backlog",
+      "estimated_travel",
+      "asset_service_ratio"
+    ],
+    "gate_thresholds": {
+      "bootstrap_iterations": 2000,
+      "cv_folds": 5,
+      "cv_mean_balanced_accuracy": 0.62,
+      "leave_one_family_out_pooled": 0.55,
+      "require_confirm_split": true,
+      "test_balanced_accuracy_ci_lower": 0.58
+    },
+    "generated_at": "2026-08-31T20:36:20.897324+00:00",
+    "margin_percentile": 95,
+    "max_iter": 20000,
+    "min_accepted": 150,
+    "min_families": 2,
+    "min_per_class": 5,
+    "min_signed": 40,
+    "rejection_reason_counts": {
+      "execution_not_verified": 4449,
+      "not_accepted": 6407
+    },
+    "reweight_mode": "renormalize-train",
+    "rows_kept": 5035,
+    "rows_loaded": 11442,
+    "rows_rejected": 6407,
+    "schema_hash": "2ce35fef153f54063cc1a91459eca36e2485c4fe6e30957b1876dc6409d973f4",
+    "schema_version": "counterfactual-v4"
+  },
+  "outputs": {
+    "labor_expansion": {
+      "reason": "confirm_insufficient_class_counts",
+      "split_counts": {
+        "confirm": 55,
+        "test": 93,
+        "train": 368,
+        "val": 96
+      },
+      "status": "unavailable"
+    },
+    "land_expansion": {
+      "reason": "test_insufficient_class_counts",
+      "split_counts": {
+        "confirm": 35,
+        "test": 52,
+        "train": 184,
+        "val": 44
+      },
+      "status": "unavailable"
+    },
+    "product:CARROT:avoid": {
+      "overall_class_counts": {
+        "0": 125
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 10,
+        "test": 14,
+        "train": 81,
+        "val": 20
+      },
+      "status": "unavailable"
+    },
+    "product:CARROT:increase": {
+      "overall_class_counts": {
+        "0": 251
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 17,
+        "test": 45,
+        "train": 155,
+        "val": 34
+      },
+      "status": "unavailable"
+    },
+    "product:EGG:increase": {
+      "overall_class_counts": {
+        "0": 62
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 6,
+        "test": 5,
+        "train": 40,
+        "val": 11
+      },
+      "status": "unavailable"
+    },
+    "product:MELON:avoid": {
+      "reason": "insufficient_usable_strategy_families",
+      "split_counts": {
+        "confirm": 39,
+        "test": 55,
+        "train": 238,
+        "val": 55
+      },
+      "status": "unavailable",
+      "strategy_families": [
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ],
+      "usable_strategy_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:MELON:increase": {
+      "overall_class_counts": {
+        "-1": 7,
+        "0": 308,
+        "1": 15
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 32,
+        "test": 54,
+        "train": 195,
+        "val": 49
+      },
+      "status": "unavailable"
+    },
+    "product:MILK:avoid": {
+      "reason": "insufficient_usable_strategy_families",
+      "split_counts": {
+        "confirm": 32,
+        "test": 61,
+        "train": 205,
+        "val": 52
+      },
+      "status": "unavailable",
+      "strategy_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ],
+      "usable_strategy_families": [
+        "strategy_follower"
+      ]
+    },
+    "product:MILK:increase": {
+      "reason": "confirm_insufficient_class_counts",
+      "split_counts": {
+        "confirm": 60,
+        "test": 98,
+        "train": 383,
+        "val": 92
+      },
+      "status": "unavailable"
+    },
+    "product:STRAWBERRY:avoid": {
+      "overall_class_counts": {
+        "-1": 2,
+        "0": 212,
+        "1": 2
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 26,
+        "test": 28,
+        "train": 133,
+        "val": 29
+      },
+      "status": "unavailable"
+    },
+    "product:STRAWBERRY:increase": {
+      "overall_class_counts": {
+        "-1": 1,
+        "0": 228,
+        "1": 6
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 30,
+        "test": 35,
+        "train": 140,
+        "val": 30
+      },
+      "status": "unavailable"
+    },
+    "product:TOMATO:avoid": {
+      "overall_class_counts": {
+        "0": 63
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 6,
+        "test": 13,
+        "train": 36,
+        "val": 8
+      },
+      "status": "unavailable"
+    },
+    "product:TOMATO:increase": {
+      "overall_class_counts": {
+        "0": 219
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 30,
+        "test": 41,
+        "train": 118,
+        "val": 30
+      },
+      "status": "unavailable"
+    },
+    "product:WHEAT:avoid": {
+      "overall_class_counts": {
+        "0": 240,
+        "1": 7
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 28,
+        "test": 40,
+        "train": 144,
+        "val": 35
+      },
+      "status": "unavailable"
+    },
+    "product:WHEAT:increase": {
+      "overall_class_counts": {
+        "-1": 3,
+        "0": 320,
+        "1": 1
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 39,
+        "test": 53,
+        "train": 187,
+        "val": 45
+      },
+      "status": "unavailable"
+    },
+    "product:WOOL:avoid": {
+      "reason": "confirm_insufficient_class_counts",
+      "split_counts": {
+        "confirm": 34,
+        "test": 52,
+        "train": 213,
+        "val": 54
+      },
+      "status": "unavailable"
+    },
+    "product:WOOL:increase": {
+      "overall_class_counts": {
+        "-1": 4,
+        "0": 255,
+        "1": 54
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 35,
+        "test": 50,
+        "train": 182,
+        "val": 46
+      },
+      "status": "unavailable"
+    }
+  }
+}

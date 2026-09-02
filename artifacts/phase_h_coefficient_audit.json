@@ -1,0 +1,660 @@
+{
+  "corpus": [
+    "data/counterfactual_dataset.v6.jsonl"
+  ],
+  "min_accepted": 150,
+  "min_signed": 75,
+  "outputs": {
+    "labor_expansion": {
+      "C": 1.0,
+      "adaptive_l1_share": 0.4798101684152699,
+      "cv_mean_balanced_accuracy": 0.6075378787878789,
+      "fitted": true,
+      "group_l1": {
+        "market": {
+          "l1_mass": 9.108555209138036,
+          "l1_share": 0.2818367913785761,
+          "max_abs_coef": 1.5143941725491548
+        },
+        "opponent": {
+          "l1_mass": 6.398211624031783,
+          "l1_share": 0.19797337703669385,
+          "max_abs_coef": 0.8266142485130008
+        },
+        "own": {
+          "l1_mass": 13.860647316473917,
+          "l1_share": 0.42887596072162976,
+          "max_abs_coef": 1.3842141629524456
+        },
+        "phase_misc": {
+          "l1_mass": 2.9511315043301845,
+          "l1_share": 0.09131387086310025,
+          "max_abs_coef": 0.6278896061953274
+        }
+      },
+      "l1_total": 32.31854565397392,
+      "market_coefficients": [
+        {
+          "coef": 0.44217396918488977,
+          "feature": "price_ratio_WHEAT"
+        },
+        {
+          "coef": -0.10649511771214959,
+          "feature": "market_displacement_WHEAT"
+        },
+        {
+          "coef": -0.18322511318289603,
+          "feature": "price_ratio_CARROT"
+        },
+        {
+          "coef": 0.5310981511718522,
+          "feature": "market_displacement_CARROT"
+        },
+        {
+          "coef": 1.199355571139927,
+          "feature": "price_ratio_TOMATO"
+        },
+        {
+          "coef": -0.1628910237720813,
+          "feature": "market_displacement_TOMATO"
+        },
+        {
+          "coef": -0.6050075668547958,
+          "feature": "price_ratio_STRAWBERRY"
+        },
+        {
+          "coef": -0.48200947901285085,
+          "feature": "market_displacement_STRAWBERRY"
+        },
+        {
+          "coef": -0.41645785680350805,
+          "feature": "price_ratio_MELON"
+        },
+        {
+          "coef": -1.5143941725491548,
+          "feature": "market_displacement_MELON"
+        },
+        {
+          "coef": 0.6586476568790622,
+          "feature": "price_ratio_EGG"
+        },
+        {
+          "coef": -0.5368786830775223,
+          "feature": "market_displacement_EGG"
+        },
+        {
+          "coef": 0.5401896701416328,
+          "feature": "price_ratio_MILK"
+        },
+        {
+          "coef": 0.7112064509922417,
+          "feature": "market_displacement_MILK"
+        },
+        {
+          "coef": 0.7655504836159563,
+          "feature": "price_ratio_WOOL"
+        },
+        {
+          "coef": -0.2529742430475159,
+          "feature": "market_displacement_WOOL"
+        }
+      ],
+      "n_fit_binary": 129,
+      "signed_class_counts": {
+        "-1": 78,
+        "0": 714,
+        "1": 109
+      },
+      "top_15_coefficients": [
+        {
+          "coef": -1.5143941725491548,
+          "feature": "market_displacement_MELON",
+          "group": "market"
+        },
+        {
+          "coef": 1.3842141629524456,
+          "feature": "own_seed_STRAWBERRY",
+          "group": "own"
+        },
+        {
+          "coef": -1.3607305116198756,
+          "feature": "own_money",
+          "group": "own"
+        },
+        {
+          "coef": 1.199355571139927,
+          "feature": "price_ratio_TOMATO",
+          "group": "market"
+        },
+        {
+          "coef": -1.0398773861491262,
+          "feature": "own_shed_FERTILIZER",
+          "group": "own"
+        },
+        {
+          "coef": 0.9740232279780571,
+          "feature": "own_weeds",
+          "group": "own"
+        },
+        {
+          "coef": -0.8266142485130008,
+          "feature": "opponent_animal_COW",
+          "group": "opponent"
+        },
+        {
+          "coef": 0.8102459984846132,
+          "feature": "opponent_ready_yield",
+          "group": "opponent"
+        },
+        {
+          "coef": -0.7924838545432661,
+          "feature": "own_shed_MILK",
+          "group": "own"
+        },
+        {
+          "coef": 0.7655504836159563,
+          "feature": "price_ratio_WOOL",
+          "group": "market"
+        },
+        {
+          "coef": 0.7112064509922417,
+          "feature": "market_displacement_MILK",
+          "group": "market"
+        },
+        {
+          "coef": -0.6918816949454931,
+          "feature": "opponent_crop_CARROT",
+          "group": "opponent"
+        },
+        {
+          "coef": 0.6586476568790622,
+          "feature": "price_ratio_EGG",
+          "group": "market"
+        },
+        {
+          "coef": -0.6453839402345269,
+          "feature": "own_shed_WHEAT",
+          "group": "own"
+        },
+        {
+          "coef": -0.6278896061953274,
+          "feature": "shop_BRUNCH_SPOT",
+          "group": "phase_misc"
+        }
+      ]
+    },
+    "land_expansion": {
+      "C": 0.01,
+      "adaptive_l1_share": 0.3515507630345638,
+      "cv_mean_balanced_accuracy": 0.7141147741147741,
+      "fitted": true,
+      "group_l1": {
+        "market": {
+          "l1_mass": 0.511396034728329,
+          "l1_share": 0.16956760446877295,
+          "max_abs_coef": 0.10611134134273414
+        },
+        "opponent": {
+          "l1_mass": 0.5488398917319188,
+          "l1_share": 0.18198315856579086,
+          "max_abs_coef": 0.07132278519784
+        },
+        "own": {
+          "l1_mass": 1.449770809964138,
+          "l1_share": 0.4807119073673832,
+          "max_abs_coef": 0.1394396453331548
+        },
+        "phase_misc": {
+          "l1_mass": 0.505876140086416,
+          "l1_share": 0.1677373295980528,
+          "max_abs_coef": 0.10081570002393303
+        }
+      },
+      "l1_total": 3.0158828765108026,
+      "market_coefficients": [
+        {
+          "coef": 0.008617022660766154,
+          "feature": "price_ratio_WHEAT"
+        },
+        {
+          "coef": 0.03405929785497637,
+          "feature": "market_displacement_WHEAT"
+        },
+        {
+          "coef": 0.01124583579246738,
+          "feature": "price_ratio_CARROT"
+        },
+        {
+          "coef": -0.012669848680017498,
+          "feature": "market_displacement_CARROT"
+        },
+        {
+          "coef": -0.01105941781182614,
+          "feature": "price_ratio_TOMATO"
+        },
+        {
+          "coef": 0.01975702285864808,
+          "feature": "market_displacement_TOMATO"
+        },
+        {
+          "coef": 0.04926619346915741,
+          "feature": "price_ratio_STRAWBERRY"
+        },
+        {
+          "coef": 0.009451085499285779,
+          "feature": "market_displacement_STRAWBERRY"
+        },
+        {
+          "coef": -0.04832806695478719,
+          "feature": "price_ratio_MELON"
+        },
+        {
+          "coef": -0.0007541663289130061,
+          "feature": "market_displacement_MELON"
+        },
+        {
+          "coef": -0.08158083780180722,
+          "feature": "price_ratio_EGG"
+        },
+        {
+          "coef": 0.04311643349162551,
+          "feature": "market_displacement_EGG"
+        },
+        {
+          "coef": 0.10611134134273414,
+          "feature": "price_ratio_MILK"
+        },
+        {
+          "coef": -0.028464090812173624,
+          "feature": "market_displacement_MILK"
+        },
+        {
+          "coef": -0.0038902536554902816,
+          "feature": "price_ratio_WOOL"
+        },
+        {
+          "coef": -0.04302511971365312,
+          "feature": "market_displacement_WOOL"
+        }
+      ],
+      "n_fit_binary": 115,
+      "signed_class_counts": {
+        "-1": 79,
+        "0": 297,
+        "1": 94
+      },
+      "top_15_coefficients": [
+        {
+          "coef": 0.1394396453331548,
+          "feature": "own_shed_MELON",
+          "group": "own"
+        },
+        {
+          "coef": -0.13207138760261838,
+          "feature": "own_empty",
+          "group": "own"
+        },
+        {
+          "coef": -0.11600332413413546,
+          "feature": "own_quadrants",
+          "group": "own"
+        },
+        {
+          "coef": 0.11580576307021014,
+          "feature": "own_shed_FERTILIZER",
+          "group": "own"
+        },
+        {
+          "coef": 0.10611134134273414,
+          "feature": "price_ratio_MILK",
+          "group": "market"
+        },
+        {
+          "coef": -0.10081570002393303,
+          "feature": "shop_SMOOTHIE_SHOP",
+          "group": "phase_misc"
+        },
+        {
+          "coef": 0.09493054236776945,
+          "feature": "shop_FARMERS_MARKET",
+          "group": "phase_misc"
+        },
+        {
+          "coef": -0.08158083780180722,
+          "feature": "price_ratio_EGG",
+          "group": "market"
+        },
+        {
+          "coef": 0.08098579304715553,
+          "feature": "own_animal_COW",
+          "group": "own"
+        },
+        {
+          "coef": -0.07132278519784,
+          "feature": "opponent_ready_yield",
+          "group": "opponent"
+        },
+        {
+          "coef": -0.06650581722152948,
+          "feature": "own_seed_MELON",
+          "group": "own"
+        },
+        {
+          "coef": 0.06577990643893834,
+          "feature": "own_shed_WHEAT",
+          "group": "own"
+        },
+        {
+          "coef": 0.06323116665171552,
+          "feature": "opponent_weeds",
+          "group": "opponent"
+        },
+        {
+          "coef": -0.05955583623190124,
+          "feature": "own_crop_MELON",
+          "group": "own"
+        },
+        {
+          "coef": 0.05784742781410196,
+          "feature": "shop_BRUNCH_SPOT",
+          "group": "phase_misc"
+        }
+      ]
+    },
+    "product:CARROT:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 3,
+        "0": 52,
+        "1": 6
+      }
+    },
+    "product:CARROT:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "0": 249
+      }
+    },
+    "product:EGG:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "0": 65
+      }
+    },
+    "product:EGG:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "0": 65,
+        "1": 1
+      }
+    },
+    "product:MELON:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 186,
+        "0": 118,
+        "1": 13
+      }
+    },
+    "product:MELON:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 4,
+        "0": 262,
+        "1": 21
+      }
+    },
+    "product:MILK:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 97,
+        "0": 203,
+        "1": 49
+      }
+    },
+    "product:MILK:increase": {
+      "C": 3.0,
+      "adaptive_l1_share": 0.5356185395854821,
+      "cv_mean_balanced_accuracy": 0.6277652086475616,
+      "fitted": true,
+      "group_l1": {
+        "market": {
+          "l1_mass": 9.113856823724086,
+          "l1_share": 0.2374727553702495,
+          "max_abs_coef": 1.406025094595376
+        },
+        "opponent": {
+          "l1_mass": 11.44239887939155,
+          "l1_share": 0.29814578421523263,
+          "max_abs_coef": 1.6568711324962289
+        },
+        "own": {
+          "l1_mass": 13.06175892589671,
+          "l1_share": 0.3403402030675292,
+          "max_abs_coef": 1.2420156419020276
+        },
+        "phase_misc": {
+          "l1_mass": 4.760521929905546,
+          "l1_share": 0.12404125734698863,
+          "max_abs_coef": 0.7497372726184657
+        }
+      },
+      "l1_total": 38.378536558917894,
+      "market_coefficients": [
+        {
+          "coef": -1.2425357917633508,
+          "feature": "price_ratio_WHEAT"
+        },
+        {
+          "coef": -1.406025094595376,
+          "feature": "market_displacement_WHEAT"
+        },
+        {
+          "coef": 0.48752700957155387,
+          "feature": "price_ratio_CARROT"
+        },
+        {
+          "coef": 0.9751894495720524,
+          "feature": "market_displacement_CARROT"
+        },
+        {
+          "coef": -0.2949289758231396,
+          "feature": "price_ratio_TOMATO"
+        },
+        {
+          "coef": -0.380729671562635,
+          "feature": "market_displacement_TOMATO"
+        },
+        {
+          "coef": 1.00217508103957,
+          "feature": "price_ratio_STRAWBERRY"
+        },
+        {
+          "coef": 0.6141372500455367,
+          "feature": "market_displacement_STRAWBERRY"
+        },
+        {
+          "coef": -0.2259271206938629,
+          "feature": "price_ratio_MELON"
+        },
+        {
+          "coef": -0.7308397559362158,
+          "feature": "market_displacement_MELON"
+        },
+        {
+          "coef": -0.7420802629354266,
+          "feature": "price_ratio_EGG"
+        },
+        {
+          "coef": -0.11457545406503952,
+          "feature": "market_displacement_EGG"
+        },
+        {
+          "coef": 0.36641964713877045,
+          "feature": "price_ratio_MILK"
+        },
+        {
+          "coef": 0.20473078819878232,
+          "feature": "market_displacement_MILK"
+        },
+        {
+          "coef": -0.2493423944724576,
+          "feature": "price_ratio_WOOL"
+        },
+        {
+          "coef": -0.07669307631031774,
+          "feature": "market_displacement_WOOL"
+        }
+      ],
+      "n_fit_binary": 150,
+      "signed_class_counts": {
+        "-1": 83,
+        "0": 877,
+        "1": 111
+      },
+      "top_15_coefficients": [
+        {
+          "coef": -1.6568711324962289,
+          "feature": "opponent_crop_MELON_age_0_2",
+          "group": "opponent"
+        },
+        {
+          "coef": -1.406025094595376,
+          "feature": "market_displacement_WHEAT",
+          "group": "market"
+        },
+        {
+          "coef": -1.2425357917633508,
+          "feature": "price_ratio_WHEAT",
+          "group": "market"
+        },
+        {
+          "coef": 1.2420156419020276,
+          "feature": "own_money",
+          "group": "own"
+        },
+        {
+          "coef": 1.2268318062294077,
+          "feature": "own_seed_WHEAT",
+          "group": "own"
+        },
+        {
+          "coef": -1.2238254908760262,
+          "feature": "opponent_quadrants",
+          "group": "opponent"
+        },
+        {
+          "coef": -1.129884991470831,
+          "feature": "opponent_structure_PASTURE",
+          "group": "opponent"
+        },
+        {
+          "coef": -1.0799618106911881,
+          "feature": "opponent_animal_COW",
+          "group": "opponent"
+        },
+        {
+          "coef": 1.00217508103957,
+          "feature": "price_ratio_STRAWBERRY",
+          "group": "market"
+        },
+        {
+          "coef": -0.9824818156099085,
+          "feature": "opponent_crop_MELON",
+          "group": "opponent"
+        },
+        {
+          "coef": -0.9815797132971277,
+          "feature": "own_crop_WHEAT_age_3_7",
+          "group": "own"
+        },
+        {
+          "coef": 0.9751894495720524,
+          "feature": "market_displacement_CARROT",
+          "group": "market"
+        },
+        {
+          "coef": 0.9079608914419971,
+          "feature": "own_crop_MELON_age_8_plus",
+          "group": "own"
+        },
+        {
+          "coef": -0.9062922988374535,
+          "feature": "opponent_crop_CARROT",
+          "group": "opponent"
+        },
+        {
+          "coef": -0.8290925980399527,
+          "feature": "own_ready_yield",
+          "group": "own"
+        }
+      ]
+    },
+    "product:STRAWBERRY:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 28,
+        "0": 55
+      }
+    },
+    "product:STRAWBERRY:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 2,
+        "0": 223,
+        "1": 8
+      }
+    },
+    "product:TOMATO:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "0": 212
+      }
+    },
+    "product:WHEAT:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 24,
+        "0": 176
+      }
+    },
+    "product:WHEAT:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 1,
+        "0": 312,
+        "1": 1
+      }
+    },
+    "product:WOOL:avoid": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 15,
+        "0": 105
+      }
+    },
+    "product:WOOL:increase": {
+      "fitted": false,
+      "reason": "quota_not_met",
+      "signed_class_counts": {
+        "-1": 1,
+        "0": 219,
+        "1": 64
+      }
+    }
+  },
+  "schema_hash": "bb4debdb162dbbf1f8a692b523b183770c4e6943916d2eebff11c3e5995b978f"
+}

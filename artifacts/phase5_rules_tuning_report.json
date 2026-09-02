@@ -1,0 +1,523 @@
+{
+  "baseline": {
+    "OPPONENT_EXPANSION_THRESHOLD": 0.0,
+    "OPPONENT_SIGNAL_WEIGHT": 4.0,
+    "TOWN_EXPOSURE_MULTIPLIER": 2.0
+  },
+  "confirm": {
+    "p5tune_exp_0p15": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "glut_mixed": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        }
+      },
+      "glut_score": 0.0,
+      "guard_ok": true
+    },
+    "p5tune_exp_1p5": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -2114.949088650737,
+            261.6824219840702
+          ],
+          "losses": 6,
+          "mean": -926.6333333333333,
+          "wins": 9
+        },
+        "glut_melon": {
+          "ci95": [
+            -351.2238776945735,
+            557.5572110279069
+          ],
+          "losses": 5,
+          "mean": 103.16666666666667,
+          "wins": 11
+        },
+        "glut_mixed": {
+          "ci95": [
+            18.744009318366352,
+            983.5226573483003
+          ],
+          "losses": 2,
+          "mean": 501.1333333333333,
+          "wins": 15
+        },
+        "starter": {
+          "ci95": [
+            -769.415937793247,
+            386.7492711265803
+          ],
+          "losses": 4,
+          "mean": -191.33333333333334,
+          "wins": 9
+        }
+      },
+      "glut_score": -107.44444444444446,
+      "guard_ok": true
+    },
+    "p5tune_exp_m0p2": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "glut_mixed": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "losses": 0,
+          "mean": 0.0,
+          "wins": 0
+        }
+      },
+      "glut_score": 0.0,
+      "guard_ok": true
+    }
+  },
+  "confirm_n": 30,
+  "grid": {
+    "OPPONENT_EXPANSION_THRESHOLD": [
+      -0.2,
+      0.15,
+      0.3
+    ],
+    "OPPONENT_SIGNAL_WEIGHT": [
+      2.0,
+      6.0,
+      8.0
+    ],
+    "TOWN_EXPOSURE_MULTIPLIER": [
+      1.5,
+      2.5,
+      3.0
+    ]
+  },
+  "screen": {
+    "p5tune_exp_0p15": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        }
+      },
+      "glut_score": 0.0,
+      "guard_ok": true,
+      "overrides": {
+        "OPPONENT_EXPANSION_THRESHOLD": 0.15
+      }
+    },
+    "p5tune_exp_0p3": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_melon": {
+          "ci95": [
+            -133.792,
+            43.391999999999996
+          ],
+          "mean": -45.2
+        },
+        "glut_mixed": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "starter": {
+          "ci95": [
+            -1289.2287561844348,
+            13.628756184434906
+          ],
+          "mean": -637.8
+        }
+      },
+      "glut_score": -15.066666666666668,
+      "guard_ok": false,
+      "overrides": {
+        "OPPONENT_EXPANSION_THRESHOLD": 0.3
+      }
+    },
+    "p5tune_exp_1p5": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -1331.5223480014574,
+            1923.7223480014577
+          ],
+          "mean": 296.1
+        },
+        "glut_melon": {
+          "ci95": [
+            57.047884088403606,
+            392.75211591159643
+          ],
+          "mean": 224.9
+        },
+        "glut_mixed": {
+          "ci95": [
+            -381.10899224016464,
+            450.3089922401647
+          ],
+          "mean": 34.6
+        },
+        "starter": {
+          "ci95": [
+            17.61444167003799,
+            381.98555832996203
+          ],
+          "mean": 199.8
+        }
+      },
+      "glut_score": 185.20000000000002,
+      "guard_ok": true,
+      "overrides": {
+        "TOWN_EXPOSURE_MULTIPLIER": 1.5
+      }
+    },
+    "p5tune_exp_2p5": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -3011.5241041574263,
+            452.92410415742665
+          ],
+          "mean": -1279.3
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            -366.24,
+            1129.24
+          ],
+          "mean": 381.5
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        }
+      },
+      "glut_score": -299.26666666666665,
+      "guard_ok": true,
+      "overrides": {
+        "TOWN_EXPOSURE_MULTIPLIER": 2.5
+      }
+    },
+    "p5tune_exp_3p0": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -1233.728,
+            400.128
+          ],
+          "mean": -416.8
+        },
+        "glut_melon": {
+          "ci95": [
+            -90.62399999999997,
+            279.424
+          ],
+          "mean": 94.4
+        },
+        "glut_mixed": {
+          "ci95": [
+            -1235.504,
+            400.70400000000006
+          ],
+          "mean": -417.4
+        },
+        "starter": {
+          "ci95": [
+            -207.2313675087459,
+            1059.6313675087458
+          ],
+          "mean": 426.2
+        }
+      },
+      "glut_score": -246.6,
+      "guard_ok": true,
+      "overrides": {
+        "TOWN_EXPOSURE_MULTIPLIER": 3.0
+      }
+    },
+    "p5tune_exp_m0p2": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        }
+      },
+      "glut_score": 0.0,
+      "guard_ok": true,
+      "overrides": {
+        "OPPONENT_EXPANSION_THRESHOLD": -0.2
+      }
+    },
+    "p5tune_sig_2p0": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -7017.58540991446,
+            2090.3854099144596
+          ],
+          "mean": -2463.6
+        },
+        "glut_melon": {
+          "ci95": [
+            -96.00000000000003,
+            296.0
+          ],
+          "mean": 100.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            -5755.493854954979,
+            870.6938549549791
+          ],
+          "mean": -2442.4
+        },
+        "starter": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        }
+      },
+      "glut_score": -1602.0,
+      "guard_ok": true,
+      "overrides": {
+        "OPPONENT_SIGNAL_WEIGHT": 2.0
+      }
+    },
+    "p5tune_sig_6p0": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -6731.303481581724,
+            643.7034815817233
+          ],
+          "mean": -3043.8
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            -6572.901872548264,
+            1112.701872548264
+          ],
+          "mean": -2730.1
+        },
+        "starter": {
+          "ci95": [
+            -26.64,
+            8.64
+          ],
+          "mean": -9.0
+        }
+      },
+      "glut_score": -1924.6333333333332,
+      "guard_ok": true,
+      "overrides": {
+        "OPPONENT_SIGNAL_WEIGHT": 6.0
+      }
+    },
+    "p5tune_sig_8p0": {
+      "diffs": {
+        "glut_livestock": {
+          "ci95": [
+            -5714.6949610802485,
+            1897.8949610802483
+          ],
+          "mean": -1908.4
+        },
+        "glut_melon": {
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "mean": 0.0
+        },
+        "glut_mixed": {
+          "ci95": [
+            -6448.034961671428,
+            -1614.3650383285717
+          ],
+          "mean": -4031.2
+        },
+        "starter": {
+          "ci95": [
+            -41.519999999999996,
+            5.519999999999996
+          ],
+          "mean": -18.0
+        }
+      },
+      "glut_score": -1979.8666666666668,
+      "guard_ok": true,
+      "overrides": {
+        "OPPONENT_SIGNAL_WEIGHT": 8.0
+      }
+    }
+  },
+  "screen_n": 10,
+  "screen_ranking": [
+    {
+      "glut_score": 185.20000000000002,
+      "name": "p5tune_exp_1p5"
+    },
+    {
+      "glut_score": 0.0,
+      "name": "p5tune_exp_m0p2"
+    },
+    {
+      "glut_score": 0.0,
+      "name": "p5tune_exp_0p15"
+    },
+    {
+      "glut_score": -246.6,
+      "name": "p5tune_exp_3p0"
+    },
+    {
+      "glut_score": -299.26666666666665,
+      "name": "p5tune_exp_2p5"
+    },
+    {
+      "glut_score": -1602.0,
+      "name": "p5tune_sig_2p0"
+    },
+    {
+      "glut_score": -1924.6333333333332,
+      "name": "p5tune_sig_6p0"
+    },
+    {
+      "glut_score": -1979.8666666666668,
+      "name": "p5tune_sig_8p0"
+    }
+  ]
+}

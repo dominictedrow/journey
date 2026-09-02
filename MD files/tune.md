@@ -104,10 +104,32 @@ Fixes applied:
   in the first place. The write fix above only makes a cutoff non-catastrophic
   -- it does not remove the reason for the cutoff.
 
+## Superseded corpus (2026-08-31, repair-plan Phase 3)
+
+Everything below this line that cites `data/counterfactual_dataset.v3.jsonl` or
+per-output row counts is a snapshot of a **retired** corpus. Two contract
+changes invalidated it:
+
+- Phase 2 replaced the season-end money-delta label with a bounded-horizon
+  blend and split safety into hard rejects vs. recorded soft flags
+  (`schema_version` `counterfactual-v3`).
+- Phase 3.3 dropped the mutually-collinear `turn` / `hour` / `day` features
+  (every checkpoint is at hour 0), leaving `remaining_fraction` + the `phase_*`
+  one-hot. Feature count 129 -> 126, `schema_version` `counterfactual-v4`.
+
+`product:*:{exit,retain}` and the `premium_exit` / `premium_retain` intervention
+family were also removed in Phase 3.1 -- nothing in `watcher_signals` ever
+consumed an `:exit` / `:retain` score, so those rows trained models no runtime
+read. The modeled outputs are now exactly `product:{8 products}:{increase,avoid}`
+plus `land_expansion` / `labor_expansion`.
+
+Re-run `scripts/watcher_readiness.py` against the regenerated
+`counterfactual-v4` corpus for live numbers. The tables below are kept only as a
+record of the *failure modes* to expect, not their counts.
+
 ## Dead (output, strategy-family) combinations
 
-Auditing `data/counterfactual_dataset.v3.jsonl` (18,750 attempted pairs as of
-2026-08-27) found the same failure mode recurring across many outputs: a
+The same failure mode recurred across many outputs on the retired corpus: a
 focal-strategy family's scripted policy either never exposes the targeted
 product/decision in the intervention window, or re-executes through the
 deviation so the tracked metric never changes -- so `execution_not_verified`
@@ -120,12 +142,10 @@ never took effect for that focal policy.
 Fully exhausted -- hit the full 2,000-attempt cap with zero accepted rows and
 zero usable families, permanently on deterministic rules until the
 intervention/checkpoint design itself changes (see "Recommended experiment
-order" item 3 and the intervention-feasibility work in `train.md`):
+order" item 3 and the intervention-feasibility work in repo-root `train.md`):
 
 | Output | Attempts | Accepted |
 |---|---|---|
-| `product:WOOL:exit` | 2000/2000 | 0 |
-| `product:MILK:exit` | 2000/2000 | 0 |
 | `product:WOOL:avoid` | 2000/2000 | 0 |
 | `product:EGG:avoid` | 2000/2000 | 0 |
 
@@ -136,7 +156,6 @@ a design change, regardless of how much more data is generated):
 | Output | Live family | Dead families |
 |---|---|---|
 | `product:MELON:avoid` | `strategy_follower` | `strategies_v2.ring.agent` (400 attempts, 0 accepted), `strategies_v2.leader_clone.agent` (100 attempts, 0 accepted) |
-| `product:STRAWBERRY:retain` | `strategies_v2.leader_clone.agent` | `strategy_follower` (550 attempts, 0 accepted), `strategies_v2.ring.agent` (550 attempts, 0 accepted) |
 
 Fix applied: `scripts/generate_until_quota.py` now tracks per-`(output,
 family)` acceptance. A family is treated as dead for an output once it has
@@ -163,27 +182,22 @@ four, either confirm that hypothesis (e.g. inspect the actual money deltas on
 their neutral rows) or revisit the label window/threshold for low-value
 products. This is a data/label-design decision, not a data-volume one.
 
-## Current per-output snapshot (2026-08-27, `counterfactual_dataset.v3.jsonl`)
+## Current per-output snapshot
 
-0 outputs are eligible. These already have >=2 usable families and just need
-more volume and per-split/per-class balance -- the highest-probability path
-to the first eligible output:
+The `counterfactual-v3` snapshot here is retired (see "Superseded corpus"
+above); so are the interim `counterfactual-v4` / `-v5` corpora. The current
+corpus is `data/counterfactual_dataset.v6.jsonl` (`counterfactual-v5` schema:
+the repair.md Phase B/C divest contract + Phase E feature normalization).
+Read live numbers from `scripts/watcher_readiness.py`:
 
-| Output | Accepted | Usable families |
-|---|---|---|
-| `labor_expansion` | 130 | ring.agent, strategy_follower |
-| `land_expansion` | 110 | ring.agent, strategy_follower |
-| `product:MILK:avoid` | 112 | ring.agent, strategy_follower |
-| `product:MILK:retain` | 105 | ring.agent, strategy_follower |
-| `product:MILK:increase` | 95 | leader_clone.agent, ring.agent, strategy_follower |
-| `product:CARROT:increase` | 110 | ring.agent, strategy_follower |
-| `product:STRAWBERRY:increase` | 94 | leader_clone.agent, strategy_follower |
-| `product:TOMATO:increase` | 79 | ring.agent, strategy_follower |
-| `product:WHEAT:increase` | 85 | ring.agent, strategy_follower |
-| `product:MELON:exit` | 82 | leader_clone.agent, ring.agent, strategy_follower |
+```bash
+PYTHONPATH=scripts /Users/dominictedrow/miniconda3/envs/agric/bin/python \
+  scripts/watcher_readiness.py --rows data/counterfactual_dataset.v6.jsonl
+```
 
-Re-run `scripts/watcher_readiness.py` before trusting these numbers if the
-corpus has grown since -- this table is a snapshot, not a live view.
+The corpus quota is >= 150 accepted / >= `watcher_config.MIN_SIGNED` (75) per
+sign / >= 2 usable families for `land_expansion`, `labor_expansion`,
+`product:MELON:{increase,avoid}`, and `product:MILK:{increase,avoid}`.
 
 ## Training command
 
@@ -192,12 +206,12 @@ Run a safe candidate without changing the runtime model:
 ```bash
 PYTHONPATH=scripts /Users/dominictedrow/miniconda3/envs/agric/bin/python \
   scripts/train_watcher.py \
-  --rows data/counterfactual_dataset.v3.jsonl \
+  --rows data/counterfactual_dataset.v6.jsonl \
   --output /tmp/watcher_model_candidate.py \
   --report /tmp/watcher_training_report \
   --min-per-class 5 \
   --min-accepted 150 \
-  --min-signed 40 \
+  --min-signed 75 \
   --max-iter 20000
 ```
 

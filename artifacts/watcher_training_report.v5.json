@@ -1,0 +1,997 @@
+{
+  "metadata": {
+    "c_grid": [
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "dataset_snapshot": {
+      "families_manifest": null,
+      "row_file_hashes": {
+        "data/counterfactual_dataset.v5.jsonl": "d9d69a44847590a94ad0e6dd46812717b1738b35a3abe0915966f53a1edfb47b"
+      },
+      "row_files": [
+        "data/counterfactual_dataset.v5.jsonl"
+      ]
+    },
+    "feature_order": [
+      "remaining_fraction",
+      "phase_opening",
+      "phase_midgame",
+      "phase_endgame",
+      "own_money",
+      "own_hands",
+      "own_quadrants",
+      "own_weeds",
+      "own_empty",
+      "own_ready_yield",
+      "own_feed_risk",
+      "own_water_risk",
+      "own_structure_COOP",
+      "own_structure_PASTURE",
+      "own_animal_GOOSE",
+      "own_animal_COW",
+      "own_animal_SHEEP",
+      "own_crop_WHEAT",
+      "own_crop_WHEAT_age_0_2",
+      "own_crop_WHEAT_age_3_7",
+      "own_crop_WHEAT_age_8_plus",
+      "own_crop_CARROT",
+      "own_crop_CARROT_age_0_2",
+      "own_crop_CARROT_age_3_7",
+      "own_crop_CARROT_age_8_plus",
+      "own_crop_TOMATO",
+      "own_crop_TOMATO_age_0_2",
+      "own_crop_TOMATO_age_3_7",
+      "own_crop_TOMATO_age_8_plus",
+      "own_crop_STRAWBERRY",
+      "own_crop_STRAWBERRY_age_0_2",
+      "own_crop_STRAWBERRY_age_3_7",
+      "own_crop_STRAWBERRY_age_8_plus",
+      "own_crop_MELON",
+      "own_crop_MELON_age_0_2",
+      "own_crop_MELON_age_3_7",
+      "own_crop_MELON_age_8_plus",
+      "opponent_money",
+      "opponent_hands",
+      "opponent_quadrants",
+      "opponent_weeds",
+      "opponent_empty",
+      "opponent_ready_yield",
+      "opponent_feed_risk",
+      "opponent_water_risk",
+      "opponent_structure_COOP",
+      "opponent_structure_PASTURE",
+      "opponent_animal_GOOSE",
+      "opponent_animal_COW",
+      "opponent_animal_SHEEP",
+      "opponent_crop_WHEAT",
+      "opponent_crop_WHEAT_age_0_2",
+      "opponent_crop_WHEAT_age_3_7",
+      "opponent_crop_WHEAT_age_8_plus",
+      "opponent_crop_CARROT",
+      "opponent_crop_CARROT_age_0_2",
+      "opponent_crop_CARROT_age_3_7",
+      "opponent_crop_CARROT_age_8_plus",
+      "opponent_crop_TOMATO",
+      "opponent_crop_TOMATO_age_0_2",
+      "opponent_crop_TOMATO_age_3_7",
+      "opponent_crop_TOMATO_age_8_plus",
+      "opponent_crop_STRAWBERRY",
+      "opponent_crop_STRAWBERRY_age_0_2",
+      "opponent_crop_STRAWBERRY_age_3_7",
+      "opponent_crop_STRAWBERRY_age_8_plus",
+      "opponent_crop_MELON",
+      "opponent_crop_MELON_age_0_2",
+      "opponent_crop_MELON_age_3_7",
+      "opponent_crop_MELON_age_8_plus",
+      "own_shed_WHEAT",
+      "own_shed_CARROT",
+      "own_shed_TOMATO",
+      "own_shed_STRAWBERRY",
+      "own_shed_MELON",
+      "own_shed_EGG",
+      "own_shed_MILK",
+      "own_shed_WOOL",
+      "own_shed_GOOSE",
+      "own_shed_COW",
+      "own_shed_SHEEP",
+      "own_shed_FERTILIZER",
+      "own_carried_WHEAT",
+      "own_carried_CARROT",
+      "own_carried_TOMATO",
+      "own_carried_STRAWBERRY",
+      "own_carried_MELON",
+      "own_carried_EGG",
+      "own_carried_MILK",
+      "own_carried_WOOL",
+      "own_carried_GOOSE",
+      "own_carried_COW",
+      "own_carried_SHEEP",
+      "own_carried_FERTILIZER",
+      "own_seed_WHEAT",
+      "own_seed_CARROT",
+      "own_seed_TOMATO",
+      "own_seed_STRAWBERRY",
+      "own_seed_MELON",
+      "shop_BAKERY",
+      "shop_PIZZA_SHOP",
+      "shop_BRUNCH_SPOT",
+      "shop_YARN_STORE",
+      "shop_ICE_CREAM_SHOP",
+      "shop_PET_CAFE",
+      "shop_SMOOTHIE_SHOP",
+      "shop_FARMERS_MARKET",
+      "price_ratio_WHEAT",
+      "market_displacement_WHEAT",
+      "price_ratio_CARROT",
+      "market_displacement_CARROT",
+      "price_ratio_TOMATO",
+      "market_displacement_TOMATO",
+      "price_ratio_STRAWBERRY",
+      "market_displacement_STRAWBERRY",
+      "price_ratio_MELON",
+      "market_displacement_MELON",
+      "price_ratio_EGG",
+      "market_displacement_EGG",
+      "price_ratio_MILK",
+      "market_displacement_MILK",
+      "price_ratio_WOOL",
+      "market_displacement_WOOL",
+      "capacity_backlog",
+      "estimated_travel",
+      "asset_service_ratio"
+    ],
+    "gate_thresholds": {
+      "bootstrap_iterations": 2000,
+      "cv_folds": 5,
+      "cv_mean_balanced_accuracy": 0.62,
+      "leave_one_family_out_pooled": 0.55,
+      "require_confirm_split": true,
+      "test_balanced_accuracy_ci_lower": 0.58
+    },
+    "generated_at": "2026-08-31T23:28:10.842855+00:00",
+    "margin_percentile": 95,
+    "max_iter": 20000,
+    "min_accepted": 150,
+    "min_families": 2,
+    "min_per_class": 5,
+    "min_signed": 75,
+    "rejection_reason_counts": {
+      "execution_not_verified": 1717,
+      "not_accepted": 2830
+    },
+    "reweight_mode": "renormalize-train",
+    "rows_kept": 3570,
+    "rows_loaded": 6400,
+    "rows_rejected": 2830,
+    "schema_hash": "2ce35fef153f54063cc1a91459eca36e2485c4fe6e30957b1876dc6409d973f4",
+    "schema_version": "counterfactual-v4"
+  },
+  "outputs": {
+    "labor_expansion": {
+      "C": 1.0,
+      "accepted": false,
+      "confirm_gate_passed": true,
+      "confirm_metrics": {
+        "accuracy_unweighted": 0.5333333333333333,
+        "accuracy_weighted": 0.5333333333333333,
+        "balanced_accuracy_unweighted": 0.55,
+        "balanced_accuracy_weighted": 0.55,
+        "class_counts": {
+          "-1": 5,
+          "0": 79,
+          "1": 10
+        },
+        "confusion_matrix": [
+          [
+            3,
+            2
+          ],
+          [
+            5,
+            5
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.6666666666666666,
+        "n_binary_rows": 15,
+        "n_rows": 94,
+        "weight_missing": 0
+      },
+      "constant_feature_columns": [
+        "phase_endgame",
+        "own_hands",
+        "own_crop_WHEAT_age_8_plus",
+        "own_crop_CARROT",
+        "own_crop_CARROT_age_0_2",
+        "own_crop_CARROT_age_3_7",
+        "own_crop_CARROT_age_8_plus",
+        "own_crop_TOMATO",
+        "own_crop_TOMATO_age_0_2",
+        "own_crop_TOMATO_age_3_7",
+        "own_crop_TOMATO_age_8_plus",
+        "opponent_hands",
+        "opponent_water_risk",
+        "opponent_structure_COOP",
+        "opponent_animal_GOOSE",
+        "opponent_crop_WHEAT",
+        "opponent_crop_WHEAT_age_0_2",
+        "opponent_crop_WHEAT_age_3_7",
+        "opponent_crop_WHEAT_age_8_plus",
+        "opponent_crop_CARROT_age_8_plus",
+        "opponent_crop_TOMATO",
+        "opponent_crop_TOMATO_age_0_2",
+        "opponent_crop_TOMATO_age_3_7",
+        "opponent_crop_TOMATO_age_8_plus",
+        "opponent_crop_STRAWBERRY",
+        "opponent_crop_STRAWBERRY_age_0_2",
+        "opponent_crop_STRAWBERRY_age_3_7",
+        "opponent_crop_STRAWBERRY_age_8_plus",
+        "own_shed_CARROT",
+        "own_shed_TOMATO",
+        "own_shed_STRAWBERRY",
+        "own_shed_EGG",
+        "own_carried_WHEAT",
+        "own_carried_CARROT",
+        "own_carried_TOMATO",
+        "own_carried_STRAWBERRY",
+        "own_carried_MELON",
+        "own_carried_EGG",
+        "own_carried_MILK",
+        "own_carried_WOOL",
+        "own_carried_GOOSE",
+        "own_carried_COW",
+        "own_carried_SHEEP",
+        "own_carried_FERTILIZER",
+        "own_seed_CARROT"
+      ],
+      "cv_gate_passed": false,
+      "cv_mean_balanced_accuracy": 0.6001633986928104,
+      "effective_feature_count": 81,
+      "leave_one_family_out": {
+        "n_pooled": 148,
+        "per_family": {
+          "strategies_v2.leader_clone.agent": {
+            "balanced_accuracy_unweighted": 0.47297297297297297,
+            "class_counts": {
+              "-1": 16,
+              "1": 37
+            },
+            "n_held_out": 53,
+            "status": "evaluated"
+          },
+          "strategies_v2.ring.agent": {
+            "balanced_accuracy_unweighted": 0.5,
+            "class_counts": {
+              "-1": 14,
+              "1": 35
+            },
+            "n_held_out": 49,
+            "status": "evaluated"
+          },
+          "strategy_follower": {
+            "balanced_accuracy_unweighted": 0.51875,
+            "class_counts": {
+              "-1": 30,
+              "1": 16
+            },
+            "n_held_out": 46,
+            "status": "evaluated"
+          }
+        },
+        "pooled_balanced_accuracy": 0.4962121212121212,
+        "pooled_class_counts": {
+          "-1": 60,
+          "1": 88
+        },
+        "status": "evaluated"
+      },
+      "leave_one_family_out_gate_passed": false,
+      "per_c_cv_metrics": {
+        "0.01": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.41666666666666663,
+            0.48611111111111116,
+            0.6200980392156863,
+            0.6151960784313726,
+            0.6805555555555556
+          ],
+          "cv_mean_balanced_accuracy": 0.5637254901960784
+        },
+        "0.03": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.48611111111111116,
+            0.4305555555555556,
+            0.6029411764705883,
+            0.5735294117647058,
+            0.5416666666666666
+          ],
+          "cv_mean_balanced_accuracy": 0.5269607843137255
+        },
+        "0.1": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.4305555555555556,
+            0.4305555555555556,
+            0.6029411764705883,
+            0.5735294117647058,
+            0.5972222222222223
+          ],
+          "cv_mean_balanced_accuracy": 0.5269607843137255
+        },
+        "0.3": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.4444444444444444,
+            0.5138888888888888,
+            0.6323529411764706,
+            0.6151960784313726,
+            0.5694444444444444
+          ],
+          "cv_mean_balanced_accuracy": 0.5550653594771242
+        },
+        "1.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.48611111111111116,
+            0.5555555555555556,
+            0.6323529411764706,
+            0.7156862745098038,
+            0.6111111111111112
+          ],
+          "cv_mean_balanced_accuracy": 0.6001633986928104
+        },
+        "3.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.5416666666666667,
+            0.5,
+            0.5024509803921569,
+            0.7156862745098038,
+            0.6527777777777778
+          ],
+          "cv_mean_balanced_accuracy": 0.582516339869281
+        },
+        "10.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.5694444444444444,
+            0.5,
+            0.5147058823529411,
+            0.7279411764705883,
+            0.6111111111111112
+          ],
+          "cv_mean_balanced_accuracy": 0.5846405228758169
+        }
+      },
+      "reason": "cv_gate_failed",
+      "split_counts": {
+        "confirm": 94,
+        "test": 131,
+        "train": 558,
+        "val": 125
+      },
+      "status": "rejected",
+      "test_gate_passed": false,
+      "test_metrics": {
+        "accuracy_unweighted": 0.4782608695652174,
+        "accuracy_weighted": 0.4782608695652174,
+        "balanced_accuracy_unweighted": 0.4734848484848485,
+        "balanced_accuracy_weighted": 0.4734848484848485,
+        "bootstrap_balanced_accuracy": {
+          "ci_lower": 0.3038461538461539,
+          "ci_upper": 0.65,
+          "n_resamples": 2000,
+          "n_rows": 23,
+          "point": 0.4734848484848485
+        },
+        "class_counts": {
+          "-1": 11,
+          "0": 108,
+          "1": 12
+        },
+        "confusion_matrix": [
+          [
+            4,
+            7
+          ],
+          [
+            5,
+            7
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.5217391304347826,
+        "n_binary_rows": 23,
+        "n_rows": 131,
+        "weight_missing": 0
+      },
+      "usable_strategy_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ],
+      "weight_missing_fit": 0
+    },
+    "land_expansion": {
+      "C": 0.1,
+      "accepted": false,
+      "confirm_gate_passed": true,
+      "confirm_metrics": {
+        "accuracy_unweighted": 0.6875,
+        "accuracy_weighted": 0.6875,
+        "balanced_accuracy_unweighted": 0.7063492063492063,
+        "balanced_accuracy_weighted": 0.7063492063492063,
+        "class_counts": {
+          "-1": 7,
+          "0": 38,
+          "1": 9
+        },
+        "confusion_matrix": [
+          [
+            6,
+            1
+          ],
+          [
+            4,
+            5
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.5625,
+        "n_binary_rows": 16,
+        "n_rows": 54,
+        "weight_missing": 0
+      },
+      "constant_feature_columns": [
+        "phase_endgame",
+        "own_hands",
+        "own_crop_WHEAT_age_8_plus",
+        "own_crop_CARROT",
+        "own_crop_CARROT_age_0_2",
+        "own_crop_CARROT_age_3_7",
+        "own_crop_CARROT_age_8_plus",
+        "own_crop_TOMATO",
+        "own_crop_TOMATO_age_0_2",
+        "own_crop_TOMATO_age_3_7",
+        "own_crop_TOMATO_age_8_plus",
+        "own_crop_STRAWBERRY",
+        "own_crop_STRAWBERRY_age_0_2",
+        "own_crop_STRAWBERRY_age_3_7",
+        "own_crop_STRAWBERRY_age_8_plus",
+        "opponent_hands",
+        "opponent_water_risk",
+        "opponent_structure_COOP",
+        "opponent_animal_GOOSE",
+        "opponent_crop_WHEAT",
+        "opponent_crop_WHEAT_age_0_2",
+        "opponent_crop_WHEAT_age_3_7",
+        "opponent_crop_WHEAT_age_8_plus",
+        "opponent_crop_CARROT_age_8_plus",
+        "opponent_crop_TOMATO",
+        "opponent_crop_TOMATO_age_0_2",
+        "opponent_crop_TOMATO_age_3_7",
+        "opponent_crop_TOMATO_age_8_plus",
+        "opponent_crop_STRAWBERRY",
+        "opponent_crop_STRAWBERRY_age_0_2",
+        "opponent_crop_STRAWBERRY_age_3_7",
+        "opponent_crop_STRAWBERRY_age_8_plus",
+        "own_shed_CARROT",
+        "own_shed_TOMATO",
+        "own_shed_STRAWBERRY",
+        "own_shed_EGG",
+        "own_carried_WHEAT",
+        "own_carried_CARROT",
+        "own_carried_TOMATO",
+        "own_carried_STRAWBERRY",
+        "own_carried_MELON",
+        "own_carried_EGG",
+        "own_carried_MILK",
+        "own_carried_WOOL",
+        "own_carried_GOOSE",
+        "own_carried_COW",
+        "own_carried_SHEEP",
+        "own_carried_FERTILIZER",
+        "own_seed_CARROT",
+        "own_seed_TOMATO"
+      ],
+      "cv_gate_passed": true,
+      "cv_mean_balanced_accuracy": 0.7319230769230769,
+      "effective_feature_count": 76,
+      "leave_one_family_out": {
+        "n_pooled": 140,
+        "per_family": {
+          "strategies_v2.leader_clone.agent": {
+            "balanced_accuracy_unweighted": 1.0,
+            "class_counts": {
+              "-1": 3,
+              "1": 1
+            },
+            "n_held_out": 4,
+            "status": "evaluated"
+          },
+          "strategies_v2.ring.agent": {
+            "balanced_accuracy_unweighted": 0.42857142857142855,
+            "class_counts": {
+              "-1": 14,
+              "1": 28
+            },
+            "n_held_out": 42,
+            "status": "evaluated"
+          },
+          "strategy_follower": {
+            "balanced_accuracy_unweighted": 0.34375,
+            "class_counts": {
+              "-1": 46,
+              "1": 48
+            },
+            "n_held_out": 94,
+            "status": "evaluated"
+          }
+        },
+        "pooled_balanced_accuracy": 0.42207792207792205,
+        "pooled_class_counts": {
+          "-1": 63,
+          "1": 77
+        },
+        "status": "evaluated"
+      },
+      "leave_one_family_out_gate_passed": false,
+      "per_c_cv_metrics": {
+        "0.01": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.71875,
+            0.558974358974359,
+            0.7743589743589744,
+            0.6770833333333333,
+            0.7743589743589744
+          ],
+          "cv_mean_balanced_accuracy": 0.7007051282051282
+        },
+        "0.03": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.71875,
+            0.558974358974359,
+            0.7076923076923077,
+            0.71875,
+            0.8128205128205128
+          ],
+          "cv_mean_balanced_accuracy": 0.7033974358974359
+        },
+        "0.1": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.8229166666666667,
+            0.5974358974358974,
+            0.7846153846153847,
+            0.71875,
+            0.735897435897436
+          ],
+          "cv_mean_balanced_accuracy": 0.7319230769230769
+        },
+        "0.3": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.8958333333333333,
+            0.5641025641025641,
+            0.7512820512820513,
+            0.7604166666666667,
+            0.6307692307692307
+          ],
+          "cv_mean_balanced_accuracy": 0.7204807692307692
+        },
+        "1.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.8854166666666667,
+            0.6743589743589744,
+            0.641025641025641,
+            0.71875,
+            0.5923076923076923
+          ],
+          "cv_mean_balanced_accuracy": 0.7023717948717949
+        },
+        "3.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.7916666666666667,
+            0.6743589743589744,
+            0.641025641025641,
+            0.75,
+            0.5538461538461539
+          ],
+          "cv_mean_balanced_accuracy": 0.6821794871794872
+        },
+        "10.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.7916666666666667,
+            0.7461538461538462,
+            0.6743589743589744,
+            0.75,
+            0.5538461538461539
+          ],
+          "cv_mean_balanced_accuracy": 0.7032051282051283
+        }
+      },
+      "reason": "leave_one_family_out_gate_failed",
+      "split_counts": {
+        "confirm": 54,
+        "test": 67,
+        "train": 307,
+        "val": 56
+      },
+      "status": "rejected",
+      "test_gate_passed": true,
+      "test_metrics": {
+        "accuracy_unweighted": 0.8,
+        "accuracy_weighted": 0.8,
+        "balanced_accuracy_unweighted": 0.8055555555555556,
+        "balanced_accuracy_weighted": 0.8055555555555556,
+        "bootstrap_balanced_accuracy": {
+          "ci_lower": 0.670413961038961,
+          "ci_upper": 0.9168333333333333,
+          "n_resamples": 2000,
+          "n_rows": 30,
+          "point": 0.8055555555555556
+        },
+        "class_counts": {
+          "-1": 12,
+          "0": 37,
+          "1": 18
+        },
+        "confusion_matrix": [
+          [
+            10,
+            2
+          ],
+          [
+            4,
+            14
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.6,
+        "n_binary_rows": 30,
+        "n_rows": 67,
+        "weight_missing": 0
+      },
+      "usable_strategy_families": [
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ],
+      "weight_missing_fit": 0
+    },
+    "product:EGG:increase": {
+      "overall_class_counts": {
+        "-1": 1,
+        "0": 70,
+        "1": 2
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 5,
+        "test": 9,
+        "train": 40,
+        "val": 19
+      },
+      "status": "unavailable"
+    },
+    "product:MELON:increase": {
+      "overall_class_counts": {
+        "-1": 2,
+        "0": 268,
+        "1": 15
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 30,
+        "test": 46,
+        "train": 152,
+        "val": 57
+      },
+      "status": "unavailable"
+    },
+    "product:MILK:increase": {
+      "C": 0.01,
+      "accepted": false,
+      "confirm_gate_passed": true,
+      "confirm_metrics": {
+        "accuracy_unweighted": 0.6666666666666666,
+        "accuracy_weighted": 0.6666666666666666,
+        "balanced_accuracy_unweighted": 0.6666666666666667,
+        "balanced_accuracy_weighted": 0.6666666666666667,
+        "class_counts": {
+          "-1": 9,
+          "0": 100,
+          "1": 9
+        },
+        "confusion_matrix": [
+          [
+            5,
+            4
+          ],
+          [
+            2,
+            7
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.5,
+        "n_binary_rows": 18,
+        "n_rows": 118,
+        "weight_missing": 0
+      },
+      "constant_feature_columns": [
+        "phase_endgame",
+        "own_hands",
+        "own_animal_GOOSE",
+        "own_crop_WHEAT_age_8_plus",
+        "own_crop_CARROT",
+        "own_crop_CARROT_age_0_2",
+        "own_crop_CARROT_age_3_7",
+        "own_crop_CARROT_age_8_plus",
+        "own_crop_TOMATO",
+        "own_crop_TOMATO_age_0_2",
+        "own_crop_TOMATO_age_3_7",
+        "own_crop_TOMATO_age_8_plus",
+        "own_crop_STRAWBERRY_age_3_7",
+        "own_crop_STRAWBERRY_age_8_plus",
+        "opponent_hands",
+        "opponent_structure_COOP",
+        "opponent_animal_GOOSE",
+        "opponent_animal_SHEEP",
+        "opponent_crop_WHEAT",
+        "opponent_crop_WHEAT_age_0_2",
+        "opponent_crop_WHEAT_age_3_7",
+        "opponent_crop_WHEAT_age_8_plus",
+        "opponent_crop_CARROT_age_8_plus",
+        "opponent_crop_TOMATO",
+        "opponent_crop_TOMATO_age_0_2",
+        "opponent_crop_TOMATO_age_3_7",
+        "opponent_crop_TOMATO_age_8_plus",
+        "opponent_crop_STRAWBERRY",
+        "opponent_crop_STRAWBERRY_age_0_2",
+        "opponent_crop_STRAWBERRY_age_3_7",
+        "opponent_crop_STRAWBERRY_age_8_plus",
+        "own_shed_CARROT",
+        "own_shed_TOMATO",
+        "own_shed_STRAWBERRY",
+        "own_shed_EGG",
+        "own_shed_WOOL",
+        "own_shed_GOOSE",
+        "own_carried_WHEAT",
+        "own_carried_CARROT",
+        "own_carried_TOMATO",
+        "own_carried_STRAWBERRY",
+        "own_carried_MELON",
+        "own_carried_EGG",
+        "own_carried_MILK",
+        "own_carried_WOOL",
+        "own_carried_GOOSE",
+        "own_carried_COW",
+        "own_carried_SHEEP",
+        "own_carried_FERTILIZER",
+        "own_seed_CARROT",
+        "own_seed_TOMATO"
+      ],
+      "cv_gate_passed": true,
+      "cv_mean_balanced_accuracy": 0.6637878787878787,
+      "effective_feature_count": 75,
+      "leave_one_family_out": {
+        "n_pooled": 131,
+        "per_family": {
+          "strategies_v2.leader_clone.agent": {
+            "balanced_accuracy_unweighted": 0.45454545454545453,
+            "class_counts": {
+              "-1": 11,
+              "1": 21
+            },
+            "n_held_out": 32,
+            "status": "evaluated"
+          },
+          "strategies_v2.ring.agent": {
+            "balanced_accuracy_unweighted": 0.4305555555555556,
+            "class_counts": {
+              "-1": 18,
+              "1": 16
+            },
+            "n_held_out": 34,
+            "status": "evaluated"
+          },
+          "strategy_follower": {
+            "balanced_accuracy_unweighted": 0.5599415204678363,
+            "class_counts": {
+              "-1": 27,
+              "1": 38
+            },
+            "n_held_out": 65,
+            "status": "evaluated"
+          }
+        },
+        "pooled_balanced_accuracy": 0.48833333333333334,
+        "pooled_class_counts": {
+          "-1": 56,
+          "1": 75
+        },
+        "status": "evaluated"
+      },
+      "leave_one_family_out_gate_passed": false,
+      "per_c_cv_metrics": {
+        "0.01": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.7515151515151515,
+            0.5939393939393939,
+            0.625,
+            0.696969696969697,
+            0.6515151515151515
+          ],
+          "cv_mean_balanced_accuracy": 0.6637878787878787
+        },
+        "0.03": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.6848484848484848,
+            0.6393939393939394,
+            0.5833333333333333,
+            0.6757575757575758,
+            0.6515151515151515
+          ],
+          "cv_mean_balanced_accuracy": 0.6469696969696969
+        },
+        "0.1": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.7303030303030302,
+            0.5939393939393939,
+            0.6166666666666667,
+            0.6636363636363636,
+            0.606060606060606
+          ],
+          "cv_mean_balanced_accuracy": 0.6421212121212121
+        },
+        "0.3": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.6303030303030304,
+            0.6393939393939394,
+            0.6166666666666667,
+            0.7090909090909091,
+            0.606060606060606
+          ],
+          "cv_mean_balanced_accuracy": 0.6403030303030304
+        },
+        "1.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.7090909090909091,
+            0.5272727272727272,
+            0.775,
+            0.7090909090909091,
+            0.5272727272727272
+          ],
+          "cv_mean_balanced_accuracy": 0.6495454545454545
+        },
+        "3.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.6424242424242425,
+            0.4484848484848485,
+            0.7666666666666666,
+            0.7424242424242424,
+            0.5272727272727272
+          ],
+          "cv_mean_balanced_accuracy": 0.6254545454545454
+        },
+        "10.0": {
+          "cv_evaluable_folds": 5,
+          "cv_fold_balanced_accuracies": [
+            0.6424242424242425,
+            0.5151515151515151,
+            0.8083333333333333,
+            0.696969696969697,
+            0.606060606060606
+          ],
+          "cv_mean_balanced_accuracy": 0.6537878787878788
+        }
+      },
+      "reason": "test_gate_failed",
+      "split_counts": {
+        "confirm": 118,
+        "test": 181,
+        "train": 651,
+        "val": 176
+      },
+      "status": "rejected",
+      "test_gate_passed": false,
+      "test_metrics": {
+        "accuracy_unweighted": 0.5483870967741935,
+        "accuracy_weighted": 0.5483870967741935,
+        "balanced_accuracy_unweighted": 0.5357142857142857,
+        "balanced_accuracy_weighted": 0.5357142857142857,
+        "bootstrap_balanced_accuracy": {
+          "ci_lower": 0.37098484848484853,
+          "ci_upper": 0.6975235202776762,
+          "n_resamples": 2000,
+          "n_rows": 31,
+          "point": 0.5357142857142857
+        },
+        "class_counts": {
+          "-1": 10,
+          "0": 150,
+          "1": 21
+        },
+        "confusion_matrix": [
+          [
+            5,
+            5
+          ],
+          [
+            9,
+            12
+          ]
+        ],
+        "majority_baseline_unweighted_diagnostic_only": 0.6774193548387096,
+        "n_binary_rows": 31,
+        "n_rows": 181,
+        "weight_missing": 0
+      },
+      "usable_strategy_families": [
+        "strategies_v2.leader_clone.agent",
+        "strategies_v2.ring.agent",
+        "strategy_follower"
+      ],
+      "weight_missing_fit": 0
+    },
+    "product:STRAWBERRY:increase": {
+      "overall_class_counts": {
+        "-1": 1,
+        "0": 220,
+        "1": 2
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 25,
+        "test": 33,
+        "train": 132,
+        "val": 33
+      },
+      "status": "unavailable"
+    },
+    "product:WOOL:avoid": {
+      "overall_class_counts": {
+        "-1": 12,
+        "0": 138,
+        "1": 31
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 18,
+        "test": 29,
+        "train": 110,
+        "val": 24
+      },
+      "status": "unavailable"
+    },
+    "product:WOOL:increase": {
+      "overall_class_counts": {
+        "-1": 4,
+        "0": 229,
+        "1": 57
+      },
+      "reason": "overall_quota_not_met",
+      "split_counts": {
+        "confirm": 41,
+        "test": 28,
+        "train": 166,
+        "val": 55
+      },
+      "status": "unavailable"
+    }
+  }
+}

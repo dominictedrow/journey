@@ -78,7 +78,7 @@ cannot produce an opponent-adaptive signal even if it trained perfectly.
   (`train_watcher.py:453,601`). `check_split_adequacy` and
   `leave_one_family_out` both take this value. Forget `--min-per-class 5` and
   training proceeds gating on balanced accuracy computed from a single sample
-  per class (bacc ∈ {0, 0.5, 1.0}). `train.md` step 6 does not emphasize the
+  per class (bacc ∈ {0, 0.5, 1.0}). Repo-root `train.md` step 6 does not emphasize the
   flag; `tune.md`'s command includes it.
 
 - **B5 — no cross-validation, no confidence interval, test split is both the
@@ -88,7 +88,7 @@ cannot produce an opponent-adaptive signal even if it trained perfectly.
   P(bacc ≥ 0.60 | true skill = 0.5) at ~10/class is roughly 0.2-0.25 per output;
   across ~20 outputs a spurious pass is likely and a real pass is
   indistinguishable from one. The only output that ever trained (old combined
-  `competitive_expansion`, `train.md:31-36`) scored val 0.420 / test 0.474 —
+  `competitive_expansion`, repo-root `train.md:31-36`) scored val 0.420 / test 0.474 —
   below chance.
 
 - **B6 — threshold drift across the toolchain.** `min_accepted`:
@@ -184,7 +184,15 @@ at all. Phase 6 is promotion.
 
 > **Status (see the Progress log at the end for detail):**
 > Phase 0 ✅ landed · Phase 1 ✅ landed · Phase 2 ✅ landed (2.5 + one 2.4
-> optimisation deferred) · Phases 3-6 not started.
+> optimisation deferred) · Phase 3 ✅ landed (schema → `counterfactual-v4`) ·
+> Phase 4 ✅ run — **SVM does not ship this iteration, agent stays on rules**
+> (0/6 quota-met outputs clear the split/family gates; see log) ·
+> Phase 5 ✅ run — **ship nothing new, agent stays on rules.** 5.1 landed
+> (3 glutter opponents); 5.2 the SVM does not learn a transferable adaptive
+> signal (best output LOFO 0.42); 5.3 no tuning of the core watcher constants
+> beats the shipped baseline vs glutters. **Phase 6 skipped** (SVM not
+> picked). See log for the two label-contract blockers to fix first if the
+> watcher is revisited.
 
 ### Phase 0 — Reconnect the submission (0.5 day) — ✅ landed
 
@@ -257,7 +265,7 @@ or clearly relabel it `diagnostic_only`.
 
 1.4 **Raise `min_per_class` default to 5 (B4)** in both the `run()` signature
 and the CLI default. Make `--min-per-class 1` emit a loud "SMOKE TEST ONLY"
-warning. Update `train.md` step 6 to state the flag explicitly.
+warning. Update repo-root `train.md` step 6 to state the flag explicitly.
 
 1.5 **Add resampling-based evaluation (B5).** Two changes:
    - **k-fold CV over seed groups** for `C` selection: instead of one val split,
@@ -566,7 +574,7 @@ bootstrap CI on the test balanced accuracy gated on the 5th-percentile
 (`bootstrap_balanced_accuracy_ci`, `gate`); and a `confirm` split
 (`gate_confirm`, `REQUIRE_CONFIRM_SPLIT`). `MIN_PER_CLASS` default is 5. Not
 re-verified: the `--min-per-class 1` "SMOKE TEST ONLY" warning text and whether
-`train.md` step 6 names the flag.
+repo-root `train.md` step 6 names the flag.
 
 **Phase 2 — ✅ landed.** One mixed generation run went from ~12% accepted to
 ~75%. Commit `5c6608a`.
@@ -657,3 +665,416 @@ yield is expected and leans on Phase 5's glutter opponents.
 it against the Phase 2 exit bar (≥ 150 accepted / ≥ 40 per sign / ≥ 2 usable
 families for `land_expansion`, `labor_expansion`, `product:MELON:*`,
 `product:MILK:*`). Then Phase 3.
+
+### 2026-08-31 — Phase 3
+
+**Phase 3 — ✅ landed. Schema `counterfactual-v3` → `counterfactual-v4`.**
+
+- **3.1 dead outputs — already gone in code, docs cleaned.** The Phase 2
+  rewrite already dropped `product:*:{exit,retain}` and the
+  `premium_exit` / `premium_retain` intervention family from
+  `counterfactual_dataset.py`, `generate_until_quota.py` and
+  `watcher_readiness.py` — nothing in `watcher_signals` ever read an
+  `:exit` / `:retain` score. This pass only purged the stale `:exit` / `:retain`
+  rows and per-output counts from `MD files/tune.md`.
+- **3.2 land/labor split — verified.** `land_expansion` and `labor_expansion`
+  are distinct `output_id`s driven by distinct deviations (`land_*` vs
+  `hand_*`), each one causal decision. Whether `labor_expansion` clears ≥ 40
+  `+1` rows is a Phase 4 data outcome.
+- **3.3 feature-matrix audit.** `shared_features.py`: dropped `turn`, `hour`
+  **and** `day` — every counterfactual checkpoint is at hour 0, so all three
+  were mutually collinear and collinear with `remaining_fraction`. Kept
+  `remaining_fraction` + the non-linear `phase_{opening,midgame,endgame}`
+  one-hot. `FEATURE_ORDER` 129 → 126. `train_watcher.py` now reports
+  `constant_feature_columns` / `effective_feature_count` per output so the
+  effective dimensionality is visible against the row count. *Not done:*
+  per-natural-cap count normalisation — `StandardScaler` already fronts the
+  model and the model design is Dom's; deferred as a conditioning tweak, not a
+  contract change.
+- **3.4 tune.md** — the stale "impossible gate" section was already rewritten in
+  Phase 1; this pass added a "Superseded corpus" banner (v3 label + v4 feature
+  changes, exit/retain removal), dropped the retired per-output snapshot, and
+  pointed the training / readiness commands at
+  `data/counterfactual_dataset.v4.jsonl`.
+- **3.5 dead fields** — removed `competitive_expansion_pressure` (returned by
+  `watcher_signals` in both `strategy_follower.py` and `main.py`, never read)
+  and `invalid_noop_purchase_indicators` (always 0; was in `_metrics` and
+  `SOFT_SAFETY_METRICS`). `overflow` is computed once now (the "twice" was
+  pre-Phase-2). `sample_weight` / `--reweight-mode` kept — `train_watcher.py`'s
+  docstring assigns that field to Dom's preprocessing pipeline; left as a live
+  hook rather than deleted.
+
+**Schema:** `shared_features.SCHEMA_VERSION` → `counterfactual-v4`,
+`SCHEMA_HASH` → `2ce35fef…`. The `counterfactual-v3` corpus never existed on
+disk (the file `data/counterfactual_dataset.v3.jsonl` is still
+`counterfactual-v2`), so nothing is invalidated that was not already stale. The
+corpus must be generated fresh as `data/counterfactual_dataset.v4.jsonl`.
+
+**`generate_until_quota.py` — projection-based dead-output skip added.** The
+first regeneration batches confirmed the `tune.md` prior: low/mid-value crops
+(`WHEAT/CARROT/TOMATO/STRAWBERRY/EGG`, both directions) produce accepted rows
+that are ~100 % neutral — the one-shot bounded nudge never moves near-term
+money past the label band — so they can never reach 40/sign and would each burn
+the full 2000-attempt cap. New `signed_quota_unreachable()` abandons an output
+once ≥ 400 attempts show its rarer signed class projected (rate × remaining
+budget) to fall short of the quota. Reported as `signed-quota-unreachable` in
+the final summary. Tests: `test_generate_until_quota.py` +3.
+
+**Tests:** `test_shared_features.py` (126 features / v4 hash),
+`test_counterfactual_dataset.py` (v4 schema string), `test_train_watcher.py`
+(separable fixture now uses a ±6σ single-dim signal, robust to the 129 → 126
+RNG-stream shift), `test_watcher_config.py` +1 (readiness vs. trainer must
+agree when a family is fit-pool sign-imbalanced), `test_generate_until_quota.py`
++3. 94 pass. `build_submission.py` still packages (rules mode); artifact
+compiles.
+
+### 2026-08-31 — Phase 4 (statistical validity checkpoint)
+
+**Result: no output ships. The agent stays on the deterministic rules path.**
+Per the plan this is an acceptable Phase 4 outcome, not a failure.
+
+**Corpus.** `data/counterfactual_dataset.v4.jsonl` — 11,442 pairs, 5,035
+execution-verified accepted, 3 opponents (`starter`, `strategies_v2.ring`,
+`strategies_v2.leader_clone`), focal `strategy_follower` / `ring` /
+`leader_clone`. Six outputs reached the Phase 2 exit bar (≥ 150 accepted /
+≥ 40 per sign): `land_expansion`, `labor_expansion`, `product:MELON:avoid`,
+`product:MILK:increase`, `product:MILK:avoid`, `product:WOOL:avoid`. The other
+twelve are `signed-quota-unreachable` (cheap/mid crops; premium `:increase`,
+which produces plenty of `+1` but essentially no `-1` against non-glutting
+opponents) or `all-families-dead` (`product:EGG:avoid`, 0 accepted).
+
+**Why the six quota-met outputs still fail the Phase 1 gates** (none even
+reached model-fitting — all blocked at split/family adequacy):
+
+| output | blocker | detail |
+|---|---|---|
+| `land_expansion` | `test_insufficient_class_counts` | test `-1 = 4` (need ≥ 5); confirm `+1 = 4` |
+| `labor_expansion` | `confirm_insufficient_class_counts` | confirm `-1 = 2` |
+| `product:MILK:increase` | `confirm_insufficient_class_counts` | confirm `-1 = 2` |
+| `product:WOOL:avoid` | `confirm_insufficient_class_counts` | confirm `-1 = 3` |
+| `product:MELON:avoid` | `insufficient_usable_strategy_families` | only `strategy_follower` has ≥ 5 of both signs in train ∪ val; `ring` has `-1 = 1` |
+| `product:MILK:avoid` | `insufficient_usable_strategy_families` | only `strategy_follower` usable; `ring`/`leader_clone` fit-pool sign-imbalanced |
+
+Two distinct causes:
+
+1. **The Phase 2 per-sign quota (40) is too low for the split geometry.** With
+   the 60/15/15/10 train/val/test/**confirm** split, ~40-45 rare-sign rows put
+   only ~4 in the 10 % confirm split — under the 5-per-class floor. `MIN_SIGNED`
+   needs to rise to ~75-80 (≈ 8 in confirm with RNG headroom) for
+   `land_expansion` / `labor_expansion` / `MILK:increase` / `WOOL:avoid`, which
+   have healthy family diversity and only miss on `confirm`/`test`. This is a
+   `watcher_config` correction, not a design change — it re-invalidates nothing
+   (features/label contract unchanged) but needs another generation pass.
+2. **Premium `product:*:avoid` cannot reach two usable families with the
+   scripted opponents.** `ring` / `leader_clone` almost never over-expose melon
+   or milk, so removing that exposure almost never helps near-term money → they
+   produce `+1` (the rarer sign for `:avoid`) at a rate near zero *in the fit
+   pool*. No amount of same-opponent generation fixes this. **This is exactly
+   the regime Phase 5's glutter opponents create.**
+
+**Tool consistency fix (Phase 1.6 residual, found here).** `watcher_readiness.py`
+reported `product:MELON:avoid` as `ready_for_training` while `train_watcher.py`
+rejected it — readiness counted a family "usable" on *any* `-1` and *any* `+1`
+across *all* splits, the trainer requires ≥ `MIN_PER_CLASS` of both in
+train ∪ val only. Readiness now uses the trainer's predicate; both report
+**0 eligible outputs** for the v4 corpus. Regression test added.
+
+**Artifacts:** `artifacts/watcher_training_report.v4.{json,md}`,
+`artifacts/watcher_readiness_v4_report.json`.
+
+**Next (Phase 5, and a Phase 2 quota bump):**
+- Raise `watcher_config.MIN_SIGNED` to ~75 and regenerate `land_expansion`,
+  `labor_expansion`, `product:MILK:increase`, `product:WOOL:avoid` — the four
+  that only miss on small-split class counts — then re-run Phase 4 for them.
+  (They may still fail the CV / test-CI / LOFO gates; the old combined output
+  scored 0.474 test balanced accuracy. That is what Phase 4 is for.)
+- Build the Phase 5.1 glutter opponents to open up `product:*:avoid` family
+  diversity and to put the price-collapse regime in-distribution at all.
+- Phase 5.3's rules-tuning sub-task is still the fastest path to shipped
+  adaptive profit and does not depend on any of the above.
+
+### 2026-08-31 — Phase 5.1 (glutter opponents)
+
+**Phase 5.1 — ✅ landed.** Three market-flooding opponents added under
+`strategies_v2/`, each a scripted focal *opponent* (not a focal policy):
+
+| file | build | flood target | validated behaviour (5 seeds, vs `strategy_follower`, 720 steps) |
+|---|---|---|---|
+| `glut_melon.py` | 32 melon tiles NW+NE, 6 hands, `SELL_MIN_PRICE_FRAC = 0` | MELON | MELON end price **4–7 in 5/5**; opponent solvent (~$14k) |
+| `glut_livestock.py` | 16 COW / 10 SHEEP NW+NE, 7 hands, dump milk+wool | WOOL (MILK partial) | WOOL floored to **5 in 3/5**, MILK dented (76–241) in those; solvent ($56–77k) |
+| `glut_mixed.py` | 16 COW / 10 SHEEP + 26 melon, 3 quadrants, dump all three | MILK (MELON/WOOL partial) | MILK **3–42 in 4/5**; occasionally near-insolvent late by design (price stays floored after) |
+
+Baseline for reference: `strategy_follower` vs `starter` holds MELON ≈ 232,
+MILK ≈ 310, WOOL ≈ 240. Across the set, every glut-fragile premium product
+(`MD files/CLAUDE.md` "Why the watcher matters": melon, wool, milk) is
+reliably crashed by at least one glutter. All use the shared
+`strategies_v2/engine.py` helpers; each supports direct `python glut_*.py`
+self-check. `resolve_opponent` in `counterfactual_dataset.py` already loads
+`strategies_v2.<name>.agent` with no change. 94 script tests still pass.
+
+**Design note (deviation from a literal reading of 5.1).** The plan names "a
+melon-mono high-volume seller, a cow+sheep livestock-flooder, and a mixed
+premium dumper." An all-quadrant / 8-hand build of each was tried first and
+stalled or bankrupted before its first yield on the $3000 opening bankroll
+(no income until melon day 10 / cow day 8 while paying ~$50/day hires). The
+shipped builds are held near ring/solid's proven two-to-three-quadrant,
+6–7-hand envelope; the flood comes from the **zero sell-gate** (dump every
+unit every turn regardless of price), not from raw capacity. Each glutter
+now floods one product reliably rather than all three — which is why there
+are three of them.
+
+### 2026-08-31 — Phase 5.2 wiring + a blocking finding
+
+**Decisions taken (Dom):** full sequence (5.2 then 5.3); the glutters
+**replace** ring/leader_clone as the *opponent* set (focal families
+unchanged); `MIN_SIGNED` 40 → **75**.
+
+**Wiring landed:**
+- `watcher_config.MIN_SIGNED = 75` (comment explains the confirm-split
+  geometry). `test_train_watcher.py` end-to-end fixture scaled up
+  (fam_a/fam_b train counts) to keep ≥ 75 per sign. 94 tests pass.
+- `generate_until_quota.py`: new `DEFAULT_OPPONENTS =
+  (starter, glut_melon, glut_livestock, glut_mixed)` and a `--opponents`
+  passthrough to `counterfactual_dataset.py` (previously the quota driver
+  always used the hard-coded scripted-opponent default).
+
+**Blocking finding — the glut regime does not, on its own, make
+`product:*:avoid` trainable.** A 24-pair smoke of `product:MELON:avoid`
+(focal `strategy_follower`, opponents = the 3 glutters) with MELON crashed to
+$4–7: **18 accepted → −1:3, 0:15, +1:0.** Same "no rarer sign" wall as
+Phase 4. Cause is not the opponent — it is the **perturbation size**:
+`crop_remove_two` drops 1–2 melon tiles out of ~19, and over the 13-day melon
+label window that moves near-term money by `$0` on most pairs and by
+`−$1300` on the few that register (the freed tile still loses to strategy
+follower's own melon even at a floored price). To get `+1` rows for `:avoid`
+the deviation or the label has to change — options, all Phase-2-contract
+(schema bump), Dom's call:
+  - (a) bigger `:avoid` deviation — remove *all* remaining melon exposure at
+    the checkpoint, not 2 tiles;
+  - (b) credit the freed capital's redeployment in the label instead of just
+    the removed product's flow;
+  - (c) pin the label window fully inside the price crash (checkpoint ≥ the
+    day the opponent's premium supply starts maturing, ~day 8–10).
+
+**`land_expansion` / `labor_expansion` / `product:MILK:increase` /
+`product:WOOL:avoid`** — the four that in Phase 4 only missed on confirm/test
+class counts — are not blocked by this; they just need the `MIN_SIGNED = 75`
+generation run. That run is safe to start now.
+
+**Decisions taken (Dom, round 2):** skip `product:*:avoid` structural fix
+this iteration — generate only the outputs that work; 5.3 grid = "core 3"
+one-factor-at-a-time (`OPPONENT_SIGNAL_WEIGHT` 2–8, `TOWN_EXPOSURE_MULTIPLIER`
+1.5–3.0, `OPPONENT_EXPANSION_THRESHOLD` −0.2–0.3), screen n=10 then confirm
+n=30/opponent.
+
+**Generation run — launched (background).**
+`generate_until_quota.py --output data/counterfactual_dataset.v5.jsonl
+--seed-base 500000 --outputs land_expansion labor_expansion
+product:MILK:increase product:WOOL:avoid product:MELON:increase
+product:WOOL:increase product:STRAWBERRY:increase product:EGG:increase`
+(opponents = the 3 glutters + starter, `MIN_SIGNED = 75`). Corpus is a fresh
+file; schema string is still `counterfactual-v4` (no feature/label change —
+the `:avoid` contract change was declined). Premium `:increase` is included
+because a glut regime should finally give it `-1` rows ("added melon
+exposure while melon is floored → hurt").
+
+**5.3 harness — built.** `scripts/phase5_rules_tuning.py`: OFAT sweep from
+the shipped baseline, each variant generated as its own
+`scripts/ab_tests/*.py` and run as a subprocess doing
+`compare_paired(tuned, strategy_follower.agent, opp, n)` vs the 3 glutters +
+starter (starter = non-glut regression guard). Note: the parent-`importlib`
++ `compare_paired` pattern in `run_phase_experiments.py` is **broken under
+the 'spawn' start method** on this machine (dynamically-loaded module can't
+be unpickled in the worker) — the subprocess-per-variant pattern from
+`test_gen.py` is the one that works. Smoke-validated; full screen pending
+(hold until generation finishes to avoid CPU oversubscription).
+
+### 2026-08-31 — Phase 5.2 result (retrain with the glut regime)
+
+**Corpus:** `data/counterfactual_dataset.v5.jsonl` — 6,400 pairs, 3,570
+accepted, opponents = `starter` + the 3 glutters, focals unchanged.
+Quota (`MIN_ACCEPTED` 150 / `MIN_SIGNED` **75**): **met for 3** —
+`land_expansion`, `labor_expansion`, `product:MILK:increase`. Unreachable
+for `product:{WOOL:avoid, MELON:increase, WOOL:increase, STRAWBERRY:increase,
+EGG:increase}` — the glut regime did **not** give premium `:increase` its
+missing `-1` rows: the checkpoint lands ~day 2–6, before the glutter's
+premium supply matures and craters the price, so adding 2 tiles still nets
+positive over the label window (same root cause as the `:avoid` blocker).
+
+**Trainer (`artifacts/watcher_training_report.v5.{json,md}`): 0 accepted.**
+Unlike Phase 4, all 3 quota-met outputs reached model fitting:
+
+| output | CV mean | test bacc (CI low) | confirm | LOFO pooled | blocker |
+|---|---|---|---|---|---|
+| `land_expansion` | **0.73** | **0.81 (0.67)** | **0.71** | **0.42** | leave-one-family-out |
+| `product:MILK:increase` | 0.66 | 0.54 (0.37) | 0.67 | 0.49 | test CI |
+| `labor_expansion` | 0.60 | 0.47 | 0.55 | 0.50 | CV |
+
+**Phase 5.2's question — "is the SVM learning the opponent-adaptive signal?"
+— answered: no.** `land_expansion` clears CV, test *and* confirm but its
+leave-one-family-out pooled balanced accuracy is **0.42** (per-family: ring
+0.43, `strategy_follower` **0.34** — worse than chance). Trained on two
+families it cannot predict the third; it is fitting family-specific patterns,
+not a transferable "opponent is scaling capacity → expand / don't" rule.
+`milk:increase`'s CV signal (0.66) collapses on the untouched test split
+(0.54). This matches the plan's own stated failure mode ("if those
+coefficients are near zero, the SVM is not learning the adaptive signal
+regardless of accuracy").
+
+**Decision (Phase 4/5 gate): the SVM does not ship. Proceed to Phase 5.3 —
+tuned deterministic rules head-to-head. The agent stays on rules; whether it
+ships *tuned* rules is 5.3's call.**
+
+### 2026-08-31 — Phase 5.3 result (tune the deterministic rules)
+
+**Harness:** `scripts/phase5_rules_tuning.py` — OFAT sweep from the shipped
+baseline (`OPPONENT_SIGNAL_WEIGHT` 4.0, `TOWN_EXPOSURE_MULTIPLIER` 2.0,
+`OPPONENT_EXPANSION_THRESHOLD` 0.0), each variant paired vs the shipped
+baseline against the 3 glutters + `starter` (regression guard). Screen n=10,
+confirm top-3 at n=30. `artifacts/phase5_rules_tuning_report.json`.
+
+**Result: no tuning of the core-3 constants beats the shipped baseline.**
+
+| knob change | screen glut_score | note |
+|---|---|---|
+| `OPPONENT_SIGNAL_WEIGHT` → 2 / 6 / 8 | −1361 / −1775 / −1502 | all worse |
+| `TOWN_EXPOSURE_MULTIPLIER` → 1.5 | +442 (best) | **fails confirm:** n=30 glut_score −120, all glutter CIs straddle 0, and **regresses vs `starter` −587 (CI [−1085, −88])** |
+| `TOWN_EXPOSURE_MULTIPLIER` → 2.5 / 3.0 | −680 / −744 | worse |
+| `OPPONENT_EXPANSION_THRESHOLD` → −0.2 / 0.15 | **0.0** | **zero effect** — confirmed at n=30; the threshold never changes an action in these matchups |
+| `OPPONENT_EXPANSION_THRESHOLD` → 0.3 | −376 | worse |
+
+Note `glut_melon` shows ≈ 0 diff for almost every variant: the watcher
+constants barely bite on the melon-glut matchup at all (the follower's melon
+build is largely fixed and the watcher only redirects *future vacancies*,
+which the melon path holds rather than replants). The watcher has thin
+runtime leverage on exactly the case it exists for.
+
+### Phase 5 verdict
+
+**Ship nothing new. The agent stays on the current deterministic rules
+(`WATCHER_BACKEND = "rules"`, shipped constants unchanged).**
+- 5.2: the SVM does not learn a transferable opponent-adaptive signal (best
+  output `land_expansion` has leave-one-family-out 0.42).
+- 5.3: no tuning of the core watcher constants beats the shipped baseline
+  against market-glutting opponents; the best screen candidate regresses vs
+  a weak opponent.
+
+**Phase 6 is skipped** (it runs "only if Phase 5 picks the SVM").
+
+**What was added and kept** (useful regardless of the negative verdict):
+`strategies_v2/glut_{melon,livestock,mixed}.py` (glut regime now available as
+an opponent for any future work), `watcher_config.MIN_SIGNED = 75`,
+`generate_until_quota.py` `--opponents` / `--outputs` passthrough,
+`scripts/phase5_rules_tuning.py`, `data/counterfactual_dataset.v5.jsonl` +
+`artifacts/watcher_training_report.v5.*` + `artifacts/phase5_rules_tuning_report.json`.
+
+**If the watcher is revisited**, the two blockers to fix first (both Phase-2
+label-contract changes, schema bump) are: (a) the counterfactual checkpoint
+lands before the opponent's premium supply matures, so the label window
+never sees the price crash — pin removal/`:avoid` and premium-`:increase`
+checkpoints to ≥ the day the opponent starts selling at volume; (b) the
+one-shot ±2-tile deviation is too small to move a bounded-horizon money
+label — a `:avoid` deviation should remove *all* of X's exposure at the
+checkpoint.
+
+### 2026-09-02 — Watcher revisited (`repair.md` Phases A–I)
+
+`repair.md` re-opened the investigation to clear the two blockers above. Both
+were built (injection scope: **A-lite / market-only**, Dom's call — Phase D
+dropped):
+
+- **Phases A/B/C — `counterfactual_dataset.py`.** New `crop_divest_all` /
+  `animal_defer_all` deviations strip *every* future `BUY_SEED X` /
+  `BUY_ANIMAL <species>` order across the label window (not two units on one
+  turn), with an opportunistic `DIG` only when a focal unit already stands on
+  an X tile. `product:X:avoid` now maps to the full divest; verification is a
+  sustained ≥ `DIVEST_VERIFY_MIN_GAP` unit gap held to the window end. A
+  both-players sales probe + `_opponent_volume_days` floors the checkpoint for
+  every `:avoid` kind and premium `:increase` to the first day the opponent's
+  realised X sales clear `OPPONENT_VOLUME_UNITS_PER_DAY` (8), so a glut that
+  matures ~day 10 lands inside the horizon.
+- **Phase E — `shared_features.py`.** Count features divided by natural caps
+  (`TILE_CAP` 64, `HANDS_CAP` 12, `SHED_CAP`/`SEED_CAP`) before
+  `StandardScaler`. `SCHEMA_VERSION` → `counterfactual-v5` (one bump covering
+  B/C + E). Feature *list* unchanged (126).
+- **Phase F — `generate_until_quota.py`.** `--probe-cache`: one probe replay
+  per `(family, opponent)` at startup, sidecar JSON, `counterfactual_dataset`
+  skips its own probe on a hit. `signed_quota_unreachable` default fixed to
+  `wc.MIN_SIGNED`.
+- **Phase G — regenerate + Phase 4 gate.** `data/counterfactual_dataset.v6.jsonl`
+  — 13,317 pairs, 5,282 accepted; opponents = 3 glutters + `starter`,
+  `MIN_SIGNED = 75`. `artifacts/watcher_training_report.v6.*`.
+
+**Phase G result — the A-lite funnel makes `:avoid` *investigable*, not
+*trainable*.** `product:MELON:avoid` now yields 186 `-1` rows (v4: ~3) and
+`product:MILK:avoid` 97 `-1` / 49 `+1` — the divest deviation and the volume
+floor work. But the rarer signed class stays far short of 75 (`melon:avoid`
+`+1` = 13): under a glut, divesting the floored product almost never *hurts*,
+so the `+1` wall is economic, not a data-volume problem. Quota is met for the
+same three outputs as v5 — `land_expansion`, `labor_expansion`,
+`product:MILK:increase` — and the trainer accepts **0**:
+
+| output | CV mean | test bacc (CI low) | confirm | LOFO pooled | blocker |
+|---|---|---|---|---|---|
+| `land_expansion` | 0.71 | 0.76 (0.65) | 0.78 | **0.50** | leave-one-family-out |
+| `product:MILK:increase` | 0.63 | 0.69 (**0.56**) | 0.70 | 0.50 | test CI lower < 0.58 |
+| `labor_expansion` | **0.61** | 0.68 | 0.44 | 0.50 | CV mean < 0.62 |
+
+**Phase H / 5.2 — coefficient audit** (`scripts/phase_h_coefficient_audit.py`
+→ `artifacts/phase_h_coefficient_audit.*`). For each fitted output, the L1
+mass of the standardized coefficient vector on the *adaptive* features
+(`price_ratio_*` + `market_displacement_*` + `opponent_*`) is **35–54%** —
+**not** the near-zero degeneracy the plan named as the clean "not learning it"
+signature. But the market coefficients are scattered in sign across unrelated
+products (`labor_expansion` leans on `market_displacement_MELON` and
+`price_ratio_TOMATO`; `milk:increase` on `market_displacement_WHEAT`), i.e. the
+model spends weight on the opponent/market channel but does not encode a
+coherent "X is glutted → act on X" rule. Combined with LOFO ≈ 0.50 (chance)
+on every fitted output, the read is unchanged from v5: **family-specific
+overfit, not a transferable opponent-adaptive signal.**
+
+**Phase H / 5.3 — rules OFAT re-run** on the v6 glut regime
+(`scripts/phase5_rules_tuning.py`, screen n=10 / confirm n=30,
+`artifacts/phase5_rules_tuning_report.json`):
+
+| knob change | screen glut_score | outcome |
+|---|---|---|
+| `OPPONENT_SIGNAL_WEIGHT` → 2 / 6 / 8 | −1602 / −1925 / −1980 | all badly worse |
+| `TOWN_EXPOSURE_MULTIPLIER` → 1.5 | **+185** (best) | **fails confirm:** n=30 glut_score −107; every glutter CI straddles 0; `starter` −191 (CI [−769, +387]) |
+| `TOWN_EXPOSURE_MULTIPLIER` → 2.5 / 3.0 | −299 / −247 | worse |
+| `OPPONENT_EXPANSION_THRESHOLD` → −0.2 / 0.15 | **0.0** | zero effect (never changes an action), confirmed |
+| `OPPONENT_EXPANSION_THRESHOLD` → 0.3 | −15 | regresses `starter` −638 |
+
+No tuning of the core-3 constants beats the shipped baseline against the
+glutters.
+
+### Phase H verdict (unchanged from Phase 5)
+
+**Ship nothing new. The agent stays on the current deterministic rules
+(`WATCHER_BACKEND = "rules"`, shipped constants unchanged).** The A-lite
+data-funnel work cleared blocker (b) enough to *inspect* the SVM on
+`product:*:avoid`, but:
+
+- **SVM:** 0 accepted on v6; no exportable model. The three outputs that
+  reach fitting overfit to focal-family patterns (LOFO pooled ≈ 0.50) — the
+  5.2 coefficient audit shows adaptive-feature weight is present but
+  incoherent, not the transferable rule the design needs.
+- **Tuned rules:** no core-3 constant tuning wins a paired final-money CI vs
+  the shipped baseline; the one positive screen candidate collapses on
+  confirm.
+- **Legacy rules:** promoted by default (both challengers lose or fail to
+  separate).
+
+`repair.md`'s own framing held: "make the SVM investigable, not ship the
+SVM," and Phase H "is a real decision gate and may again conclude ship
+nothing." It did.
+
+**Kept regardless of the verdict** (`repair.md` "What ships regardless"):
+the A-lite divest deviations + opponent-volume checkpoint floor in
+`counterfactual_dataset.py`, `shared_features` normalization
+(`counterfactual-v5`), `generate_until_quota.py --probe-cache`,
+`data/counterfactual_dataset.v6.jsonl` +
+`artifacts/watcher_training_report.v6.*`,
+`scripts/phase_h_coefficient_audit.py`, and the refreshed
+`artifacts/phase5_rules_tuning_report.json` /
+`artifacts/watcher_readiness_report.json`.
