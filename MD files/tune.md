@@ -1,5 +1,15 @@
 # Watcher SVM tuning guide
 
+> **Retired 2026-09-02.** The counterfactual SVM investigation concluded "ship
+> nothing" (see `watcher_svm_repair_plan.md` §6 and `repair.md`). The training
+> pipeline it documents — `train_watcher.py`, `counterfactual_dataset.py`,
+> `generate_until_quota.py`, `watcher_readiness.py`, `shared_features.py`,
+> `watcher_config.py`, `phase5_rules_tuning.py` — was removed from the tree;
+> recover it from git history (`master` at commit `f963d9c` or earlier) if the
+> effort is ever reopened. The commands below are kept only as a record of how
+> it was run. The shipped agent uses the deterministic `watcher_signals` rules
+> path, which is untouched.
+
 `0 accepted` is a promotion result, not an indication that no training occurred.
 Each eligible output is fitted, evaluated, and then accepted only if it clears
 the project's offline gates. The levers below affect either predictive quality,
