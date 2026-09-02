@@ -215,6 +215,146 @@ class CounterfactualDatasetTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 cd._run(base, "starter", 0, 1, 48, 24)
 
+    @staticmethod
+    def _divest_obs(step, tiles=None, farmer=(4, 4), hands=()):
+        return {"step": step, "day": step // 24, "hour": step % 24, "player": 0,
+                "farms": [{"tiles": tiles or [], "farmer": list(farmer),
+                           "hands": [list(p) for p in hands]}]}
+
+    def test_crop_divest_all_strips_every_future_x_buy_across_the_window(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [],
+                            "market": [["BUY_SEED", "MELON", 5], ["BUY_SEED", "WHEAT", 3],
+                                       ["BUY_SEED", "MELON", 2]]}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        for step in (0, 24, 120, 300):  # all inside MELON's 13-day window
+            action = wrapper(self._divest_obs(step))
+            self.assertEqual(action["market"], [["BUY_SEED", "WHEAT", 3]])
+        self.assertTrue(wrapper.audit["eligible"])
+        self.assertGreater(wrapper.audit["applied"], 0)
+
+    def test_crop_divest_all_is_inactive_past_the_label_window(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [], "market": [["BUY_SEED", "MELON", 2]]}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        end = cd._divest_window_end(0, "crop_divest_all", "MELON")
+        action = wrapper(self._divest_obs(end + 1))
+        self.assertEqual(action["market"], [["BUY_SEED", "MELON", 2]])
+        self.assertEqual(wrapper.audit["applied"], 0)
+
+    def test_crop_divest_all_digs_only_an_idle_unit_on_an_x_tile(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [["NORTH"]], "market": []}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        tiles = [[{"kind": "PLANT", "crop": "MELON"}, {"kind": "PLANT", "crop": "MELON"}]]
+        # farmer idle on a MELON plant -> dug; hand MOVING across a MELON plant
+        # -> left alone (it is en route to husbandry it still owes).
+        action = wrapper(self._divest_obs(5, tiles=tiles, farmer=(0, 0), hands=[(1, 0)]))
+        self.assertEqual(action["farmer"], ["DIG"])
+        self.assertEqual(action["hands"], [["NORTH"]])
+
+    def test_crop_divest_all_does_not_hijack_a_unit_mid_husbandry(self):
+        base = lambda obs: {"farmer": ["WATER"], "hands": [], "market": [["BUY_SEED", "MELON", 2]]}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        tiles = [[{"kind": "PLANT", "crop": "MELON"}]]
+        action = wrapper(self._divest_obs(5, tiles=tiles, farmer=(0, 0)))
+        self.assertEqual(action["farmer"], ["WATER"])   # left tending its crop
+        self.assertEqual(action["market"], [])          # but the buy is still stripped
+
+    def test_crop_divest_all_dead_combo_is_rejected_once(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [], "market": [["BUY_SEED", "WHEAT", 2]]}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        for step in (0, 24, 48):
+            action = wrapper(self._divest_obs(step, tiles=[[None]], farmer=(0, 0)))
+            self.assertEqual(action["market"], [["BUY_SEED", "WHEAT", 2]])
+        self.assertFalse(wrapper.audit["eligible"])
+        self.assertEqual(wrapper.audit["applied"], 0)
+        self.assertIn("focal_holds_no_x_and_buys_no_x",
+                      wrapper.audit["ineligible_reason_counts"])
+
+    def test_crop_divest_all_never_corrupts_pre_checkpoint_actions(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [], "market": [["BUY_SEED", "MELON", 2]]}
+        wrapper = cd.RecordingAgent(base, 3, {"kind": "crop_divest_all", "item": "MELON",
+                                              "target": None})
+        pre = [wrapper(self._divest_obs(s)) for s in (0, 1, 2)]
+        self.assertTrue(all(a["market"] == [["BUY_SEED", "MELON", 2]] for a in pre))
+        self.assertEqual(cd._hash(wrapper.pre_actions), cd._hash(pre))
+        self.assertEqual(wrapper(self._divest_obs(3))["market"], [])
+
+    def test_animal_defer_all_strips_every_future_species_buy(self):
+        base = lambda obs: {"farmer": ["PASS"], "hands": [],
+                            "market": [["BUY_ANIMAL", "COW", 2], ["BUY_ANIMAL", "SHEEP", 1],
+                                       ["BUY_ANIMAL", "COW", 1]]}
+        wrapper = cd.RecordingAgent(base, 0, {"kind": "animal_defer_all", "item": "COW",
+                                              "target": None})
+        action = wrapper(self._divest_obs(0))
+        self.assertEqual(action["market"], [["BUY_ANIMAL", "SHEEP", 1]])
+        self.assertTrue(wrapper.audit["eligible"])
+
+    def test_divest_kinds_map_to_avoid_outputs(self):
+        self.assertEqual(cd.modeled_output_id({"kind": "crop_divest_all", "item": "MELON"}),
+                         "product:MELON:avoid")
+        self.assertEqual(cd.modeled_output_id({"kind": "animal_defer_all", "item": "COW"}),
+                         "product:MILK:avoid")
+
+    def test_avoid_output_uses_the_full_divest_deviation(self):
+        for out, kind in (("product:MELON:avoid", "crop_divest_all"),
+                          ("product:WOOL:avoid", "animal_defer_all")):
+            dev = cd.deviation_for_output(out, random.Random(0))
+            self.assertEqual(dev["kind"], kind)
+            self.assertEqual(cd.modeled_output_id(dev), out)
+
+    def test_opponent_volume_days_flags_days_over_the_bar(self):
+        log = [{"step": 5, "player": 1, "sold": {"MELON": {"units": 3, "revenue": 0}}},
+               {"step": 24 * 10 + 2, "player": 1, "sold": {"MELON": {"units": 9, "revenue": 0}}},
+               {"step": 24 * 10 + 6, "player": 1, "sold": {"MELON": {"units": 4, "revenue": 0}}},
+               {"step": 24 * 12, "player": 0, "sold": {"MELON": {"units": 50, "revenue": 0}}}]
+        self.assertEqual(cd._opponent_volume_days(log, 1, "MELON", 8), [10])
+
+    def test_checkpoint_is_floored_to_the_opponent_volume_day(self):
+        div = {"kind": "crop_divest_all", "item": "MELON", "target": None}
+        days = {cd.checkpoint_for_deviation(random.Random(s), div, 720, [2, 4, 12, 15], min_day=10)["day"]
+                for s in range(40)}
+        self.assertTrue(min(days) >= 10)
+        prem = {"kind": "crop_add_two", "item": "MELON", "target": None}
+        pdays = {cd.checkpoint_for_deviation(random.Random(s), prem, 720, None, min_day=9)["day"]
+                 for s in range(40)}
+        self.assertTrue(min(pdays) >= 9)
+
+    def test_checkpoint_floor_degrades_when_focal_never_emits_that_late(self):
+        # animal herd bought once in the opening: flooring past the last emission
+        # day would leave nothing to strip, so fall back to the real days.
+        dev = {"kind": "animal_defer_all", "item": "COW", "target": None}
+        days = {cd.checkpoint_for_deviation(random.Random(s), dev, 720, [1, 3], min_day=18)["day"]
+                for s in range(40)}
+        self.assertTrue(days <= {1, 3})
+
+    def test_focal_order_days_buckets_every_order_kind(self):
+        def act(step):
+            m = {30: [["BUY_SEED", "MELON", 2], ["HIRE"]],
+                 130: [["BUY_ANIMAL", "COW", 1], ["BUY_SEED", "MELON", 1]]}.get(step, [])
+            return SimpleNamespace(action={"market": m})
+        env = SimpleNamespace(steps=[[act(t), act(t)] for t in range(200)])
+        got = cd._focal_order_days(env, 0)
+        self.assertEqual(got["BUY_SEED:MELON"], [1, 5])
+        self.assertEqual(got["HIRE"], [1])
+        self.assertEqual(got["BUY_ANIMAL:COW"], [5])
+
+    def test_probe_cache_skips_the_probe_replay(self):
+        focal = cd.resolve_opponent("strategy_follower")
+        key = "strategy_follower|starter"
+        cache = {key: {"focal_order_days": {"BUY_SEED:MELON": [1]},
+                       "opponent_volume_days": {"MELON": [4]}}}
+        with mock.patch.object(cd, "_run", wraps=cd._run) as spy:
+            row = cd.generate_pair(focal, cd.resolve_opponent("starter"), "starter",
+                                   seed=7, pair_index=0, episode_steps=240,
+                                   target_output="product:MELON:avoid", probe_cache=cache)
+            # 2 replays (baseline + intervention), not 3 -- the probe was cached.
+            self.assertEqual(spy.call_count, 2)
+        self.assertEqual(row["checkpoint_min_day"], 4)
+
     def test_generate_pair_end_to_end_yields_a_labelled_row(self):
         focal = cd.resolve_opponent("strategy_follower")
         row = cd.generate_pair(focal, cd.resolve_opponent("starter"), "starter",
@@ -224,7 +364,7 @@ class CounterfactualDatasetTests(unittest.TestCase):
         self.assertIn(row["label"], (-1, 0, 1))
         self.assertIn("money_delta", row["label_components"])
         self.assertIsInstance(row["accepted"], bool)
-        self.assertEqual(row["schema_version"], "counterfactual-v3")
+        self.assertEqual(row["schema_version"], "counterfactual-v5")
 
 
 if __name__ == "__main__":

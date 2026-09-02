@@ -7,12 +7,26 @@ import json
 from collections import Counter
 
 
-# v3: the row contract changed in repair-plan Phase 2 -- the label is now a
-# bounded-horizon outcome (blend of near-term money delta and X value-flow),
-# not a season-end money delta, and safety is split into hard rejects vs.
-# recorded soft flags. Features are unchanged; Phase 3 will bump again for the
-# feature-matrix audit.
-SCHEMA_VERSION = "counterfactual-v3"
+# v5 (repair.md Phase E): count features are divided by their natural caps so
+# the raw matrix is already O(1)-conditioned before StandardScaler, which
+# matters at n ~ 150. The feature *list* is unchanged from v4 -- only the
+# values are rescaled -- so the version string is bumped explicitly to move
+# SCHEMA_HASH. This bump also stamps the Phase B/C deviation-contract change.
+# v4 (repair-plan Phase 3.3 feature-matrix audit): every counterfactual
+# checkpoint is taken at hour 0, so `turn` (== 24*day), `hour` (== 0) and `day`
+# were mutually collinear and collinear with `remaining_fraction`. Only
+# `remaining_fraction` plus the non-linear `phase_*` one-hot survive; `turn`,
+# `hour` and `day` are dropped. v3 already carried the Phase 2 row-contract
+# change (bounded-horizon blend label, hard/soft safety split).
+SCHEMA_VERSION = "counterfactual-v5"
+
+# Natural caps for the count features (repair.md Phase E). A reachable farm is
+# at most 4 quadrants x 16 tiles; hands top out well under 12; the shed holds
+# 100; a sane seed backlog is one board's worth.
+TILE_CAP = 64
+HANDS_CAP = 12
+SHED_CAP = 100
+SEED_CAP = 64
 CROPS = ("WHEAT", "CARROT", "TOMATO", "STRAWBERRY", "MELON")
 ANIMALS = ("GOOSE", "COW", "SHEEP")
 PRODUCTS = CROPS + ("EGG", "MILK", "WOOL")
@@ -34,8 +48,7 @@ def _hash(value):
 
 
 def _feature_names():
-    names = ["turn", "day", "hour", "remaining_fraction", "phase_opening",
-             "phase_midgame", "phase_endgame"]
+    names = ["remaining_fraction", "phase_opening", "phase_midgame", "phase_endgame"]
     for side in ("own", "opponent"):
         names += [f"{side}_money", f"{side}_hands", f"{side}_quadrants",
                   f"{side}_weeds", f"{side}_empty", f"{side}_ready_yield",
@@ -59,12 +72,44 @@ FEATURE_ORDER = _feature_names()
 SCHEMA_HASH = _hash({"version": SCHEMA_VERSION, "features": FEATURE_ORDER})
 
 
+def _normalizers():
+    """Per-feature divisor; features not listed pass through unscaled
+    (already-normalized ``price_ratio_*`` / ``market_displacement_*`` / ``phase_*``
+    / ``remaining_fraction`` / ``shop_*``, and money, which StandardScaler
+    handles alone)."""
+    norm = {}
+    for side in ("own", "opponent"):
+        for k in ("weeds", "empty", "ready_yield", "feed_risk", "water_risk"):
+            norm[f"{side}_{k}"] = TILE_CAP
+        norm[f"{side}_hands"] = HANDS_CAP
+        norm[f"{side}_quadrants"] = 4
+        for x in STRUCTURES:
+            norm[f"{side}_structure_{x}"] = TILE_CAP
+        for x in ANIMALS:
+            norm[f"{side}_animal_{x}"] = TILE_CAP
+        for crop in CROPS:
+            norm[f"{side}_crop_{crop}"] = TILE_CAP
+            for bucket in ("0_2", "3_7", "8_plus"):
+                norm[f"{side}_crop_{crop}_age_{bucket}"] = TILE_CAP
+    for item in PRODUCTS + ANIMALS + ("FERTILIZER",):
+        norm[f"own_shed_{item}"] = SHED_CAP
+        norm[f"own_carried_{item}"] = SHED_CAP
+    for crop in CROPS:
+        norm[f"own_seed_{crop}"] = SEED_CAP
+    # capacity_backlog is a sum of raw tile-turn / yield counts; estimated_travel
+    # and asset_service_ratio are already bounded ratios and pass through.
+    norm["capacity_backlog"] = TILE_CAP
+    return norm
+
+
+FEATURE_NORMALIZERS = _normalizers()
+
+
 def extract_features(obs, episode_steps=720):
     """Return a fixed-order raw aggregate vector; opponent private data is absent."""
     player = obs["player"]
     day, step = obs["day"], obs.get("step", obs["day"] * 24 + obs["hour"])
-    values = {"turn": step, "day": day, "hour": obs["hour"],
-              "remaining_fraction": max(0.0, (episode_steps - 1 - step) / max(1, episode_steps - 1)),
+    values = {"remaining_fraction": max(0.0, (episode_steps - 1 - step) / max(1, episode_steps - 1)),
               "phase_opening": int(day < 10), "phase_midgame": int(10 <= day < 20),
               "phase_endgame": int(day >= 20)}
     for label, idx in (("own", player), ("opponent", 1 - player)):
@@ -120,4 +165,4 @@ def extract_features(obs, episode_steps=720):
     values["capacity_backlog"] = backlog
     values["estimated_travel"] = assets / units
     values["asset_service_ratio"] = assets / (24 * units)
-    return [values[name] for name in FEATURE_ORDER]
+    return [values[name] / FEATURE_NORMALIZERS.get(name, 1) for name in FEATURE_ORDER]

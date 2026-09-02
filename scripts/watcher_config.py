@@ -11,7 +11,12 @@ from __future__ import annotations
 # ---- Corpus quotas (a modeled output needs all of these to be trainable) ----
 
 MIN_ACCEPTED = 150          # execution-verified accepted rows for the output
-MIN_SIGNED = 40             # accepted rows per signed class (label -1 and +1)
+MIN_SIGNED = 75             # accepted rows per signed class (label -1 and +1).
+                            # Raised from 40 after Phase 4: with the
+                            # 60/15/15/10 train/val/test/confirm split, ~40
+                            # rare-sign rows leave only ~4 in the confirm
+                            # split -- under MIN_PER_CLASS. ~75 puts ~8 in
+                            # confirm with RNG headroom.
 MIN_PER_CLASS = 5           # per-split signed rows of each class; also the
                             # leave-one-family-out usability floor
 MIN_FAMILIES = 2            # distinct usable focal families in train u val
@@ -78,3 +83,19 @@ PRODUCT_HORIZON_DAYS = {
 LABEL_NEUTRAL_BAND_FRACTION = 0.08
 LABEL_NEUTRAL_BAND_FLOOR_PRODUCT = 120.0
 LABEL_NEUTRAL_BAND_FLOOR_CAPACITY = 350.0
+
+# ---- Phase B/C: full-divest deviation contract ----
+
+# crop_divest_all / animal_defer_all execution verification: the focal's X unit
+# count (seeds+planted / shed+placed) must open a gap of at least this many
+# units below baseline and hold it to the end of the label window -- a
+# sustained strip, not a one-step blip (repair.md Phase B).
+DIVEST_VERIFY_MIN_GAP = 2
+
+# Opponent-volume checkpoint floor. The intervention checkpoint for every
+# product:*:avoid kind and for premium product:*:increase (crop_add_two,
+# crop_redirect_two, animal_add_one where the product is premium) is floored to
+# the first day the opponent's realised sales of that product reach this bar,
+# so a glut that matures on day ~10 still lands inside a 13-day label horizon
+# (repair.md Phase C). Non-premium / non-avoid outputs are unaffected.
+OPPONENT_VOLUME_UNITS_PER_DAY = 8

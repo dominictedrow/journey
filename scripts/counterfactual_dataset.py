@@ -50,7 +50,13 @@ THROUGHPUT = {"WHEAT": 400, "CARROT": 450, "TOMATO": 200, "STRAWBERRY": 100,
               "MELON": 300, "EGG": 332, "MILK": 122, "WOOL": 105}
 DEVIATIONS = ("crop_add_two", "crop_remove_two", "crop_redirect_two",
               "animal_add_one", "animal_defer_one", "hand_add_one",
-              "hand_remove_one", "land_advance", "land_defer")
+              "hand_remove_one", "land_advance", "land_defer",
+              "crop_divest_all", "animal_defer_all")
+# Market-only full-divest kinds (repair.md Phase A). Unlike the bounded
+# remove/defer kinds they strip *every* matching future purchase on *every*
+# turn from the checkpoint to the end of the label window, driving incremental
+# exposure to X to zero without touching already-planted tiles.
+DIVEST_KINDS = ("crop_divest_all", "animal_defer_all")
 ANIMAL_PRODUCT = {"GOOSE": "EGG", "COW": "MILK", "SHEEP": "WOOL"}
 # 60/15/15/10 train/val/test/confirm. `confirm` is opened once by the trainer,
 # after a candidate is otherwise finalised, and never feeds any decision back.
@@ -100,6 +106,8 @@ class RecordingAgent:
 
     def _intervene(self, action, obs):
         kind, item, target = self.deviation["kind"], self.deviation.get("item"), self.deviation.get("target")
+        if kind in DIVEST_KINDS:
+            return self._intervene_divest(action, obs, kind, item)
         remaining = self.deviation.setdefault("remaining", 2 if "two" in kind else 1)
         if remaining <= 0: return action
         self.audit["attempted"] += 1
@@ -147,6 +155,91 @@ class RecordingAgent:
             self.audit["applied"] += 1
             self.audit["events"].append({"step": obs.get("step"), "before": before, "after": copy.deepcopy(action)})
         return action
+
+    def _intervene_divest(self, action, obs, kind, item):
+        """Strip every future BUY_SEED X / BUY_ANIMAL <species> order this turn,
+        and opportunistically DIG an X plant a focal unit already stands on.
+        Active only from the checkpoint to the end of the label window."""
+        step = obs.get("step", obs.get("day", 0) * 24 + obs.get("hour", 0))
+        if step > _divest_window_end(self.checkpoint_step, kind, item):
+            return action
+        self.audit["attempted"] += 1
+        before = copy.deepcopy(action)
+        reason = _intervention_eligibility(kind, item, action, obs, 0)
+        if reason is not None:
+            counts = self.audit.setdefault("ineligible_reason_counts", {})
+            counts[reason] = counts.get(reason, 0) + 1
+            return action
+        self.audit["eligible"] = True
+
+        op = "BUY_SEED" if kind == "crop_divest_all" else "BUY_ANIMAL"
+        market = action.get("market", [])
+        kept = [o for o in market if not _divest_matches(o, op, item)]
+        if len(kept) != len(market):
+            action["market"] = kept
+
+        if kind == "crop_divest_all":
+            farm = _farm(obs)
+            tiles = farm.get("tiles", [])
+            hands_action = action.get("hands", [])
+            positions = [farm.get("farmer")] + list(farm.get("hands", []))
+            for u_idx, pos in enumerate(positions):
+                if not pos:
+                    continue
+                x, y = pos[0], pos[1]
+                if not (0 <= y < len(tiles) and 0 <= x < len(tiles[y])):
+                    continue
+                tile = tiles[y][x]
+                if not (isinstance(tile, dict) and tile.get("crop") == item):
+                    continue
+                cur = action["farmer"] if u_idx == 0 else (
+                    hands_action[u_idx - 1] if u_idx - 1 < len(hands_action) else ["PASS"])
+                # Only steal a genuinely idle (PASS) unit's turn. A unit that is
+                # moving (NORTH/...) is en route to husbandry it still owes other
+                # tiles; hijacking it -- or a unit mid-WATER/HARVEST/FEED --
+                # strands those tiles and trips the missed-watering /
+                # escaped-animal hard-safety reject, which was rejecting the
+                # majority of :avoid pairs on an early checkpoint. The market
+                # strip already drives incremental X exposure to zero on its own.
+                if not cur or cur[0] != "PASS":
+                    continue
+                if u_idx == 0:
+                    action["farmer"] = ["DIG"]
+                else:
+                    while len(hands_action) <= u_idx - 1:
+                        hands_action.append(["PASS"])
+                    hands_action[u_idx - 1] = ["DIG"]
+                    action["hands"] = hands_action
+
+        if action != before:
+            self.audit["applied"] += 1
+            self.audit["events"].append({"step": obs.get("step"), "before": before, "after": copy.deepcopy(action)})
+        return action
+
+
+def _divest_matches(order, op, item):
+    """A future BUY_SEED X / BUY_ANIMAL <species> order the divest strips."""
+    return bool(order) and order[0] == op and len(order) > 1 and order[1] == item
+
+
+def _divest_window_end(checkpoint_step, kind, item):
+    product = item if kind == "crop_divest_all" else ANIMAL_PRODUCT.get(item, item)
+    horizon = wc.PRODUCT_HORIZON_DAYS.get(product, wc.LABEL_HORIZON_DAYS_PRODUCT)
+    return checkpoint_step + horizon * TURNS_PER_DAY
+
+
+def _unit_on_crop_tile(obs, item):
+    farm = _farm(obs)
+    tiles = farm.get("tiles", [])
+    for pos in [farm.get("farmer")] + list(farm.get("hands", [])):
+        if not pos:
+            continue
+        x, y = pos[0], pos[1]
+        if 0 <= y < len(tiles) and 0 <= x < len(tiles[y]):
+            tile = tiles[y][x]
+            if isinstance(tile, dict) and tile.get("crop") == item:
+                return True
+    return False
 
 
 def _farm(obs):
@@ -227,6 +320,14 @@ def _intervention_eligibility(kind, item, action, obs, remaining, target=None):
         if not any(o and o[0] == "BUY_SEED" and len(o) > 2 and o[1] != target
                    and (item is None or o[1] == item) for o in market):
             return "no_redirectable_purchase"
+    elif kind in ("crop_divest_all", "animal_defer_all"):
+        op = "BUY_SEED" if kind == "crop_divest_all" else "BUY_ANIMAL"
+        buys_x = any(_divest_matches(o, op, item) for o in market)
+        # A crop divest can also bite by digging a plant a focal unit stands on;
+        # an animal defer has no standing-on-tile lever (DIG can't remove animals).
+        on_x_tile = kind == "crop_divest_all" and _unit_on_crop_tile(obs, item)
+        if not buys_x and not on_x_tile:
+            return "focal_holds_no_x_and_buys_no_x"
     return None
 
 
@@ -264,9 +365,11 @@ def _quadrant_count(obs):
 _VERIFY_METRICS = {
     "crop_add_two": ("crop_units", True),
     "crop_remove_two": ("crop_units", False),
+    "crop_divest_all": ("crop_units", False),
     "crop_redirect_two": ("crop_units", True),
     "animal_add_one": ("animal_units", True),
     "animal_defer_one": ("animal_units", False),
+    "animal_defer_all": ("animal_units", False),
     "hand_add_one": ("hands", True),
     "hand_remove_one": ("hands", False),
     "land_advance": ("quadrants", True),
@@ -277,6 +380,37 @@ _VERIFY_EXTRACTORS = {
     "hands": lambda obs, _item: _hand_count(obs),
     "quadrants": lambda obs, _item: _quadrant_count(obs),
 }
+
+
+# The full-divest kinds are verified differently (repair.md Phase B): not "the
+# X unit count dropped by >= 1 at some step" but "it stayed at least
+# DIVEST_VERIFY_MIN_GAP below baseline through the end of the window and never
+# rose above it" -- a sustained strip, not a transient dip.
+_SUSTAINED_VERIFY_KINDS = ("crop_divest_all", "animal_defer_all")
+
+
+def _verify_sustained_gap(extract, metric, item, benv, ienv, idx, start, end):
+    """The strip is verified only if the focal's X unit count opens a gap of at
+    least DIVEST_VERIFY_MIN_GAP below baseline and holds it at every step from
+    that onset to the end of the window -- a sustained divest, not a blip."""
+    K = wc.DIVEST_VERIFY_MIN_GAP
+    onset = None
+    min_gap_after_onset = None
+    for step in range(start, end):
+        gap = (extract(_obs_at(benv, step, idx), item)
+               - extract(_obs_at(ienv, step, idx), item))
+        if onset is None:
+            if gap >= K:
+                onset = step
+                min_gap_after_onset = gap
+        else:
+            min_gap_after_onset = min(min_gap_after_onset, gap)
+    last = max(start, end - 1)
+    ok = onset is not None and min_gap_after_onset >= K
+    return ok, {"metric": metric, "window": [start, end], "min_gap_required": K,
+                "onset_step": onset, "min_gap_after_onset": min_gap_after_onset,
+                "baseline_end": extract(_obs_at(benv, last, idx), item),
+                "intervention_end": extract(_obs_at(ienv, last, idx), item)}
 
 
 def _execution_verified(kind, item, benv, ienv, idx, applied_step, window_steps):
@@ -292,6 +426,8 @@ def _execution_verified(kind, item, benv, ienv, idx, applied_step, window_steps)
     extract = _VERIFY_EXTRACTORS[metric]
     start = applied_step + 1
     end = min(start + window_steps, len(benv.steps), len(ienv.steps))
+    if kind in _SUSTAINED_VERIFY_KINDS:
+        return _verify_sustained_gap(extract, metric, item, benv, ienv, idx, start, end)
     for step in range(start, end):
         bv = extract(_obs_at(benv, step, idx), item)
         iv = extract(_obs_at(ienv, step, idx), item)
@@ -305,7 +441,7 @@ def _execution_verified(kind, item, benv, ienv, idx, applied_step, window_steps)
 
 
 def _metrics(env, idx):
-    feed = water = cap = missed = noops = 0
+    feed = water = cap = missed = 0
     escaped = 0
     previous_tiles = None
     for pair in env.steps:
@@ -337,7 +473,7 @@ def _metrics(env, idx):
     return {"feed_risk_tile_turns": feed, "water_risk_tile_turns": water,
             "escaped_animals": escaped, "missed_watering_deaths": missed,
             "shed_overflow_indicators": overflow, "ending_saleable_inventory": ending,
-            "invalid_noop_purchase_indicators": noops, "market_order_cap_violations": cap,
+            "market_order_cap_violations": cap,
             "episode_status_failures": int(final_state.status != "DONE"),
             "cash_trough_touched": int(bool(money_curve) and min(money_curve) <= 0)}
 
@@ -353,8 +489,7 @@ HARD_SAFETY_METRICS = ("escaped_animals", "missed_watering_deaths",
                        "episode_status_failures")
 SOFT_SAFETY_METRICS = ("feed_risk_tile_turns", "water_risk_tile_turns",
                        "shed_overflow_indicators", "ending_saleable_inventory",
-                       "invalid_noop_purchase_indicators", "cash_trough_touched",
-                       "market_order_cap_violations")
+                       "cash_trough_touched", "market_order_cap_violations")
 
 
 def safety_split(baseline, intervention):
@@ -467,53 +602,105 @@ def compute_label(output_id, checkpoint_step, benv, ienv, idx,
                          benv, ienv, idx, baseline_sales, intervention_sales)
 
 
-def _install_sales_probe(focal_idx):
-    """Wrap the env's per-step market phase to record the focal player's realised
-    sell volume and revenue by product. During the market phase only SELL reduces
-    a player's shed (BUY_PRODUCT adds WHEAT/FERTILIZER only), so the per-step shed
-    decrease is exactly units sold; revenue uses the mean of the pre/post-refresh
-    price. Returns (log, original) -- the caller must restore ``original``."""
+def _install_sales_probe(player_indices):
+    """Wrap the env's per-step market phase to record realised sell volume and
+    revenue by product for each player in ``player_indices``. During the market
+    phase only SELL reduces a player's shed (BUY_PRODUCT adds WHEAT/FERTILIZER
+    only), so the per-step shed decrease is exactly units sold; revenue uses the
+    mean of the pre/post-refresh price. Log entries are
+    ``{"step", "player", "sold": {item: {"units", "revenue"}}}``.
+    Returns (log, original) -- the caller must restore ``original``."""
+    idxs = [player_indices] if isinstance(player_indices, int) else list(player_indices)
     log = []
     original = _kenv._process_market
 
     def wrapped(state, env):
         obs0 = state[0].observation
         step = int(_kenv.get(obs0, "step", 0))
-        shed_before = dict(state[focal_idx].observation.private.get("shed", {}))
+        sheds_before = {p: dict(state[p].observation.private.get("shed", {})) for p in idxs}
         prices_before = dict(obs0.market["prices"])
         original(state, env)
-        shed_after = state[focal_idx].observation.private.get("shed", {})
         prices_after = obs0.market["prices"]
-        sold = {}
-        for item in PRODUCTS:
-            units = shed_before.get(item, 0) - shed_after.get(item, 0)
-            if units > 0:
-                px = 0.5 * (prices_before.get(item, BASE_PRICE[item]) +
-                            prices_after.get(item, BASE_PRICE[item]))
-                sold[item] = {"units": units, "revenue": units * px}
-        if sold:
-            log.append({"step": step, "sold": sold})
+        for p in idxs:
+            shed_after = state[p].observation.private.get("shed", {})
+            sold = {}
+            for item in PRODUCTS:
+                units = sheds_before[p].get(item, 0) - shed_after.get(item, 0)
+                if units > 0:
+                    px = 0.5 * (prices_before.get(item, BASE_PRICE[item]) +
+                                prices_after.get(item, BASE_PRICE[item]))
+                    sold[item] = {"units": units, "revenue": units * px}
+            if sold:
+                log.append({"step": step, "player": p, "sold": sold})
 
     _kenv._process_market = wrapped
     return log, original
 
 
-def _order_emission_days(env, idx, kind, item):
-    """Days on which the focal actually emits the order this removal/defer
-    deviation cancels. Drives the intervention checkpoint off day 0."""
-    op = {"crop_remove_two": "BUY_SEED", "animal_defer_one": "BUY_ANIMAL",
-          "hand_remove_one": "HIRE", "land_defer": "BUY_LAND"}[kind]
-    days = set()
+def _player_sales(sales_log, player):
+    return [entry for entry in sales_log if entry.get("player", player) == player]
+
+
+def _opponent_volume_days(sales_log, player, product, units_per_day):
+    """Days on which ``player`` realised at least ``units_per_day`` units of
+    ``product``. The first such day is the checkpoint floor for product:*:avoid
+    and premium product:*:increase, so the label window contains the opponent's
+    price crash rather than ending before the glut matures (repair.md Phase C)."""
+    per_day = {}
+    for entry in sales_log:
+        if entry.get("player") != player:
+            continue
+        units = entry["sold"].get(product, {}).get("units", 0)
+        if units:
+            day = entry["step"] // TURNS_PER_DAY
+            per_day[day] = per_day.get(day, 0) + units
+    return sorted(day for day, units in per_day.items() if units >= units_per_day)
+
+
+_REMOVAL_OP = {"crop_remove_two": "BUY_SEED", "animal_defer_one": "BUY_ANIMAL",
+               "hand_remove_one": "HIRE", "land_defer": "BUY_LAND",
+               "crop_divest_all": "BUY_SEED", "animal_defer_all": "BUY_ANIMAL"}
+
+
+def _emission_key(op, item):
+    return f"{op}:{item}" if op in ("BUY_SEED", "BUY_ANIMAL") else op
+
+
+def _focal_order_days(env, idx):
+    """{"BUY_SEED:MELON": [days], "HIRE": [days], ...} -- every day the focal
+    emits each kind of market order. Precomputed once per (family, opponent) for
+    the probe cache (repair.md Phase F); the focal is opponent-blind so this is
+    stable enough to reuse across seeds."""
+    days: dict[str, set] = {}
     for step, pair in enumerate(env.steps):
         action = pair[idx].action
         orders = action.get("market", []) if isinstance(action, dict) else []
         for order in orders:
-            if not order or order[0] != op:
+            if not order:
                 continue
-            if op == "BUY_SEED" and (len(order) < 2 or order[1] != item):
+            op = order[0]
+            if op not in ("BUY_SEED", "BUY_ANIMAL", "HIRE", "BUY_LAND"):
                 continue
-            days.add(step // TURNS_PER_DAY)
-    return sorted(days)
+            item = order[1] if op in ("BUY_SEED", "BUY_ANIMAL") and len(order) > 1 else None
+            days.setdefault(_emission_key(op, item), set()).add(step // TURNS_PER_DAY)
+    return {key: sorted(value) for key, value in days.items()}
+
+
+def _order_emission_days(env, idx, kind, item):
+    """Days on which the focal actually emits the order this removal/defer
+    deviation cancels. Drives the intervention checkpoint off day 0."""
+    return _focal_order_days(env, idx).get(_emission_key(_REMOVAL_OP[kind], item), [])
+
+
+def _probe_summary(env, focal_idx, sales_log):
+    """The two per-(family, opponent) facts a checkpoint needs: which days the
+    focal emits each order, and which days the opponent floods each product."""
+    opp = 1 - focal_idx
+    return {"focal_order_days": _focal_order_days(env, focal_idx),
+            "opponent_volume_days": {
+                product: _opponent_volume_days(sales_log, opp, product,
+                                               wc.OPPONENT_VOLUME_UNITS_PER_DAY)
+                for product in PRODUCTS}}
 
 
 def _run(base, opponent, idx, seed, steps, checkpoint, deviation=None):
@@ -524,7 +711,9 @@ def _run(base, opponent, idx, seed, steps, checkpoint, deviation=None):
         return wrapped(observation)
     agents = [focal, opponent] if idx == 0 else [opponent, focal]
     env = make("kaggriculture", configuration={"episodeSteps": steps, "seed": seed}, debug=False)
-    sales_log, original_market = _install_sales_probe(idx)
+    # Both players: focal sales feed the label, opponent sales feed the
+    # opponent-volume checkpoint floor (repair.md Phase C).
+    sales_log, original_market = _install_sales_probe((idx, 1 - idx))
     try:
         env.run(agents)
     finally:
@@ -558,7 +747,10 @@ def deviation_for_output(output_id, rng):
     product, direction = parts[1], parts[2]
     if product in CROPS:
         if direction == "avoid":
-            return {"kind": "crop_remove_two", "item": product, "target": None, "remaining": 2}
+            # Full market divest over the whole label window (repair.md Phase B):
+            # crop_remove_two only clipped 2 units on one turn -- too small to
+            # move a bounded-horizon money label.
+            return {"kind": "crop_divest_all", "item": product, "target": None, "remaining": 2}
         # Half the increase rows come from redirecting whatever crop the focal is
         # already buying, so product:X:increase is supervised by both the add and
         # the redirect path (repair-plan 2.6). item=None -> redirect the first
@@ -568,16 +760,34 @@ def deviation_for_output(output_id, rng):
             return {"kind": "crop_redirect_two", "item": None, "target": product, "remaining": 2}
         return {"kind": "crop_add_two", "item": product, "target": None, "remaining": 2}
     animal = next(key for key, value in ANIMAL_PRODUCT.items() if value == product)
-    kind = "animal_add_one" if direction == "increase" else "animal_defer_one"
+    kind = "animal_add_one" if direction == "increase" else "animal_defer_all"
     return {"kind": kind, "item": animal, "target": None, "remaining": 1}
 
 
-REMOVAL_KINDS = ("crop_remove_two", "animal_defer_one", "hand_remove_one", "land_defer")
+REMOVAL_KINDS = ("crop_remove_two", "animal_defer_one", "hand_remove_one", "land_defer",
+                 "crop_divest_all", "animal_defer_all")
 
 
-def checkpoint_for_deviation(rng, deviation, episode_steps, preferred_days=None):
-    """Schedule interventions early enough to affect an actionable future slot."""
+def _volume_floor_applies(kind, product):
+    """The opponent-volume checkpoint floor applies to every product:*:avoid
+    kind and to premium product:*:increase (add / redirect / animal_add). For
+    all of these the label can only be signed if the window sees the crash."""
+    if not product:
+        return False
+    if kind in ("crop_divest_all", "animal_defer_all", "crop_remove_two", "animal_defer_one"):
+        return True
+    if kind in ("crop_add_two", "crop_redirect_two", "animal_add_one"):
+        return product in PREMIUM_PRODUCTS
+    return False
+
+
+def checkpoint_for_deviation(rng, deviation, episode_steps, preferred_days=None, min_day=0):
+    """Schedule interventions early enough to affect an actionable future slot.
+    ``min_day`` floors the checkpoint at the opponent's volume day so the label
+    window still contains the price crash (repair.md Phase C)."""
     specs = checkpoint_specs(episode_steps)
+    last = len(specs) - 1
+    min_day = max(0, min(int(min_day), last))
     kind = deviation["kind"]
     if kind in REMOVAL_KINDS:
         # A removal/defer only registers if it is active before the focal emits
@@ -585,12 +795,19 @@ def checkpoint_for_deviation(rng, deviation, episode_steps, preferred_days=None)
         # probe run). Pick from its earlier half: early enough to still catch a
         # later multi-unit emission, varied enough for split/family diversity.
         # Day 0 is only right when the focal buys on day 0.
-        usable = sorted(d for d in (preferred_days or []) if 0 <= d <= len(specs) - 1)
-        if not usable:
-            return specs[0]
-        return specs[rng.choice(usable[:max(1, (len(usable) + 1) // 2)])]
-    last_day = min(len(specs) - 1, 12 if kind.startswith(("crop", "animal")) else 18)
-    eligible = specs[:last_day + 1]
+        all_days = sorted(d for d in (preferred_days or []) if 0 <= d <= last)
+        # Prefer emission days at/after the volume floor (window catches the
+        # crash). If the focal emits nothing that late -- e.g. an animal herd
+        # bought once in the opening -- fall back to the real emission days so
+        # the strip still bites, rather than a floored checkpoint it cannot act
+        # on (repair.md Phase C: the floor degrades gracefully).
+        pool = [d for d in all_days if d >= min_day] or all_days
+        if not pool:
+            return specs[min_day]
+        return specs[rng.choice(pool[:max(1, (len(pool) + 1) // 2)])]
+    last_day = min(last, 12 if kind.startswith(("crop", "animal")) else 18)
+    window = specs[:last_day + 1]
+    eligible = [spec for spec in window if spec["day"] >= min_day] or window
     preferred = [spec for spec in eligible if preferred_days and spec["day"] in preferred_days]
     return rng.choice(preferred or eligible)
 
@@ -610,9 +827,9 @@ def modeled_output_id(deviation):
     if kind == "crop_redirect_two":
         return f"product:{deviation['target']}:increase"
     if kind == "crop_add_two": return f"product:{item}:increase"
-    if kind == "crop_remove_two": return f"product:{item}:avoid"
+    if kind in ("crop_remove_two", "crop_divest_all"): return f"product:{item}:avoid"
     if kind == "animal_add_one": return f"product:{ANIMAL_PRODUCT[item]}:increase"
-    if kind == "animal_defer_one": return f"product:{ANIMAL_PRODUCT[item]}:avoid"
+    if kind in ("animal_defer_one", "animal_defer_all"): return f"product:{ANIMAL_PRODUCT[item]}:avoid"
     if kind.startswith("hand_"): return "labor_expansion"
     if kind.startswith("land_"): return "land_expansion"
     raise ValueError(f"deviation has no modeled output: {deviation!r}")
@@ -626,23 +843,40 @@ def build_tasks(pairs, seed_base, opponents, episode_steps):
 
 
 def generate_pair(base, opponent, opponent_name, seed, pair_index, episode_steps=720,
-                  target_output=None, strategy_family="strategy_follower", checkpoint_days=None):
+                  target_output=None, strategy_family="strategy_follower", checkpoint_days=None,
+                  probe_cache=None):
     rng = random.Random((seed << 16) ^ pair_index)
     deviation = (deviation_for_output(target_output, rng) if target_output
                  else random_deviation(rng))
     idx = pair_index % 2
     kind = deviation["kind"]
+    output_id = modeled_output_id(deviation)
+    product = output_id.split(":")[1] if output_id.startswith("product:") else None
+    floor_applies = _volume_floor_applies(kind, product)
 
     probe_days = None
-    if kind in REMOVAL_KINDS and not checkpoint_days:
-        # One extra baseline replay to learn which days the focal actually emits
-        # the order this removal/defer cancels. Without it the checkpoint pins to
-        # day 0 and interventions against a focal that buys later never register
-        # (repair-plan C1).
-        probe = _run(base, opponent, idx, seed, episode_steps, episode_steps + 1)
-        probe_days = _order_emission_days(probe[1], idx, kind, deviation.get("item"))
+    volume_days = None
+    if not checkpoint_days and (kind in REMOVAL_KINDS or floor_applies):
+        # Which days the focal emits the order a removal/defer cancels (so the
+        # checkpoint does not pin to day 0 -- repair-plan C1), and which days the
+        # opponent floods the product (so the label window contains the price
+        # crash -- repair.md Phase C). Both come from one baseline replay, or
+        # from a precomputed per-(family, opponent) cache (repair.md Phase F).
+        cached = (probe_cache or {}).get(f"{strategy_family}|{opponent_name}")
+        if cached is not None:
+            summary = cached
+        else:
+            probe = _run(base, opponent, idx, seed, episode_steps, episode_steps + 1)
+            summary = _probe_summary(probe[1], idx, probe[4])
+        if kind in REMOVAL_KINDS:
+            probe_days = summary["focal_order_days"].get(
+                _emission_key(_REMOVAL_OP[kind], deviation.get("item")), [])
+        if floor_applies:
+            volume_days = summary["opponent_volume_days"].get(product, [])
 
-    spec = checkpoint_for_deviation(rng, deviation, episode_steps, checkpoint_days or probe_days)
+    min_day = volume_days[0] if volume_days else 0
+    spec = checkpoint_for_deviation(rng, deviation, episode_steps,
+                                    checkpoint_days or probe_days, min_day=min_day)
     checkpoint_step = spec["step"]
 
     b, benv, bm, bs, b_sales = _run(base, opponent, idx, seed, episode_steps, checkpoint_step)
@@ -661,15 +895,22 @@ def generate_pair(base, opponent, opponent_name, seed, pair_index, episode_steps
     # crop_redirect_two verifies the *target* crop rose (item is None -- it
     # redirects whatever the focal was buying).
     verify_item = deviation.get("target") if kind == "crop_redirect_two" else deviation.get("item")
+    verify_window = wc.EXEC_VERIFY_WINDOW_STEPS
+    if kind in _SUSTAINED_VERIFY_KINDS and isinstance(applied_step, int):
+        # A full divest is verified across the whole label window, not just the
+        # 4-day exec-verify window (repair.md Phase B).
+        verify_window = max(wc.EXEC_VERIFY_WINDOW_STEPS,
+                            _divest_window_end(checkpoint_step, kind, verify_item) - applied_step)
     executed, evidence = _execution_verified(kind, verify_item, benv, ienv,
-                                             idx, applied_step, wc.EXEC_VERIFY_WINDOW_STEPS)
+                                             idx, applied_step, verify_window)
     evidence["applied_step"] = applied_step
     i.audit["execution_verified"] = executed
     i.audit["execution_evidence"] = evidence
 
-    output_id = modeled_output_id(deviation)
+    b_sales_focal = _player_sales(b_sales, idx)
+    i_sales_focal = _player_sales(i_sales, idx)
     label, label_components = compute_label(output_id, checkpoint_step, benv, ienv,
-                                            idx, b_sales, i_sales)
+                                            idx, b_sales_focal, i_sales_focal)
     season_end_delta = im - bm
     eligible = i.audit["eligible"]
     accepted = bool(state_match and action_match and applied and eligible
@@ -681,6 +922,7 @@ def generate_pair(base, opponent, opponent_name, seed, pair_index, episode_steps
             "strategy_family": strategy_family, "split": split_for_seed_group(seed),
             "sample_weight": 1.0,
             "checkpoint": spec, "deviation": deviation, "probe_order_days": probe_days,
+            "probe_volume_days": volume_days, "checkpoint_min_day": min_day,
             "output_id": output_id, "intervention_audit": i.audit,
             "baseline_money": bm, "intervention_money": im,
             "season_end_delta": season_end_delta, "season_end_label": label_delta(season_end_delta),
@@ -712,7 +954,14 @@ def _generate_task(task):
     return generate_pair(focal, resolve_opponent(task["opponent_name"]),
                          task["opponent_name"], task["seed"], task["pair_index"],
                          task["episode_steps"], task.get("target_output"),
-                         task.get("strategy_family", "strategy_follower"), task.get("checkpoint_days"))
+                         task.get("strategy_family", "strategy_follower"),
+                         task.get("checkpoint_days"), task.get("probe_cache"))
+
+
+def load_probe_cache(path):
+    """Read a Phase F probe-cache sidecar: {"entries": {"family|opponent": ...}}."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return payload.get("entries", payload)
 
 
 def summarize_rows(rows):
@@ -758,16 +1007,21 @@ def main(argv=None):
     p.add_argument("--strategy-family", default="strategy_follower")
     p.add_argument("--checkpoint-days", nargs="+", type=int,
                    help="replay-guided preferred checkpoint days; infeasible days fall back safely")
+    p.add_argument("--probe-cache", type=Path,
+                   help="Phase F sidecar of precomputed per-(family, opponent) emission / "
+                        "opponent-volume days; skips the per-pair probe replay when a match exists")
     p.add_argument("--append", action="store_true",
                    help="append deterministically ordered new rows to an existing output")
     args = p.parse_args(argv)
     if args.pairs > 2000:
         p.error("--pairs may not exceed the phase-10 per-output attempt cap of 2000")
+    probe_cache = load_probe_cache(args.probe_cache) if args.probe_cache else None
     tasks = build_tasks(args.pairs, args.seed_base, args.opponents, args.episode_steps)
     for task in tasks:
         task["target_output"] = args.target_output
         task["strategy_family"] = args.strategy_family
         task["checkpoint_days"] = args.checkpoint_days
+        task["probe_cache"] = probe_cache
 
     # Validate against existing corpus state before running any simulation, so a
     # run that is doomed to fail (reused seed group, attempt cap already spent)

@@ -777,7 +777,6 @@ def watcher_signals(obs, backend):
             "town_demand_pressure": dict(zeros),
             "opponent_supply_pressure": dict(zeros),
             "market_glut_risk": dict(zeros),
-            "competitive_expansion_pressure": 0.0,
             "land_expansion_pressure": 0.0,
             "labor_expansion_pressure": 0.0,
             "recommended_limits": {
@@ -912,7 +911,6 @@ def watcher_signals(obs, backend):
         "town_demand_pressure": town_pressure,
         "opponent_supply_pressure": opponent_pressure,
         "market_glut_risk": glut_risk,
-        "competitive_expansion_pressure": expansion,
         "land_expansion_pressure": land_expansion,
         "labor_expansion_pressure": labor_expansion,
         "recommended_limits": {

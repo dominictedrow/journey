@@ -207,6 +207,18 @@ def to_matrix(rows):
     return [list(row["features"]) for row in rows]
 
 
+def constant_feature_names(rows):
+    """Feature columns that never vary across `rows` -- zero information for the
+    fit, reported so the effective dimensionality is visible against the row
+    count (repair-plan 3.3). Pass the fit pool (train u val)."""
+    matrix = to_matrix(rows)
+    if not matrix:
+        return []
+    names = shared_features.FEATURE_ORDER
+    return [names[col] for col in range(len(matrix[0]))
+            if len({record[col] for record in matrix}) <= 1]
+
+
 def to_labels(rows):
     return [int(row["label"]) for row in rows]
 
@@ -627,11 +639,13 @@ def run(rows_paths, families_path=None, output_path=None, report_path=None,
         test_rows, confirm_rows = partitions["test"], partitions["confirm"]
         fit_rows = list(train_rows) + list(val_rows)
         fit_binary = binary_only(fit_rows)
+        constant_columns = constant_feature_names(fit_binary)
 
         best_c, per_c_cv = select_c_grouped_kfold(fit_rows, c_grid, wc.CV_FOLDS, max_iter)
         if best_c is None:
             results[output_id] = {"status": "unavailable", "reason": "cross_validation_unavailable",
-                                   "split_counts": split_counts, "cv_diagnostic": per_c_cv}
+                                   "split_counts": split_counts, "cv_diagnostic": per_c_cv,
+                                   "constant_feature_columns": constant_columns}
             continue
 
         scaler = fit_scaler(to_matrix(fit_rows))
@@ -662,6 +676,8 @@ def run(rows_paths, families_path=None, output_path=None, report_path=None,
             "confirm_metrics": confirm_metrics,
             "split_counts": split_counts,
             "weight_missing_fit": weight_missing_fit,
+            "constant_feature_columns": constant_columns,
+            "effective_feature_count": len(shared_features.FEATURE_ORDER) - len(constant_columns),
             "usable_strategy_families": usable,
             "leave_one_family_out": lofo,
             "cv_gate_passed": cv_passed,

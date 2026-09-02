@@ -66,7 +66,17 @@ def audit(paths, min_accepted=wc.MIN_ACCEPTED, min_signed=wc.MIN_SIGNED,
                         for split in wc.SPLITS}
         family_labels = {family: Counter(row["label"] for row in valid if row["strategy_family"] == family)
                          for family in sorted({row["strategy_family"] for row in valid})}
-        usable = [family for family, counts in family_labels.items() if counts[-1] and counts[1]]
+        # "Usable family" must match train_watcher.usable_families exactly: >=
+        # min_split_class of BOTH signs in train u val only (never test/confirm).
+        # A family that is sign-imbalanced in the fit pool -- common for premium
+        # product:*:avoid, where the scripted opponents rarely produce the rarer
+        # sign -- is not usable however many signed rows it has in test/confirm.
+        fitpool_family_labels = {
+            family: Counter(row["label"] for row in valid
+                            if row["strategy_family"] == family and row["split"] in ("train", "val"))
+            for family in sorted({row["strategy_family"] for row in valid})}
+        usable = [family for family, counts in fitpool_family_labels.items()
+                  if counts[-1] >= min_split_class and counts[1] >= min_split_class]
         quota = (len(valid) >= min_accepted and labels[-1] >= min_signed and labels[1] >= min_signed and
                  len(usable) >= min_families and all(counts[-1] >= min_split_class and counts[1] >= min_split_class
                                                      for counts in split_labels.values()))

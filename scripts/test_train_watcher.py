@@ -390,9 +390,9 @@ class RunEndToEndTests(unittest.TestCase):
     # (family, split): (n_pos, n_neg) -- fam_c is deliberately sign-imbalanced,
     # the shape that made the old per-family LOFO gate structurally unpassable.
     LAYOUT = {
-        ("fam_a", "train"): (20, 20), ("fam_a", "val"): (6, 6),
+        ("fam_a", "train"): (28, 28), ("fam_a", "val"): (6, 6),
         ("fam_a", "test"): (8, 8), ("fam_a", "confirm"): (6, 6),
-        ("fam_b", "train"): (12, 12), ("fam_b", "val"): (4, 4),
+        ("fam_b", "train"): (18, 18), ("fam_b", "val"): (4, 4),
         ("fam_b", "test"): (6, 6), ("fam_b", "confirm"): (5, 5),
         ("fam_c", "train"): (10, 2), ("fam_c", "val"): (3, 0),
         ("fam_c", "test"): (2, 2), ("fam_c", "confirm"): (2, 2),
@@ -405,7 +405,8 @@ class RunEndToEndTests(unittest.TestCase):
             for (family, split), (n_pos, n_neg) in self.LAYOUT.items():
                 for label, count in ((1, n_pos), (-1, n_neg)):
                     for _ in range(count):
-                        feats = None if separable else make_features(rng)
+                        feats = (make_features(rng, {1: 6.0, -1: -6.0}[label], 4)
+                                 if separable else make_features(rng))
                         row = make_row(rng, label, split, strategy_family=family,
                                        output_id=self.OUTPUT, features=feats,
                                        offset_dim=4, seed=seed)

@@ -27,10 +27,22 @@ class SharedFeatureTests(unittest.TestCase):
         self.assertIs(cd.extract_features, sf.extract_features)
 
     def test_schema_contract_is_stable(self):
-        self.assertEqual(len(sf.FEATURE_ORDER), 129)
-        self.assertEqual(sf.SCHEMA_VERSION, "counterfactual-v3")
+        self.assertEqual(len(sf.FEATURE_ORDER), 126)
+        self.assertEqual(sf.SCHEMA_VERSION, "counterfactual-v5")
         self.assertEqual(sf.SCHEMA_HASH,
-                         "f31101e405fe8f33bf0a299c34110b53550443af35fa3eec9be857472299caf8")
+                         "bb4debdb162dbbf1f8a692b523b183770c4e6943916d2eebff11c3e5995b978f")
+
+    def test_count_features_are_cap_normalized(self):
+        # Every count feature divides by its natural cap, so a mid-game obs
+        # lands well inside [0, 1] (money is the sole intentional exception).
+        values = dict(zip(sf.FEATURE_ORDER, sf.extract_features(observation())))
+        for name, v in values.items():
+            if name.endswith("_money"):
+                continue
+            self.assertGreaterEqual(v, 0.0, name)
+            self.assertLessEqual(v, 1.5, name)
+        self.assertEqual(sf.FEATURE_NORMALIZERS["own_shed_WHEAT"], sf.SHED_CAP)
+        self.assertEqual(sf.FEATURE_NORMALIZERS["own_hands"], sf.HANDS_CAP)
 
     def test_opponent_private_sentinels_do_not_affect_features(self):
         base = observation()
@@ -46,7 +58,9 @@ class SharedFeatureTests(unittest.TestCase):
         after = copy.deepcopy(before)
         after["private"]["shed"]["WHEAT"] = 8
         index = sf.FEATURE_ORDER.index("own_shed_WHEAT")
-        self.assertEqual(sf.extract_features(after)[index] - sf.extract_features(before)[index], 1)
+        self.assertAlmostEqual(
+            sf.extract_features(after)[index] - sf.extract_features(before)[index],
+            1 / sf.SHED_CAP)
 
 
 if __name__ == "__main__":
