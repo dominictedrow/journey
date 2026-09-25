@@ -1,5 +1,5 @@
 # Data (MIRA license; never commit)
-data/
+/data/
 *.dcm
 train_series/
 test_series/
@@ -38,3 +38,7 @@ runs/
 checkpoints/
 *.parquet
 configs/paths.yaml
+
+# Packaging / test caches
+*.egg-info/
+.pytest_cache/

@@ -55,12 +55,12 @@ Official formula (raw TeX from the page):
 - 819,640 files, **569.76 GB**, DICOM + CSV. Test set has **~1,300 studies**; the example `test.csv`/`test_series/` are replaced with the real test data at scoring. **The `Report` column is NOT available at test time.** Prevalence may differ between train / public LB / private LB.
 - Hierarchy: `train_series/<StudyInstanceUID>/<SeriesInstanceUID>/<SOPInstanceUID>.dcm` (one .dcm = one slice). Series typically 20–45 slices (median 30), long tail to a few hundred.
 - `train.csv`: `StudyInstanceUID`, `Report` (free text, several languages), 12 binary labels — but **only a small subset of training studies carry labels**; the rest must be derived from `Report`.
-- `train_series.csv`: `StudyInstanceUID`, `SeriesInstanceUID`, `Fluid_Sensitive` (T2/PD/STIR-like), `Fat_Suppression`, `Anatomical_Plane` (Sagittal/Coronal/Axial). ~~Fluid_Sensitive and Fat_Suppression are correlated but not equivalent.~~ **Correction (S00, public notebooks [3rd-party], verify in S01): they are identical on all 24,371 train series rows (1 bit). Derive the contrast class from TR/TE/InversionTime instead.** Same schema for `test_series.csv`, so these are usable model inputs at test time.
+- `train_series.csv`: `StudyInstanceUID`, `SeriesInstanceUID`, `Fluid_Sensitive` (T2/PD/STIR-like), `Fat_Suppression`, `Anatomical_Plane` (Sagittal/Coronal/Axial). ~~Fluid_Sensitive and Fat_Suppression are correlated but not equivalent.~~ **Correction: they are identical on all 24,371 train series rows (1 bit); verified from `train_series.csv` in S01 (`docs/data_audit.md` §3). Derive the contrast class from TR/TE/InversionTime instead.** On the visible test stub the flag tracks header fat suppression, not T2-ness (a T2 sagittal without FS is 0), so read it as "fat-suppressed" (`docs/data_audit_test.md` §8; 14 series; confirm corpus-wide in S01 part 2). Same schema for `test_series.csv`, so these are usable model inputs at test time.
 - Twelve targets: ACL injury, MCL injury, Medial Meniscus tear, Lateral Meniscus tear, Medial OA, Lateral OA, PF (patellofemoral) OA, Effusion, Synovitis, Baker's cyst, Contusion, Fracture.
 - DICOM notes: intensities, orientations, resolutions vary; mixed transfer syntaxes (Explicit VR Little Endian uncompressed, JPEG Lossless, JPEG 2000, Implicit VR Little Endian); **every DICOM is stripped to an allowlisted set of 86 metadata tags**. Public notebooks [3rd-party, verify S01]: every sampled train file is Explicit VR LE (uncompressed); IOP, IPP, PixelSpacing, SliceThickness, Rescale slope/intercept, TR/TE/TI, Manufacturer, FieldStrength, PatientSex (94.6%), Laterality (~50% missing) are present; PatientAge and overlays not seen; no MONOCHROME1. Filename order ≠ physical order: **sort by IPP·normal**. Details: `docs/kaggle/data_and_dicom_from_notebooks.md`.
-- **Verified-label studies: 58** (confirmed by Dom and the forum; image-read by two readers + an adjudicator, not derived from the reports; **not representative**: every gold study has ≥1 positive, ACL 41% vs ~20% corpus-wide). **Total training studies: 4,407** (forum + many notebooks, 3rd-party; the old "7,504" was wrong; verify from `train.csv` in S01). 24,371 series, ~819k slice files. The Acknowledgements page credits 22 sites (19+3).
+- **Verified-label studies: 58** (confirmed by Dom and the forum; image-read by two readers + an adjudicator, not derived from the reports; **not representative**: every gold study has ≥1 positive, ACL 41% vs ~20% corpus-wide). **Total training studies: 4,407** and **58 gold** (verified from `train.csv` in S01: 4,349 unlabeled, 0 partial; `docs/data_audit.md` §1–2). 24,371 series (verified), ~819k slice files (3rd-party; S01 part 2 counts them). The Acknowledgements page credits 22 sites (19+3).
 - Reports: ~9 languages (~60% non-English); 46 report texts are shared across 177 studies, so **group folds by report hash**. Host confirmed (forum 733965) that sending report text to commercial LLM APIs for labeling is allowed. DUA-gated external knee datasets (OAI, MRNet, fastMRI, KneeCoT) are effectively not allowed.
-- Access: rules must be accepted (signed in) to see/download data.
+- Access: rules must be accepted (signed in) to see/download data. **Dom has accepted them** (Kaggle CLI shows `userHasEntered = True`, checked 2026-09-24 in S01).
 
 ## Compute [Dom]
 - Training target: Dom's **Windows box**: **16 GB RAM**, **RTX 5070 with ~12 GB VRAM**, and an **Intel Core i5** CPU (with **16 cores** per Dom's recollection (`UNVERIFIED: could be 16 logical threads rather than 16 physical cores; TODO confirm exact model`)).
@@ -113,7 +113,7 @@ Confirmed-standard pieces to plan for:
 - Quantization = storing/computing weights and activations in lower precision (e.g. int8/fp16) to cut memory and runtime; do it post-training after accuracy is established.
 - Combining multiple sequences into one feature map / extra channels vs. token sequence: to be decided by ablation.
 
-## Repo layout (proposed; nothing built yet)
+## Repo layout (S01 built `src/knee/{audit,data}`, `tests/`, `scripts/`, `configs/`; the rest comes in later sessions)
 ```
 data/          # symlink or path config only; raw data is NOT committed (MIRA license, 570 GB)
 docs/          # dicom_tags.md, decisions, experiment log
@@ -124,7 +124,7 @@ Current state: see `HANDOFF.md` §4. Private GitHub remote: `dominictedrow/knees
 
 ## Open questions (ask Dom / research before acting)
 1. Exact i5 model and whether "16" means physical cores or threads (check Task Manager → Performance → CPU: Cores vs Logical processors) (matters for DICOM decoding throughput), and whether the Windows box has a faster internal drive for caching preprocessed volumes.
-2. Total train studies from `train.csv` (verified-label count is settled at 58; public evidence says 4,407; confirm in S01).
+2. ~~Total train studies~~ → resolved in S01: 4,407 studies / 58 gold / 24,371 series, measured from the CSVs (`docs/data_audit.md`).
 3. Which of the 86 DICOM tags exist (orientation, spacing, slope/intercept, demographics)?
 4. Kaggle notebook GPU type and weekly GPU quota, and whether `RuntimeSeconds` counts the full notebook run.
 5. ~~Fallback decision date and teammates~~ → resolved 2026-09-24: Oct 8 gate with a parallel Track A; **solo**.

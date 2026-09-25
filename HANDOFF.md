@@ -55,18 +55,30 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-24, session S00 (planning, on the Mac)._
+_Last updated: 2026-09-24, session S01 part 1 (on the Mac; no data drive, no GPU)._
 
-- Repo: planning docs only; no code yet. The private GitHub remote exists (`dominictedrow/knees`).
-- Research done: `docs/research/` (4 reports) and `docs/kaggle/` (4 reports). The plan is in `docs/plan/`.
-- Data: on Dom's external SSD attached to the Windows box. **Not yet audited by any session.**
-- Environment on the Windows box: **not set up yet** (Python, CUDA PyTorch for the RTX 5070, pydicom decoders).
+- **Code exists now:** `src/knee/audit/` (env check, CSV audit, full-corpus header scan, per-series/study summary,
+  decode benchmark, report writer), `src/knee/data/{geometry,series_meta}.py` (slice ordering, plane, laterality, contrast
+  class, site proxy: shared with S02 and inference), `tests/` (15 pytest tests, CPU, all passing), `requirements.txt`
+  (pinned, resolves for Windows/py3.12: torch 2.14.0+cu130), `pyproject.toml`, `configs/paths.example.yaml`,
+  `scripts/run_s01.ps1` (one command runs the whole S01 audit on Windows).
+- **Measured from the real CSVs:** 4,407 studies, 58 gold, 24,371 series, Fluid ≡ FatSup on every row, every study has all
+  3 planes, 223 studies share a normalized report text (52 groups) → `docs/data_audit.md` §1–4.
+- **Measured on the visible test stub** (512 of 558 files, rate-limited): 100% Explicit VR LE, 0 errors, 69 tags, Toshiba
+  files lack TR/TE/Sex/Laterality/FieldStrength, CSV fluid flag = header fat-sat on 14/14 series → `docs/data_audit_test.md`,
+  `docs/dicom_tags_test.md`.
+- Decoders verified bit-exact on all four transfer syntaxes (on the Mac). Dom has accepted the competition rules.
+- **Not done yet (needs the Windows box):** env check on the RTX 5070, full-corpus header scan/tags/geometry/laterality/site
+  proxy, decode throughput from the SATA SSD, cache-drive choice, corrupt-file list.
 - Submissions made: none. Best public LB: n/a. Top of the LB on 2026-09-24: 0.959; public notebooks: 0.941–0.947.
 - Long jobs running: none.
 
 ## 5. Next session
 
-**S01: Windows environment and data audit.** Brief: `docs/plan/sessions/S01_env_and_data_audit.md`.
+**S01 part 2 (Windows box): run the audit and interpret it.** Brief: `docs/plan/sessions/S01_env_and_data_audit.md`
+(see its "Status after part 1" section first). In short: set up the venv, fill `configs/paths.yaml`, run
+`scripts/run_s01.ps1`, review the regenerated `docs/env.md` / `docs/data_audit.md` / `docs/dicom_tags.md`, answer CLAUDE.md
+open questions #1 and #3, pick the cache drive, raise surprises with Dom. Then **S02** (preprocessing + cache).
 
 ## 6. Quick facts a fresh session tends to get wrong
 

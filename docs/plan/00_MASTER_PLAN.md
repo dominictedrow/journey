@@ -31,7 +31,7 @@ refines with what it learned (the rule: whoever finishes S<N> updates brief S<N+
 | # | Session | Track | Target dates | Needs GPU | Status |
 |---|---|---|---|---|---|
 | S00 | Research + plan (Mac) | — | Sep 24 | no | ✅ done |
-| S01 | Windows env + data audit | D | Sep 25 | smoke | ☐ |
+| S01 | Windows env + data audit | D | Sep 25 | smoke | ◐ part 1 done on the Mac (code, CSV audit, test stub); part 2 = run `scripts/run_s01.ps1` on Windows |
 | S02 | Preprocessing library + cache v1 | D | Sep 25–26 | no (CPU decode, overnight) | ☐ |
 | S03 | ViT modules from scratch + unit tests + MAE pipeline → **launch MAE pretraining** | B | Sep 26–27 | **yes, multi-day** | ☐ |
 | S04 | Labels v1: Claude API reader + public sets + blend + gold calibration + folds | L | Sep 27–28 | no | ☐ |

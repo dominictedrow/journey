@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knee"
+version = "0.1.0"
+description = "RSNA Knee Abnormality Detection: shared pipeline, Track A (pretrained) and Track B (scratch ViT)"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

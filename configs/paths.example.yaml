@@ -1,0 +1,12 @@
+# Copy to configs/paths.yaml (gitignored) and edit for this machine.
+# Any key can also be overridden with an environment variable (KNEE_DATA_ROOT, KNEE_CACHE_ROOT, KNEE_AUDIT_OUT).
+
+# Folder that holds train.csv, train_series.csv, test*.csv, train_series/, test_series/
+# (the unzipped competition download). Windows example: E:/rsna-knee
+data_root: D:/rsna-knee-abnormality-detection
+
+# Fast internal drive for preprocessed caches (S02+). Never the FAT32 project drive.
+cache_root: C:/knee_cache
+
+# Where audit scripts write their raw outputs (parquet/json). MIRA-derived: keep out of the repo.
+audit_out: C:/knee_cache/audit

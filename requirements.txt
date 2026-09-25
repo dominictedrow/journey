@@ -1,0 +1,37 @@
+# Pinned for the Windows training box (Python 3.12, RTX 5070 = Blackwell sm_120).
+# Install:  python -m pip install -r requirements.txt   then   python -m pip install -e . --no-deps
+#
+# torch: CUDA 13.0 build. Blackwell needs a CUDA >= 12.8 build; the last cu128 Windows wheel is torch 2.11.0.
+# cu130 needs an NVIDIA driver from the R580 branch or newer (UNVERIFIED on Dom's box: env_check prints the driver).
+# If the driver is older, update it, or fall back to: torch==2.11.0+cu128 torchvision==0.26.0+cu128
+# from https://download.pytorch.org/whl/cu128.
+# The Kaggle scoring image uses its own torch (2.10.0+cu128 per [JB]); the inference notebook does not install these pins.
+--extra-index-url https://download.pytorch.org/whl/cu130
+torch==2.14.0+cu130; sys_platform != "darwin"
+torchvision==0.29.0+cu130; sys_platform != "darwin"
+torch==2.14.0; sys_platform == "darwin"
+torchvision==0.29.0; sys_platform == "darwin"
+
+numpy==2.5.3
+pandas==3.0.6
+pyarrow==25.0.1
+scikit-learn==1.9.1
+pyyaml==6.0.3
+psutil==7.2.2
+tqdm==4.70.1
+matplotlib==3.11.2
+opencv-python-headless==5.0.0.93
+
+# DICOM: pydicom matches the Kaggle image (3.0.2). Decoders for JPEG Lossless / JPEG 2000 (insurance: train looks
+# uncompressed) and gdcm as a second decoder / JPEG-Lossless encoder for tests.
+pydicom==3.0.2
+pylibjpeg==2.1.0
+pylibjpeg-libjpeg==2.4.0
+pylibjpeg-openjpeg==2.6.0
+python-gdcm==3.2.6
+
+# Track A only: Track B must not import timm model classes (decision 2026-09-24).
+timm==1.0.30
+
+kaggle==2.2.4
+pytest==9.1.1

@@ -3,6 +3,37 @@
 **Track:** D (data/infra, shared by both tracks) · **Machine:** Windows box · **GPU needed:** briefly (smoke test)
 **Depends on:** nothing · **Unblocks:** S02 (preprocessing/cache), S03 (labels)
 
+## Status after part 1 (2026-09-24, on the Mac)
+Part 1 wrote and tested all of this session's code; part 2 runs it on the Windows box. Everything below still applies;
+most steps are now "run the script, then read and act on its output".
+
+| Brief step | Code | Status |
+|---|---|---|
+| A1–A6 environment | `python -m knee.audit.env_check` → `docs/env.md` generated block | code tested on the Mac (CPU); **run on Windows** |
+| A4 requirements | `requirements.txt`, `pyproject.toml` | pinned; resolves for Windows/py3.12; **install on Windows** |
+| B1–B3 counts, gold, series flags, reports | `python -m knee.audit.csv_audit` | **done** on the real CSVs → `docs/data_audit.md` §1–4 |
+| B4 files, header read, truncation | `python -m knee.audit.header_scan` (resumable shards) | tested on the test stub; **run on train** |
+| B5 tags | same scan (every file, not a sample) → `docs/dicom_tags.md` | test stub done (`docs/dicom_tags_test.md`) |
+| B6 syntaxes + decode speed | `python -m knee.audit.decode_bench` | decoders verified bit-exact on the Mac; **throughput on Windows** |
+| B7–B9 geometry, laterality, site proxy | `python -m knee.audit.series_summary` | tested on the test stub; **run on train** |
+| Reports | `python -m knee.audit.write_reports` | regenerates `docs/data_audit*.md`, `docs/dicom_tags*.md` |
+
+**Part 2 checklist:**
+1. `git pull`; set up the venv (lines at the top of `scripts/run_s01.ps1`); copy `configs/paths.example.yaml` →
+   `configs/paths.yaml` and fill in `data_root` (the SSD), `cache_root` and `audit_out` (internal drive).
+2. `powershell -ExecutionPolicy Bypass -File scripts\run_s01.ps1`. The header scan is the long step (estimate 30–60 min;
+   UNVERIFIED). It resumes if interrupted.
+3. Read the regenerated docs and act on them:
+   - CPU cores → CLAUDE.md open question #1.
+   - Tag list → open question #3 and checklist items 2, 4, 5, 6, 12.
+   - Corrupt/truncated files: the forum said 2.
+   - Laterality: geometry-vs-tag agreement by |centre x| band. Pick a dead zone and write the rule into S02's brief.
+   - Contrast class × CSV flag: confirm the flag means fat suppression.
+   - Cold decode throughput vs the SSD's MB/s: is S02 disk-bound or CPU-bound?
+   - Cache drive.
+4. Update CLAUDE.md, HANDOFF, the master plan, and the S02 brief if reality differs. Commit the regenerated docs
+   (aggregates only; the raw parquet stays in `audit_out`).
+
 ## Goal
 A working, reproducible Python/CUDA environment on the Windows box, plus a written, measured audit
 of the raw data that replaces guesses in CLAUDE.md with facts.
