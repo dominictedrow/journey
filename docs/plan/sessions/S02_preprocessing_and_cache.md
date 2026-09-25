@@ -3,6 +3,31 @@
 **Track:** D (shared) · **Machine:** Windows · **GPU:** no (CPU decode; the full build runs overnight)
 **Depends on:** S01 (env, `docs/dicom_tags.md`, `docs/data_audit.md`, cache-drive choice) · **Unblocks:** S03 (MAE), S05 (Track A)
 
+## Status after part 1 (2026-09-24, on the Mac)
+Part 1 wrote and tested all of this session's code on synthetic DICOMs and the real test stub; part 2 runs it on the
+full train set. Session log: `docs/sessions_log/S02_2026-09-24.md`. Format/rules: `docs/cache.md`.
+
+| Brief step | Code | Status |
+|---|---|---|
+| 1 dicom_io | `src/knee/data/dicom_io.py` | done (deferred pixel reads; robust) |
+| 2 geometry / laterality / canonicalization | `geometry.py` (canonical frame, `resolve_study_laterality`) | done; **dead zone = placeholder 20 mm** until S01 part 2 |
+| 3 series_select | `series_select.py` (+ contrast class from `series_meta.py`) | done; rank tables are placeholders for Dom's review |
+| 4 normalize, 5 crop_resize | `normalize.py`, `crop_resize.py` | done (1–99 %, 130 mm, 384 px; decision 2026-09-24) |
+| (new) one entry point | `preprocess.py::preprocess_study` | done: used by the cache **and** the notebook |
+| 6 build_cache | `build_cache.py` | done; stub cache built; **full build on Windows** |
+| 7 dataset | `dataset.py` | done; loader bench on the stub |
+| Measure | `inspect_cache.py bench`, `docs/cache.md` §4 | stub numbers in §4a; **§4b on Windows** |
+| Tests | `tests/test_data.py` (32) | pass; parity test included |
+
+**Part 2 checklist** (after S01 part 2):
+1. `git pull`; `pip install -e . --no-deps` if needed; `configs/paths.yaml` `cache_root` on an internal drive with ≥ ~130 GB free.
+2. `powershell -ExecutionPolicy Bypass -File scripts\run_s02.ps1 -DeadZoneMm <from S01 part 2> -SmokeOnly`, then check
+   the smoke numbers and the projected size.
+3. Run it again without `-SmokeOnly` (the full build is resumable; it refuses to mix params). Expect ≈1 h, disk-bound (UNVERIFIED).
+4. Fill `docs/cache.md` §4b; look at `docs/figures/cache_check_*.png` with Dom (every knee must read as a RIGHT knee).
+5. If S01 part 2 changes the contrast thresholds or the CSV-flag meaning, update `series_meta.py`/`series_select.py`
+   **before** the full build (slots and contrast classes are written into the index at build time).
+
 ## Goal
 One preprocessing module used **identically** by training, the cache build, and the Kaggle notebook, plus a full
 memory-mapped cache of all 4,407 train studies.

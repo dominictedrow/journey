@@ -3,6 +3,14 @@
 **Track:** B · **Machine:** Windows · **GPU:** yes. Ends by **launching a multi-day MAE job**.
 **Depends on:** S02 cache · **Unblocks:** S07 (fine-tuning from MAE)
 
+## Cache facts from S02 (read before building the MAE data path)
+- Cache: `<cache_root>/cache_v1_train/`, read it with `knee.data.dataset.CacheReader` (lazy memmaps, spawn-safe).
+  Every slice of every series, uint8, 384 × 384, 130 mm FOV (0.34 mm/px), canonical right-knee frame. `docs/cache.md`.
+- 2.5D windows: `dataset.window_indices` / `gather_windows` (with `out_px=` for a lower MAE resolution, INTER_AREA).
+- MAE needs a flat index of (series row, centre slice). Build it from `series_index.parquet` (`n_slices`, `valid`).
+  **Weight sampling per series, not per slice**: one stub 3D GRE series has 160 slices vs ~30 for a typical series.
+- Series-type ids for `SeriesTypeEmbed`: `dataset.type_ids(row)` (plane 3, fluid 2, contrast 6, field 3, slot 6).
+
 ## Goal
 Hand-written ViT modules (no `timm` model classes in Track B), each unit-tested, assembled into `SliceViT`/`KneeViT`;
 an MAE wrapper; a timed pilot; then the long pretraining run started in the background with checkpoint/resume.

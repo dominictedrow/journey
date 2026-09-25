@@ -1,0 +1,259 @@
+"""PyTorch datasets over the S02 cache (S02 step 7). Shared by Track A and Track B; inference reuses the window
+functions on in-memory arrays from preprocess_study, so train and test windows are assembled the same way.
+
+A **2.5D window** = 3 physically adjacent slices of one series (centre ± 1) stacked as channels (decision 2026-09-24).
+Train: K window centres per series drawn with stratified jitter over the span (a new view each epoch).
+Eval:  evenly spaced centres over the span (deterministic), or every slice.
+
+Datasets return **uint8** pixels (4× smaller to move between processes); convert to float on the GPU.
+They are spawn-safe for Windows DataLoader workers: the memmaps are opened lazily inside each worker.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pandas as pd
+import torch
+from torch.utils.data import Dataset
+
+from knee.data.series_select import CONTRASTS, PLANES, SLOTS
+from knee.paths import LABELS
+
+SPAN = (0.02, 0.98)  # HP: fraction of the ordered stack that window centres cover (public best: 2–98% [KT])
+FIELD_STRENGTHS = ["1.5T", "3T", "other"]
+
+
+# ------------------------------------------------------------------------------------------ window helpers (pure)
+def _span_idx(n: int, span: tuple[float, float]) -> tuple[int, int]:
+    lo = int(np.floor(span[0] * (n - 1)))
+    hi = int(np.ceil(span[1] * (n - 1)))
+    return lo, max(lo, hi)
+
+
+def train_centres(n: int, k: int, rng: np.random.Generator, span=SPAN) -> np.ndarray:
+    """k centres over the span: one uniform draw inside each of k equal bins (stratified jitter). Sorted."""
+    lo, hi = _span_idx(n, span)
+    edges = np.linspace(lo, hi + 1, k + 1)
+    c = np.floor(edges[:-1] + rng.random(k) * np.diff(edges)).astype(np.int64)
+    return np.clip(c, lo, hi)
+
+
+def eval_centres(n: int, k: int | None, span=SPAN) -> np.ndarray:
+    """k evenly spaced centres over the span; k=None → every slice in the span."""
+    lo, hi = _span_idx(n, span)
+    if k is None or k >= hi - lo + 1:
+        return np.arange(lo, hi + 1, dtype=np.int64)
+    return np.rint(np.linspace(lo, hi, k)).astype(np.int64)
+
+
+def window_indices(n: int, centres: np.ndarray) -> np.ndarray:
+    """(k, 3) slice indices [c-1, c, c+1], clamped at the stack ends (edge slice repeated)."""
+    c = np.asarray(centres, dtype=np.int64)[:, None]
+    return np.clip(c + np.array([-1, 0, 1]), 0, n - 1)
+
+
+def gather_windows(vol: np.ndarray, centres: np.ndarray, out_px: int | None = None) -> np.ndarray:
+    """vol (n, H, W) uint8 (memmap or array) → (k, 3, h, w) uint8, resized with INTER_AREA if out_px is set."""
+    idx = window_indices(len(vol), centres)
+    uniq, inv = np.unique(idx, return_inverse=True)
+    slices = np.asarray(vol[uniq])  # one read per distinct slice (sorted → mostly sequential on disk)
+    if out_px is not None and out_px != slices.shape[-1]:
+        slices = np.stack([cv2.resize(s, (out_px, out_px), interpolation=cv2.INTER_AREA) for s in slices])
+    return slices[inv.reshape(idx.shape)]
+
+
+def rel_position(n: int, centres: np.ndarray) -> np.ndarray:
+    """Normalized position of each centre in its stack: 0 = first slice, 1 = last."""
+    return (np.asarray(centres, dtype=np.float32) / max(n - 1, 1)).astype(np.float32)
+
+
+def type_ids(meta: dict) -> dict[str, int]:
+    """Integer ids for the series-type embeddings (plane, fluid, contrast class, field strength, slot)."""
+    fs = meta.get("field_strength")
+    fs_id = 2 if fs is None or not np.isfinite(fs) else (0 if fs < 2.0 else 1)
+    slot = meta.get("slot")
+    return {"plane": PLANES.index(meta["plane"]) if meta.get("plane") in PLANES else 0,
+            "fluid": int(bool(meta.get("fluid"))),
+            "contrast": CONTRASTS.index(meta["contrast_class"]) if meta.get("contrast_class") in CONTRASTS
+            else CONTRASTS.index("UNK"),
+            "field": fs_id,
+            "slot": SLOTS.index(slot) if slot in SLOTS else len(SLOTS)}  # len(SLOTS) = "no slot"
+
+
+# ------------------------------------------------------------------------------------------ cache access
+class CacheReader:
+    """Read-only view of a built cache. Picklable: memmaps are (re)opened lazily in each process."""
+
+    def __init__(self, cache_dir: str | Path):
+        self.cache_dir = Path(cache_dir)
+        self.manifest = json.loads((self.cache_dir / "cache_manifest.json").read_text())
+        self.out_px = int(self.manifest["params"]["out_px"])
+        ser = pd.read_parquet(self.cache_dir / "series_index.parquet")
+        self.studies = pd.read_parquet(self.cache_dir / "study_index.parquet").set_index("study_uid")
+        self._series_by_study: dict[str, list[dict]] = {
+            uid: g.sort_values("offset").to_dict("records") for uid, g in ser.groupby("study_uid", sort=False)}
+        self._mm: dict[int, np.memmap] = {}
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        d["_mm"] = {}
+        return d
+
+    @property
+    def study_uids(self) -> list[str]:
+        return sorted(self._series_by_study)
+
+    def series(self, study_uid: str) -> list[dict]:
+        return self._series_by_study.get(study_uid, [])
+
+    def _shard(self, shard: int) -> np.memmap:
+        mm = self._mm.get(shard)
+        if mm is None:
+            f = self.cache_dir / "shards" / f"shard_{shard:05d}.u8"
+            n = f.stat().st_size // (self.out_px * self.out_px)
+            mm = np.memmap(f, dtype=np.uint8, mode="r", shape=(n, self.out_px, self.out_px))
+            self._mm[shard] = mm
+        return mm
+
+    def pixels(self, row: dict) -> np.ndarray:
+        """(n_slices, out_px, out_px) uint8 memmap view of one series."""
+        o = int(row["offset"])
+        return self._shard(int(row["shard"]))[o: o + int(row["n_slices"])]
+
+
+def _labels_for(labels: pd.DataFrame | None, uid: str) -> tuple[torch.Tensor, torch.Tensor]:
+    if labels is None or uid not in labels.index:
+        return torch.zeros(len(LABELS)), torch.zeros(len(LABELS), dtype=torch.bool)
+    v = labels.loc[uid, LABELS].to_numpy(dtype=np.float32)
+    m = np.isfinite(v)
+    return torch.from_numpy(np.nan_to_num(v)), torch.from_numpy(m)
+
+
+# ------------------------------------------------------------------------------------------ Track A
+class StudyWindowsDataset(Dataset):
+    """Track A: a fixed grid of 5 slots × W windows per study.
+
+    Returns x uint8 (S=5, W, 3, h, w), slot_mask (S,), z (S, W) relative positions, labels (12,), label_mask (12,).
+    Missing slots are zeros with slot_mask False. train=True draws random centres (and optional slot dropout).
+    """
+
+    def __init__(self, reader: CacheReader, study_uids: list[str], labels: pd.DataFrame | None = None,
+                 windows_per_slot: int = 12, train: bool = False, out_px: int | None = None, span=SPAN,
+                 slot_dropout: float = 0.0, seed: int = 0):
+        self.r, self.uids, self.labels = reader, list(study_uids), labels
+        self.W, self.train, self.span, self.slot_dropout, self.seed = windows_per_slot, train, span, slot_dropout, seed
+        self.px = out_px or reader.out_px
+        self.epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self.epoch = epoch
+
+    def __len__(self) -> int:
+        return len(self.uids)
+
+    def __getitem__(self, i: int) -> dict:
+        uid = self.uids[i]
+        rng = np.random.default_rng((self.seed, self.epoch, i))
+        by_slot = {s["slot"]: s for s in self.r.series(uid) if s.get("slot") in SLOTS}
+        x = np.zeros((len(SLOTS), self.W, 3, self.px, self.px), dtype=np.uint8)
+        z = np.zeros((len(SLOTS), self.W), dtype=np.float32)
+        mask = np.zeros(len(SLOTS), dtype=bool)
+        present = [k for k, s in enumerate(SLOTS) if s in by_slot]
+        if self.train and self.slot_dropout > 0 and len(present) > 1:
+            drop = rng.random(len(present)) < self.slot_dropout
+            if drop.all():
+                drop[rng.integers(len(present))] = False
+            present = [k for k, d in zip(present, drop) if not d]
+        for k in present:
+            row = by_slot[SLOTS[k]]
+            vol = self.r.pixels(row)
+            n = len(vol)
+            c = train_centres(n, self.W, rng, self.span) if self.train else eval_centres(n, self.W, self.span)
+            if len(c) < self.W:  # stack shorter than W: repeat evenly (eval) so the grid stays fixed
+                c = c[np.rint(np.linspace(0, len(c) - 1, self.W)).astype(int)]
+            x[k] = gather_windows(vol, c, self.px)
+            z[k] = rel_position(n, c)
+            mask[k] = True
+        y, ym = _labels_for(self.labels, uid)
+        return {"x": torch.from_numpy(x), "slot_mask": torch.from_numpy(mask), "z": torch.from_numpy(z),
+                "labels": y, "label_mask": ym, "study_uid": uid}
+
+
+# ------------------------------------------------------------------------------------------ Track B
+class StudyBagDataset(Dataset):
+    """Track B: a variable-length bag of windows from every series of the study (not only the 5 slots).
+
+    Each window carries its series' type ids and its slice position. Use collate_bag to pad a batch.
+    train: windows_per_series random windows per series (+ optional series dropout).
+    eval:  eval_windows_per_series evenly spaced (None = every slice in the span).
+    """
+
+    def __init__(self, reader: CacheReader, study_uids: list[str], labels: pd.DataFrame | None = None,
+                 windows_per_series: int = 8, eval_windows_per_series: int | None = 16, train: bool = False,
+                 out_px: int | None = None, span=SPAN, series_dropout: float = 0.0, max_series: int | None = None,
+                 seed: int = 0):
+        self.r, self.uids, self.labels = reader, list(study_uids), labels
+        self.K, self.K_eval, self.train, self.span = windows_per_series, eval_windows_per_series, train, span
+        self.series_dropout, self.max_series, self.seed = series_dropout, max_series, seed
+        self.px = out_px or reader.out_px
+        self.epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        self.epoch = epoch
+
+    def __len__(self) -> int:
+        return len(self.uids)
+
+    def __getitem__(self, i: int) -> dict:
+        uid = self.uids[i]
+        rng = np.random.default_rng((self.seed, self.epoch, i))
+        series = [s for s in self.r.series(uid) if int(s["n_slices"]) > 0]
+        if self.train and self.series_dropout > 0 and len(series) > 1:
+            keep = rng.random(len(series)) >= self.series_dropout
+            if not keep.any():
+                keep[rng.integers(len(series))] = True
+            series = [s for s, k in zip(series, keep) if k]
+        if self.max_series is not None and len(series) > self.max_series:
+            pick = rng.choice(len(series), self.max_series, replace=False) if self.train else \
+                np.arange(self.max_series)
+            series = [series[j] for j in sorted(pick)]
+        xs, sid, z, zmm, tid = [], [], [], [], {k: [] for k in ("plane", "fluid", "contrast", "field", "slot")}
+        for j, row in enumerate(series):
+            vol = self.r.pixels(row)
+            n = len(vol)
+            c = train_centres(n, self.K, rng, self.span) if self.train else eval_centres(n, self.K_eval, self.span)
+            xs.append(gather_windows(vol, c, self.px))
+            sid.append(np.full(len(c), j))
+            z.append(rel_position(n, c))
+            pos = np.asarray(row["positions_mm"], dtype=np.float32)
+            zmm.append(pos[c] - np.float32(np.median(pos)))  # mm from the stack's middle (optional feature)
+            for k, v in type_ids(row).items():
+                tid[k].append(np.full(len(c), v))
+        y, ym = _labels_for(self.labels, uid)
+        out = {"x": torch.from_numpy(np.concatenate(xs)), "series_idx": torch.from_numpy(np.concatenate(sid)),
+               "z": torch.from_numpy(np.concatenate(z)), "z_mm": torch.from_numpy(np.concatenate(zmm)),
+               "labels": y, "label_mask": ym, "study_uid": uid}
+        for k, v in tid.items():
+            out[k] = torch.from_numpy(np.concatenate(v).astype(np.int64))
+        return out
+
+
+def collate_bag(batch: list[dict]) -> dict:
+    """Pad bags to the longest one; window_mask marks real windows (True) vs padding (False)."""
+    L = max(len(b["x"]) for b in batch)
+    B = len(batch)
+    out: dict = {"window_mask": torch.zeros(B, L, dtype=torch.bool), "study_uid": [b["study_uid"] for b in batch],
+                 "labels": torch.stack([b["labels"] for b in batch]),
+                 "label_mask": torch.stack([b["label_mask"] for b in batch])}
+    for k in ("x", "series_idx", "z", "z_mm", "plane", "fluid", "contrast", "field", "slot"):
+        ref = batch[0][k]
+        t = torch.zeros((B, L, *ref.shape[1:]), dtype=ref.dtype)
+        for i, b in enumerate(batch):
+            t[i, : len(b[k])] = b[k]
+        out[k] = t
+    for i, b in enumerate(batch):
+        out["window_mask"][i, : len(b["x"])] = True
+    return out

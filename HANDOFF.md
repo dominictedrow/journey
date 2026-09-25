@@ -55,30 +55,36 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-24, session S01 part 1 (on the Mac; no data drive, no GPU)._
+_Last updated: 2026-09-24, session S02 part 1 (on the Mac; no data drive, no GPU)._
 
-- **Code exists now:** `src/knee/audit/` (env check, CSV audit, full-corpus header scan, per-series/study summary,
-  decode benchmark, report writer), `src/knee/data/{geometry,series_meta}.py` (slice ordering, plane, laterality, contrast
-  class, site proxy: shared with S02 and inference), `tests/` (15 pytest tests, CPU, all passing), `requirements.txt`
-  (pinned, resolves for Windows/py3.12: torch 2.14.0+cu130), `pyproject.toml`, `configs/paths.example.yaml`,
-  `scripts/run_s01.ps1` (one command runs the whole S01 audit on Windows).
-- **Measured from the real CSVs:** 4,407 studies, 58 gold, 24,371 series, Fluid ≡ FatSup on every row, every study has all
-  3 planes, 223 studies share a normalized report text (52 groups) → `docs/data_audit.md` §1–4.
-- **Measured on the visible test stub** (512 of 558 files, rate-limited): 100% Explicit VR LE, 0 errors, 69 tags, Toshiba
-  files lack TR/TE/Sex/Laterality/FieldStrength, CSV fluid flag = header fat-sat on 14/14 series → `docs/data_audit_test.md`,
-  `docs/dicom_tags_test.md`.
-- Decoders verified bit-exact on all four transfer syntaxes (on the Mac). Dom has accepted the competition rules.
-- **Not done yet (needs the Windows box):** env check on the RTX 5070, full-corpus header scan/tags/geometry/laterality/site
-  proxy, decode throughput from the SATA SSD, cache-drive choice, corrupt-file list.
+- **S01 code** (part 1): `src/knee/audit/` (env check, CSV audit, header scan, series/study summary, decode bench, reports),
+  `scripts/run_s01.ps1`. **S01 part 2 (running it on Windows) has not happened yet.**
+- **S02 code** (part 1): `src/knee/data/` = the shared preprocessing library. `preprocess.preprocess_study()` is the one
+  entry point for the cache build *and* the Kaggle notebook (canonical frame: every knee stored as a right knee in a
+  fixed display per plane; 130 mm crop → 384 px; per-series 1–99 window → uint8; slots). `build_cache.py` (resumable
+  shards, parquet indexes, manifest), `dataset.py` (`StudyWindowsDataset` for Track A, `StudyBagDataset` +
+  `collate_bag` for Track B), `inspect_cache.py` (figures, loader bench), `scripts/run_s02.ps1`. Details: `docs/cache.md`.
+- Tests: 47 pytest tests (CPU), all passing; `tests/test_data.py` includes the train/infer **parity** test.
+- **Measured:** the CSVs (`docs/data_audit.md` §1–4), the test stub (`docs/data_audit_test.md`, `docs/dicom_tags_test.md`),
+  stub preprocessing ≈4.2 ms/slice on the M3; the canonical frame was checked by eye on real stub images.
+- Stub facts still worth knowing: 100% Explicit VR LE, Toshiba files lack TR/TE/Sex/Laterality/FieldStrength, CSV fluid
+  flag = header fat-sat on 14/14; decoders bit-exact on all 4 syntaxes. Dom has accepted the competition rules.
+- Decided this session: cache v1 = 384 px, every slice of every series, ≈120 GB (`docs/decisions.md`).
+- **Not done yet (needs the Windows box):** everything in S01 part 2; the full cache build + its measurements
+  (`docs/cache.md` §4b); the train figures.
 - Submissions made: none. Best public LB: n/a. Top of the LB on 2026-09-24: 0.959; public notebooks: 0.941–0.947.
 - Long jobs running: none.
 
 ## 5. Next session
 
-**S01 part 2 (Windows box): run the audit and interpret it.** Brief: `docs/plan/sessions/S01_env_and_data_audit.md`
-(see its "Status after part 1" section first). In short: set up the venv, fill `configs/paths.yaml`, run
-`scripts/run_s01.ps1`, review the regenerated `docs/env.md` / `docs/data_audit.md` / `docs/dicom_tags.md`, answer CLAUDE.md
-open questions #1 and #3, pick the cache drive, raise surprises with Dom. Then **S02** (preprocessing + cache).
+**On the Windows box, in this order:**
+1. **S01 part 2**: brief `docs/plan/sessions/S01_env_and_data_audit.md` ("Status after part 1"). Set up the venv, fill
+   `configs/paths.yaml` (`cache_root` on an internal drive with **≥ ~130 GB free**), run `scripts/run_s01.ps1`, and
+   interpret the output. From its laterality table, pick the geometry **dead zone** (mm).
+2. **S02 part 2**: brief `docs/plan/sessions/S02_preprocessing_and_cache.md` ("Status after part 1"). Run
+   `scripts/run_s02.ps1 -DeadZoneMm <from step 1>` (start with `-SmokeOnly`), fill `docs/cache.md` §4b, and look at the
+   train figures with Dom.
+3. Then **S03** (ViT modules + MAE launch; it needs the cache) and/or **S04** (labels; it doesn't need the cache).
 
 ## 6. Quick facts a fresh session tends to get wrong
 

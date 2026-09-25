@@ -110,3 +110,86 @@ def spacing_stats(positions: np.ndarray) -> dict:
         "n_duplicate": dup,  # >0 means several stacks / echoes share positions (must be split before stacking)
         "max_gap_ratio": float(d_pos.max() / med) if med > 0 else np.nan,  # >1.5 hints at a missing slice
     }
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Canonical frame (S02). Every series is re-oriented in-plane to one fixed display per plane, slices are ordered
+# along one fixed patient axis, and left knees are mirrored so every study looks like a RIGHT knee.
+#
+# Target display (LPS unit vectors: direction of increasing column index, direction of increasing row index):
+#   Axial:    columns → +x (patient Left),      rows → +y (Posterior)   (radiological convention, viewed from feet)
+#   Coronal:  columns → +x (patient Left),      rows → -z (Inferior)    (head at top, radiological)
+#   Sagittal: columns → +y (Posterior),         rows → -z (Inferior)    (anterior on the left, head at top)
+# Slices are sorted ascending along u × v (Axial: +z, Coronal: +y, Sagittal: -x). For a right knee that means
+# sagittal slice 0 is the most medial slice (patient-left-most); coronal slice 0 is the most anterior.
+# Mirroring a left knee = flip columns for axial/coronal (x is the column axis) and reverse the slice order for
+# sagittal (x is the slice axis). A left knee is the mirror image of a right knee across the sagittal plane, so this
+# gives right-knee anatomy: medial is always on the image right (cor/ax) and at slice 0 (sag).
+# ---------------------------------------------------------------------------------------------------------------
+_E = np.eye(3)
+CANONICAL_UV = {
+    "Axial": (_E[0], _E[1]),
+    "Coronal": (_E[0], -_E[2]),
+    "Sagittal": (_E[1], -_E[2]),
+}
+
+
+def canonical_normal(plane: str) -> np.ndarray:
+    u, v = CANONICAL_UV[plane]
+    return np.cross(u, v)
+
+
+def canonical_inplane_ops(iop: np.ndarray, plane: str) -> tuple[bool, bool, bool]:
+    """(transpose, flip_rows, flip_cols) that map an image with this IOP onto the plane's canonical display.
+
+    Apply in that order: img.T first (if transpose), then flip axis 0 (rows) and/or axis 1 (cols). Oblique planes
+    use the best-matching axis assignment (maximum |dot| sum), so a 10–15° tilt maps like its orthogonal plane.
+    """
+    r, c = np.asarray(iop[:3], float), np.asarray(iop[3:6], float)  # r: +column direction, c: +row direction
+    u, v = CANONICAL_UV[plane]
+    keep = abs(r @ u) + abs(c @ v)
+    swap = abs(r @ v) + abs(c @ u)
+    transpose = bool(swap > keep)
+    if transpose:  # after img.T, the column direction is the old row direction (c) and vice versa
+        r, c = c, r
+    return transpose, bool(c @ v < 0), bool(r @ u < 0)
+
+
+def apply_inplane_ops(img: np.ndarray, ops: tuple[bool, bool, bool], mirror_cols: bool = False) -> np.ndarray:
+    """Apply canonical_inplane_ops (and an optional extra left-right mirror) to a 2-D or (..., H, W) array."""
+    transpose, flip_rows, flip_cols = ops
+    if transpose:
+        img = np.swapaxes(img, -1, -2)
+    if flip_rows:
+        img = img[..., ::-1, :]
+    if flip_cols != mirror_cols:  # two flips cancel
+        img = img[..., :, ::-1]
+    return np.ascontiguousarray(img)
+
+
+def canonical_positions(ipp: np.ndarray, iop: np.ndarray, plane: str) -> np.ndarray:
+    """Slice positions (mm) along the true slice normal, signed to point the plane's canonical way. Sort ascending
+    for canonical slice order. (The true normal keeps mm exact for oblique stacks; the axis would shrink by cos θ.)"""
+    n = slice_normal(iop)
+    if n @ canonical_normal(plane) < 0:
+        n = -n
+    return np.asarray(ipp, dtype=np.float64) @ n
+
+
+def resolve_study_laterality(tags: list, center_xs: list, dead_zone_mm: float) -> tuple[str, str]:
+    """Study laterality ('R'/'L'/'U') and its source ('tag'/'geometry'/'none').
+
+    1. The DICOM Laterality tag, if the study's tagged series agree (a conflict falls through to geometry).
+    2. Geometry: the median image-centre x over the study's series (laterality_from_center_x with a dead zone).
+    'U' means don't mirror: a wrong flip is worse than no flip [WG]. The dead zone is a placeholder until S01 part 2
+    measures tag-vs-geometry agreement by |x| band (UNVERIFIED).
+    """
+    t = {str(x).strip().upper() for x in tags if x is not None and str(x).strip().upper() in ("L", "R")}
+    if len(t) == 1:
+        return t.pop(), "tag"
+    xs = [float(x) for x in center_xs if x is not None and np.isfinite(x)]
+    if xs:
+        lat = laterality_from_center_x(float(np.median(xs)), dead_zone_mm)
+        if lat != "U":
+            return lat, "geometry"
+    return "U", "none"
