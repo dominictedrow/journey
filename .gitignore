@@ -1,0 +1,40 @@
+# Data (MIRA license; never commit)
+data/
+*.dcm
+train_series/
+test_series/
+*.csv.zip
+
+# Model weights / checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.npy
+*.npz
+
+# Secrets
+kaggle.json
+.env
+*.key
+
+# Python / tooling
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+.DS_Store
+.gstack/
+graphify-out/
+wandb/
+
+# macOS AppleDouble files created on FAT32
+._*
+
+# Caches, runs, derived label files (MIRA-derived; keep out of the repo)
+data_cache/
+runs/
+checkpoints/
+*.parquet
+configs/paths.yaml
