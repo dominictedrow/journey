@@ -9,6 +9,9 @@
 session fills the label/fold paths, checks the VRAM of the config (batch 1, 15 train windows at 384 px, grad
 checkpointing), runs the smoke run (`--set optim.epochs=1 data.limit_studies=200`), then fold 0.
 
+**Labels available (S04 part 1):** `<cache_root>/labels/labels_v0.parquet` + `folds_v0.csv` (public-only blend, gold
+0.889). Use v1 once S04 part 2 builds it; set `labels.file`, `folds.file`, and `gold.file` (= train.csv) in the config.
+
 ## Goal
 A trained, validated pretrained-backbone model reproducing the public single-model recipe on *our* labels/folds, with
 OOF predictions saved for later blending.

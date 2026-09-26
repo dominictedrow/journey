@@ -55,7 +55,7 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-25, session S03 part 1 (on the Mac; no data drive, no GPU)._
+_Last updated: 2026-09-26, session S04 part 1 (on the Mac; no data drive, no GPU)._
 
 - **S01 code** (part 1): `src/knee/audit/` (env check, CSV audit, header scan, series/study summary, decode bench, reports),
   `scripts/run_s01.ps1`. **S01 part 2 (running it on Windows) has not happened yet.**
@@ -71,9 +71,17 @@ _Last updated: 2026-09-25, session S03 part 1 (on the Mac; no data drive, no GPU
   plumbing), `src/knee/utils/metrics.py`, `src/knee/infer/predict.py` (notebook model side → `submission.csv`),
   configs `mae_vits.yaml` / `trackB_vits_mil.yaml` / `trackA_coatnet.yaml`, `scripts/run_s03.ps1`.
   Session log: `docs/sessions_log/S03_2026-09-25.md`.
+- **S04 code** (part 1): `src/knee/labels/` (prompt/schema, Claude batch reader with cost ledger + $50 budget guard,
+  public sets + license/leak check, blend, LOO gold calibration, folds, `build_labels.py`). **Built labels_v0 + folds_v0**
+  (4 public CC0 readers, gold 0.889 [0.849, 0.924]) in `<cache_root>/labels/` on the Mac scratchpad only: rebuild on
+  Windows with `python -m knee.labels.public_sets download` then `python -m knee.labels.build_labels --version v0
+  --no-claude` (~2 min, CPU). QA: `docs/labels.md`. Session log: `docs/sessions_log/S04_2026-09-26.md`.
+  **Claude reader pilot not run yet** (needs `ANTHROPIC_API_KEY` in `.env`); Dom chose to pilot Opus 5 *and* Sonnet 5.
+- **S06 code**: `notebooks/infer.py` (Kaggle script kernel) + `scripts/build_kaggle_bundle.py` (stages the upload folder;
+  never uploads), tested in `tests/test_notebook.py`.
 - **Label/fold file format is fixed** (`train_sup.py` docstring): labels parquet = `StudyInstanceUID` + 12 soft columns
   (NaN = unknown) + optional `w_<label>`; folds csv = `StudyInstanceUID, fold`. S04 must write exactly that.
-- Tests: 85 pytest tests (CPU) pass, 1 skipped (stub); includes train/infer **parity** at the pixel level (S02) and at the
+- Tests: 103 pytest tests (CPU) pass, 1 skipped (stub); includes train/infer **parity** at the pixel level (S02) and at the
   model-input level (S03), and an end-to-end submission test.
 - **Long jobs, once launched (S03 part 2):** `scripts\run_s03.ps1 -Status` (process, last log lines, snapshots, GPU),
   `-Pause` (writes `<run_dir>\STOP` → saves `last.pt`, exits), `-Launch` (starts or resumes from `last.pt`). The same
@@ -90,17 +98,25 @@ _Last updated: 2026-09-25, session S03 part 1 (on the Mac; no data drive, no GPU
 
 ## 5. Next session
 
+**Can run now, on either machine (no GPU):** the S04 part 2 Claude reader pilot. Brief `docs/plan/sessions/S04_labels_v1.md`
+("Status after part 1") has the exact commands: `.env` with the key → `reader sync --n 2` → pilot batches for Opus 5 and
+Sonnet 5 → `collect` → `parse` → `build_labels --version pilot_<model>` for each → show Dom gold AUC + $/report → Dom picks →
+full run (the guard refuses > $50 total) → `build_labels --version v1`.
+
 **On the Windows box, in this order:**
-1. **S01 part 2**: brief `docs/plan/sessions/S01_env_and_data_audit.md` ("Status after part 1"). Set up the venv, fill
-   `configs/paths.yaml` (`cache_root` on an internal drive with **≥ ~130 GB free**), run `scripts/run_s01.ps1`, and
-   interpret the output. From its laterality table, pick the geometry **dead zone** (mm).
+1. **S01 part 2**: brief `docs/plan/sessions/S01_env_and_data_audit.md` ("Status after part 1"). Set up the venv
+   (`requirements.txt` now includes `anthropic`), fill `configs/paths.yaml` (`cache_root` on an internal drive with
+   **≥ ~130 GB free**), run `scripts/run_s01.ps1`, and interpret the output. From its laterality table, pick the geometry
+   **dead zone** (mm). It also writes the site proxy (`<audit_out>/study_train.parquet`): **re-run `build_labels` afterwards**
+   so the folds stratify by site (decision 2026-09-26).
 2. **S02 part 2**: brief `docs/plan/sessions/S02_preprocessing_and_cache.md` ("Status after part 1"). Run
    `scripts/run_s02.ps1 -DeadZoneMm <from step 1>` (start with `-SmokeOnly`), fill `docs/cache.md` §4b, and look at the
    train figures with Dom.
 3. **S03 part 2**: brief `docs/plan/sessions/S03_vit_modules_and_mae_launch.md` ("Status after part 1"). Run
    `scripts\run_s03.ps1` (tests → VRAM table → MAE pilot), get Dom's OK on the duration, then `-Launch`.
-4. **S04** (labels; no GPU, can run on the Mac or Windows while MAE trains). It must write the file format in §4.
-   S05 (Track A) then only needs the paths filled into `configs/trackA_coatnet.yaml`.
+4. **S04 part 2** if it hasn't run on the Mac (above), while MAE trains.
+5. **S05** (Track A): fill `labels.file` / `folds.file` / `gold.file` in `configs/trackA_coatnet.yaml` (v1, or v0 if v1
+   isn't ready), then its brief. **S06** then needs only wheels + the S05 checkpoint + Dom's OK to upload/submit.
 
 ## 6. Quick facts a fresh session tends to get wrong
 

@@ -3,6 +3,21 @@
 **Track:** L · **Machine:** Windows (or the Mac; no GPU needed) · **GPU:** no (MAE keeps running)
 **Depends on:** S01 (train.csv facts) · **Unblocks:** S05, S07
 
+**Status after part 1 (2026-09-26, Mac):** all code is written and tested (`src/knee/labels/`, 16 CPU tests incl. a
+fake-SDK batch run). Public sets downloaded + license-checked (all CC0-1.0), leak-checked, blended → **labels_v0**
+(public only, gold 0.889 [0.849, 0.924]) + `folds_v0.csv`; `docs/labels.md` is the v0 QA report. **Remaining (part 2):**
+the Claude reader pilot on **both** Opus 5 and Sonnet 5 (decision 2026-09-26) → Dom picks the model from gold agreement
+and measured $/report → full run → `build_labels --version v1` → re-run once S01 part 2 writes the site proxy
+(`<audit_out>/study_train.parquet`; folds then stratify by site). Commands:
+```
+python -m knee.labels.reader sync --n 2                                   # ~$0.05 smoke test (Opus 5)
+python -m knee.labels.reader submit --split pilot                         # Opus 5, run claude_v1
+python -m knee.labels.reader submit --split pilot --model claude-sonnet-5 --run-name claude_sonnet5_v1
+python -m knee.labels.reader collect [--model ... --run-name ...]         # repeat until both batches ended
+python -m knee.labels.reader parse [--run-name ...]; python -m knee.labels.build_labels --version pilot_<model> --claude-run <run>
+python -m knee.labels.reader submit --split full [--run-name <picked>]    # refuses if spent + projection > $50
+```
+
 ## Goal
 `labels_v1.parquet`: StudyInstanceUID + 12 soft targets + 12 per-label weights; `folds_v1.csv`; a label QA report.
 

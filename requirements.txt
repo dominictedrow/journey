@@ -34,4 +34,6 @@ python-gdcm==3.2.6
 timm==1.0.30
 
 kaggle==2.2.4
+# S04 report reader (Claude API, Message Batches). Key in .env (gitignored).
+anthropic==1.8.0
 pytest==9.1.1

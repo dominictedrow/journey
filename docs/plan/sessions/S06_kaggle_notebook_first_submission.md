@@ -3,6 +3,13 @@
 **Track:** A (the notebook is reused by B) · **Machine:** Windows + Kaggle · **GPU:** Kaggle
 **Depends on:** S05 checkpoint · **Unblocks:** the G-Oct 1 gate
 
+**Status after S04 part 1 (2026-09-26, Mac):** step 3's script is written and CPU-tested: `notebooks/infer.py` (path
+resolution for both `/kaggle/input/competitions/<slug>` and `/kaggle/input/<slug>` layouts, offline wheel install only
+for missing decoders, hardware print, test-data probe, per-stage timing, `run_summary.json`, preprocessing-version
+guard) and `scripts/build_kaggle_bundle.py` (stages `knee_src/`, `weights/`, `arms.json` with the cache manifest's
+PreprocParams and the report-label prior, `dataset-metadata.json`; **never uploads**). Test: `tests/test_notebook.py`.
+Remaining: wheels built on Kaggle's Python, the S05 checkpoint, Dom's OK to create the dataset/push/submit.
+
 ## Goal
 A valid scored submission, the measured runtime, and answers to the test-data open questions.
 
