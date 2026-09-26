@@ -1,0 +1,43 @@
+# S07: fine-tune KneeViT (SliceViT from MAE + attention-MIL head) on report labels. All numbers are HP placeholders.
+#   python -m knee.train.train_sup --config configs/trackB_vits_mil.yaml --set folds.fold=0
+# Random-init control: the same command with --set init.encoder=null run_name=trackB_vits_mil_scratch
+run_name: trackB_vits_mil
+seed: 0
+precision: bf16
+model:
+  kind: knee_vit
+  cfg:
+    slice_vit: {img_size: 256, patch: 16, dim: 384, depth: 12, heads: 6, tokenizer: conv_stem, stem_norm: gn,
+                pos2d: sincos, pool: gap, qk_norm: true, layerscale: 0.1, drop_path: 0.1, attn_impl: sdpa,
+                grad_checkpointing: true}
+    slice_pos: {n_freq: 8, use_mm: false}
+    series_type: {fields: [plane, fluid, contrast, field], max_series: 0}
+    head: {kind: attn_mil, att_dim: 256, dropout: 0.2, gated: false}   # then: {kind: finding_query, heads: 6}
+    window_chunk: 64
+    window_dropout: 0.1
+init:
+  encoder: null            # e.g. <cache_root>/runs/mae_vits_p16_256/encoder_final.pt
+labels: {file: null, lo: 0.4, hi: 0.6}   # S04: labels_v1.parquet
+folds: {file: null, fold: 0}             # S04: folds_v1.csv
+gold: {file: null}                        # <data_root>/train.csv (scored, never used for selection)
+data:
+  format: bag
+  out_px: 256
+  train_windows: 8         # per series (~5.5 series/study → ~44 windows)
+  eval_windows: 16
+  series_dropout: 0.1
+  max_series: null
+  batch_size: 1
+  workers: 4
+optim:
+  lr: 3.0e-4
+  weight_decay: 0.05
+  betas: [0.9, 0.999]
+  warmup_frac: 0.1
+  epochs: 20
+  min_lr_ratio: 0.01
+  clip: 1.0
+  accum: 16
+  layer_decay: 0.75        # LLRD (02 §C15)
+loss: {rank_w: 0.05, rank_bank: 256, pos_thr: 0.6, neg_thr: 0.4}
+select: {top_k: 3}

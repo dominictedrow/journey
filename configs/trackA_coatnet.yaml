@@ -1,0 +1,40 @@
+# S05: Track A = the public Raptor recipe on our labels/folds: CoAtNet-RMLP-2 (ImageNet-12k→1k) per 2.5D window at
+# 384 px + per-finding attention-MIL head, 5 slots. All numbers are HP placeholders (public values in comments [KT]).
+#   python -m knee.train.train_sup --config configs/trackA_coatnet.yaml --set folds.fold=0
+run_name: trackA_coatnet384
+seed: 0
+precision: bf16
+model:
+  kind: trackA
+  cfg:
+    backbone: coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k   # downloads once from the HF hub on the Windows box
+    pretrained: true
+    head: {kind: attn_mil, att_dim: 256, dropout: 0.2, gated: false}  # Raptor exactly
+    grad_checkpointing: true
+    window_chunk: 16
+    window_dropout: 0.0
+    slot_embed: true       # our addition (zero-init, starts neutral); false = the public recipe
+    slice_pos: false
+labels: {file: null, lo: 0.4, hi: 0.6}
+folds: {file: null, fold: 0}
+gold: {file: null}
+data:
+  format: slots
+  out_px: 384
+  train_windows: 3         # per slot → 15 per study (public: K12 per study at bs 8 on 24 GB)
+  eval_windows: 12         # per slot → 60 (public best: 62 over a 2–98% span)
+  slot_dropout: 0.1
+  batch_size: 1
+  workers: 4
+optim:
+  lr: 1.0e-3               # head LR (public 1e-3)
+  backbone_lr_mult: 0.03   # backbone 3e-5 (public)
+  weight_decay: 0.02
+  betas: [0.9, 0.999]
+  warmup_frac: 0.15
+  epochs: 16
+  min_lr_ratio: 0.01
+  clip: 1.0
+  accum: 24                # effective batch 24 (public)
+loss: {rank_w: 0.075, rank_bank: 256, pos_thr: 0.6, neg_thr: 0.4}
+select: {top_k: 3}

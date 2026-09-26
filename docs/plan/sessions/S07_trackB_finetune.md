@@ -3,6 +3,11 @@
 **Track:** B · **Machine:** Windows · **GPU:** yes (after MAE finishes, or at a good checkpoint; ask Dom)
 **Depends on:** S03 (MAE checkpoint), S04 labels/folds, S05 (`train_sup.py`, metrics) · **Unblocks:** the S08 gate
 
+
+**Code status (S03 part 1, 2026-09-25):** `configs/trackB_vits_mil.yaml` + `train_sup.py` already do steps 1–3
+(`init.encoder` loads the MAE `encoder_*.pt` strictly and prints missing/unexpected keys; `layer_decay` = LLRD; the random-init
+control is `--set init.encoder=null`). Attention maps: `model(batch, return_attn=True)` returns `[B, 12, L]` window weights.
+
 ## Goal
 A quantified answer to "how good is Dom's from-scratch ViT?": MAE-pretrained vs random-init vs Track A, on the same
 folds and labels.

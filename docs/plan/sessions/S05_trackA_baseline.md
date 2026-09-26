@@ -3,6 +3,12 @@
 **Track:** A · **Machine:** Windows · **GPU:** yes (**ask Dom before pausing MAE**; resume it after)
 **Depends on:** S02 cache, S04 labels/folds · **Unblocks:** S06 (first submission)
 
+
+**Code status (S03 part 1, 2026-09-25):** steps 1–3 are written and CPU-tested: `src/knee/model/trackA.py`,
+`src/knee/train/train_sup.py` (shared trainer), `src/knee/utils/metrics.py`, `configs/trackA_coatnet.yaml`. This
+session fills the label/fold paths, checks the VRAM of the config (batch 1, 15 train windows at 384 px, grad
+checkpointing), runs the smoke run (`--set optim.epochs=1 data.limit_studies=200`), then fold 0.
+
 ## Goal
 A trained, validated pretrained-backbone model reproducing the public single-model recipe on *our* labels/folds, with
 OOF predictions saved for later blending.

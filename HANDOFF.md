@@ -55,7 +55,7 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-24, session S02 part 1 (on the Mac; no data drive, no GPU)._
+_Last updated: 2026-09-25, session S03 part 1 (on the Mac; no data drive, no GPU)._
 
 - **S01 code** (part 1): `src/knee/audit/` (env check, CSV audit, header scan, series/study summary, decode bench, reports),
   `scripts/run_s01.ps1`. **S01 part 2 (running it on Windows) has not happened yet.**
@@ -64,14 +64,27 @@ _Last updated: 2026-09-24, session S02 part 1 (on the Mac; no data drive, no GPU
   fixed display per plane; 130 mm crop → 384 px; per-series 1–99 window → uint8; slots). `build_cache.py` (resumable
   shards, parquet indexes, manifest), `dataset.py` (`StudyWindowsDataset` for Track A, `StudyBagDataset` +
   `collate_bag` for Track B), `inspect_cache.py` (figures, loader bench), `scripts/run_s02.ps1`. Details: `docs/cache.md`.
-- Tests: 47 pytest tests (CPU), all passing; `tests/test_data.py` includes the train/infer **parity** test.
+- **S03 code** (part 1): `src/knee/model/` (Track B ViT, hand-written: conv stem, sincos/slice/series-type embeddings,
+  manual+SDPA attention, pre-norm blocks, `SliceViT`, `AttnMILHead`/`FindingQueryHead`/`ClsStudyHead`, `KneeViT`; Track A
+  `trackA.py`; GPU `sanity.py`), `src/knee/ssl/` (MAE + resumable `pretrain_mae.py` + linear probe), `src/knee/train/`
+  (**`train_sup.py` = the one supervised trainer for both tracks**, optim/LLRD, losses incl. rank bank, checkpoint/STOP
+  plumbing), `src/knee/utils/metrics.py`, `src/knee/infer/predict.py` (notebook model side → `submission.csv`),
+  configs `mae_vits.yaml` / `trackB_vits_mil.yaml` / `trackA_coatnet.yaml`, `scripts/run_s03.ps1`.
+  Session log: `docs/sessions_log/S03_2026-09-25.md`.
+- **Label/fold file format is fixed** (`train_sup.py` docstring): labels parquet = `StudyInstanceUID` + 12 soft columns
+  (NaN = unknown) + optional `w_<label>`; folds csv = `StudyInstanceUID, fold`. S04 must write exactly that.
+- Tests: 85 pytest tests (CPU) pass, 1 skipped (stub); includes train/infer **parity** at the pixel level (S02) and at the
+  model-input level (S03), and an end-to-end submission test.
+- **Long jobs, once launched (S03 part 2):** `scripts\run_s03.ps1 -Status` (process, last log lines, snapshots, GPU),
+  `-Pause` (writes `<run_dir>\STOP` → saves `last.pt`, exits), `-Launch` (starts or resumes from `last.pt`). The same
+  STOP file works for `train_sup.py` runs.
 - **Measured:** the CSVs (`docs/data_audit.md` §1–4), the test stub (`docs/data_audit_test.md`, `docs/dicom_tags_test.md`),
   stub preprocessing ≈4.2 ms/slice on the M3; the canonical frame was checked by eye on real stub images.
 - Stub facts still worth knowing: 100% Explicit VR LE, Toshiba files lack TR/TE/Sex/Laterality/FieldStrength, CSV fluid
   flag = header fat-sat on 14/14; decoders bit-exact on all 4 syntaxes. Dom has accepted the competition rules.
 - Decided this session: cache v1 = 384 px, every slice of every series, ≈120 GB (`docs/decisions.md`).
 - **Not done yet (needs the Windows box):** everything in S01 part 2; the full cache build + its measurements
-  (`docs/cache.md` §4b); the train figures.
+  (`docs/cache.md` §4b); the train figures; S03 part 2 (VRAM table, MAE pilot, launch).
 - Submissions made: none. Best public LB: n/a. Top of the LB on 2026-09-24: 0.959; public notebooks: 0.941–0.947.
 - Long jobs running: none.
 
@@ -84,7 +97,10 @@ _Last updated: 2026-09-24, session S02 part 1 (on the Mac; no data drive, no GPU
 2. **S02 part 2**: brief `docs/plan/sessions/S02_preprocessing_and_cache.md` ("Status after part 1"). Run
    `scripts/run_s02.ps1 -DeadZoneMm <from step 1>` (start with `-SmokeOnly`), fill `docs/cache.md` §4b, and look at the
    train figures with Dom.
-3. Then **S03** (ViT modules + MAE launch; it needs the cache) and/or **S04** (labels; it doesn't need the cache).
+3. **S03 part 2**: brief `docs/plan/sessions/S03_vit_modules_and_mae_launch.md` ("Status after part 1"). Run
+   `scripts\run_s03.ps1` (tests → VRAM table → MAE pilot), get Dom's OK on the duration, then `-Launch`.
+4. **S04** (labels; no GPU, can run on the Mac or Windows while MAE trains). It must write the file format in §4.
+   S05 (Track A) then only needs the paths filled into `configs/trackA_coatnet.yaml`.
 
 ## 6. Quick facts a fresh session tends to get wrong
 

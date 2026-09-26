@@ -3,6 +3,26 @@
 **Track:** B · **Machine:** Windows · **GPU:** yes. Ends by **launching a multi-day MAE job**.
 **Depends on:** S02 cache · **Unblocks:** S07 (fine-tuning from MAE)
 
+## Status after part 1 (2026-09-25, on the Mac)
+Part 1 wrote and CPU-tested all of this brief's code; part 2 runs the GPU half and launches MAE. Session log:
+`docs/sessions_log/S03_2026-09-25.md`.
+
+| Brief item | Code | Status |
+|---|---|---|
+| 1–7 modules | `src/knee/model/{patch_embed,pos_embed,attention,mlp,block,slice_vit,heads,knee_vit}.py` | done; `tests/test_model.py` (25) pass on CPU |
+| 8 sanity suite | CPU part in `tests/test_model.py`; GPU part + VRAM table in `knee.model.sanity` | CPU done; **GPU on Windows** |
+| MAE | `src/knee/ssl/{mae,mae_data,probe,pretrain_mae}.py`, `configs/mae_vits.yaml` | done; smoke-tested on a fake cache incl. STOP + resume |
+| Pilot + launch | `scripts/run_s03.ps1` (`-Launch`, `-Status`, `-Pause`) | **on Windows** |
+
+**Part 2 checklist** (after S02 part 2 built the cache):
+1. `git pull`; `pip install -e . --no-deps`; `python -m pytest -q tests` (expect 85 passed, 1 skipped).
+2. `powershell -ExecutionPolicy Bypass -File scripts\run_s03.ps1` → writes `docs/s03_vram_table.md`, runs a 300-step pilot.
+   Set `data.batch_size` from the MAE rows of the VRAM table (and `data.workers` so GPU util stays high) **before** the pilot
+   if the default OOMs; check the first recon image in `<run_dir>/pilot/recon/`.
+3. Log the pilot in `docs/experiments.md`; set `optim.epochs` from `hours_total`; **ask Dom** to approve the duration.
+4. `run_s03.ps1 -Launch`; add the job to the GPU calendar; HANDOFF §4 gets the `-Status` / `-Pause` / `-Launch` commands.
+5. If S04 labels exist, set `probe.labels`/`probe.folds` in the config before launching (else add them at a pause/resume).
+
 ## Cache facts from S02 (read before building the MAE data path)
 - Cache: `<cache_root>/cache_v1_train/`, read it with `knee.data.dataset.CacheReader` (lazy memmaps, spawn-safe).
   Every slice of every series, uint8, 384 × 384, 130 mm FOV (0.34 mm/px), canonical right-knee frame. `docs/cache.md`.

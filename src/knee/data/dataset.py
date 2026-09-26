@@ -83,6 +83,70 @@ def type_ids(meta: dict) -> dict[str, int]:
             "slot": SLOTS.index(slot) if slot in SLOTS else len(SLOTS)}  # len(SLOTS) = "no slot"
 
 
+# ------------------------------------------------------------------------------------------ one study → model input
+# Pure functions over (pixels, row) pairs: `pixels` is a cache memmap view (training) or ProcessedSeries.pixels from
+# preprocess_study (inference), `row` the series metadata (cache index row, or ProcessedSeries.meta + positions_mm).
+# Both datasets and knee.infer.predict call these, so train and test windows are assembled by the same code.
+TYPE_FIELDS = ("plane", "fluid", "contrast", "field", "slot")
+
+
+def slots_sample(series: list[tuple[np.ndarray, dict]], W: int, px: int, train: bool, rng: np.random.Generator,
+                 span=SPAN, slot_dropout: float = 0.0) -> dict[str, np.ndarray]:
+    """Track A grid: x (5, W, 3, px, px) uint8, slot_mask (5,), z (5, W). Missing slots are zeros, mask False."""
+    by_slot = {row["slot"]: (vol, row) for vol, row in series if row.get("slot") in SLOTS and len(vol) > 0}
+    x = np.zeros((len(SLOTS), W, 3, px, px), dtype=np.uint8)
+    z = np.zeros((len(SLOTS), W), dtype=np.float32)
+    mask = np.zeros(len(SLOTS), dtype=bool)
+    present = [k for k, s in enumerate(SLOTS) if s in by_slot]
+    if train and slot_dropout > 0 and len(present) > 1:
+        drop = rng.random(len(present)) < slot_dropout
+        if drop.all():
+            drop[rng.integers(len(present))] = False
+        present = [k for k, d in zip(present, drop) if not d]
+    for k in present:
+        vol, _ = by_slot[SLOTS[k]]
+        n = len(vol)
+        c = train_centres(n, W, rng, span) if train else eval_centres(n, W, span)
+        if len(c) < W:  # stack shorter than W: repeat evenly (eval) so the grid stays fixed
+            c = c[np.rint(np.linspace(0, len(c) - 1, W)).astype(int)]
+        x[k] = gather_windows(vol, c, px)
+        z[k] = rel_position(n, c)
+        mask[k] = True
+    return {"x": x, "slot_mask": mask, "z": z}
+
+
+def bag_sample(series: list[tuple[np.ndarray, dict]], K: int, K_eval: int | None, px: int, train: bool,
+               rng: np.random.Generator, span=SPAN, series_dropout: float = 0.0,
+               max_series: int | None = None) -> dict[str, np.ndarray]:
+    """Track B bag: x (L, 3, px, px) uint8 + per-window series_idx, z, z_mm and type ids (L,). L = 0 if no series."""
+    series = [(v, r) for v, r in series if len(v) > 0]
+    if train and series_dropout > 0 and len(series) > 1:
+        keep = rng.random(len(series)) >= series_dropout
+        if not keep.any():
+            keep[rng.integers(len(series))] = True
+        series = [s for s, k in zip(series, keep) if k]
+    if max_series is not None and len(series) > max_series:
+        pick = rng.choice(len(series), max_series, replace=False) if train else np.arange(max_series)
+        series = [series[j] for j in sorted(pick)]
+    xs, sid, z, zmm = [np.zeros((0, 3, px, px), np.uint8)], [np.zeros(0, np.int64)], [np.zeros(0, np.float32)], \
+        [np.zeros(0, np.float32)]
+    tid = {k: [np.zeros(0, np.int64)] for k in TYPE_FIELDS}
+    for j, (vol, row) in enumerate(series):
+        n = len(vol)
+        c = train_centres(n, K, rng, span) if train else eval_centres(n, K_eval, span)
+        xs.append(gather_windows(vol, c, px))
+        sid.append(np.full(len(c), j, dtype=np.int64))
+        z.append(rel_position(n, c))
+        pos = np.asarray(row["positions_mm"], dtype=np.float32)
+        zmm.append(pos[c] - np.float32(np.median(pos)))  # mm from the stack's middle (optional feature)
+        for k, v in type_ids(row).items():
+            tid[k].append(np.full(len(c), v, dtype=np.int64))
+    out = {"x": np.concatenate(xs), "series_idx": np.concatenate(sid), "z": np.concatenate(z),
+           "z_mm": np.concatenate(zmm)}
+    out.update({k: np.concatenate(v) for k, v in tid.items()})
+    return out
+
+
 # ------------------------------------------------------------------------------------------ cache access
 class CacheReader:
     """Read-only view of a built cache. Picklable: memmaps are (re)opened lazily in each process."""
@@ -157,29 +221,10 @@ class StudyWindowsDataset(Dataset):
     def __getitem__(self, i: int) -> dict:
         uid = self.uids[i]
         rng = np.random.default_rng((self.seed, self.epoch, i))
-        by_slot = {s["slot"]: s for s in self.r.series(uid) if s.get("slot") in SLOTS}
-        x = np.zeros((len(SLOTS), self.W, 3, self.px, self.px), dtype=np.uint8)
-        z = np.zeros((len(SLOTS), self.W), dtype=np.float32)
-        mask = np.zeros(len(SLOTS), dtype=bool)
-        present = [k for k, s in enumerate(SLOTS) if s in by_slot]
-        if self.train and self.slot_dropout > 0 and len(present) > 1:
-            drop = rng.random(len(present)) < self.slot_dropout
-            if drop.all():
-                drop[rng.integers(len(present))] = False
-            present = [k for k, d in zip(present, drop) if not d]
-        for k in present:
-            row = by_slot[SLOTS[k]]
-            vol = self.r.pixels(row)
-            n = len(vol)
-            c = train_centres(n, self.W, rng, self.span) if self.train else eval_centres(n, self.W, self.span)
-            if len(c) < self.W:  # stack shorter than W: repeat evenly (eval) so the grid stays fixed
-                c = c[np.rint(np.linspace(0, len(c) - 1, self.W)).astype(int)]
-            x[k] = gather_windows(vol, c, self.px)
-            z[k] = rel_position(n, c)
-            mask[k] = True
+        series = [(self.r.pixels(s), s) for s in self.r.series(uid)]
+        out = slots_sample(series, self.W, self.px, self.train, rng, self.span, self.slot_dropout)
         y, ym = _labels_for(self.labels, uid)
-        return {"x": torch.from_numpy(x), "slot_mask": torch.from_numpy(mask), "z": torch.from_numpy(z),
-                "labels": y, "label_mask": ym, "study_uid": uid}
+        return {**{k: torch.from_numpy(v) for k, v in out.items()}, "labels": y, "label_mask": ym, "study_uid": uid}
 
 
 # ------------------------------------------------------------------------------------------ Track B
@@ -210,35 +255,11 @@ class StudyBagDataset(Dataset):
     def __getitem__(self, i: int) -> dict:
         uid = self.uids[i]
         rng = np.random.default_rng((self.seed, self.epoch, i))
-        series = [s for s in self.r.series(uid) if int(s["n_slices"]) > 0]
-        if self.train and self.series_dropout > 0 and len(series) > 1:
-            keep = rng.random(len(series)) >= self.series_dropout
-            if not keep.any():
-                keep[rng.integers(len(series))] = True
-            series = [s for s, k in zip(series, keep) if k]
-        if self.max_series is not None and len(series) > self.max_series:
-            pick = rng.choice(len(series), self.max_series, replace=False) if self.train else \
-                np.arange(self.max_series)
-            series = [series[j] for j in sorted(pick)]
-        xs, sid, z, zmm, tid = [], [], [], [], {k: [] for k in ("plane", "fluid", "contrast", "field", "slot")}
-        for j, row in enumerate(series):
-            vol = self.r.pixels(row)
-            n = len(vol)
-            c = train_centres(n, self.K, rng, self.span) if self.train else eval_centres(n, self.K_eval, self.span)
-            xs.append(gather_windows(vol, c, self.px))
-            sid.append(np.full(len(c), j))
-            z.append(rel_position(n, c))
-            pos = np.asarray(row["positions_mm"], dtype=np.float32)
-            zmm.append(pos[c] - np.float32(np.median(pos)))  # mm from the stack's middle (optional feature)
-            for k, v in type_ids(row).items():
-                tid[k].append(np.full(len(c), v))
+        series = [(self.r.pixels(s), s) for s in self.r.series(uid)]
+        out = bag_sample(series, self.K, self.K_eval, self.px, self.train, rng, self.span, self.series_dropout,
+                         self.max_series)
         y, ym = _labels_for(self.labels, uid)
-        out = {"x": torch.from_numpy(np.concatenate(xs)), "series_idx": torch.from_numpy(np.concatenate(sid)),
-               "z": torch.from_numpy(np.concatenate(z)), "z_mm": torch.from_numpy(np.concatenate(zmm)),
-               "labels": y, "label_mask": ym, "study_uid": uid}
-        for k, v in tid.items():
-            out[k] = torch.from_numpy(np.concatenate(v).astype(np.int64))
-        return out
+        return {**{k: torch.from_numpy(v) for k, v in out.items()}, "labels": y, "label_mask": ym, "study_uid": uid}
 
 
 def collate_bag(batch: list[dict]) -> dict:

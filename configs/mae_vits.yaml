@@ -1,0 +1,53 @@
+# S03: MAE pretraining of Track B's SliceViT (ViT-S/16 + conv stem) on every series of the train cache.
+# Every number is a placeholder (HP) until the pilot; `python -m knee.ssl.pretrain_mae --config configs/mae_vits.yaml --pilot 300`
+# prints windows/s + peak VRAM and extrapolates the wall-clock for optim.epochs. Dom approves the duration before launch.
+run_name: mae_vits_p16_256
+seed: 0
+precision: bf16
+# cache_dir / run_dir default to <cache_root>/cache_v1_train and <cache_root>/runs/<run_name> (configs/paths.yaml)
+model:
+  img_size: 256        # HP: MAE resolution (the cache is 384 px; windows are downsampled at load)
+  patch: 16
+  dim: 384             # ViT-S width
+  depth: 12
+  heads: 6
+  tokenizer: conv_stem
+  stem_norm: gn
+  pos2d: sincos
+  pool: gap
+  qk_norm: true
+  layerscale: 0.1
+  drop_path: 0.0       # MAE usually pretrains without stochastic depth
+  attn_impl: sdpa
+  grad_checkpointing: false
+mae:
+  mask_ratio: 0.75
+  dec_dim: 256
+  dec_depth: 4
+  dec_heads: 8
+  norm_pix: true
+data:
+  out_px: 256
+  windows_per_series: 4   # HP: 24,371 series × 4 ≈ 97k windows per epoch
+  scale: [0.6, 1.0]
+  ratio: [0.85, 1.18]
+  batch_size: 128         # HP: set from the VRAM table (knee.model.sanity)
+  workers: 8              # HP: the loader must keep up (INTER_AREA resize on CPU); check windows/s vs GPU util
+optim:
+  blr: 1.5e-4             # lr = blr × batch × accum / 256 (MAE convention)
+  weight_decay: 0.05
+  betas: [0.9, 0.95]
+  warmup_epochs: 2
+  epochs: 40              # HP: set from the pilot so the run fits the GPU calendar (Dom approves)
+  min_lr_ratio: 0.0
+  clip: 1.0
+  accum: 1
+ckpt_minutes: 30
+snapshot_every_epochs: 5
+log_every: 50
+recon_every_steps: 2000
+probe:                    # fill in once S04 has written labels_v1.parquet / folds_v1.csv
+  labels: null
+  folds: null
+  every_epochs: 5
+  fold: 0

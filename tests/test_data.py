@@ -224,6 +224,50 @@ def test_parity_cache_equals_direct_and_datasets(synth, tmp_path):
     assert set(ds_e[0]["plane"].tolist()) == {0, 1, 2}
 
 
+    # model-input parity: the inference path (preprocess_study → arm_input) builds exactly the eval batch the
+    # training datasets build from the cache, for both input formats
+    from knee.infer.predict import arm_input
+    bag_cfg = {"format": "bag", "train_windows": 3, "eval_windows": 4, "out_px": 16}
+    slot_cfg = {"format": "slots", "train_windows": 3, "eval_windows": 4, "out_px": 16}
+    for study in ("1.1", "1.2"):
+        direct, _ = preprocess_study(synth / "train_series" / study, info, PARAMS)
+        got = arm_input(direct, bag_cfg)
+        ref = collate_bag([StudyBagDataset(r2, [study], eval_windows_per_series=4, out_px=16)[0]])
+        for k in ("x", "window_mask", "z", "z_mm", "plane", "fluid", "contrast", "field", "slot", "series_idx"):
+            torch.testing.assert_close(got[k], ref[k], msg=k)
+        got = arm_input(direct, slot_cfg)
+        ref = StudyWindowsDataset(r2, [study], windows_per_slot=4, out_px=16)[0]
+        for k in ("x", "slot_mask", "z"):
+            torch.testing.assert_close(got[k][0], ref[k], msg=k)
+
+
+def test_predict_dirs_and_submission(synth, tmp_path):
+    """End to end on synthetic DICOMs: a tiny KneeViT checkpoint → predictions → submission.csv with asserts;
+    a broken study folder gets the fallback row instead of crashing."""
+    from knee.infer.predict import SUBMISSION_COLUMNS, load_arm, predict_dirs, write_submission
+    from knee.model.knee_vit import KneeViT
+    cfg = {"model": {"kind": "knee_vit", "cfg": {"slice_vit": {"img_size": 16, "patch": 8, "dim": 16, "depth": 1,
+                                                                "heads": 2}}},
+           "data": {"format": "bag", "train_windows": 2, "eval_windows": 3, "out_px": 16}}
+    m = KneeViT(cfg["model"]["cfg"])
+    torch.save({"model": m.state_dict(), "cfg": cfg}, tmp_path / "model_avg.pt")
+    arm = load_arm(tmp_path / "model_avg.pt", torch.device("cpu"))
+    (tmp_path / "broken").mkdir()
+    (tmp_path / "broken" / "junk").mkdir()
+    (tmp_path / "broken" / "junk" / "x.dcm").write_bytes(b"not a dicom")
+    dirs = [synth / "train_series" / "1.1", synth / "train_series" / "1.2", tmp_path / "broken"]
+    prior = np.linspace(0.1, 0.9, 12)
+    pred, timing = predict_dirs(dirs, _info(synth), [arm, arm], torch.device("cpu"), PARAMS, workers=0,
+                                fallback=prior)
+    assert pred.StudyInstanceUID.tolist() == ["1.1", "1.2", "broken"]
+    assert timing.error.iloc[:2].isna().all() and timing.error.iloc[2]
+    np.testing.assert_allclose(pred.iloc[2, 1:].to_numpy(dtype=float), prior)
+    np.testing.assert_allclose(pred.iloc[0, 1:].to_numpy(dtype=float), 0.5)  # zero-init head
+    sub = write_submission(pred, ["1.2", "1.1", "broken", "missing"], tmp_path / "submission.csv", prior)
+    assert list(sub.columns) == SUBMISSION_COLUMNS and sub.StudyInstanceUID.tolist()[0] == "1.2"
+    np.testing.assert_allclose(sub.iloc[3, 1:].to_numpy(dtype=float), prior)
+
+
 @pytest.mark.skipif(not os.environ.get("KNEE_STUB_DIR"), reason="set KNEE_STUB_DIR to the Kaggle test stub dir")
 def test_real_stub_slice_order_and_laterality():
     """On real DICOMs: positions ascend, spacing matches the header-based audit, the tagged study is L."""
