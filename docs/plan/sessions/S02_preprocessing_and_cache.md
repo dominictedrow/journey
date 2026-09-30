@@ -10,7 +10,7 @@ full train set. Session log: `docs/sessions_log/S02_2026-09-24.md`. Format/rules
 | Brief step | Code | Status |
 |---|---|---|
 | 1 dicom_io | `src/knee/data/dicom_io.py` | done (deferred pixel reads; robust) |
-| 2 geometry / laterality / canonicalization | `geometry.py` (canonical frame, `resolve_study_laterality`) | done; **dead zone = placeholder 20 mm** until S01 part 2 |
+| 2 geometry / laterality / canonicalization | `geometry.py` (canonical frame, `resolve_study_laterality`) | done; **dead zone = 20 mm, confirmed by S01 part 2** (agreement with the tag 48% for |x| ≤ 20 mm, 98–100% above; `docs/data_audit.md` §9) |
 | 3 series_select | `series_select.py` (+ contrast class from `series_meta.py`) | done; rank tables are placeholders for Dom's review |
 | 4 normalize, 5 crop_resize | `normalize.py`, `crop_resize.py` | done (1–99 %, 130 mm, 384 px; decision 2026-09-24) |
 | (new) one entry point | `preprocess.py::preprocess_study` | done: used by the cache **and** the notebook |

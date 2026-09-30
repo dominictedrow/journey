@@ -55,68 +55,44 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-26, session S04 part 1 (on the Mac; no data drive, no GPU)._
+_Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no GPU)._
 
-- **S01 code** (part 1): `src/knee/audit/` (env check, CSV audit, header scan, series/study summary, decode bench, reports),
-  `scripts/run_s01.ps1`. **S01 part 2 (running it on Windows) has not happened yet.**
-- **S02 code** (part 1): `src/knee/data/` = the shared preprocessing library. `preprocess.preprocess_study()` is the one
-  entry point for the cache build *and* the Kaggle notebook (canonical frame: every knee stored as a right knee in a
-  fixed display per plane; 130 mm crop → 384 px; per-series 1–99 window → uint8; slots). `build_cache.py` (resumable
-  shards, parquet indexes, manifest), `dataset.py` (`StudyWindowsDataset` for Track A, `StudyBagDataset` +
-  `collate_bag` for Track B), `inspect_cache.py` (figures, loader bench), `scripts/run_s02.ps1`. Details: `docs/cache.md`.
-- **S03 code** (part 1): `src/knee/model/` (Track B ViT, hand-written: conv stem, sincos/slice/series-type embeddings,
-  manual+SDPA attention, pre-norm blocks, `SliceViT`, `AttnMILHead`/`FindingQueryHead`/`ClsStudyHead`, `KneeViT`; Track A
-  `trackA.py`; GPU `sanity.py`), `src/knee/ssl/` (MAE + resumable `pretrain_mae.py` + linear probe), `src/knee/train/`
-  (**`train_sup.py` = the one supervised trainer for both tracks**, optim/LLRD, losses incl. rank bank, checkpoint/STOP
-  plumbing), `src/knee/utils/metrics.py`, `src/knee/infer/predict.py` (notebook model side → `submission.csv`),
-  configs `mae_vits.yaml` / `trackB_vits_mil.yaml` / `trackA_coatnet.yaml`, `scripts/run_s03.ps1`.
-  Session log: `docs/sessions_log/S03_2026-09-25.md`.
-- **S04 code** (part 1): `src/knee/labels/` (prompt/schema, Claude batch reader with cost ledger + $50 budget guard,
-  public sets + license/leak check, blend, LOO gold calibration, folds, `build_labels.py`). **Built labels_v0 + folds_v0**
-  (4 public CC0 readers, gold 0.889 [0.849, 0.924]) in `<cache_root>/labels/` on the Mac scratchpad only: rebuild on
-  Windows with `python -m knee.labels.public_sets download` then `python -m knee.labels.build_labels --version v0
-  --no-claude` (~2 min, CPU). QA: `docs/labels.md`. Session log: `docs/sessions_log/S04_2026-09-26.md`.
-  **Claude reader pilot not run yet** (needs `ANTHROPIC_API_KEY` in `.env`); Dom chose to pilot Opus 5 *and* Sonnet 5.
-- **S06 code**: `notebooks/infer.py` (Kaggle script kernel) + `scripts/build_kaggle_bundle.py` (stages the upload folder;
-  never uploads), tested in `tests/test_notebook.py`.
-- **Label/fold file format is fixed** (`train_sup.py` docstring): labels parquet = `StudyInstanceUID` + 12 soft columns
-  (NaN = unknown) + optional `w_<label>`; folds csv = `StudyInstanceUID, fold`. S04 must write exactly that.
-- Tests: 103 pytest tests (CPU) pass, 1 skipped (stub); includes train/infer **parity** at the pixel level (S02) and at the
-  model-input level (S03), and an end-to-end submission test.
-- **Long jobs, once launched (S03 part 2):** `scripts\run_s03.ps1 -Status` (process, last log lines, snapshots, GPU),
-  `-Pause` (writes `<run_dir>\STOP` → saves `last.pt`, exits), `-Launch` (starts or resumes from `last.pt`). The same
-  STOP file works for `train_sup.py` runs.
-- **Measured:** the CSVs (`docs/data_audit.md` §1–4), the test stub (`docs/data_audit_test.md`, `docs/dicom_tags_test.md`),
-  stub preprocessing ≈4.2 ms/slice on the M3; the canonical frame was checked by eye on real stub images.
-- Stub facts still worth knowing: 100% Explicit VR LE, Toshiba files lack TR/TE/Sex/Laterality/FieldStrength, CSV fluid
-  flag = header fat-sat on 14/14; decoders bit-exact on all 4 syntaxes. Dom has accepted the competition rules.
-- Decided this session: cache v1 = 384 px, every slice of every series, ≈120 GB (`docs/decisions.md`).
-- **Not done yet (needs the Windows box):** everything in S01 part 2; the full cache build + its measurements
-  (`docs/cache.md` §4b); the train figures; S03 part 2 (VRAM table, MAE pilot, launch).
-- Submissions made: none. Best public LB: n/a. Top of the LB on 2026-09-24: 0.959; public notebooks: 0.941–0.947.
-- Long jobs running: none.
+- **S01 code** (part 1): `src/knee/audit/`. **The S01 data audit ran on Kaggle** (2026-09-30, private kernel
+  `dominictedrow/knee-audit` = `notebooks/kaggle_audit/`, 31 min): full corpus, 819,078 train files, all Explicit VR LE,
+  0 errors/truncations; `docs/data_audit.md`, `docs/dicom_tags.md` (+ `_test`). Outputs copied to `<audit_out>` on the Mac
+  (`study_train.parquet` = site proxy). **Dead zone = 20 mm** (decision 2026-09-30). Still Windows-only: `env_check` and
+  the local decode throughput (the SSD/i5 numbers S02 needs).
+- **S02 code** (part 1): `src/knee/data/` = the shared preprocessing library (`preprocess.preprocess_study()` for the cache
+  build *and* the Kaggle notebook). Details: `docs/cache.md`. Open from the audit: 2,707 series have more than one IOP
+  (check whether it's float noise or real multi-stack series before the cache build).
+- **S03 code** (part 1): Track B ViT, MAE, `train_sup.py` (both tracks), `infer/predict.py`. Log: `docs/sessions_log/S03_2026-09-25.md`.
+- **S04 labels:** labels_v0 (4 public CC0 readers, gold 0.889 [0.849, 0.924]) + **folds_v0 now stratified by site**
+  (rebuilt 2026-09-30 from the Kaggle site proxy) in `<cache_root>/labels/` on the Mac. Rebuild anywhere with
+  `python -m knee.labels.public_sets download` then `python -m knee.labels.build_labels --version v0 --no-claude` (needs
+  `<audit_out>/study_train.parquet` for site stratification). **Our reader = Claude Code agents** (`agent_reader.py`,
+  `docs/labels_agent_reader.md`). Prompt **v3** is current: gold 0.864 alone, the blend gain over the public readers is
+  +0.002 [−0.005, +0.010], so **the full agent run is on hold** (Dom's go rule "beats the public readers" isn't met).
+- **Kaggle side:** `docs/kaggle_env.md` (CPU notebook = 4 vCPU / 32 GB / 20.9 GB output; data at
+  `/kaggle/input/competitions/<slug>`; datasets at `/kaggle/input/datasets/<user>/<slug>`; NFS reads scale to ~213 MB/s at
+  16 workers). Private datasets: `dominictedrow/knee-src` (code; **re-version it when `src/knee` changes**:
+  `kaggle datasets version -p <staged dir> -m ...`) and `dominictedrow/knee-wheels` (decoders; installed offline with
+  `--no-deps`, never numpy). Kernels: `knee-probe`, `knee-audit`. GPU quota untouched (30 h/week).
+- **S06 code**: `notebooks/infer.py` + `scripts/build_kaggle_bundle.py`; the wheels now exist (above).
+- Tests: 103+ pytest (CPU) pass; label tests 17 + 1 skipped.
+- Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
 
-**Can run now, on either machine (no GPU):** the S04 part 2 Claude reader pilot. Brief `docs/plan/sessions/S04_labels_v1.md`
-("Status after part 1") has the exact commands: `.env` with the key → `reader sync --n 2` → pilot batches for Opus 5 and
-Sonnet 5 → `collect` → `parse` → `build_labels --version pilot_<model>` for each → show Dom gold AUC + $/report → Dom picks →
-full run (the guard refuses > $50 total) → `build_labels --version v1`.
+**Without the Windows box (Mac + Kaggle):**
+- Decide what else Kaggle should do. Options: a Kaggle-side preprocessing cache (≤ 20 GB per kernel output, so a smaller
+  resolution or series subset) and Track A training on T4 ×2 (30 h/week). The measured I/O makes a full read ≈ 45 min at 16
+  workers. Ask Dom before spending GPU quota.
+- Investigate the 2,707 multi-IOP series (a Kaggle kernel over `series_train` + a few headers).
+- Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
 
-**On the Windows box, in this order:**
-1. **S01 part 2**: brief `docs/plan/sessions/S01_env_and_data_audit.md` ("Status after part 1"). Set up the venv
-   (`requirements.txt` now includes `anthropic`), fill `configs/paths.yaml` (`cache_root` on an internal drive with
-   **≥ ~130 GB free**), run `scripts/run_s01.ps1`, and interpret the output. From its laterality table, pick the geometry
-   **dead zone** (mm). It also writes the site proxy (`<audit_out>/study_train.parquet`): **re-run `build_labels` afterwards**
-   so the folds stratify by site (decision 2026-09-26).
-2. **S02 part 2**: brief `docs/plan/sessions/S02_preprocessing_and_cache.md` ("Status after part 1"). Run
-   `scripts/run_s02.ps1 -DeadZoneMm <from step 1>` (start with `-SmokeOnly`), fill `docs/cache.md` §4b, and look at the
-   train figures with Dom.
-3. **S03 part 2**: brief `docs/plan/sessions/S03_vit_modules_and_mae_launch.md` ("Status after part 1"). Run
-   `scripts\run_s03.ps1` (tests → VRAM table → MAE pilot), get Dom's OK on the duration, then `-Launch`.
-4. **S04 part 2** if it hasn't run on the Mac (above), while MAE trains.
-5. **S05** (Track A): fill `labels.file` / `folds.file` / `gold.file` in `configs/trackA_coatnet.yaml` (v1, or v0 if v1
-   isn't ready), then its brief. **S06** then needs only wheels + the S05 checkpoint + Dom's OK to upload/submit.
+**On the Windows box, in this order:** S01 env check (`env_check` + decode bench on the SSD; skip the header scan) →
+S02 part 2 (`scripts/run_s02.ps1 -DeadZoneMm 20`, copy `<audit_out>` from the Mac or re-run the audit) → S03 part 2
+(VRAM table, MAE pilot, launch) → S05 on labels_v0/folds_v0 → S06 (bundle + `knee-wheels` + Dom's OK to submit).
 
 ## 6. Quick facts a fresh session tends to get wrong
 

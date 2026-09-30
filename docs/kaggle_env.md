@@ -45,15 +45,25 @@ image's numpy under torch, so `notebooks/infer.py` installs with `--no-deps` and
 | slice shapes (top) | 512², 256², 384², 528², 1024² |
 | listing 4,407 study dirs | 0.08 s; counting files in 200 studies: 23 s |
 
-**So I/O is the bottleneck, not decoding.** One process reading the whole 570 GB at 63 MB/s would take ≈ 2.5 h. Whether
-parallel readers scale on the NFS mount is **UNVERIFIED**, so measure it before planning a full pass.
+**So I/O is the bottleneck, not decoding.** Parallel readers do scale on the NFS mount (`knee-audit` decode bench, 300
+fresh files per row: read + decode + rescale):
+
+| workers | slices/s | MB/s |
+|---|---|---|
+| 1 | 62 | 43 |
+| 4 | 173 | 122 |
+| 8 | 259 | 176 |
+| 16 | 325 | 213 |
+
+At 16 workers, a full pass over the ≈ 575 GB of train files takes ≈ 45 min (819k slices / 325 per s ≈ 42 min).
+The full header scan (16 workers, headers only) took 21 min.
 
 ## 5. What this means for the plan
 
-1. **S06 offline wheels: solved.** The wheels exist for the exact image. Still needed: a private dataset with them (or
-   inside the bundle), created only with Dom's OK.
-2. **S01 part 2 can run on Kaggle** (CPU, no GPU quota): the header scan, series summary and reports read the mount
-   directly. It needs `src/knee` as a private code-only dataset. The decode benchmark on Kaggle doesn't replace the
+1. **S06 offline wheels: solved.** The private dataset `dominictedrow/knee-wheels` (4 wheels, no numpy) installed cleanly
+   offline in `knee-audit` (`pip install --no-index --no-deps`), and all decoders were bit-exact on every syntax.
+2. **S01 part 2 ran on Kaggle** (2026-09-30, `notebooks/kaggle_audit`, 31 min, CPU, no GPU quota): the header scan, series summary and reports read the mount
+   directly, with `src/knee` from the private code-only dataset `dominictedrow/knee-src`. The decode benchmark on Kaggle doesn't replace the
    Windows-box throughput numbers S02 needs.
 3. **The 120 GB cache can't be a notebook output** (20.9 GB cap). A session could build a cache in `/tmp` (1.1 TB free,
    quota UNVERIFIED) and train in the same session, but it's lost afterwards. A persistent Kaggle-side cache would need

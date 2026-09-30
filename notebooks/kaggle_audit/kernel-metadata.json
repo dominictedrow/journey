@@ -1,0 +1,13 @@
+{
+  "id": "dominictedrow/knee-audit",
+  "title": "knee-audit",
+  "code_file": "audit.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": false,
+  "competition_sources": ["rsna-knee-abnormality-detection"],
+  "dataset_sources": ["dominictedrow/knee-src", "dominictedrow/knee-wheels"],
+  "kernel_sources": []
+}

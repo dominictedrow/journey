@@ -42,7 +42,7 @@ class PreprocParams:
     out_px: int = CR.OUT_PX
     pct_lo: float = N.PCT_LO
     pct_hi: float = N.PCT_HI
-    lat_dead_zone_mm: float = 20.0  # placeholder until S01 part 2 measures agreement by |x| band (UNVERIFIED)
+    lat_dead_zone_mm: float = 20.0  # S01 part 2 (docs/data_audit.md §9): tag agreement 48% for |x| ≤ 20 mm, 98–100% above
     canonicalize_laterality: bool = True
     version: str = PREPROC_VERSION
 

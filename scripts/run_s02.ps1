@@ -10,7 +10,7 @@ param(
     [int]$Workers = 0,          # build processes; default = physical cores
     [int]$OutPx = 384,          # stored resolution (HP; Track A's CoAtNet runs at 384)
     [double]$CropMm = 130,      # physical FOV of the crop (HP)
-    [double]$DeadZoneMm = 20,   # laterality geometry dead zone; set from S01 part 2's |x|-band table
+    [double]$DeadZoneMm = 20,   # laterality geometry dead zone; 20 mm = S01 part 2's |x|-band table (docs/data_audit.md §9)
     [switch]$SmokeOnly
 )
 $ErrorActionPreference = "Stop"

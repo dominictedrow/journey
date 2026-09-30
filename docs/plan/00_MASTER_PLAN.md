@@ -31,7 +31,7 @@ refines with what it learned (the rule: whoever finishes S<N> updates brief S<N+
 | # | Session | Track | Target dates | Needs GPU | Status |
 |---|---|---|---|---|---|
 | S00 | Research + plan (Mac) | — | Sep 24 | no | ✅ done |
-| S01 | Windows env + data audit | D | Sep 25 | smoke | ◐ part 1 done on the Mac (code, CSV audit, test stub); part 2 = run `scripts/run_s01.ps1` on Windows |
+| S01 | Windows env + data audit | D | Sep 25 | smoke | ◐ data audit **done on Kaggle** 2026-09-30 (`notebooks/kaggle_audit`, full corpus; `docs/data_audit.md`, `docs/dicom_tags.md`); left for Windows: env check + local decode throughput (`run_s01.ps1` minus the scan) |
 | S02 | Preprocessing library + cache v1 | D | Sep 25–26 | no (CPU decode, overnight) | ◐ part 1 done on the Mac (code + 32 tests, stub cache); part 2 = `scripts/run_s02.ps1` on Windows after S01 part 2 |
 | S03 | ViT modules from scratch + unit tests + MAE pipeline → **launch MAE pretraining** | B | Sep 26–27 | **yes, multi-day** | ◐ part 1 done on the Mac (all model/MAE/trainer/inference code, 85 CPU tests); part 2 = `scripts/run_s03.ps1` (VRAM table, pilot, launch) |
 | S04 | Labels v1: Claude API reader + public sets + blend + gold calibration + folds | L | Sep 27–28 | no | ◐ part 1 done on the Mac (all code, 16 tests, public-only labels_v0 + folds_v0, gold 0.889); part 2 = Claude reader pilot (Opus 5 + Sonnet 5) → full run → v1 |
