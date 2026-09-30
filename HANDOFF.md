@@ -89,7 +89,7 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   `docs/sessions_log/P02_2026-09-30.md`): launch overhead confirmed negligible; `torch.compile` works on the T4 and
   cuts inference 37–48%; ckpt off + channels_last cuts Track A training 28% (11.3 GB peak); CoAtNet attention already
   uses the mem-efficient kernel; the conv+BN fold was slower and is now off by default. Track A ≈ 14 T4-h per fold
-  after those fixes. `knee-src` needs a re-version for the `fuse.py` change.
+  after those fixes. `knee-src` re-versioned to `eff48b0` (verified by a full download).
 - Tests: 117 pytest (CPU) pass, 2 skipped (`tests/test_perf.py` added).
 - Submissions made: none. Long jobs running: none.
 
