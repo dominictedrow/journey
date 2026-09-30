@@ -72,7 +72,7 @@ def test_mae_dataset_and_crop(tmp_path):
     ds = MAEWindowDataset(CacheReader(f["cache"]), out_px=32, windows_per_series=2)
     assert len(ds) == 2 * ds.n_series
     x = ds[0]
-    assert x.shape == (3, 32, 32) and x.dtype == torch.uint8
+    assert x.shape == (1, 3, 32, 32) and x.dtype == torch.uint8  # (windows_per_read, C, H, W)
     assert torch.equal(ds[0], x)  # deterministic given (seed, epoch, index): resumable
     win = np.random.default_rng(0).integers(0, 255, (3, 64, 64), dtype=np.uint8)
     out = random_resized_crop(win, 32, np.random.default_rng(0), scale=(1, 1), ratio=(1, 1))

@@ -38,7 +38,7 @@ from knee.train.optim import build_adamw, param_groups, set_lr, warmup_cosine
 from knee.utils.metrics import auc_table, binarize, bootstrap_macro_auc, df_to_markdown, macro_auc
 
 DEFAULTS: dict = {
-    "run_name": "sup_default", "seed": 0, "device": "auto", "precision": "bf16", "cache_dir": None, "run_dir": None,
+    "run_name": "sup_default", "seed": 0, "device": "auto", "precision": "auto", "cache_dir": None, "run_dir": None,
     "model": {"kind": "knee_vit", "cfg": {}},
     "init": {"encoder": None},
     "labels": {"file": None, "lo": 0.4, "hi": 0.6},
@@ -159,6 +159,7 @@ def main(argv=None) -> dict:
     log = C.JsonlLog(run_dir / "log.jsonl")
     device = C.pick_device(cfg["device"])
     C.seed_everything(cfg["seed"])
+    cfg["precision"] = C.resolve_precision(device, cfg["precision"])  # auto → bf16 (5070) / fp16 (T4) / fp32 (CPU)
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
@@ -196,6 +197,7 @@ def main(argv=None) -> dict:
     warmup = int(ocfg["warmup_frac"] * total_steps)
     groups = build_param_groups(model, ocfg)
     opt = build_adamw(groups, ocfg["betas"], fused=True if device.type == "cuda" else None)
+    scaler = C.make_scaler(device, cfg["precision"])
     bank = RankBank(cfg["loss"]["rank_bank"])
     lcfg = cfg["loss"]
 
@@ -205,17 +207,32 @@ def main(argv=None) -> dict:
         ck = torch.load(last, map_location="cpu", weights_only=False)
         model.load_state_dict(ck["model"])
         opt.load_state_dict(ck["opt"])
+        if ck.get("scaler"):
+            scaler.load_state_dict(ck["scaler"])
         state = ck["state"]
         C.set_rng_state(ck["rng"])
         print(f"resumed: epoch {state['epoch']} batch {state['batch_in_epoch']}")
     (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False))
     n_params = sum(p.numel() for p in model.parameters())
     print(f"fold {fold}: {len(tr_uids)} train / {len(va_uids)} val studies; {steps_per_epoch} steps/epoch; "
-          f"{n_params / 1e6:.1f}M params; {len(groups)} param groups; device {device}", flush=True)
+          f"{n_params / 1e6:.1f}M params; {len(groups)} param groups; device {device}, {cfg['precision']}",
+          flush=True)
+    meter = C.GpuMeter(device)
+
+    def check_finite(where: str) -> tuple[float, int]:
+        """Losses are checked here (log/checkpoint/epoch end), not per micro-batch, so the GPU is never waited on.
+        bf16/fp32: any non-finite loss stops the run before a checkpoint can save broken weights. fp16: the scaler
+        skips steps with inf/NaN gradients, so isolated bad micro-batches are tolerated; all bad = stop."""
+        mean, bad = meter.read()
+        if bad and (cfg["precision"] != "fp16" or bad >= meter.n):
+            raise SystemExit(f"{bad} non-finite losses before {where} (epoch {state['epoch']} batch "
+                             f"{state['batch_in_epoch']}); last good state is {last}")
+        return mean, bad
 
     def checkpoint() -> None:
-        C.save_atomic({"model": model.state_dict(), "opt": opt.state_dict(), "state": state, "rng": C.rng_state(),
-                       "cfg": cfg}, last)
+        check_finite("checkpoint")
+        C.save_atomic({"model": model.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(),
+                       "state": state, "rng": C.rng_state(), "cfg": cfg}, last)
 
     sampler = C.ResumableRandomSampler(len(ds_tr), seed=cfg["seed"])
     t_ckpt = time.time()
@@ -226,7 +243,8 @@ def main(argv=None) -> dict:
         dl = DataLoader(ds_tr, batch_size=bs, sampler=sampler, num_workers=dcfg["workers"], collate_fn=collate,
                         drop_last=True, pin_memory=device.type == "cuda")
         model.train()
-        t0, run_loss, run_n = time.time(), 0.0, 0
+        t0, run_n = time.time(), 0
+        meter.reset()
         for b in dl:
             if state["batch_in_epoch"] >= batches_per_epoch:
                 break
@@ -242,23 +260,27 @@ def main(argv=None) -> dict:
                 loss = loss + lcfg["rank_w"] * pairwise_rank_loss(logits, b["labels"], b["label_mask"], rl, rt, rm,
                                                                   lcfg["pos_thr"], lcfg["neg_thr"])
                 bank.push(logits, b["labels"], b["label_mask"])
-            if not torch.isfinite(loss):
-                raise SystemExit(f"non-finite loss at epoch {ep} batch {state['batch_in_epoch']}")
-            (loss / accum).backward()
+            meter.add(loss)
+            scaler.scale(loss / accum).backward()
             state["batch_in_epoch"] += 1
-            run_loss, run_n = run_loss + loss.item(), run_n + 1
+            run_n += 1
             if state["batch_in_epoch"] % accum:
                 continue
             lr = set_lr(opt, ocfg["lr"], warmup_cosine(state["step"], warmup, total_steps, ocfg["min_lr_ratio"]))
+            scaler.unscale_(opt)  # clip the true gradients, not the scaled ones (no-op without fp16)
             torch.nn.utils.clip_grad_norm_(model.parameters(), ocfg["clip"])
-            opt.step()
+            scaler.step(opt)      # = opt.step(), skipped if an fp16 gradient overflowed
+            scaler.update()
             opt.zero_grad(set_to_none=True)
             state["step"] += 1
             if state["step"] % cfg["log_every"] == 0:
-                log.write(step=state["step"], epoch=ep, loss=run_loss / max(run_n, 1), lr=lr,
+                mean, bad = check_finite("log")
+                log.write(step=state["step"], epoch=ep, loss=mean, lr=lr, nonfinite=bad,
+                          loss_scale=scaler.get_scale() if scaler.is_enabled() else None,
                           studies_per_s=run_n * bs / max(time.time() - t0, 1e-9), peak_vram_gb=C.cuda_peak_gb())
-                print(f"ep {ep} step {state['step']} loss {run_loss / max(run_n, 1):.4f} lr {lr:.2e}", flush=True)
-                t0, run_loss, run_n = time.time(), 0.0, 0
+                print(f"ep {ep} step {state['step']} loss {mean:.4f} lr {lr:.2e}", flush=True)
+                t0, run_n = time.time(), 0
+                meter.reset()
             if C.stop_requested(run_dir):
                 checkpoint()
                 print(f"STOP: saved {last}; re-run the same command to resume.")
@@ -268,6 +290,7 @@ def main(argv=None) -> dict:
                 t_ckpt = time.time()
 
         # ---- end of epoch: eval, keep top-k weights
+        check_finite("end of epoch")
         rec = {"epoch": ep}
         if va_uids:
             uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"])

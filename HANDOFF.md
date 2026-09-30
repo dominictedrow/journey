@@ -13,6 +13,7 @@ reading order below.
 5. Only as your brief directs:
    - `docs/plan/01_vit_barebones.md`: the ViT skeleton (shapes, modules, where each of Dom's components sits).
    - `docs/plan/02_vit_detailed_plan.md`: the research-backed detail of each section, plus the gap log.
+   - `docs/plan/03_performance_plan.md`: where step time goes (compute vs bandwidth vs overhead vs I/O) and the ranked optimization menu.
    - `docs/research/*.md`: cited research reports (ViT fundamentals, 3D/medical ViT, SSL + labels, RSNA winners + efficiency).
    - `docs/kaggle/*.md`: what the public Kaggle notebooks and forum show (labels, top solutions, data/DICOM facts, official pages).
    - `docs/decisions.md`: every decision Dom has made, dated. **Don't re-litigate these.**
@@ -78,7 +79,11 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   `kaggle datasets version -p <staged dir> -m ...`) and `dominictedrow/knee-wheels` (decoders; installed offline with
   `--no-deps`, never numpy). Kernels: `knee-probe`, `knee-audit`. GPU quota untouched (30 h/week).
 - **S06 code**: `notebooks/infer.py` + `scripts/build_kaggle_bundle.py`; the wheels now exist (above).
-- Tests: 103+ pytest (CPU) pass; label tests 17 + 1 skipped.
+- **Performance step 1** (2026-09-30, `docs/plan/03_performance_plan.md`, log `docs/sessions_log/P01_2026-09-30.md`): `precision: auto`
+  (bf16 on the 5070, fp16 + GradScaler on the T4), threaded DICOM reads (`KNEE_IO_THREADS`), MAE `windows_per_read`,
+  inference folds (`knee.model.fuse`), no per-micro-batch host syncs. Not measured on a GPU yet. **`knee-src` on Kaggle is
+  now stale**: re-version it before the next Kaggle kernel.
+- Tests: 117 pytest (CPU) pass, 2 skipped (`tests/test_perf.py` added).
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session

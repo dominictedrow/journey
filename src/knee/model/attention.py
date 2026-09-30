@@ -27,12 +27,10 @@ from torch import nn
 
 def _safe_key_mask(key_mask: torch.Tensor) -> torch.Tensor:
     """A sequence with no real key would give softmax(all -inf) = NaN. Unmask key 0 there; its output is padding
-    anyway and is ignored downstream, but NaNs would poison the gradients of the whole batch."""
+    anyway and is ignored downstream, but NaNs would poison the gradients of the whole batch.
+    Branch-free (no `if empty.any()`), so it never makes the CPU wait for the GPU."""
     empty = ~key_mask.any(dim=-1)
-    if empty.any():
-        key_mask = key_mask.clone()
-        key_mask[empty, 0] = True
-    return key_mask
+    return torch.cat([key_mask[:, :1] | empty[:, None], key_mask[:, 1:]], dim=1)
 
 
 def attend(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, key_mask: torch.Tensor | None = None,

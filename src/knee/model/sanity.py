@@ -3,7 +3,7 @@
     python -m knee.model.sanity --out docs/figures/../vram_table.md   (scripts/run_s03.ps1 calls it)
 
 1. manual ≡ sdpa attention on CUDA (fp32 tight, bf16 loose), and which SDPA kernel is picked.
-2. One supervised training step (fwd + bwd, bf16 autocast) for a grid of (H, windows per study L, E, depth,
+2. One supervised training step (fwd + bwd; bf16 autocast on sm_80+, fp16 on older GPUs such as the T4) for a grid of (H, windows per study L, E, depth,
    grad checkpointing): peak VRAM and ms/step, batch = 1 study. OOM is recorded, not fatal.
 3. MAE training steps for a few batch sizes at the pretraining resolution: peak VRAM and windows/s.
 The CPU unit tests (tests/test_model.py) cover correctness; this covers what only the GPU can tell us.
@@ -22,6 +22,11 @@ from knee.model.attention import attend
 from knee.model.knee_vit import KneeViT
 from knee.model.slice_vit import SliceViT
 from knee.ssl.mae import MAE
+
+
+def train_dtype() -> torch.dtype:
+    """What precision "auto" trains in on this GPU (knee.train.common.resolve_precision): bf16 needs sm_80+."""
+    return torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
 
 
 def fake_batch(L: int, H: int, device) -> dict:
@@ -68,7 +73,7 @@ def sup_step(H: int, L: int, E: int, depth: int, ckpt: bool, head: str, device) 
     for i in range(4):
         torch.cuda.synchronize()
         t0 = time.time()
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.autocast("cuda", dtype=train_dtype()):
             loss = F.binary_cross_entropy_with_logits(m(b).float(), torch.rand(1, 12, device=device))
         loss.backward()
         opt.step()
@@ -89,7 +94,7 @@ def mae_steps(H: int, bs: int, E: int, depth: int, device) -> tuple[float, float
         if i == 2:
             torch.cuda.synchronize()
             t0 = time.time()
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.autocast("cuda", dtype=train_dtype()):
             loss = mae(x)["loss"]
         loss.backward()
         opt.step()
@@ -109,7 +114,7 @@ def main(argv=None) -> None:
     device = torch.device("cuda")
     lines = [f"# S03 GPU sanity + VRAM table ({torch.cuda.get_device_name()}, torch {torch.__version__})", "",
              "## Attention", *check_attention(device), "",
-             "## Supervised step (1 study, bf16 autocast, AdamW; peak allocated GB / ms per step)", "",
+             f"## Supervised step (1 study, {train_dtype()} autocast, AdamW; peak allocated GB / ms per step)", "",
              "| H | windows L | E | depth | grad ckpt | head | peak GB | ms/step |", "|---|---|---|---|---|---|---|---|"]
     grid = itertools.product((256,) if a.quick else (224, 256, 384), (40, 80) if a.quick else (40, 80, 120),
                              (384,) if a.quick else (192, 384), (12,), (False, True), ("attn_mil", "finding_query"))
@@ -122,7 +127,7 @@ def main(argv=None) -> None:
         torch.cuda.empty_cache()
         print(row, flush=True)
         lines.append(row)
-    lines += ["", "## MAE step (mask 0.75, bf16; peak allocated GB / windows per s)", "",
+    lines += ["", f"## MAE step (mask 0.75, {train_dtype()}; peak allocated GB / windows per s)", "",
               "| H | batch | E | depth | peak GB | windows/s |", "|---|---|---|---|---|---|"]
     for H, bs, E in itertools.product((224, 256), (64, 128) if a.quick else (32, 64, 128, 256), (384,)):
         try:

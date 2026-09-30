@@ -2,11 +2,19 @@
 
 Each file is read once (header + raw pixel bytes); pixels are decoded only for the slices we keep. Every function
 is robust to bad files: it returns None and logs instead of raising, so one corrupt slice never kills a study.
+
+I/O concurrency (docs/plan/03_performance_plan.md, A1): `read_slices` reads a whole series with a per-process thread
+pool. One reader is latency-bound on Kaggle's NFS mount (≈ 62 files/s at 1 worker vs 325 at 16, docs/kaggle_env.md §4),
+and file reads release the GIL, so threads overlap the waits even inside a single DataLoader worker. With pixels, each
+file is read in one go (whole bytes, parsed from memory) instead of header now + a second open for the deferred pixel
+bytes later. The parsed result is the same as `read_slice`. KNEE_IO_THREADS sets the pool size (default 16; ≤ 1 = serial).
 """
 from __future__ import annotations
 
+import io
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -28,6 +36,20 @@ HEADER_FIELDS = [
     "ScanningSequence", "ScanOptions", "MRAcquisitionType", "ImageType",
 ]
 DEFER_SIZE = "64 KB"
+IO_THREADS = int(os.environ.get("KNEE_IO_THREADS", "16"))
+
+_pool: ThreadPoolExecutor | None = None
+_pool_pid: int | None = None
+
+
+def _io_pool() -> ThreadPoolExecutor | None:
+    """One pool per process (a forked DataLoader worker never reuses its parent's pool threads)."""
+    global _pool, _pool_pid
+    if IO_THREADS <= 1:
+        return None
+    if _pool is None or _pool_pid != os.getpid():
+        _pool, _pool_pid = ThreadPoolExecutor(IO_THREADS, thread_name_prefix="dicom-io"), os.getpid()
+    return _pool
 
 
 def _val(ds, name):
@@ -46,12 +68,16 @@ class SliceFile:
     ds: pydicom.Dataset | None = field(default=None, repr=False)  # kept only while the series is processed
 
 
-def read_slice(path: str | os.PathLike, with_pixels: bool = True) -> SliceFile | None:
+def read_slice(path: str | os.PathLike, with_pixels: bool = True, whole_file: bool = False) -> SliceFile | None:
     """Read one DICOM. with_pixels=False skips the pixel bytes (fast header pass). With pixels, large elements are
-    deferred (read from disk only when .pixel_array is used), so holding a whole series of datasets stays cheap.
+    deferred (read from disk only when .pixel_array is used), so holding a whole series of datasets stays cheap;
+    whole_file=True instead reads the file in one go and parses it from memory (one open, used by read_slices).
     None if unreadable."""
     try:
-        if with_pixels:
+        if with_pixels and whole_file:
+            with open(path, "rb") as fh:
+                ds = pydicom.dcmread(io.BytesIO(fh.read()))
+        elif with_pixels:
             ds = pydicom.dcmread(path, defer_size=DEFER_SIZE)
         else:
             ds = pydicom.dcmread(path, stop_before_pixels=True)
@@ -62,6 +88,14 @@ def read_slice(path: str | os.PathLike, with_pixels: bool = True) -> SliceFile |
     return SliceFile(str(path), hdr, ds if with_pixels else None)
 
 
+def read_slices(paths: list[str], with_pixels: bool = True) -> list[SliceFile | None]:
+    """read_slice over many files with overlapping reads (see the module docstring). Same order as `paths`."""
+    pool = _io_pool()
+    if pool is None or len(paths) < 2:
+        return [read_slice(p, with_pixels, whole_file=with_pixels) for p in paths]
+    return list(pool.map(lambda p: read_slice(p, with_pixels, whole_file=with_pixels), paths))
+
+
 def list_dicoms(series_dir: str | os.PathLike) -> list[str]:
     return sorted(e.path for e in os.scandir(series_dir) if e.is_file() and e.name.lower().endswith(".dcm"))
 
@@ -69,8 +103,7 @@ def list_dicoms(series_dir: str | os.PathLike) -> list[str]:
 def read_series_headers(series_dir: str | os.PathLike) -> pd.DataFrame:
     """One row per readable file: path + HEADER_FIELDS. Unreadable files are logged and dropped."""
     rows = []
-    for p in list_dicoms(series_dir):
-        s = read_slice(p, with_pixels=False)
+    for s in read_slices(list_dicoms(series_dir), with_pixels=False):
         if s is not None:
             rows.append({"path": s.path, **s.header})
     return pd.DataFrame(rows, columns=["path", *HEADER_FIELDS])

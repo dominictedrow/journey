@@ -30,27 +30,26 @@ def pairwise_rank_loss(logits: torch.Tensor, targets: torch.Tensor, label_mask: 
                        ref_mask: torch.Tensor | None = None, pos_thr: float = 0.6, neg_thr: float = 0.4
                        ) -> torch.Tensor:
     """Pairs within the batch, plus (current × reference) pairs if a reference set is given. Returns 0 (with grad)
-    when no finding has a pair."""
+    when no finding has a pair.
+
+    Written with pair masks instead of boolean indexing: `s[pos, k]` has a data-dependent size, so every such index
+    forces a GPU→CPU sync (36 per micro-batch with the bank). Here every (i, j, finding) pair is scored and the
+    invalid ones are zeroed, which is the same mean per finding, then the mean over findings that have a pair."""
     s, y = logits.float(), targets.float()
     m = torch.ones_like(y, dtype=torch.bool) if label_mask is None else label_mask.bool()
+    pos, neg = m & (y > pos_thr), m & (y < neg_thr)                                  # [B, K]
+    terms = [(s[:, None, :] - s[None, :, :], pos[:, None, :] & neg[None, :, :])]    # [B, B, K]
     if ref_logits is not None and len(ref_logits):
         rs, ry = ref_logits.float().detach(), ref_targets.float()
         rm = torch.ones_like(ry, dtype=torch.bool) if ref_mask is None else ref_mask.bool()
-    else:
-        rs = ry = rm = None
-    per_label = []
-    for k in range(y.shape[1]):
-        pos, neg = m[:, k] & (y[:, k] > pos_thr), m[:, k] & (y[:, k] < neg_thr)
-        diffs = [s[pos, k][:, None] - s[neg, k][None, :]]
-        if rs is not None:
-            rpos, rneg = rm[:, k] & (ry[:, k] > pos_thr), rm[:, k] & (ry[:, k] < neg_thr)
-            diffs += [s[pos, k][:, None] - rs[rneg, k][None, :], rs[rpos, k][:, None] - s[neg, k][None, :]]
-        d = torch.cat([x.flatten() for x in diffs])
-        if d.numel():
-            per_label.append(F.softplus(-d).mean())
-    if not per_label:
-        return logits.sum() * 0.0
-    return torch.stack(per_label).mean()
+        rpos, rneg = rm & (ry > pos_thr), rm & (ry < neg_thr)
+        terms += [(s[:, None, :] - rs[None, :, :], pos[:, None, :] & rneg[None, :, :]),   # [B, R, K]
+                  (rs[:, None, :] - s[None, :, :], rpos[:, None, :] & neg[None, :, :])]   # [R, B, K]
+    num = sum((F.softplus(-d) * w).sum(dim=(0, 1)) for d, w in terms)                  # [K]
+    cnt = sum(w.sum(dim=(0, 1)) for _, w in terms)                                     # [K]
+    has = cnt > 0
+    per_label = torch.where(has, num / cnt.clamp(min=1), num * 0.0)
+    return per_label.sum() / has.sum().clamp(min=1)
 
 
 class RankBank:

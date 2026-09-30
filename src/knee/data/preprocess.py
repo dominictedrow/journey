@@ -4,7 +4,8 @@ Used identically by the cache builder (train) and the Kaggle inference notebook 
 train/infer parity testable (tests/test_data.py::test_parity_cache_equals_direct).
 
 Per series:
-  1. read every file once (pixel bytes deferred, so memory stays small until a slice is decoded)
+  1. read every file once, overlapping the reads in a thread pool (dicom_io.read_slices); the bytes of a slice
+     are dropped as soon as it is decoded
   2. keep the majority orientation; split off duplicate positions (several stacks/echoes in one series)
   3. order slices along the plane's canonical normal (IPP·n, never filename/InstanceNumber)
   4. decode → modality LUT → centre crop crop_mm (native px) → resize to the output scale
@@ -26,7 +27,7 @@ from knee.data import crop_resize as CR
 from knee.data import geometry as G
 from knee.data import normalize as N
 from knee.data import series_meta as SM
-from knee.data.dicom_io import decode_pixels, list_dicoms, read_slice, slice_geometry
+from knee.data.dicom_io import decode_pixels, list_dicoms, read_slices, slice_geometry
 from knee.data.series_select import assign_slots
 
 log = logging.getLogger(__name__)
@@ -84,8 +85,7 @@ def _mode(values):
 def _read_series(series_dir: Path, series_uid: str, plane_csv: str | None) -> _SeriesHeaders | None:
     paths = list_dicoms(series_dir)
     files = []
-    for p in paths:
-        s = read_slice(p, with_pixels=True)
+    for p, s in zip(paths, read_slices(paths, with_pixels=True)):
         if s is None:
             continue
         ipp, iop, ps = slice_geometry(s.header)

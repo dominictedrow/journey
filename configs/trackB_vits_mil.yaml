@@ -3,7 +3,7 @@
 # Random-init control: the same command with --set init.encoder=null run_name=trackB_vits_mil_scratch
 run_name: trackB_vits_mil
 seed: 0
-precision: bf16
+precision: auto   # bf16 on the RTX 5070 (sm_120), fp16 + loss scaling on the Kaggle T4 (sm_75)
 model:
   kind: knee_vit
   cfg:

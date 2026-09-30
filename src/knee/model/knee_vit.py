@@ -52,10 +52,8 @@ def drop_windows(mask: torch.Tensor, p: float) -> torch.Tensor:
         return mask
     keep = (torch.rand(mask.shape, device=mask.device) >= p) & mask
     none_left = ~keep.any(dim=1) & mask.any(dim=1)
-    if none_left.any():
-        first = mask.float().argmax(dim=1)
-        keep[none_left, first[none_left]] = True
-    return keep
+    first = torch.zeros_like(mask).scatter_(1, mask.float().argmax(dim=1, keepdim=True), True)
+    return keep | (first & none_left[:, None])  # branch-free: no GPU→CPU sync
 
 
 class KneeViT(nn.Module):

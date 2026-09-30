@@ -3,7 +3,7 @@
 # prints windows/s + peak VRAM and extrapolates the wall-clock for optim.epochs. Dom approves the duration before launch.
 run_name: mae_vits_p16_256
 seed: 0
-precision: bf16
+precision: auto   # bf16 on the RTX 5070 (sm_120), fp16 + loss scaling on the Kaggle T4 (sm_75)
 # cache_dir / run_dir default to <cache_root>/cache_v1_train and <cache_root>/runs/<run_name> (configs/paths.yaml)
 model:
   img_size: 256        # HP: MAE resolution (the cache is 384 px; windows are downsampled at load)
@@ -29,6 +29,7 @@ mae:
 data:
   out_px: 256
   windows_per_series: 4   # HP: 24,371 series × 4 ≈ 97k windows per epoch
+  windows_per_read: 4     # HP: windows cut from one series read (1 = one read per window; 03 plan A3)
   scale: [0.6, 1.0]
   ratio: [0.85, 1.18]
   batch_size: 128         # HP: set from the VRAM table (knee.model.sanity)

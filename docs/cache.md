@@ -7,7 +7,7 @@ Run on Windows: `scripts/run_s02.ps1`. Tests: `tests/test_data.py`.
 
 | step | rule | where | knob (HP) |
 |---|---|---|---|
-| read | every file once; pixel bytes deferred until decode; unreadable files logged and skipped | `dicom_io.read_slice` | |
+| read | every file once, whole file in one read, reads overlapped by a per-process thread pool; bytes freed as each slice is decoded; unreadable files logged and skipped | `dicom_io.read_slices` | `KNEE_IO_THREADS` (16) |
 | orientation filter | keep slices whose normal is within ~5.7° of the series' majority normal | `preprocess._read_series` | |
 | duplicates | positions within 0.05 mm = several stacks/echoes: keep the biggest (EchoNumbers, AcquisitionNumber) group, then one slice per position | same | |
 | slice order | ascending IPP · (true slice normal, signed to the plane's canonical normal) | `geometry.canonical_positions` | |

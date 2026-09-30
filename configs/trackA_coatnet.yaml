@@ -3,7 +3,7 @@
 #   python -m knee.train.train_sup --config configs/trackA_coatnet.yaml --set folds.fold=0
 run_name: trackA_coatnet384
 seed: 0
-precision: bf16
+precision: auto   # bf16 on the RTX 5070 (sm_120), fp16 + loss scaling on the Kaggle T4 (sm_75)
 model:
   kind: trackA
   cfg:

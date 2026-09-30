@@ -8,7 +8,12 @@ Run dir (default <cache_root>/runs/<run_name>): config.yaml, log.jsonl, last.pt 
 (SliceViT weights only: what S07 loads), recon/*.png, pilot.json. Never inside the repo (FAT32, 4 GB file limit).
 
 Schedule: AdamW (β2 0.95), lr = blr · effective_batch / 256 (MAE convention), per-step linear warmup + cosine.
-Precision: bf16 autocast on CUDA, fp32 master weights (decision 2026-09-24).
+Precision: "auto" = bf16 autocast on the 5070 (decision 2026-09-24), fp16 autocast + loss scaling on the T4; fp32
+master weights either way.
+
+Loader (docs/plan/03_performance_plan.md, A3): each dataset item is one series read that yields `windows_per_read`
+windows, so per-window file access and Python overhead are paid once per read. The DataLoader batches
+batch_size / windows_per_read items and concatenates them.
 """
 from __future__ import annotations
 
@@ -31,12 +36,12 @@ from knee.train import common as C
 from knee.train.optim import build_adamw, param_groups, set_lr, warmup_cosine
 
 DEFAULTS: dict = {
-    "run_name": "mae_default", "seed": 0, "cache_dir": None, "run_dir": None, "device": "auto", "precision": "bf16",
+    "run_name": "mae_default", "seed": 0, "cache_dir": None, "run_dir": None, "device": "auto", "precision": "auto",
     "model": {"img_size": 256, "patch": 16, "dim": 384, "depth": 12, "heads": 6, "tokenizer": "conv_stem",
               "stem_norm": "gn", "pos2d": "sincos", "pool": "gap", "qk_norm": True, "layerscale": 0.1,
               "drop_path": 0.0, "attn_impl": "sdpa", "grad_checkpointing": False},
     "mae": {"mask_ratio": 0.75, "dec_dim": 256, "dec_depth": 4, "dec_heads": 8, "norm_pix": True},
-    "data": {"out_px": 256, "windows_per_series": 4, "scale": [0.6, 1.0], "ratio": [0.85, 1.18],
+    "data": {"out_px": 256, "windows_per_series": 4, "windows_per_read": 1, "scale": [0.6, 1.0], "ratio": [0.85, 1.18],
              "batch_size": 64, "workers": 6, "limit_studies": 0},
     "optim": {"blr": 1.5e-4, "weight_decay": 0.05, "betas": [0.9, 0.95], "warmup_epochs": 2, "epochs": 40,
               "min_lr_ratio": 0.0, "clip": 1.0, "accum": 1},
@@ -96,6 +101,7 @@ def main(argv=None) -> dict:
     log = C.JsonlLog(run_dir / "log.jsonl")
     device = C.pick_device(cfg["device"])
     C.seed_everything(cfg["seed"])
+    cfg["precision"] = C.resolve_precision(device, cfg["precision"])
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
@@ -106,12 +112,16 @@ def main(argv=None) -> dict:
     if cfg["data"]["limit_studies"]:
         uids = uids[: cfg["data"]["limit_studies"]]
     dcfg = cfg["data"]
+    kr = int(dcfg["windows_per_read"])
     ds = MAEWindowDataset(reader, uids, dcfg["out_px"], dcfg["windows_per_series"], scale=tuple(dcfg["scale"]),
-                          ratio=tuple(dcfg["ratio"]), seed=cfg["seed"])
+                          ratio=tuple(dcfg["ratio"]), seed=cfg["seed"], windows_per_read=kr)
     bs, accum = dcfg["batch_size"], cfg["optim"]["accum"]
-    batches_per_epoch = len(ds) // bs
+    if bs % kr:
+        raise SystemExit(f"data.batch_size {bs} must be a multiple of data.windows_per_read {kr}")
+    ipb = bs // kr  # dataset items (series reads) per batch
+    batches_per_epoch = len(ds) // ipb
     if batches_per_epoch < accum:
-        raise SystemExit(f"dataset has {len(ds)} windows: fewer than one optimizer step at batch {bs}×{accum}")
+        raise SystemExit(f"dataset has {ds.n_windows} windows: fewer than one optimizer step at batch {bs}×{accum}")
     steps_per_epoch = batches_per_epoch // accum
     ocfg = cfg["optim"]
     total_steps = ocfg["epochs"] * steps_per_epoch
@@ -121,25 +131,44 @@ def main(argv=None) -> dict:
     mae = build(cfg).to(device)
     opt = build_adamw(param_groups(mae, base_lr, ocfg["weight_decay"]), ocfg["betas"],
                       fused=True if device.type == "cuda" else None)
+    scaler = C.make_scaler(device, cfg["precision"])
     state = {"epoch": 0, "batch_in_epoch": 0, "step": 0, "elapsed": 0.0}
     last = run_dir / "last.pt"
     if last.exists() and not a.pilot:
         ck = torch.load(last, map_location="cpu", weights_only=False)
         mae.load_state_dict(ck["model"])
         opt.load_state_dict(ck["opt"])
+        if ck.get("scaler"):
+            scaler.load_state_dict(ck["scaler"])
         state = ck["state"]
         C.set_rng_state(ck["rng"])
         print(f"resumed from {last}: epoch {state['epoch']} batch {state['batch_in_epoch']} step {state['step']}")
     (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False))
     n_params = sum(p.numel() for p in mae.encoder.parameters())
-    print(f"{len(ds.n)} series, {len(ds)} windows/epoch, {steps_per_epoch} steps/epoch, {total_steps} total, "
-          f"lr {base_lr:.2e}, encoder {n_params / 1e6:.1f}M params, device {device}", flush=True)
+    print(f"{len(ds.n)} series, {ds.n_windows} windows/epoch ({kr} per read), {steps_per_epoch} steps/epoch, "
+          f"{total_steps} total, lr {base_lr:.2e}, encoder {n_params / 1e6:.1f}M params, device {device}, "
+          f"{cfg['precision']}", flush=True)
+    meter = C.GpuMeter(device)
+
+    def save(tag: str) -> None:
+        C.save_atomic({"model": mae.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(),
+                       "state": state, "rng": C.rng_state(), "cfg": cfg}, run_dir / f"{tag}.pt")
+
+    def check_finite(where: str) -> tuple[float, int]:
+        """Checked at log/checkpoint time, not per batch (no GPU sync per step). bf16/fp32: any non-finite loss
+        stops the run (state → nan_state.pt, last.pt untouched). fp16: tolerated unless every batch was bad."""
+        mean, bad = meter.read()
+        if bad and (cfg["precision"] != "fp16" or bad >= meter.n // max(bs, 1)):
+            save("nan_state")
+            raise SystemExit(f"{bad} non-finite losses before {where} (step {state['step']}); state saved to "
+                             f"nan_state.pt, last good state is last.pt")
+        return mean, bad
 
     def checkpoint(tag: str = "last") -> None:
-        C.save_atomic({"model": mae.state_dict(), "opt": opt.state_dict(), "state": state, "rng": C.rng_state(),
-                       "cfg": cfg}, run_dir / f"{tag}.pt")
+        check_finite("checkpoint")
+        save(tag)
 
-    recon_batch = torch.stack([ds[i] for i in range(min(8, len(ds)))]).to(device)
+    recon_batch = torch.cat([ds[i] for i in range(min(8, len(ds)))])[:8].to(device)
     sampler = C.ResumableRandomSampler(len(ds), seed=cfg["seed"])
     t_ckpt, t_start = time.time(), time.time() - state["elapsed"]
     pilot_t0, pilot_windows, pilot_skip = None, 0, 5
@@ -148,29 +177,29 @@ def main(argv=None) -> dict:
     while state["epoch"] < ocfg["epochs"] and not done:
         ep = state["epoch"]
         ds.set_epoch(ep)
-        sampler.set_epoch(ep, start=state["batch_in_epoch"] * bs)
-        loader = DataLoader(ds, batch_size=bs, sampler=sampler, num_workers=dcfg["workers"], drop_last=True,
-                            pin_memory=device.type == "cuda", persistent_workers=False,
+        sampler.set_epoch(ep, start=state["batch_in_epoch"] * ipb)
+        loader = DataLoader(ds, batch_size=ipb, sampler=sampler, num_workers=dcfg["workers"], drop_last=True,
+                            collate_fn=torch.cat, pin_memory=device.type == "cuda", persistent_workers=False,
                             prefetch_factor=4 if dcfg["workers"] else None)
-        t_log, n_log, loss_log = time.time(), 0, 0.0
+        t_log, n_log = time.time(), 0
+        meter.reset()
         for x in loader:
             if state["batch_in_epoch"] >= batches_per_epoch:
                 break
             x = x.to(device, non_blocking=True)
             with C.autocast_ctx(device, cfg["precision"]):
                 loss = mae(x)["loss"]
-            if not torch.isfinite(loss):
-                checkpoint("nan_state")
-                raise SystemExit(f"non-finite loss at step {state['step']}; state saved to nan_state.pt")
-            (loss / accum).backward()
+            meter.add(loss, len(x))
+            scaler.scale(loss / accum).backward()
             state["batch_in_epoch"] += 1
             n_log += len(x)
-            loss_log += loss.item() * len(x)
             if state["batch_in_epoch"] % accum:
                 continue
             lr = set_lr(opt, base_lr, warmup_cosine(state["step"], warmup, total_steps, ocfg["min_lr_ratio"]))
+            scaler.unscale_(opt)
             gnorm = torch.nn.utils.clip_grad_norm_(mae.parameters(), ocfg["clip"])
-            opt.step()
+            scaler.step(opt)
+            scaler.update()
             opt.zero_grad(set_to_none=True)
             state["step"] += 1
             state["elapsed"] = time.time() - t_start
@@ -184,11 +213,14 @@ def main(argv=None) -> dict:
                     pilot_windows += bs * accum
             if state["step"] % cfg["log_every"] == 0:
                 dt = time.time() - t_log
-                log.write(step=state["step"], epoch=ep, loss=loss_log / max(n_log, 1), lr=lr, grad_norm=float(gnorm),
+                mean, bad = check_finite("log")
+                log.write(step=state["step"], epoch=ep, loss=mean, lr=lr, grad_norm=float(gnorm), nonfinite=bad,
+                          loss_scale=scaler.get_scale() if scaler.is_enabled() else None,
                           windows_per_s=n_log / max(dt, 1e-9), peak_vram_gb=C.cuda_peak_gb())
-                print(f"ep {ep} step {state['step']}/{total_steps} loss {loss_log / max(n_log, 1):.4f} "
+                print(f"ep {ep} step {state['step']}/{total_steps} loss {mean:.4f} "
                       f"lr {lr:.2e} {n_log / max(dt, 1e-9):.0f} win/s", flush=True)
-                t_log, n_log, loss_log = time.time(), 0, 0.0
+                t_log, n_log = time.time(), 0
+                meter.reset()
             if cfg["recon_every_steps"] and state["step"] % cfg["recon_every_steps"] == 0:
                 save_recon(mae, recon_batch, run_dir / "recon" / f"step{state['step']:07d}.png")
             if a.pilot and state["step"] >= a.pilot:
@@ -231,8 +263,9 @@ def main(argv=None) -> dict:
             torch.cuda.synchronize()
         dt = time.time() - pilot_t0 if pilot_t0 else float("nan")
         wps = pilot_windows / dt if pilot_t0 and dt > 0 else float("nan")
-        epoch_h = len(ds) / wps / 3600 if wps == wps else float("nan")
-        result = {"windows_per_s": wps, "peak_vram_gb": C.cuda_peak_gb(), "windows_per_epoch": len(ds),
+        epoch_h = ds.n_windows / wps / 3600 if wps == wps else float("nan")
+        result = {"windows_per_s": wps, "peak_vram_gb": C.cuda_peak_gb(), "windows_per_epoch": ds.n_windows,
+                  "windows_per_read": kr, "precision": cfg["precision"],
                   "hours_per_epoch": epoch_h, "planned_epochs": ocfg["epochs"],
                   "hours_total": epoch_h * ocfg["epochs"], "batch_size": bs, "accum": accum,
                   "measured_steps": state["step"] - pilot_skip, "device": str(device),

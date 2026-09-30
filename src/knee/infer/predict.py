@@ -30,7 +30,8 @@ SUBMISSION_COLUMNS = ["StudyInstanceUID", *LABELS]
 
 
 def load_arm(ckpt: str | Path, device) -> tuple[torch.nn.Module, dict]:
-    """A train_sup model_avg.pt → (model in eval mode, its data config). Never downloads weights."""
+    """A train_sup model_avg.pt → (model in eval mode with inference folds applied, its data config). Never downloads
+    weights."""
     from knee.train.train_sup import build_model
     ck = torch.load(ckpt, map_location="cpu", weights_only=False)
     mcfg = ck["cfg"]["model"]
@@ -38,7 +39,10 @@ def load_arm(ckpt: str | Path, device) -> tuple[torch.nn.Module, dict]:
         mcfg = {**mcfg, "cfg": {**mcfg.get("cfg", {}), "pretrained": False, "grad_checkpointing": False}}
     model = build_model(mcfg)
     model.load_state_dict(ck["model"])
-    return model.to(device).eval(), ck["cfg"]["data"]
+    from knee.model.fuse import prepare_for_inference
+    folded = prepare_for_inference(model)  # exact weight folds (LayerScale, conv+BN): fewer memory passes
+    log.info("arm %s: folded %s", Path(ckpt).name, folded)
+    return model.to(device), ck["cfg"]["data"]
 
 
 def arm_input(series: list, data_cfg: dict) -> dict:

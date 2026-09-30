@@ -43,13 +43,59 @@ def pick_device(pref: str = "auto") -> torch.device:
     return torch.device("cpu")  # MPS is not used: the Mac is only for CPU tests (CLAUDE.md, compute)
 
 
+def resolve_precision(device: torch.device, precision: str) -> str:
+    """"auto" → bf16 on GPUs with native bf16 tensor cores (compute capability ≥ 8.0: the RTX 5070), fp16 below that
+    (the Kaggle T4 is sm_75: no bf16 tensor cores, and torch may still report bf16 as "supported" through emulation),
+    fp32 on CPU. Explicit values pass through."""
+    if precision != "auto":
+        return precision
+    if device.type != "cuda":
+        return "fp32"
+    return "bf16" if torch.cuda.get_device_capability(device)[0] >= 8 else "fp16"
+
+
 def autocast_ctx(device: torch.device, precision: str):
-    """bf16 autocast on CUDA (decision 2026-09-24); fp32 elsewhere. fp16 is for inference on the T4 only."""
+    """bf16 autocast on CUDA (decision 2026-09-24); fp16 autocast for the T4 (pair it with make_scaler); fp32 elsewhere.
+    `precision` should already be resolved (resolve_precision)."""
     if precision == "bf16" and device.type == "cuda":
         return torch.autocast("cuda", dtype=torch.bfloat16)
+    if precision == "fp16" and device.type == "cuda":
+        return torch.autocast("cuda", dtype=torch.float16)
     if precision == "bf16_cpu" and device.type == "cpu":
         return torch.autocast("cpu", dtype=torch.bfloat16)
     return torch.autocast(device.type, enabled=False)
+
+
+def make_scaler(device: torch.device, precision: str) -> torch.amp.GradScaler:
+    """Loss scaling, needed for fp16 only: fp16 gradients underflow to 0 below ~6e-8, so the loss is multiplied by a
+    large factor before backward and the gradients divided back before the optimizer step. A step whose gradients
+    overflowed (inf/NaN) is skipped and the factor halved. bf16 has fp32's exponent range and needs none, so the
+    scaler is disabled there (every call is then a pass-through)."""
+    return torch.amp.GradScaler(device.type, enabled=precision == "fp16" and device.type == "cuda")
+
+
+class GpuMeter:
+    """Running sums kept on the device, so the training loop never waits for the GPU (no .item() per micro-batch).
+    `read()` syncs once; call it at log/checkpoint time only."""
+
+    def __init__(self, device: torch.device):
+        self.device = device
+        self.reset()
+
+    def reset(self) -> None:
+        self.loss_sum = torch.zeros((), device=self.device, dtype=torch.float64)
+        self.n_bad = torch.zeros((), device=self.device, dtype=torch.int64)
+        self.n = 0
+
+    def add(self, loss: torch.Tensor, weight: int = 1) -> None:
+        ok = torch.isfinite(loss.detach())
+        self.loss_sum += torch.where(ok, loss.detach().double() * weight, 0.0)
+        self.n_bad += (~ok).long()
+        self.n += weight
+
+    def read(self) -> tuple[float, int]:
+        """(mean finite loss, number of non-finite micro-batches) since the last reset."""
+        return float(self.loss_sum) / max(self.n, 1), int(self.n_bad)
 
 
 def load_config(path: str | Path) -> dict:
