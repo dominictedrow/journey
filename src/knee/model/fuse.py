@@ -95,7 +95,11 @@ def fold_timm_conv_bn(model: nn.Module) -> int:
     return n
 
 
-def prepare_for_inference(model: nn.Module) -> dict[str, int]:
-    """eval() + every exact fold that applies to this model. Returns what was folded (for the run log)."""
+def prepare_for_inference(model: nn.Module, conv_bn: bool = False) -> dict[str, int]:
+    """eval() + the exact folds that pay off. Returns what was folded (for the run log).
+
+    conv_bn is off by default: measured on the T4 (knee-profile, 2026-09-30), it made Track A inference 7% *slower* in
+    eager mode (1,041 → 1,119 ms min over 60 windows). cuDNN convolution adds a bias as a separate broadcast `add_` pass,
+    which costs more than the fused BN-inference kernel it replaces. Under torch.compile the bias fuses anyway."""
     model.eval()
-    return {"layerscale": fold_layerscale(model), "conv_bn": fold_timm_conv_bn(model)}
+    return {"layerscale": fold_layerscale(model), "conv_bn": fold_timm_conv_bn(model) if conv_bn else 0}

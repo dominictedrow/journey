@@ -37,7 +37,7 @@ is the fp16-accumulate rate, so **62 TFLOPS** with fp32 accumulate (what PyTorch
 - cuDNN/SDPA kernels on CUDA differ from the CPU ones (e.g. attention with a bias, see B5).
 - The 50%/75% efficiency factors are assumptions.
 
-→ **One real `torch.profiler` run on a T4 (~15 min of GPU quota) replaces these estimates with measurements** (§6).
+→ **One real `torch.profiler` run on a T4 replaced these estimates with measurements: see §2b** (2026-09-30).
 
 ## 2. Results per step (estimates)
 
@@ -63,6 +63,69 @@ averages 38–57 FLOP/B, well below both. The GEMMs themselves sit above the rid
 Top single items on the T4 (Track A training): `convolution_backward` 224 ms (compute), attention `bmm` + softmax +
 softmax-backward ≈ 290 ms (**materialized L×L scores**, see B5), `_to_copy` (autocast casts) 142 ms, `add`/`mul`/`clone`
 ≈ 240 ms (bandwidth), BatchNorm + SiLU ≈ 75 ms.
+
+### 2b. Measured on a Kaggle T4 (2026-09-30, `notebooks/kaggle_profile`, ~7 min of GPU)
+
+Synthetic inputs, random weights, the committed configs, fp16 autocast + GradScaler (what `precision: auto` picks on
+the T4), batch 1 study. torch 2.10.0+cu128, cuDNN 9.10, timm 1.0.26, Triton 3.6.0; 2× Tesla T4 (15.6 GB), only GPU 0
+used. Median of 10 steps after 3 warm-ups; kernel split from `torch.profiler` over 3 more steps. Raw: kernel output
+`results.json` (not committed; re-run the kernel to regenerate). "Train" = forward + backward of one micro-batch; the
+optimizer step runs once per `accum` micro-batches and is listed separately.
+
+| Workload | Variant | ms / step | est. (§2) | Peak VRAM GB | gemm+conv | attention | norm | casts/copies | elementwise |
+|---|---|---|---|---|---|---|---|---|---|
+| Track A train (15 win @384) | ckpt on (as committed) | **971** | 1,307 | 3.9 | 40% | 16% | 2% | 19% | 18% |
+| | ckpt off | 747 (−23%) | | 11.3 | | | | | |
+| | ckpt on + channels_last | 921 (−5%) | | 3.9 | | | | | |
+| | **ckpt off + channels_last** | **704 (−28%)** | | 11.3 | | | | | |
+| Track A optimizer step | AdamW + clip + scaler | 37 | | | | | | | |
+| Track A inference (60 win @384) | autocast | **1,067** | 626 | 2.0 | 41% | 15% | 2% | 24% | 17% |
+| | + conv/BN fold | 1,136 (**+6%, slower**) | | 1.5 | | | | | |
+| | + fold + channels_last | 1,035 (−3%) | | 1.5 | | | | | |
+| | **+ fold + cl + `torch.compile`** | **673 (−37%)** | | 1.3 | | | | | |
+| Track B train (44 win @256) | ckpt on (as committed) | **288** | 154 | 1.3 | 22% | 8% | 17% | 32% | 15% |
+| | ckpt off | 235 (−18%) | | 3.7 | | | | | |
+| Track B optimizer step | AdamW + clip + scaler | 14 | | | | | | | |
+| Track B inference (88 win @256) | autocast | **185** | 97 | 0.7 | 24% | 5% | 24% | 33% | 12% |
+| | + LayerScale fold | 181 (−2%) | | 0.7 | | | | | |
+| | **+ fold + `torch.compile`** | **96 (−48%)** | | 0.5 | | | | | |
+| MAE step (128 win @256, incl. optimizer) | as committed | **406** | 201 | 6.7 | 24% | 7% | 18% | 27% | 14% |
+
+Kernel shares are of GPU kernel time for the first variant of each workload. Under `torch.compile` most kernels are
+fused Triton kernels, so the category split isn't meaningful there and is omitted.
+
+**What the measurements say:**
+1. **Launch overhead is confirmed not to matter.** Summed kernel time ≈ wall time in every eager run (GPU busy 99–102%),
+   and "Command Buffer Full" takes ~41% of CPU time: the CPU is ahead and waiting for queue space. The GPU never idles.
+2. **Bandwidth-bound work is an even bigger share than estimated.** GEMM + conv + attention is only 29–56% of kernel
+   time. In Track B, LayerNorm (fp32 under CUDA autocast, as predicted in §1) plus casts/copies is 58% of inference.
+   That's why the ViTs came in ~2× slower than estimated while Track A's convs came in faster.
+3. **`torch.compile` works on the T4** (Triton 3.6 on sm75; B4 was UNVERIFIED) and is the largest single win: −37% on
+   Track A inference, −48% on Track B. The one-time compile costs 49 s (B) and 86 s (A). Caveat: measured at fixed
+   shapes. Real bags vary per study, and `encode_windows` splits into `window_chunk` pieces with a ragged last chunk,
+   so the notebook must pad to a fixed chunk size (or accept one dynamic-shape recompile). Not yet tested.
+4. **CoAtNet's biased attention already uses the memory-efficient kernel** (`fmha_cutlassF/B_f16_..._sm75`, forward
+   and backward; no FlashAttention on sm75). The materialized L×L path seen on CPU doesn't happen on CUDA. **B5 is
+   closed: nothing to do.** Attention is 15–16% of Track A.
+5. **Gradient checkpointing off** (C1): −23% Track A, −18% Track B. Track A then peaks at 11.3 GB: fits the T4 (15.6 GB),
+   too tight for the 5070 (12 GB) without a smaller `window_chunk`.
+6. **channels_last** (B3): −5% training, −3% inference on top of the fold. Small but free for training.
+7. **The conv/BN fold (B2) made Track A slower in eager mode.** cuDNN adds the new conv bias in a separate broadcast
+   `add_` (+360 ms), which costs more than the fused BN-inference kernel it replaces (−345 ms). It's now off by
+   default (`prepare_for_inference(conv_bn=False)`). The LayerScale fold gave −2% on Track B and stays on.
+
+**Revised GPU-hour budget (T4, from the measured rows):**
+
+| Job | As committed | With ckpt off + cl, compiled eval |
+|---|---|---|
+| Track A, 1 fold (16 ep × 3,525 train + 16 × 882 eval) | 15.2 h train + 4.2 h eval ≈ **19 h** | 11.0 + 2.6 ≈ **14 h** |
+| Track B, 1 fold (20 ep) | 5.6 + 0.9 ≈ **6.5 h** | 4.6 + 0.5 ≈ **5 h** |
+| MAE, 40 ep × 97k windows (315 windows/s) | **3.4 h** of GPU, if the loader delivers 315 windows/s | |
+| Inference, 1,300 studies, model only | Track A 23 min, Track B 4 min | A 15 min (+1.5 min compile), B 2 min |
+
+Track A × 5 folds at ~14 h = 70 h still eats most of the ~90 h of quota left before Oct 22. Two levers not tried
+here: each Kaggle GPU session has **two T4s**, so two folds could train at once (whether quota is billed per session
+or per GPU is UNVERIFIED), and evaluating every 2nd epoch halves the eval share.
 
 ## 3. Outside the model: I/O and the data loader
 
@@ -136,10 +199,12 @@ branch-free mask helpers). Speed-ups are **not measured yet**: that needs the T4
 
 1. **Now (architecture-independent, Mac-codable, CPU-testable):** C3 (fp16 + GradScaler), A1, A3, B2, D. All [exact] except
    C3, and C3 is required for Kaggle anyway.
-2. **One real GPU profile** (§6) to confirm the split and settle B3/B4/B5/C1 before coding them.
+2. ~~One real GPU profile~~ **Done (§2b).** Settled: C1 (off wherever VRAM allows), B3 (small win), B4 (works on the T4,
+   biggest win; needs fixed chunk shapes), B5 (nothing to do). B2's conv/BN fold is off by default. Next: C1 + B3 in the
+   Track A config for Kaggle training, compile with padded chunks in `infer.py`, then A1/A2 measured in a real inference run.
 3. **After the Oct 8 gate** (architecture final): C2, C4, C5, B1 on the chosen arms; the efficiency submission's window budget.
 
-## 6. What needs a real GPU (the ~15-min T4 profile)
+## 6. What needs a real GPU (the T4 profile: done 2026-09-30, §2b)
 
 A Kaggle GPU kernel with synthetic inputs (no cache needed) that runs, per workload: `torch.profiler` (CUDA kernel time
 by op type), peak VRAM with checkpointing on vs off, channels_last on vs off, `torch.compile` on the T4 (does Triton run on

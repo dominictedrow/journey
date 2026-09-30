@@ -40,7 +40,7 @@ def load_arm(ckpt: str | Path, device) -> tuple[torch.nn.Module, dict]:
     model = build_model(mcfg)
     model.load_state_dict(ck["model"])
     from knee.model.fuse import prepare_for_inference
-    folded = prepare_for_inference(model)  # exact weight folds (LayerScale, conv+BN): fewer memory passes
+    folded = prepare_for_inference(model)  # exact LayerScale fold (conv+BN off: slower in eager on the T4)
     log.info("arm %s: folded %s", Path(ckpt).name, folded)
     return model.to(device), ck["cfg"]["data"]
 

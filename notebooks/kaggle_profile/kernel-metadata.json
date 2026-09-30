@@ -1,0 +1,13 @@
+{
+  "id": "dominictedrow/knee-profile",
+  "title": "knee-profile",
+  "code_file": "gpu_profile.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": false,
+  "competition_sources": [],
+  "dataset_sources": ["dominictedrow/knee-src"],
+  "kernel_sources": []
+}

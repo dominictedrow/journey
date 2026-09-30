@@ -16,6 +16,14 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E002 — T4 profile of every workload — 2026-09-30 — session P02
+- Track: A + B + MAE (performance only; no training, no metric). Machine: Kaggle GPU kernel `knee-profile`, Tesla T4, 411 s.
+- Git commit: code at `519ca33` (knee-src), script `notebooks/kaggle_profile/gpu_profile.py`. Synthetic inputs, random weights.
+- Results: `docs/plan/03_performance_plan.md` §2b. Track A train 971 ms/micro-batch (704 with ckpt off + channels_last,
+  11.3 GB), Track A inference 1,067 ms / 60 windows (673 compiled), Track B train 288 ms (235 ckpt off), Track B
+  inference 185 ms (96 compiled), MAE 406 ms / 128 windows (6.7 GB).
+- Verdict: keep. Conv+BN fold turned off by default (slower); compile, ckpt off and channels_last are next.
+
 ### E001 — labels v0: blend of 4 public report-label sets — 2026-09-26 — session S04 part 1
 - Track: L (labels). Machine: Mac (no GPU).
 - Code: `python -m knee.labels.build_labels --version v0 --no-claude` (commit of S04 part 1). Readers: pilkwang,

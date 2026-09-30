@@ -85,6 +85,11 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   (bf16 on the 5070, fp16 + GradScaler on the T4), threaded DICOM reads (`KNEE_IO_THREADS`), MAE `windows_per_read`,
   inference folds (`knee.model.fuse`), no per-micro-batch host syncs. Not measured on a GPU yet. `knee-src` re-versioned
   2026-09-30 to `519ca33` (verified: a full download equals `src/knee`).
+- **T4 profile done** (2026-09-30, kernel `knee-profile`, ~7 min GPU; `03_performance_plan.md` §2b, log
+  `docs/sessions_log/P02_2026-09-30.md`): launch overhead confirmed negligible; `torch.compile` works on the T4 and
+  cuts inference 37–48%; ckpt off + channels_last cuts Track A training 28% (11.3 GB peak); CoAtNet attention already
+  uses the mem-efficient kernel; the conv+BN fold was slower and is now off by default. Track A ≈ 14 T4-h per fold
+  after those fixes. `knee-src` needs a re-version for the `fuse.py` change.
 - Tests: 117 pytest (CPU) pass, 2 skipped (`tests/test_perf.py` added).
 - Submissions made: none. Long jobs running: none.
 
@@ -94,6 +99,9 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - Decide what else Kaggle should do. Options: a Kaggle-side preprocessing cache (≤ 20 GB per kernel output, so a smaller
   resolution or series subset) and Track A training on T4 ×2 (30 h/week). The measured I/O makes a full read ≈ 45 min at 16
   workers. Ask Dom before spending GPU quota.
+- Performance step 2 (from the T4 profile): Track A Kaggle config with `grad_checkpointing: false` + channels_last;
+  `torch.compile` in `infer.py` with fixed-size padded window chunks (test recompiles). Ask Dom about the Track A fold
+  budget (~14 T4-h per fold) and try the second T4 per session.
 - Investigate the 2,707 multi-IOP series (a Kaggle kernel over `series_train` + a few headers).
 - Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
 

@@ -195,7 +195,7 @@ def test_fold_timm_coatnet_same_output():
     x = torch.randn(2, 3, 64, 64)
     with torch.no_grad():
         ref = m(x)
-        folded = prepare_for_inference(m)
+        folded = prepare_for_inference(m, conv_bn=True)
         out = m(x)
     assert folded["conv_bn"] > 0
     torch.testing.assert_close(out, ref, rtol=1e-4, atol=1e-4)
