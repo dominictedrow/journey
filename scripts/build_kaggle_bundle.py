@@ -7,7 +7,7 @@
 Result:
     <out>/knee_src/knee/...   copy of src/knee (no __pycache__, no ._* AppleDouble files)
     <out>/weights/arm<i>.pt   the checkpoints
-    <out>/wheels/*.whl        optional; build them for the Kaggle image's Python (3.12 per [JB], UNVERIFIED), e.g. in an
+    <out>/wheels/*.whl        optional; build them for the Kaggle image's Python (3.12.13, verified by knee-probe 2026-09-29), e.g. in an
                               internet-on Kaggle notebook: pip download pylibjpeg pylibjpeg-libjpeg pylibjpeg-openjpeg
                               python-gdcm --dest wheels
     <out>/arms.json           arms + blend + fallback prior (mean soft label of the report labels, else 0.5)
@@ -49,6 +49,8 @@ def build(out: Path, ckpts: list[Path], weights: list[float], how: str, labels: 
     if wheels is not None:
         (out / "wheels").mkdir(exist_ok=True)
         for whl in Path(wheels).glob("*.whl"):
+            if whl.name.startswith("numpy-"):  # pip download adds it as a dependency; the image's numpy must stay
+                continue
             shutil.copy2(whl, out / "wheels" / whl.name)
     spec = {"arms": arms, "how": how, "prior": prior, "preproc": preproc}
     (out / "arms.json").write_text(json.dumps(spec, indent=1))

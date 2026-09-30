@@ -59,13 +59,16 @@ def sh(cmd: str) -> str:
 
 
 def install_wheels(bundle: Path) -> None:
-    """pip install --no-index from the bundle, only for decoders the image lacks."""
+    """pip install --no-index from the bundle, only for decoders the image lacks.
+
+    --no-deps: `pip download` also fetches numpy (2.5.3 on 2026-09-29) while the image ships numpy 2.0.2 under torch;
+    the decoders only need the image's numpy, so never let pip touch it (knee-probe run, docs/kaggle_env.md)."""
     wheels = bundle / "wheels"
     missing = [p for p in WHEEL_PKGS if importlib.util.find_spec(WHEEL_MODULES[p]) is None]
     if not missing or not wheels.is_dir():
         log.info("wheels: nothing to install (missing=%s, wheels dir=%s)", missing, wheels.is_dir())
         return
-    out = subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--find-links", str(wheels), *missing],
+    out = subprocess.run([sys.executable, "-m", "pip", "install", "--no-index", "--no-deps", "--find-links", str(wheels), *missing],
                          capture_output=True, text=True)
     log.info("wheels: pip install %s → rc %d %s", missing, out.returncode, out.stderr[-500:])
 
