@@ -76,13 +76,15 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - **Kaggle side:** `docs/kaggle_env.md` (CPU notebook = 4 vCPU / 32 GB / 20.9 GB output; data at
   `/kaggle/input/competitions/<slug>`; datasets at `/kaggle/input/datasets/<user>/<slug>`; NFS reads scale to ~213 MB/s at
   16 workers). Private datasets: `dominictedrow/knee-src` (code; **re-version it when `src/knee` changes**:
-  `kaggle datasets version -p <staged dir> -m ...`) and `dominictedrow/knee-wheels` (decoders; installed offline with
+  stage `<dir>/dataset-metadata.json` + `<dir>/pkg/knee/` (no `__pycache__`/`._*`), then
+  `kaggle datasets version -p <dir> --dir-mode zip -m ...`. The extra `pkg/` level matters: zip mode drops the top folder
+  name, and the kernels look for `knee/__init__.py`. `kaggle datasets files` can show a stale listing; verify by download) and `dominictedrow/knee-wheels` (decoders; installed offline with
   `--no-deps`, never numpy). Kernels: `knee-probe`, `knee-audit`. GPU quota untouched (30 h/week).
 - **S06 code**: `notebooks/infer.py` + `scripts/build_kaggle_bundle.py`; the wheels now exist (above).
 - **Performance step 1** (2026-09-30, `docs/plan/03_performance_plan.md`, log `docs/sessions_log/P01_2026-09-30.md`): `precision: auto`
   (bf16 on the 5070, fp16 + GradScaler on the T4), threaded DICOM reads (`KNEE_IO_THREADS`), MAE `windows_per_read`,
-  inference folds (`knee.model.fuse`), no per-micro-batch host syncs. Not measured on a GPU yet. **`knee-src` on Kaggle is
-  now stale**: re-version it before the next Kaggle kernel.
+  inference folds (`knee.model.fuse`), no per-micro-batch host syncs. Not measured on a GPU yet. `knee-src` re-versioned
+  2026-09-30 to `519ca33` (verified: a full download equals `src/knee`).
 - Tests: 117 pytest (CPU) pass, 2 skipped (`tests/test_perf.py` added).
 - Submissions made: none. Long jobs running: none.
 
