@@ -1,6 +1,7 @@
 """S04 label pipeline tests (CPU, synthetic data, no network, no API key): prompt/schema, reader bookkeeping and cost,
 public-set parsing + leak check, blend semantics, out-of-fold calibration, folds, and an end-to-end build."""
 import json
+from pathlib import Path
 import re
 
 import numpy as np
@@ -177,18 +178,23 @@ def test_fit_map_shrinks_and_is_monotone():
     assert mp["present_1"] == pytest.approx(mp["uncertain"])  # pooled
 
 
-def test_calibration_is_leave_one_out_for_gold():
+def test_calibration_is_out_of_fold_for_gold():
     uids = [f"g{i}" for i in range(6)]
     long = pd.DataFrame([{"StudyInstanceUID": u, "label": k,
                           "bin": ("present_3" if (u == "g0" and k == "ACL") else "absent")} for u in uids for k in LABELS])
     gold = pd.DataFrame(0.0, index=uids, columns=LABELS)
     gold.loc["g0", "ACL"] = 1.0
-    frame, maps = reader_frame(long, gold, calibrate=True, m=5.0)
+    frame, maps = reader_frame(long, gold, calibrate=True, m=5.0, oof="loo")
     # all-gold map sees g0's positive in present_3; g0's own LOO value can't (that bin is empty without it → prior)
     assert maps["ACL"]["present_3"] > P.prior_prob("ACL", "present_3")
     assert frame.loc["g0", "ACL"] == pytest.approx(P.prior_prob("ACL", "present_3"))
     prior, _ = reader_frame(long, gold, calibrate=False)
     assert prior.loc["g1", "ACL"] == P.prior_prob("ACL", "absent")
+    kf, _ = reader_frame(long, gold, calibrate=True, m=5.0, oof=3)  # K-fold: g0 is never in its own fitting fold
+    assert kf.loc["g0", "ACL"] == pytest.approx(P.prior_prob("ACL", "present_3"))
+    from knee.labels.calibrate import gold_folds
+    folds = gold_folds(uids, 3, seed=1)
+    assert sorted(u for f in folds for u in f) == sorted(uids) and len(folds) == 3
 
 
 # ------------------------------------------------------------------------------------------ folds
@@ -323,3 +329,61 @@ def test_submit_collect_with_fake_client(tmp_path, monkeypatch):
             run2.save_raw(f.stem, json.loads(f.read_text()))
         RD.cmd_submit(types.SimpleNamespace(**{**vars(args), "split": "full", "budget": 0.001}), run2, reports)
     assert len(RD.parse_run(run)) == 30 * 12
+
+
+def test_agent_reader_export_ingest_roundtrip(tmp_path):
+    from knee.labels import agent_reader as AR
+    rng = np.random.default_rng(0)
+    n = 30
+    df = pd.DataFrame({"StudyInstanceUID": [f"1.2.{i}" for i in range(n)],
+                       "Report": [f"report {i} ACL intact" for i in range(n)]})
+    for k in LABELS:
+        df[k] = np.where(np.arange(n) < 5, rng.integers(0, 2, n), np.nan)
+    csv = tmp_path / "train.csv"
+    df.to_csv(csv, index=False)
+    reports = RD.load_reports(csv)
+    run = RD.Run(tmp_path / "claude" / "agent_t")
+
+    class A:
+        split, n_random, seed, shard_size, model = "full", 0, 0, 12, "claude-opus-5-5"
+    AR.cmd_export(A, run, reports)
+    shards = sorted((run.root / "shards").glob("s*.jsonl"))
+    assert [s.stem for s in shards] == ["s0000", "s0001", "s0002"]
+    ids = [json.loads(x)["id"] for s in shards for x in s.read_text().splitlines()]
+    assert sorted(ids) == sorted(RD.custom_id(u) for u in df.StudyInstanceUID)  # every study once
+    assert ids[:5] != [RD.custom_id(u) for u in df.StudyInstanceUID[:5]]  # shuffled: gold not first
+    assert "uid" not in shards[0].read_text() and "1.2." not in shards[0].read_text()  # blinded
+
+    first = [json.loads(x)["id"] for x in shards[0].read_text().splitlines()]
+    lines = [json.dumps({"id": c, "language": "English", "knee_side": "left",
+                         "f": {"acl": ["absent", 0, False, False, "ACL intact"]}}) for c in first[:-2]]
+    lines.append(json.dumps({"id": first[-2], "f": {"acl": ["torn", 3, False, False, ""]}}))  # bad state
+    (run.root / "out" / "s0000.jsonl").write_text("\n".join(lines) + "\nnot json\n")
+    AR.cmd_ingest(A, run, reports)
+    log = json.loads((run.root / "ingest_log.json").read_text())["s0000"]
+    assert log["accepted"] == 10 and len(log["rejected"]) == 2 and len(log["missing"]) == 2
+    assert len(run.done_uids()) == 10
+    long = RD.parse_run(run)
+    acl = long[long.label == "ACL"]
+    assert (acl.bin == "absent").all() and long[long.label == "MCL"].bin.isna().all()  # omitted = not_mentioned
+    AR.cmd_export(A, run, reports)  # s0001/s0002 still open, s0000's 2 failures re-exported
+    new = sorted((run.root / "shards").glob("s*.jsonl"))[-1]
+    assert new.stem == "s0003" and len(new.read_text().splitlines()) == 2
+    assert "AGENT_INSTRUCTIONS.md" in AR.dispatch_prompt(run.root, ["s0001"])
+
+
+def test_agent_reader_scan_split_excludes_gold_and_pilot():
+    from knee.labels import agent_reader as AR
+    rng = np.random.default_rng(1)
+    n = 300
+    df = pd.DataFrame({"StudyInstanceUID": [f"1.3.{i}" for i in range(n)],
+                       "Report": [f"report {i}: the ACL is intact" for i in range(n)]})
+    for k in LABELS:
+        df[k] = np.where(np.arange(n) < 20, rng.integers(0, 2, n), np.nan)
+    df["is_gold"] = np.arange(n) < 20
+    scan = AR.scan_uids(df, n=50)
+    assert len(scan) == len(set(scan)) == 50
+    assert not set(scan) & set(RD.pilot_uids(df, 42, 0))  # pilot and gold excluded
+    assert AR.scan_uids(df, n=50) == scan  # seeded
+    assert "up to 10 short notes" in AR.dispatch_prompt(Path("/r"), ["s0000"], scan=True)
+    assert "at most 3 short notes" in AR.dispatch_prompt(Path("/r"), ["s0000"])

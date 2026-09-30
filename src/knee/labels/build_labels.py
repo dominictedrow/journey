@@ -110,7 +110,7 @@ def main() -> None:
     cfg = BlendConfig(weight_mode=a.weight_mode)
     p, w, status = blend(frames, uids, cfg)
 
-    # ---- gold ablations (all out-of-fold w.r.t. gold: nothing below is fitted on gold except the LOO calibration)
+    # ---- gold ablations (all out-of-fold w.r.t. gold: nothing below is fitted on gold except the out-of-fold calibration)
     abl: dict[str, dict] = {}
     for n, f in {**frames, **refs}.items():
         abl[f"reader: {n}" + (" (reference)" if n in refs else "")] = score(gold, reader_for_scoring(f, uids))
@@ -220,13 +220,13 @@ def render_md(qa, per_finding, prev, stat, agree, fprev, manifest) -> str:
         L.append(f"| {s.name} | {role} | {lic} | {s.note} |")
     if "claude" in qa["readers"]:
         L.append(f"| claude | reader (blended) | ours | Claude API reader, prompt {__import__('knee.labels.prompt', fromlist=['x']).PROMPT_VERSION}, "
-                 f"{'gold-calibrated (LOO)' if qa['calibrated'] else 'prior map'} |")
+                 f"{'gold-calibrated (5-fold OOF)' if qa['calibrated'] else 'prior map'} |")
     L += ["", "Excluded without download: yunusgmsoy v5 and barun2104 (gold labels pasted into the 58 rows).",
           "Leak check (≥10 findings with AUC ≥ 0.999, or ≥95% of gold rows reproduced): "
           + ", ".join(f"{k} {'LEAK' if v['leaked'] else 'ok'}" for k, v in qa["leak_check"].items()) + ".", "",
           "## 2. Gold-58 macro AUC (bootstrap 95% CI, 1,000 resamples)", "",
           "Single readers score silent cells as 0.5. Nothing here is tuned on gold except our reader's calibration, "
-          "which is leave-one-out. Differences under ~0.02 are not measurable on 58 studies.", "",
+          "which is 5-fold out-of-fold. Differences under ~0.02 are not measurable on 58 studies.", "",
           "| variant | gold macro AUC [95% CI] |", "|---|---|"]
     L += [f"| {k} | {_fmt(v)} |" for k, v in qa["ablations"].items()]
     L += ["", "## 3. Per-finding gold AUC", "", df_to_markdown(per_finding.reset_index(names="finding"), ".3f"),
@@ -246,7 +246,7 @@ def render_md(qa, per_finding, prev, stat, agree, fprev, manifest) -> str:
           "Blended prevalence (p > 0.5) per fold:", "",
           df_to_markdown(fprev.reset_index(names="finding"), ".3f"), ""]
     if qa["calibrated"]:
-        L += ["## 8. Our reader's calibration maps (fitted on all 58; gold rows used leave-one-out values)", "",
+        L += ["## 8. Our reader's calibration maps (fitted on all 58; gold rows used 5-fold out-of-fold values)", "",
               "| finding | " + " | ".join(qa["calibration_maps"][LABELS[0]].keys()) + " |",
               "|---|" + "---|" * len(qa["calibration_maps"][LABELS[0]])]
         for k, mp in qa["calibration_maps"].items():

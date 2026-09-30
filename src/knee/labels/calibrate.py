@@ -11,8 +11,11 @@ neighbouring bins, never reorder them. It exists to set **target values** (e.g. 
 not ~0.65, if the gold readers mostly call it negative), not to chase gold AUC. Per-finding choices tuned on the 58
 have hurt on the LB before (docs/kaggle/labels_from_notebooks.md §3).
 
-**Out of fold:** each gold study's calibrated value comes from a map fitted on the other 57 (leave-one-out), so the
-gold AUC reported for "calibrated" is honest. Non-gold studies use the map fitted on all 58.
+**Out of fold:** each gold study's calibrated value comes from a map fitted on the other gold folds (K-fold, K=5,
+seeded), so the gold AUC reported for "calibrated" is honest. Non-gold studies use the map fitted on all 58.
+Not leave-one-out: with ~6 coarse bins, LOO shifts a bin's value down for exactly its positives (their own positive
+is removed) and up for its negatives, so it breaks every tie against the truth. The agent pilot (2026-09-27) lost
+0.853 → 0.797 gold AUC to that alone (docs/labels_agent_reader.md §5). `oof="loo"` keeps the old behaviour.
 
 Known bias: the gold 58 are enriched (every study has ≥ 1 positive; Fracture 31% vs ~7% in reports), so the fitted
 values sit high in absolute terms. Only their spacing matters for ranking; BCE on soft targets tolerates the offset.
@@ -49,11 +52,19 @@ def apply_map(bins: pd.Series, mp: dict[str, float]) -> pd.Series:
     return bins.map(lambda b: mp.get(b, np.nan) if isinstance(b, str) else np.nan).astype(float)
 
 
-def reader_frame(long: pd.DataFrame, gold: pd.DataFrame | None, calibrate: bool = True, m: float = 5.0
-                 ) -> tuple[pd.DataFrame, dict]:
+def gold_folds(uids: list[str], oof: int | str, seed: int = 0) -> list[list[str]]:
+    """Held-out groups of gold studies: one per study for "loo", else K seeded random folds."""
+    if oof == "loo":
+        return [[u] for u in uids]
+    order = np.random.default_rng(seed).permutation(len(uids))
+    return [[uids[i] for i in order[f::int(oof)]] for f in range(int(oof))]
+
+
+def reader_frame(long: pd.DataFrame, gold: pd.DataFrame | None, calibrate: bool = True, m: float = 5.0,
+                 oof: int | str = 5, seed: int = 0) -> tuple[pd.DataFrame, dict]:
     """Long frame from reader.parse_run → standard frame (NaN = not mentioned).
 
-    calibrate=False → prompt.PRIOR values. calibrate=True → the gold map; gold studies get their leave-one-out value.
+    calibrate=False → prompt.PRIOR values. calibrate=True → the gold map; gold studies get their out-of-fold value (see `oof`).
     Returns (frame, maps) where maps[label] is the all-gold map (for the QA report)."""
     wide_bin = long.pivot(index="StudyInstanceUID", columns="label", values="bin").reindex(columns=LABELS)
     out = pd.DataFrame(index=wide_bin.index, columns=LABELS, dtype=float)
@@ -68,9 +79,9 @@ def reader_frame(long: pd.DataFrame, gold: pd.DataFrame | None, calibrate: bool 
         yk = gold.loc[gidx, k].astype(float)
         maps[k] = fit_map(b.loc[gidx], yk, k, m)
         out[k] = apply_map(b, maps[k])
-        for u in gidx:  # leave-one-out for the gold rows
-            rest = [v for v in gidx if v != u]
+        for held in gold_folds(gidx, oof, seed):  # out-of-fold values for the gold rows
+            rest = [v for v in gidx if v not in set(held)]
             mp = fit_map(b.loc[rest], yk.loc[rest], k, m)
-            out.loc[u, k] = apply_map(b.loc[[u]], mp).iloc[0]
+            out.loc[held, k] = apply_map(b.loc[held], mp).to_numpy()
     out.index.name = "StudyInstanceUID"
     return out, maps
