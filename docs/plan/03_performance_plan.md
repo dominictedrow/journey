@@ -214,6 +214,14 @@ branch-free mask helpers). Speed-ups are **not measured yet**: that needs the T4
    **Measurement:** `notebooks/kaggle_profile` with `PROFILE_SET=step2` (the default now; cycles 3 bag sizes per
    workload, reports the compute share and graph counts, 30-min cap). Estimated at 20–30 min of T4 quota; **not pushed**
    (Dom, 2026-09-30: wait). Needs `knee-src` re-versioned first.
+   **Item 3, bigger matmuls (coded 2026-09-30, CPU-tested):** `optim.effective_batch` derives `accum` from
+   `data.batch_size`, so several studies per micro-batch keep the recipe (configs still at batch 1 until the VRAM table);
+   `data.eval_batch_size` (4 in the configs, exact); inference `perf.studies_per_forward` (grouped forward, failed
+   groups retried one by one) and `perf.window_chunk` (inference keeps no activations, so bigger chunks are free).
+   Expected gain is modest (UNVERIFIED, 5–15%): the encoder already packs a step's windows into GEMMs of ~16k token
+   rows; the limit is the 384 width, which batching doesn't change. What batching does buy: fewer small remainder
+   chunks, per-step costs (head, Python, launches) amortized, and inference no longer one study per forward. The
+   step-2 profile measures it (`+bs2/+bs4`, `+4studies`; ms per study), and the cap is now 40 min.
 4. **After the Oct 8 gate** (architecture final): C2, C4, C5 on the chosen arms; B1 checked on real OOF; the efficiency
    submission's window budget.
 

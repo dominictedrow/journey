@@ -25,6 +25,7 @@ data:
   eval_windows: 12         # per slot → 60 (public best: 62 over a 2–98% span)
   slot_dropout: 0.1
   batch_size: 1
+  eval_batch_size: 4       # studies per eval forward (exact; no activations kept in eval)
   workers: 4
 optim:
   lr: 1.0e-3               # head LR (public 1e-3)
@@ -36,5 +37,7 @@ optim:
   min_lr_ratio: 0.01
   clip: 1.0
   accum: 24                # effective batch 24 (public)
+  effective_batch: 24      # studies per optimizer step; accum = this / data.batch_size (raise batch_size
+                           # for bigger matmuls once the VRAM table allows; plan §4 item 3)
 loss: {rank_w: 0.075, rank_bank: 256, pos_thr: 0.6, neg_thr: 0.4}
 select: {top_k: 3}

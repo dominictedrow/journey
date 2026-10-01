@@ -7,8 +7,8 @@ Inputs attached to the kernel:
       knee_src/knee/...   the repo's `src/knee` package: the same preprocessing + window code as training
       arms.json           {"arms": [{"ckpt": "weights/<name>.pt", "weight": 1.0}, ...], "how": "mean"|"rank",
                            "prior": [12 floats] (fallback row), "preproc": {PreprocParams overrides},
-                           "perf": {"half", "compile", "channels_last", ...} (predict.PERF_DEFAULTS; an arm's own
-                           "perf" overrides it)}
+                           "perf": {"half", "compile", "channels_last", "window_chunk", "studies_per_forward", ...}
+                           (predict.PERF_DEFAULTS; an arm's own "perf" overrides it, except studies_per_forward)}
       weights/*.pt        train_sup `model_avg.pt` checkpoints
       wheels/*.whl        optional offline wheels (pylibjpeg, openjpeg, libjpeg, gdcm; timm if the image lacks it)
 
@@ -171,7 +171,8 @@ def main(argv: list[str] | None = None) -> int:
     t = time.time()
     dirs = [comp / "test_series" / u for u in expected]  # from the CSV: never walk the input tree
     pred, timing = predict_dirs(dirs, series_info_from_csv(test_series), arms, device, params,
-                                workers=a.workers, weights=weights, how=spec.get("how", "mean"), fallback=prior)
+                                workers=a.workers, weights=weights, how=spec.get("how", "mean"), fallback=prior,
+                                studies_per_forward=int(spec.get("perf", {}).get("studies_per_forward", 1)))
     T["predict"] = time.time() - t
 
     t = time.time()

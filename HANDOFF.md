@@ -95,7 +95,10 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   pure-fp16 inference (`perf.half`). All behind `perf` switches, off by default. CPU-tested only; the T4 profile
   (`PROFILE_SET=step2`, ~20–30 min) is **not pushed** (Dom: wait). `knee-src` is **stale** (still `eff48b0`):
   re-version it before any Kaggle run.
-- Tests: 131 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added).
+- **Item 3 (bigger matmuls) coded** (same day, P03 log): `optim.effective_batch`, `data.eval_batch_size` (4 in the configs),
+  inference `perf.studies_per_forward` + `perf.window_chunk`. Training batch stays 1 until a VRAM measurement. The
+  step-2 profile now also measures these (~30–40 min of T4 total, still not pushed).
+- Tests: 133 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added).
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session

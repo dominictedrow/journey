@@ -45,9 +45,13 @@ DEFAULTS: dict = {
     "folds": {"file": None, "fold": 0},
     "gold": {"file": None},
     "data": {"format": "bag", "out_px": 256, "train_windows": 8, "eval_windows": 16, "series_dropout": 0.1,
-             "max_series": None, "slot_dropout": 0.0, "batch_size": 1, "workers": 4, "limit_studies": 0},
+             "max_series": None, "slot_dropout": 0.0, "batch_size": 1, "eval_batch_size": 1, "workers": 4,
+             "limit_studies": 0},
     "optim": {"lr": 3e-4, "weight_decay": 0.05, "betas": [0.9, 0.999], "warmup_frac": 0.1, "epochs": 12,
-              "min_lr_ratio": 0.01, "clip": 1.0, "accum": 8, "layer_decay": None, "backbone_lr_mult": None},
+              "min_lr_ratio": 0.01, "clip": 1.0, "accum": 8, "layer_decay": None, "backbone_lr_mult": None,
+              # studies per optimizer step. If set, accum = effective_batch / data.batch_size, so raising batch_size
+              # (more studies per forward = bigger matmuls, plan §4 item 3) keeps the optimization recipe
+              "effective_batch": None},
     "loss": {"rank_w": 0.05, "rank_bank": 256, "pos_thr": 0.6, "neg_thr": 0.4},
     "select": {"top_k": 3},
     "ckpt_minutes": 30, "log_every": 50,
@@ -112,9 +116,12 @@ def make_dataset(cfg: dict, reader: CacheReader, uids: list[str], labels: pd.Dat
 
 
 @torch.no_grad()
-def predict(model, ds, collate, device, precision: str, workers: int) -> tuple[list[str], np.ndarray]:
+def predict(model, ds, collate, device, precision: str, workers: int, batch_size: int = 1
+            ) -> tuple[list[str], np.ndarray]:
+    """Studies per forward = batch_size (the output doesn't depend on it: padded windows are never encoded, and the
+    head masks them; Track A's BatchNorm uses running statistics in eval)."""
     model.eval()
-    dl = DataLoader(ds, batch_size=1, shuffle=False, num_workers=workers, collate_fn=collate,
+    dl = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=workers, collate_fn=collate,
                     pin_memory=device.type == "cuda")
     uids, out = [], []
     for b in dl:
@@ -201,6 +208,10 @@ def main(argv=None) -> dict:
         torch.backends.cudnn.benchmark = True  # only a few conv shapes now, so autotuning each once pays off
     ocfg, dcfg = cfg["optim"], cfg["data"]
     bs, accum = dcfg["batch_size"], ocfg["accum"]
+    if ocfg["effective_batch"]:
+        if ocfg["effective_batch"] % bs:
+            raise SystemExit(f"optim.effective_batch {ocfg['effective_batch']} must be a multiple of data.batch_size {bs}")
+        accum = ocfg["accum"] = ocfg["effective_batch"] // bs
     batches_per_epoch = len(ds_tr) // bs
     steps_per_epoch = max(1, batches_per_epoch // accum)
     total_steps = ocfg["epochs"] * steps_per_epoch
@@ -303,7 +314,7 @@ def main(argv=None) -> dict:
         check_finite("end of epoch")
         rec = {"epoch": ep}
         if va_uids:
-            uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"])
+            uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"], dcfg["eval_batch_size"])
             rec.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"]))
             pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(
                 run_dir / "epochs" / f"oof_ep{ep:03d}.parquet", index=False)
@@ -328,7 +339,7 @@ def main(argv=None) -> dict:
     C.save_atomic({"model": model.state_dict(), "epochs": keep, "cfg": cfg}, run_dir / "model_avg.pt")
     result = {"fold": fold, "top_epochs": keep}
     if va_uids:
-        uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"])
+        uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"], dcfg["eval_batch_size"])
         result.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"]))
         pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(run_dir / "oof.parquet",
                                                                                      index=False)

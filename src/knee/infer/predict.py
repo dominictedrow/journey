@@ -29,7 +29,8 @@ log = logging.getLogger(__name__)
 SUBMISSION_COLUMNS = ["StudyInstanceUID", *LABELS]
 
 
-PERF_DEFAULTS = {"half": False, "compile": False, "compile_mode": None, "channels_last": False, "min_bucket": 4}
+PERF_DEFAULTS = {"half": False, "compile": False, "compile_mode": None, "channels_last": False, "min_bucket": 4,
+                 "window_chunk": None, "studies_per_forward": 1}  # the last one is read by notebooks/infer.py
 
 
 def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.nn.Module, dict]:
@@ -39,7 +40,10 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     perf (arms.json "perf", all off by default; docs/plan/03_performance_plan.md):
     - half: the whole model in fp16, run without autocast (B1). Changes numerics: check the OOF AUC before using it.
     - compile: torch.compile the window encoder at fixed chunk shapes (B4). CUDA/Linux only; exact.
-    - channels_last: Track A backbone in NHWC (B3). Exact."""
+    - channels_last: Track A backbone in NHWC (B3). Exact.
+    - window_chunk: windows per encoder call at inference (plan §4 item 3: bigger matmuls). Training's value is set by
+      its VRAM (activations kept for backward); inference keeps none, so it can be larger. Exact for SliceViT and for
+      Track A in eval (BatchNorm uses running statistics)."""
     from knee.model.compiled import to_half
     from knee.model.fuse import prepare_for_inference
     from knee.train.train_sup import build_model
@@ -52,6 +56,8 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     model.load_state_dict(ck["model"])
     folded = prepare_for_inference(model)  # exact LayerScale fold (conv+BN off: slower in eager on the T4)
     model.to(device)
+    if perf["window_chunk"]:
+        model.window_chunk = int(perf["window_chunk"])
     if perf["half"] and device.type == "cuda":
         to_half(model)
     if perf["channels_last"] and hasattr(model, "use_channels_last"):
@@ -62,8 +68,8 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     return model, ck["cfg"]["data"]
 
 
-def arm_input(series: list, data_cfg: dict) -> dict:
-    """ProcessedSeries list → one study's model input for an arm (batch of 1), built by the training code."""
+def arm_sample(series: list, data_cfg: dict) -> dict:
+    """ProcessedSeries list → one study's (uncollated) model input for an arm, built by the training code."""
     pairs = [(s.pixels, {**s.meta, "positions_mm": s.positions_mm, "n_slices": len(s.pixels)}) for s in series]
     rng = np.random.default_rng(0)  # unused with train=False; eval sampling is deterministic
     if data_cfg["format"] == "bag":
@@ -72,13 +78,28 @@ def arm_input(series: list, data_cfg: dict) -> dict:
         b = {k: torch.from_numpy(v) for k, v in out.items()}
         b.update({"labels": torch.zeros(len(LABELS)), "label_mask": torch.zeros(len(LABELS), dtype=torch.bool),
                   "study_uid": ""})
-        return collate_bag([b])
+        return b
     out = slots_sample(pairs, data_cfg["eval_windows"], data_cfg["out_px"], False, rng, SPAN)
-    return {k: torch.from_numpy(v)[None] for k, v in out.items()}
+    return {k: torch.from_numpy(v) for k, v in out.items()}
 
 
-def n_windows(batch: dict) -> int:
-    return int(batch["window_mask"].sum()) if "window_mask" in batch else int(batch["slot_mask"].sum())
+def collate_arm(samples: list[dict], data_cfg: dict) -> dict:
+    """Several studies' arm_sample outputs → one batch (bags padded to the longest; slots have a fixed shape)."""
+    if data_cfg["format"] == "bag":
+        return collate_bag(samples)
+    return {k: torch.stack([s[k] for s in samples]) for k in samples[0]}
+
+
+def arm_input(series: list, data_cfg: dict) -> dict:
+    """One study's model input for an arm (batch of 1)."""
+    return collate_arm([arm_sample(series, data_cfg)], data_cfg)
+
+
+def n_windows(sample: dict) -> int:
+    m = sample["window_mask"] if "window_mask" in sample else sample.get("slot_mask")
+    if m is None:  # an uncollated bag sample has no mask: every window is real
+        return len(sample["x"])
+    return int(m.sum())
 
 
 class TestStudies(Dataset):
@@ -95,7 +116,7 @@ class TestStudies(Dataset):
         t0 = time.time()
         try:
             series, _ = preprocess_study(d, self.info, self.params)
-            inputs = [arm_input(series, c) for c in self.data_cfgs]
+            inputs = [arm_sample(series, c) for c in self.data_cfgs]
             if all(n_windows(b) == 0 for b in inputs):
                 raise ValueError("no usable windows")
             return d.name, inputs, None, time.time() - t0
@@ -105,7 +126,7 @@ class TestStudies(Dataset):
 
 @torch.no_grad()
 def run_arm(model, batch: dict, device) -> np.ndarray:
-    """fp16 on CUDA (the T4 has no bf16 tensor cores [W]): autocast, or plain fp16 if the model was loaded with
+    """→ [B, 12] probabilities for a batch of B studies. fp16 on CUDA (the T4 has no bf16 tensor cores [W]): autocast, or plain fp16 if the model was loaded with
     perf.half (autocast would bring back the fp32 LayerNorm casts). fp32 retry if it fails or gives NaN/inf."""
     from knee.model.compiled import is_half
     b = {k: v.to(device, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
@@ -115,7 +136,7 @@ def run_arm(model, batch: dict, device) -> np.ndarray:
             with torch.autocast("cuda", dtype=torch.float16, enabled=not half):
                 p = torch.sigmoid(model(b).float())
             if torch.isfinite(p).all():
-                return p[0].cpu().numpy()
+                return p.cpu().numpy()
             log.warning("non-finite fp16 output; retrying in fp32")
         except RuntimeError as e:
             log.warning("fp16 forward failed (%s); retrying in fp32", e)
@@ -123,10 +144,10 @@ def run_arm(model, batch: dict, device) -> np.ndarray:
         if half:  # fp16 → fp32 → fp16 is lossless, so the retry leaves the weights exactly as they were
             model.float()
             try:
-                return torch.sigmoid(model(b).float())[0].cpu().numpy()
+                return torch.sigmoid(model(b).float()).cpu().numpy()
             finally:
                 model.half()
-    return torch.sigmoid(model(b).float())[0].cpu().numpy()
+    return torch.sigmoid(model(b).float()).cpu().numpy()
 
 
 def combine(arm_probs: list[np.ndarray], weights: list[float] | None, how: str) -> np.ndarray:
@@ -139,30 +160,76 @@ def combine(arm_probs: list[np.ndarray], weights: list[float] | None, how: str) 
 
 def predict_dirs(study_dirs: list[Path], series_info: dict, arms: list[tuple[torch.nn.Module, dict]], device,
                  params: PreprocParams = PreprocParams(), workers: int = 2, weights: list[float] | None = None,
-                 how: str = "mean", fallback: np.ndarray | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Returns (predictions: StudyInstanceUID + 12, per-study timing/error log)."""
+                 how: str = "mean", fallback: np.ndarray | None = None, studies_per_forward: int = 1
+                 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Returns (predictions: StudyInstanceUID + 12, per-study timing/error log).
+
+    studies_per_forward > 1 runs several preprocessed studies through each arm in one forward (bigger matmuls, fewer
+    ragged chunks and launches; plan §4 item 3). The predictions don't depend on it. If a grouped forward fails, its
+    studies are retried one at a time, so one bad study can't take its neighbours down to the fallback row."""
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
+    k = max(1, int(studies_per_forward))
     ds = TestStudies(study_dirs, series_info, params, [c for _, c in arms])
     dl = DataLoader(ds, batch_size=None, shuffle=False, num_workers=workers,
-                    prefetch_factor=2 if workers else None)
+                    prefetch_factor=max(2, k) if workers else None)
     uids, per_arm, rows = [], [[] for _ in arms], []
-    for uid, inputs, err, t_pre in dl:
+
+    def forward(group: list[tuple[str, list]]) -> list[list[np.ndarray]]:
+        """[(uid, per-arm samples)] → per study, per arm, 12 probabilities."""
+        out = [[] for _ in group]
+        for a, (m, cfg) in enumerate(arms):
+            p = run_arm(m, collate_arm([inp[a] for _, inp in group], cfg), device)
+            for i in range(len(group)):
+                out[i].append(p[i])
+        return out
+
+    def flush(group: list[tuple[str, list, float]]) -> None:
         t0 = time.time()
-        probs = None
-        if inputs is not None:
-            try:
-                probs = [run_arm(m, b, device) for (m, _), b in zip(arms, inputs)]
-            except Exception as e:  # noqa: BLE001
-                err = f"{type(e).__name__}: {e}"[:300]
-                if device.type == "cuda":
-                    torch.cuda.empty_cache()
-        if probs is None:
-            log.warning("study %s → fallback row (%s)", uid, err)
-            probs = [fallback] * len(arms)
+        probs, errs = None, [None] * len(group)
+        try:
+            probs = forward([(u, inp) for u, inp, _ in group])
+        except Exception as e:  # noqa: BLE001
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+            if len(group) == 1:
+                errs[0] = f"{type(e).__name__}: {e}"[:300]
+            else:
+                log.warning("grouped forward of %d studies failed (%s); retrying one by one", len(group), e)
+                probs = []
+                for i, (u, inp, _) in enumerate(group):
+                    try:
+                        probs.append(forward([(u, inp)])[0])
+                    except Exception as e1:  # noqa: BLE001
+                        errs[i] = f"{type(e1).__name__}: {e1}"[:300]
+                        probs.append(None)
+                        if device.type == "cuda":
+                            torch.cuda.empty_cache()
+        dt = (time.time() - t0) / len(group)  # model time, shared equally by the group's studies
+        for i, (uid, _, t_pre) in enumerate(group):
+            p = probs[i] if probs is not None else None
+            if p is None:
+                log.warning("study %s → fallback row (%s)", uid, errs[i])
+                p = [fallback] * len(arms)
+            emit(uid, p, errs[i], t_pre, dt)
+
+    def emit(uid, probs, err, t_pre, t_model) -> None:
         uids.append(uid)
-        for k, p in enumerate(probs):
-            per_arm[k].append(p)
-        rows.append({"StudyInstanceUID": uid, "error": err, "preprocess_s": t_pre, "model_s": time.time() - t0})
+        for a, p in enumerate(probs):
+            per_arm[a].append(p)
+        rows.append({"StudyInstanceUID": uid, "error": err, "preprocess_s": t_pre, "model_s": t_model})
+
+    group: list[tuple[str, list, float]] = []
+    for uid, inputs, err, t_pre in dl:
+        if inputs is None:
+            log.warning("study %s → fallback row (%s)", uid, err)
+            emit(uid, [fallback] * len(arms), err, t_pre, 0.0)
+            continue
+        group.append((uid, inputs, t_pre))
+        if len(group) == k:
+            flush(group)
+            group = []
+    if group:
+        flush(group)
     final = combine([np.stack(p) for p in per_arm], weights, how) if uids else np.zeros((0, len(LABELS)))
     pred = pd.DataFrame(final, columns=LABELS)
     pred.insert(0, "StudyInstanceUID", uids)

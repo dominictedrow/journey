@@ -282,3 +282,40 @@ def test_real_stub_slice_order_and_laterality():
         tags = {s.meta["laterality_tag"] for s in series} - {None}
         if tags:
             assert sm["laterality"] in tags and sm["laterality_source"] == "tag"
+
+
+def test_predict_dirs_grouped_equals_single(synth, tmp_path, monkeypatch):
+    """Several studies per forward and a bigger inference window_chunk give the same predictions as one study at a
+    time; a failing grouped forward falls back to one-by-one, not to the fallback row."""
+    from knee.infer import predict as P
+    from knee.model.knee_vit import KneeViT
+    cfg = {"model": {"kind": "knee_vit", "cfg": {"slice_vit": {"img_size": 16, "patch": 8, "dim": 16, "depth": 1,
+                                                                "heads": 2}, "window_chunk": 2}},
+           "data": {"format": "bag", "train_windows": 2, "eval_windows": 3, "out_px": 16}}
+    torch.manual_seed(0)
+    m = KneeViT(cfg["model"]["cfg"])
+    for p in m.head.parameters():  # the logit layers are zero-init: make the predictions differ per study
+        torch.nn.init.normal_(p, std=0.5)
+    torch.save({"model": m.state_dict(), "cfg": cfg}, tmp_path / "model_avg.pt")
+    dirs = [synth / "train_series" / "1.1", synth / "train_series" / "1.2", synth / "train_series" / "1.1"]
+    dev = torch.device("cpu")
+    one = P.predict_dirs(dirs, _info(synth), [P.load_arm(tmp_path / "model_avg.pt", dev)], dev, PARAMS, workers=0)[0]
+    assert not np.allclose(one.iloc[0, 1:].to_numpy(dtype=float), one.iloc[1, 1:].to_numpy(dtype=float))
+    big = P.load_arm(tmp_path / "model_avg.pt", dev, {"window_chunk": 64})
+    assert big[0].window_chunk == 64
+    grouped, timing = P.predict_dirs(dirs, _info(synth), [big], dev, PARAMS, workers=0, studies_per_forward=2)
+    assert grouped.StudyInstanceUID.tolist() == one.StudyInstanceUID.tolist() and timing.error.isna().all()
+    np.testing.assert_allclose(grouped.iloc[:, 1:].to_numpy(dtype=float), one.iloc[:, 1:].to_numpy(dtype=float),
+                               rtol=1e-5, atol=1e-6)
+
+    real = P.run_arm
+
+    def no_groups(model, batch, device):
+        if len(batch["study_uid"]) > 1:
+            raise RuntimeError("simulated OOM")
+        return real(model, batch, device)
+    monkeypatch.setattr(P, "run_arm", no_groups)
+    retried, timing = P.predict_dirs(dirs, _info(synth), [big], dev, PARAMS, workers=0, studies_per_forward=3)
+    assert timing.error.isna().all()
+    np.testing.assert_allclose(retried.iloc[:, 1:].to_numpy(dtype=float), one.iloc[:, 1:].to_numpy(dtype=float),
+                               rtol=1e-5, atol=1e-6)

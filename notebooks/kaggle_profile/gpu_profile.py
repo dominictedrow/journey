@@ -12,8 +12,9 @@ Outputs in /kaggle/working/profile/: results.json (everything) and summary.md (t
 PROFILE_SET selects the workloads: "step1" = the 2026-09-30 profile above; "step2" (default) = performance step 2:
 torch.compile in training and inference at fixed chunk buckets (knee.model.compiled), pure-fp16 inference, compiled
 MAE. Step 2 cycles every step through several bag sizes (as real studies do), so recompiles and padding are paid for
-in the timing, and reports the compute share (gemm/conv + attention) of GPU kernel time. It stops starting new
-variants after STEP2_BUDGET_MIN minutes.
+in the timing, and reports the compute share (gemm/conv + attention) of GPU kernel time. It also measures item 3
+(several studies per step/forward, bigger inference chunks; ms are per study). It stops starting new
+variants after STEP2_BUDGET_MIN minutes (default 40).
 
 Push (Dom's OK given 2026-09-30): kaggle kernels push -p notebooks/kaggle_profile --accelerator NvidiaTeslaT4
 CPU smoke test (tiny sizes, no CUDA): PROFILE_SMOKE=1 KNEE_SRC=src python notebooks/kaggle_profile/gpu_profile.py
@@ -35,7 +36,7 @@ import torch
 
 SMOKE = os.environ.get("PROFILE_SMOKE") == "1"
 PROFILE_SET = os.environ.get("PROFILE_SET", "step2")
-STEP2_BUDGET_MIN = float(os.environ.get("STEP2_BUDGET_MIN", "30"))
+STEP2_BUDGET_MIN = float(os.environ.get("STEP2_BUDGET_MIN", "40"))
 WORK = Path("/kaggle/working/profile") if not SMOKE else Path(os.environ.get("PERF_OUT", ".")) / "profile_smoke"
 WORK.mkdir(parents=True, exist_ok=True)
 
@@ -405,6 +406,21 @@ def over_budget() -> bool:
     return time.time() - T0 > STEP2_BUDGET_MIN * 60
 
 
+def multi_bag(sizes: list[int], px: int) -> dict:
+    """Several studies in one batch, padded to the longest bag (what collate_bag does)."""
+    L, B = max(sizes), len(sizes)
+    b = bag(L, px)
+    b = {k: v.expand(B, *v.shape[1:]).clone() for k, v in b.items()}
+    for i, n in enumerate(sizes):
+        b["window_mask"][i, n:] = False
+    return b
+
+
+def batches_of(sizes: list[int], k: int, px: int) -> list[dict]:
+    """k-study batches whose bag sizes rotate through `sizes` (so the same mix of sizes as the 1-study variants)."""
+    return [multi_bag([sizes[(j + i) % len(sizes)] for i in range(k)], px) for j in range(len(sizes))]
+
+
 def cycling(bags, fn):
     """One step = fn(next bag). ITERS and PROF are multiples of len(bags), so every size is timed equally."""
     state = {"i": 0}
@@ -417,6 +433,17 @@ def cycling(bags, fn):
 
 def train_on(model, sc):
     tgt = torch.rand(1, 12, device=DEV)
+    lossf = torch.nn.BCEWithLogitsLoss()
+
+    def f(b):
+        with amp():
+            lg = logits_of(model(b))
+        sc.scale(lossf(lg.float(), tgt)).backward()
+    return f
+
+
+def train_on_k(model, sc, k: int):
+    tgt = torch.rand(k, 12, device=DEV)
     lossf = torch.nn.BCEWithLogitsLoss()
 
     def f(b):
@@ -446,14 +473,15 @@ def fresh():
         torch.cuda.empty_cache()
 
 
-def bench2(name, variant, step, compiled: bool):
+def bench2(name, variant, step, compiled: bool, studies: int = 1):
     if over_budget():
         log(f"== {name} [{variant}] skipped: over the {STEP2_BUDGET_MIN} min budget")
         RESULTS["runs"].append({"workload": name, "variant": variant, "status": "skipped (budget)"})
         return None
     if compiled and DEV.type != "cuda" and not SMOKE:
         return None
-    rec = bench(name, variant, step, extra={"sizes": CYC.get(name.replace("_train", "_tr").replace("_infer", "_ev"))})
+    rec = bench(name, variant, step, per_iter_div=studies,  # ms are per study, so batch sizes compare directly
+                extra={"sizes": CYC.get(name.replace("_train", "_tr").replace("_infer", "_ev")), "studies": studies})
     rec["graphs"] = graphs() if compiled else 0
     (WORK / "results.json").write_text(json.dumps(RESULTS, indent=1))
     return rec
@@ -475,6 +503,13 @@ def step2_trackB():
         bench2("B_train", "ckpt_off" + ("+compile" if comp else ""), cycling(bags, train_on(m, scaler_())), comp)
         free(m)
     free(*bags)
+    for k in (2, 4):  # item 3: several studies per micro-batch (ms per study; OOM is recorded, not fatal)
+        fresh()
+        bags = batches_of(CYC["B_tr"], k, SZ["B_px"])
+        m = KneeViT(cfg).to(DEV).train()
+        m.compile_encoder()
+        bench2("B_train", f"ckpt_off+compile+bs{k}", cycling(bags, train_on_k(m, scaler_(), k)), True, studies=k)
+        free(m, *bags)
 
     bags = [bag(n, SZ["B_px"]) for n in CYC["B_ev"]]
     base = KneeViT(CFG_B).to(DEV).eval()
@@ -490,6 +525,17 @@ def step2_trackB():
             v = ("half" if half else "autocast") + "+folded" + ("+compile" if comp else "")
             bench2("B_infer", v, cycling(bags, infer_on(m, half)), comp)
             free(m)
+    for half in (False, True):  # item 3: 4 studies per forward, inference window_chunk 128
+        fresh()
+        m = copy.deepcopy(base)
+        if half:
+            to_half(m)
+        m.window_chunk = 128
+        m.compile_encoder()
+        multi = batches_of(CYC["B_ev"], 4, SZ["B_px"])
+        bench2("B_infer", ("half" if half else "autocast") + "+folded+compile+4studies+chunk128",
+               cycling(multi, infer_on(m, half)), True, studies=4)
+        free(m, *multi)
     # fp16 numerics: window features of the pure-half encoder vs autocast vs fp32 (random weights)
     x = bags[0]["x"][0]
     with torch.no_grad():
@@ -560,6 +606,18 @@ def step2_trackA():
             v = ("half" if half else "autocast") + "+cl" + ("+compile" if comp else "")
             bench2("A_infer", v, cycling(bags, infer_on(m, half)), comp)
             free(m)
+    for half in (False, True):  # item 3: 4 studies per forward, inference window_chunk 32
+        fresh()
+        m = copy.deepcopy(base)
+        if half:
+            to_half(m)
+        m.use_channels_last()
+        m.window_chunk = 32
+        m.compile_encoder()
+        multi = batches_of(CYC["A_ev"], 4, SZ["A_px"])
+        bench2("A_infer", ("half" if half else "autocast") + "+cl+compile+4studies+chunk32",
+               cycling(multi, infer_on(m, half)), True, studies=4)
+        free(m, *multi)
     x = bags[0]["x"][0][:8]
     with torch.no_grad():
         f32 = base.encode_windows(x)

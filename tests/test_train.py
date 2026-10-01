@@ -217,3 +217,21 @@ def test_train_sup_track_a_slots(tmp_path):
            "optim": {"epochs": 1, "accum": 1, "backbone_lr_mult": 0.1}, "select": {"top_k": 1}}
     res = train_sup.main(["--config", str(_write(tmp_path / "a.yaml", cfg))])
     assert np.isfinite(res["val_macro_auc"]) or res["val_n_findings"] == 0
+
+
+def test_train_sup_effective_batch(tmp_path):
+    """effective_batch derives accum from batch_size, and eval runs several studies per forward."""
+    from knee.train import train_sup
+    f = make_fake_cache(tmp_path / "c", n_studies=8, px=48)
+    cfg = {"cache_dir": str(f["cache"]), "run_dir": str(tmp_path / "run"), "device": "cpu", "precision": "fp32",
+           "model": {"kind": "knee_vit", "cfg": {"slice_vit": TINY_VIT}},
+           "labels": {"file": str(f["labels"])}, "folds": {"file": str(f["folds"]), "fold": 0},
+           "data": {"out_px": 32, "train_windows": 2, "eval_windows": 3, "batch_size": 2, "eval_batch_size": 3,
+                    "workers": 0},
+           "optim": {"epochs": 1, "accum": 99, "effective_batch": 4}, "select": {"top_k": 1}}
+    res = train_sup.main(["--config", str(_write(tmp_path / "sup.yaml", cfg))])
+    assert np.isfinite(res["val_macro_auc"])
+    assert yaml.safe_load((tmp_path / "run" / "config.yaml").read_text())["optim"]["accum"] == 2
+    cfg["optim"]["effective_batch"] = 5
+    with pytest.raises(SystemExit):
+        train_sup.main(["--config", str(_write(tmp_path / "sup2.yaml", {**cfg, "run_dir": str(tmp_path / "r2")}))])
