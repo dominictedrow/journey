@@ -115,7 +115,7 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   (**Dom to confirm** this policy). Pure-fp16 Track A test added (resnet10t BN + CoAtNet-RMLP nano).
 - **Review fixes, third batch** (same day, log `docs/sessions_log/P06_2026-09-30.md`; `bug.md` is now all fixed except
   the MAE LR sweep, a GPU experiment). Behaviour changes to know: Track A `freeze_bn: true` (BN frozen; **Dom to
-  confirm**), and `train_sup` uses the best single epoch when the top-k average scores worse (**Dom to confirm**).
+  confirm**), and `train_sup` uses the best single epoch when the top-k average scores worse (confirmed by Dom 2026-10-01).
   Train/eval loaders keep persistent workers (epoch encoded in the sampler index). Inference shares windows across
   arms with the same data config, replaces non-finite outputs with the fallback row, and decodes only slotted series
   for Track A. `infer.py --deadline-hours` kills a hung shard. Bundles now need `--cache-manifest`: `infer.py` checks
