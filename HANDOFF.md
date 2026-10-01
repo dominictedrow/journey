@@ -101,7 +101,11 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - **Item 4 (MAE loader) coded** (same day, P03 log): `data.gpu_crop` (on in `mae_vits.yaml`; crop + resize on the
   GPU in one roi_align, ≤1 grey level from cv2), `knee.data.derive_cache` (256-px cache, optional), and
   `scripts/perf/mae_loader_bench.py` (windows/s without a GPU: run it on the Windows box's SSD in S03 part 2).
-- Tests: 140 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added; MAE loader tests in `test_perf.py`).
+- **Both T4s coded** (same day, log `docs/sessions_log/P04_2026-09-30.md`): `notebooks/infer.py --gpus auto` shards the
+  test studies over every visible GPU (one spawned process per GPU, `predict.predict_dirs_multi`; arm blend once over all
+  studies, so identical output), and `python -m knee.train.multi_fold --config ... --folds 0 1 2 3 4 [--hours N]` trains
+  one fold per GPU from a queue. CPU-tested only; never run on a GPU.
+- Tests: 145 pytest (CPU) pass, 2 skipped (`tests/test_multi_gpu.py` added).
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
@@ -115,7 +119,8 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   workers. Ask Dom before spending GPU quota.
 - Performance step 2 (from the T4 profile): Track A Kaggle config with `grad_checkpointing: false` + channels_last;
   `torch.compile` in `infer.py` with fixed-size padded window chunks (test recompiles). Ask Dom about the Track A fold
-  budget (~14 T4-h per fold) and try the second T4 per session.
+  budget (~14 T4-h per fold). The second T4 is now coded (P04): measure a 2-GPU inference pass (add it to the step-2
+  profile) and check whether Kaggle bills quota per session or per GPU before planning Track A folds two at a time.
 - Investigate the 2,707 multi-IOP series (a Kaggle kernel over `series_train` + a few headers).
 - Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
 

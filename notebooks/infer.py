@@ -14,6 +14,9 @@ Inputs attached to the kernel:
 
 Stages (each timed; the efficiency score is linear in total runtime): setup → probe (optional) → load arms →
 preprocess + model per study (DataLoader workers overlap DICOM decode with the GPU) → write + assert submission.
+With 2 GPUs (Kaggle T4 ×2, `--gpus auto`) the predict stage runs one process per GPU, each loading every arm and
+taking a cost-balanced half of the studies (`predict.predict_dirs_multi`); the arm blend still runs once over all
+studies, so the submission doesn't depend on the GPU count.
 
 Local test: `python notebooks/infer.py --comp-dir <dir with test.csv, test_series.csv, test_series/> --bundle-dir <dir>
 --out <dir>` (tests/test_notebook.py does this on synthetic DICOMs with a tiny checkpoint).
@@ -119,6 +122,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="/kaggle/working")
     ap.add_argument("--workers", type=int, default=max((os.cpu_count() or 2) - 1, 0))
     ap.add_argument("--probe", type=int, default=1, help="1 = run the test-data probe (first submissions)")
+    ap.add_argument("--gpus", default="auto",
+                    help="'auto' = every visible GPU (Kaggle T4 ×2 → one process per GPU, studies split between them); "
+                         "an int caps the count; 1 = the single-process path. --workers is split across the GPUs")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True)
     T: dict[str, float] = {}
@@ -140,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     import torch
 
     from knee.data.preprocess import PREPROC_VERSION, PreprocParams, series_info_from_csv
-    from knee.infer.predict import load_arm, predict_dirs, write_submission
+    from knee.infer.predict import load_arm, predict_dirs, predict_dirs_multi, write_submission
     from knee.paths import LABELS
     hw = hardware()
     log.info("hardware %s", json.dumps(hw))
@@ -157,9 +163,12 @@ def main(argv: list[str] | None = None) -> int:
 
     t = time.time()
     spec = json.loads((bundle / "arms.json").read_text())
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    arms = [load_arm(bundle / arm["ckpt"], device, {**spec.get("perf", {}), **arm.get("perf", {})})
-            for arm in spec["arms"]]
+    n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    n_dev = n_gpu if a.gpus == "auto" else min(int(a.gpus), n_gpu)
+    arm_specs = [(str(bundle / arm["ckpt"]), {**spec.get("perf", {}), **arm.get("perf", {})}) for arm in spec["arms"]]
+    device = torch.device("cuda" if n_gpu else "cpu")
+    # several GPUs: each shard process loads its own arms (timed inside predict); one GPU/CPU: load them here
+    arms = [load_arm(ck, device, perf) for ck, perf in arm_specs] if n_dev <= 1 else None
     weights = [float(arm.get("weight", 1.0)) for arm in spec["arms"]]
     prior = np.asarray(spec.get("prior", [0.5] * len(LABELS)), dtype=np.float64)
     pp = spec.get("preproc", {})
@@ -170,9 +179,20 @@ def main(argv: list[str] | None = None) -> int:
 
     t = time.time()
     dirs = [comp / "test_series" / u for u in expected]  # from the CSV: never walk the input tree
-    pred, timing = predict_dirs(dirs, series_info_from_csv(test_series), arms, device, params,
-                                workers=a.workers, weights=weights, how=spec.get("how", "mean"), fallback=prior,
-                                studies_per_forward=int(spec.get("perf", {}).get("studies_per_forward", 1)))
+    spf = int(spec.get("perf", {}).get("studies_per_forward", 1))
+    multi: dict = {}
+    if arms is not None:
+        pred, timing = predict_dirs(dirs, series_info_from_csv(test_series), arms, device, params,
+                                    workers=a.workers, weights=weights, how=spec.get("how", "mean"), fallback=prior,
+                                    studies_per_forward=spf)
+    else:
+        # the series count is the only per-study cost known before reading a file (UNVERIFIED as a proxy for slices)
+        cost = test_series.groupby(test_series.StudyInstanceUID.astype(str)).size().astype(float).to_dict()
+        pred, timing, multi = predict_dirs_multi(
+            dirs, series_info_from_csv(test_series), arm_specs, [f"cuda:{i}" for i in range(n_dev)], out / "shards",
+            params, workers_per_device=-(-a.workers // n_dev), weights=weights, how=spec.get("how", "mean"),
+            fallback=prior, studies_per_forward=spf, cost=cost)
+        log.info("multi-GPU %s", json.dumps(multi))
     T["predict"] = time.time() - t
 
     t = time.time()
@@ -185,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
                "n_errors": int(timing.error.notna().sum()) if len(timing) else 0,
                "preprocess_s_sum": round(float(timing.preprocess_s.sum()), 2) if len(timing) else 0.0,
                "model_s_sum": round(float(timing.model_s.sum()), 2) if len(timing) else 0.0,
-               "hardware": hw, "probe": pr}
+               "hardware": hw, "probe": pr, "multi_gpu": multi}
     (out / "run_summary.json").write_text(json.dumps(summary, indent=1, default=str))
     log.info("summary %s", json.dumps(summary["stages_s"]))
     return 0

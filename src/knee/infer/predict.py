@@ -7,11 +7,13 @@
 
 Preprocessing runs in DataLoader workers so the CPU (DICOM decode) overlaps the GPU (02 §F). Any study that fails
 anywhere gets the fallback row (the train prior if given, else 0.5) and is logged: every test study always gets a row.
-Arms run sequentially on one GPU (no DataParallel); a checkpoint is a `model_avg.pt` from train_sup.
+Arms run sequentially on one GPU (no DataParallel); a checkpoint is a `model_avg.pt` from train_sup. With several
+GPUs (Kaggle's T4 ×2), `predict_dirs_multi` runs one process per GPU over a cost-balanced share of the studies.
 """
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -167,6 +169,24 @@ def predict_dirs(study_dirs: list[Path], series_info: dict, arms: list[tuple[tor
     studies_per_forward > 1 runs several preprocessed studies through each arm in one forward (bigger matmuls, fewer
     ragged chunks and launches; plan §4 item 3). The predictions don't depend on it. If a grouped forward fails, its
     studies are retried one at a time, so one bad study can't take its neighbours down to the fallback row."""
+    uids, per_arm, timing = predict_raw(study_dirs, series_info, arms, device, params, workers, fallback,
+                                        studies_per_forward)
+    return combine_raw(uids, per_arm, weights, how), timing
+
+
+def combine_raw(uids: list[str], per_arm: list[np.ndarray], weights: list[float] | None, how: str) -> pd.DataFrame:
+    """Per-arm (n_studies, 12) → the predictions frame. Runs once over *all* studies: a rank blend is only correct
+    over the full test set, so the multi-GPU shards return raw per-arm probabilities and are combined here."""
+    final = combine(per_arm, weights, how) if uids else np.zeros((0, len(LABELS)))
+    pred = pd.DataFrame(final, columns=LABELS)
+    pred.insert(0, "StudyInstanceUID", list(uids))
+    return pred
+
+
+def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torch.nn.Module, dict]], device,
+                params: PreprocParams = PreprocParams(), workers: int = 2, fallback: np.ndarray | None = None,
+                studies_per_forward: int = 1) -> tuple[list[str], list[np.ndarray], pd.DataFrame]:
+    """predict_dirs without the arm blend → (uids, per arm an (n, 12) array, timing log)."""
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
     k = max(1, int(studies_per_forward))
     ds = TestStudies(study_dirs, series_info, params, [c for _, c in arms])
@@ -230,10 +250,103 @@ def predict_dirs(study_dirs: list[Path], series_info: dict, arms: list[tuple[tor
             group = []
     if group:
         flush(group)
-    final = combine([np.stack(p) for p in per_arm], weights, how) if uids else np.zeros((0, len(LABELS)))
-    pred = pd.DataFrame(final, columns=LABELS)
-    pred.insert(0, "StudyInstanceUID", uids)
-    return pred, pd.DataFrame(rows)
+    per_arm = [np.stack(p) if p else np.zeros((0, len(LABELS))) for p in per_arm]
+    return uids, per_arm, pd.DataFrame(rows, columns=["StudyInstanceUID", "error", "preprocess_s", "model_s"])
+
+
+# ---- several GPUs (Kaggle's T4 ×2): one process per GPU, each with the whole model set and its own share of studies.
+# Not DataParallel: on the hidden test it ran the host out of RAM (top_solutions_from_notebooks.md §3), and it would
+# only split the model work. Here each process also runs its own preprocessing workers.
+
+
+def shard_studies(study_dirs: list[Path], n: int, cost: dict[str, float] | None = None) -> list[list[int]]:
+    """Indices of study_dirs split into n shards of about equal cost (greedy: most expensive study first, onto the
+    lightest shard). cost = study uid → relative cost (the series count from test_series.csv is the proxy we have
+    before reading any file); missing → 1. Each shard keeps the input order."""
+    cost = cost or {}
+    order = sorted(range(len(study_dirs)), key=lambda i: (-cost.get(Path(study_dirs[i]).name, 1.0), i))
+    shards, load = [[] for _ in range(n)], [0.0] * n
+    for i in order:
+        j = min(range(n), key=lambda k: (load[k], k))
+        shards[j].append(i)
+        load[j] += cost.get(Path(study_dirs[i]).name, 1.0)
+    return [sorted(sh) for sh in shards]
+
+
+def _shard_worker(device: str, arm_specs: list[tuple[str, dict]], study_dirs: list[Path], series_info: dict,
+                  params: PreprocParams, workers: int, fallback, studies_per_forward: int, out: str) -> None:
+    """Child process: load every arm on `device`, predict its studies, pickle (uids, per-arm probs, timing) to `out`.
+    Loads the checkpoints itself (a compiled model doesn't cross processes)."""
+    import multiprocessing as mp
+    import pickle
+    if mp.current_process().name != "MainProcess":  # a fresh spawned interpreter has no logging set up
+        logging.basicConfig(level=logging.INFO, format=f"%(asctime)s %(levelname)s [{device}] %(message)s", force=True)
+    dev = torch.device(device)
+    if dev.type == "cuda":
+        torch.cuda.set_device(dev)  # so empty_cache, autocast and Triton all default to this GPU
+    t0 = time.time()
+    arms = [load_arm(ck, dev, perf) for ck, perf in arm_specs]
+    t_load = time.time() - t0
+    uids, per_arm, timing = predict_raw(study_dirs, series_info, arms, dev, params, workers, fallback,
+                                        studies_per_forward)
+    timing["device"] = device
+    tmp = out + ".tmp"
+    with open(tmp, "wb") as f:
+        pickle.dump({"uids": uids, "per_arm": per_arm, "timing": timing, "load_s": t_load}, f)
+    os.replace(tmp, out)
+
+
+def predict_dirs_multi(study_dirs: list[Path], series_info: dict, arm_specs: list[tuple[str, dict]],
+                       devices: list[str], work_dir: str | Path, params: PreprocParams = PreprocParams(),
+                       workers_per_device: int = 1, weights: list[float] | None = None, how: str = "mean",
+                       fallback: np.ndarray | None = None, studies_per_forward: int = 1,
+                       cost: dict[str, float] | None = None) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """predict_dirs over several devices at once → (predictions, timing log with a `device` column, info).
+
+    arm_specs = [(checkpoint path, perf dict)]: each child loads its own copy. The arm blend runs once here over all
+    studies, so the output is the same as predict_dirs on one device. If a child dies (CUDA error, host OOM), its
+    shard is re-run once in this process on the same device after the others finish; only if that fails too do its
+    studies get the fallback row (write_submission fills them). Spawned, not forked: CUDA can't be used in a fork."""
+    import multiprocessing as mp
+    import pickle
+    fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
+    work_dir = Path(work_dir)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    shards = shard_studies(study_dirs, len(devices), cost)
+    ctx = mp.get_context("spawn")
+    jobs = []
+    for k, (dev, idx) in enumerate(zip(devices, shards)):
+        out = work_dir / f"shard{k}.pkl"
+        out.unlink(missing_ok=True)
+        args = (dev, arm_specs, [study_dirs[i] for i in idx], series_info, params, workers_per_device, fallback,
+                studies_per_forward, str(out))
+        p = ctx.Process(target=_shard_worker, args=args, name=f"shard{k}")  # not daemonic: it has DataLoader workers
+        p.start()
+        jobs.append((k, dev, idx, args, out, p))
+        log.info("shard %d → %s: %d studies, cost %.0f", k, dev, len(idx),
+                 sum((cost or {}).get(Path(study_dirs[i]).name, 1.0) for i in idx))
+    info: dict = {"devices": list(devices), "shard_sizes": [len(s) for s in shards], "retried": [], "lost": []}
+    results = []
+    for k, dev, idx, args, out, p in jobs:
+        p.join()
+        if p.exitcode == 0 and out.exists():
+            results.append(pickle.loads(out.read_bytes()))
+            continue
+        log.error("shard %d on %s exited with %s; re-running it in the main process", k, dev, p.exitcode)
+        info["retried"].append(k)
+        try:
+            _shard_worker(*args)
+            results.append(pickle.loads(out.read_bytes()))
+        except Exception as e:  # noqa: BLE001 - the submission must still be written
+            log.error("shard %d failed again (%s); its %d studies get the fallback row", k, e, len(idx))
+            info["lost"].append(k)
+    info["load_s"] = [round(r["load_s"], 2) for r in results]
+    uids = [u for r in results for u in r["uids"]]
+    per_arm = [np.concatenate([r["per_arm"][a] for r in results]) if results else np.zeros((0, len(LABELS)))
+               for a in range(len(arm_specs))]
+    timing = pd.concat([r["timing"] for r in results], ignore_index=True) if results else pd.DataFrame(
+        columns=["StudyInstanceUID", "error", "preprocess_s", "model_s", "device"])
+    return combine_raw(uids, per_arm, weights, how), timing, info
 
 
 def write_submission(pred: pd.DataFrame, expected_uids: list[str], out: str | Path,

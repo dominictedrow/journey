@@ -69,6 +69,29 @@ def merge(base: dict, over: dict) -> dict:
     return out
 
 
+def load_cfg(path: str | Path, sets: list[str]) -> dict:
+    """DEFAULTS ← config file ← `--set a.b=value` overrides (values parsed as YAML)."""
+    cfg = merge(DEFAULTS, C.load_config(path))
+    for kv in sets:
+        k, v = kv.split("=", 1)
+        d = cfg
+        *path_, last = k.split(".")
+        for p in path_:
+            d = d[p]
+        d[last] = yaml.safe_load(v)
+    return cfg
+
+
+def resolve_dirs(cfg: dict) -> dict:
+    """Fill cache_dir / run_dir from configs/paths.yaml when the config leaves them null (run dir = per fold)."""
+    if cfg["cache_dir"] is None or cfg["run_dir"] is None:
+        from knee.paths import load_paths
+        p = load_paths()
+        cfg["cache_dir"] = cfg["cache_dir"] or str(p.cache_root / "cache_v1_train")
+        cfg["run_dir"] = cfg["run_dir"] or str(p.cache_root / "runs" / cfg["run_name"] / f"fold{int(cfg['folds']['fold'])}")
+    return cfg
+
+
 def build_model(mcfg: dict) -> torch.nn.Module:
     if mcfg["kind"] == "knee_vit":
         from knee.model.knee_vit import KneeViT
@@ -151,20 +174,9 @@ def main(argv=None) -> dict:
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--set", nargs="*", default=[], help="overrides like folds.fold=1 optim.epochs=3")
     a = ap.parse_args(argv)
-    cfg = merge(DEFAULTS, C.load_config(a.config))
-    for kv in a.set:
-        k, v = kv.split("=", 1)
-        d = cfg
-        *path, last = k.split(".")
-        for p in path:
-            d = d[p]
-        d[last] = yaml.safe_load(v)
+    cfg = load_cfg(a.config, a.set)
     fold = int(cfg["folds"]["fold"])
-    if cfg["cache_dir"] is None or cfg["run_dir"] is None:
-        from knee.paths import load_paths
-        p = load_paths()
-        cfg["cache_dir"] = cfg["cache_dir"] or str(p.cache_root / "cache_v1_train")
-        cfg["run_dir"] = cfg["run_dir"] or str(p.cache_root / "runs" / cfg["run_name"] / f"fold{fold}")
+    resolve_dirs(cfg)
     run_dir = Path(cfg["run_dir"])
     (run_dir / "epochs").mkdir(parents=True, exist_ok=True)
     log = C.JsonlLog(run_dir / "log.jsonl")

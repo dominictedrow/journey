@@ -125,7 +125,8 @@ fused Triton kernels, so the category split isn't meaningful there and is omitte
 
 Track A × 5 folds at ~14 h = 70 h still eats most of the ~90 h of quota left before Oct 22. Two levers not tried
 here: each Kaggle GPU session has **two T4s**, so two folds could train at once (whether quota is billed per session
-or per GPU is UNVERIFIED), and evaluating every 2nd epoch halves the eval share.
+or per GPU is UNVERIFIED), and evaluating every 2nd epoch halves the eval share. **Coded 2026-09-30 (P04):**
+`knee.train.multi_fold` (one fold per GPU) and `predict.predict_dirs_multi` (inference sharded over both T4s).
 
 ## 3. Outside the model: I/O and the data loader
 
