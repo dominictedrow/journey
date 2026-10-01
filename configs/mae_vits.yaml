@@ -33,7 +33,9 @@ data:
   scale: [0.6, 1.0]
   ratio: [0.85, 1.18]
   batch_size: 128         # HP: set from the VRAM table (knee.model.sanity)
-  workers: 8              # HP: the loader must keep up (INTER_AREA resize on CPU); check windows/s vs GPU util
+  workers: 8              # HP: the loader must keep up; check with scripts/perf/mae_loader_bench.py
+  gpu_crop: true          # crop + resize on the GPU (one roi_align per batch; ≤1 grey level from cv2 INTER_AREA);
+                          # workers only read. Optional 256-px cache: python -m knee.data.derive_cache (plan A5)
 optim:
   blr: 1.5e-4             # lr = blr × batch × accum / 256 (MAE convention)
   weight_decay: 0.05

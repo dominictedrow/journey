@@ -200,3 +200,107 @@ def test_fold_timm_coatnet_same_output():
     assert folded["conv_bn"] > 0
     torch.testing.assert_close(out, ref, rtol=1e-4, atol=1e-4)
     assert fold_timm_conv_bn(m) == 0  # idempotent: nothing left to fold
+
+
+# ------------------------------------------------------------------------------------------ MAE loader, step 4
+def _ramp(S: int, C: int = 3) -> np.ndarray:
+    """A smooth test image (crop geometry errors show up as large differences; noise would hide them)."""
+    yy, xx = np.mgrid[0:S, 0:S]
+    img = 40 + 0.5 * xx + 0.3 * yy + 20 * np.sin(xx / 7.0) * np.cos(yy / 9.0)
+    return np.stack([np.clip(img + 10 * c, 0, 255) for c in range(C)]).astype(np.uint8)
+
+
+@pytest.mark.parametrize("box,out_px", [((0, 0, 64, 64), 64), ((5, 9, 50, 41), 32), ((3, 2, 20, 18), 40)])
+def test_gpu_resized_crop_matches_cv2(box, out_px):
+    """Identity → exact; shrinking ≈ INTER_AREA; enlarging ≈ INTER_LINEAR (both within ~1–2 grey levels)."""
+    pytest.importorskip("torchvision")
+    import cv2
+    from knee.ssl.mae_data import gpu_resized_crop
+    win = _ramp(64)
+    y0, x0, h, w = box
+    crop = np.ascontiguousarray(win[:, y0:y0 + h, x0:x0 + w].transpose(1, 2, 0))
+    ref = cv2.resize(crop, (out_px, out_px), interpolation=cv2.INTER_AREA if h > out_px else cv2.INTER_LINEAR)
+    ref = ref.transpose(2, 0, 1).astype(np.int16)
+    got = gpu_resized_crop(torch.from_numpy(win)[None], torch.tensor([[x0, y0, x0 + w, y0 + h]], dtype=torch.float32),
+                           out_px)[0].numpy().astype(np.int16)
+    d = np.abs(got - ref)
+    if (h, w) == (out_px, out_px):
+        assert d.max() == 0
+    else:
+        assert d.mean() < 1.0 and d.max() <= 3, (d.mean(), d.max())
+
+
+def test_mae_gpu_crop_items_use_the_same_crops(tmp_path):
+    """gpu_crop items carry the raw windows + the boxes the CPU path would have cut (same rng calls)."""
+    pytest.importorskip("torchvision")
+    from knee.ssl.mae_data import MAEWindowDataset, collate_windows, gpu_resized_crop
+    f = make_fake_cache(tmp_path / "c", n_studies=3, px=64)
+    r = CacheReader(f["cache"])
+    cpu = MAEWindowDataset(r, out_px=64, windows_per_series=4, windows_per_read=4, scale=(1, 1), ratio=(1, 1))
+    gpu = MAEWindowDataset(r, out_px=64, windows_per_series=4, windows_per_read=4, scale=(1, 1), ratio=(1, 1),
+                           gpu_crop=True)
+    x, boxes = gpu[1]
+    assert x.shape == (4, 3, 64, 64) and boxes.shape == (4, 4)
+    torch.testing.assert_close(gpu_resized_crop(x, boxes, 64), cpu[1])  # full-frame crop at the same size: exact
+    rnd = MAEWindowDataset(r, out_px=32, windows_per_series=4, windows_per_read=4)
+    rnd_g = MAEWindowDataset(r, out_px=32, windows_per_series=4, windows_per_read=4, gpu_crop=True)
+    for i in range(len(rnd)):  # the same box per window as the cv2 path: equal output sizes, near-equal content
+        xg, bg = rnd_g[i]
+        assert gpu_resized_crop(xg, bg, 32).shape == rnd[i].shape
+    xb, bb = collate_windows([rnd_g[0], rnd_g[1]])
+    assert xb.shape[0] == bb.shape[0] == 8
+
+
+def test_pretrain_mae_with_gpu_crop(tmp_path):
+    pytest.importorskip("torchvision")
+    from knee.ssl import pretrain_mae
+    f = make_fake_cache(tmp_path / "c", n_studies=4, px=48)
+    cfg = {"cache_dir": str(f["cache"]), "run_dir": str(tmp_path / "run"), "device": "cpu", "precision": "auto",
+           "model": {"img_size": 32, "patch": 8, "dim": 32, "depth": 2, "heads": 2, "drop_path": 0.0},
+           "mae": {"dec_dim": 32, "dec_depth": 1, "dec_heads": 2},
+           "data": {"out_px": 32, "windows_per_series": 2, "windows_per_read": 2, "batch_size": 4, "workers": 0,
+                    "gpu_crop": True},
+           "optim": {"epochs": 1, "warmup_epochs": 0}, "log_every": 1, "recon_every_steps": 1}
+    (tmp_path / "m.yaml").write_text(yaml.safe_dump(cfg))
+    res = pretrain_mae.main(["--config", str(tmp_path / "m.yaml")])
+    assert res["epoch"] == 1 and (tmp_path / "run" / "encoder_final.pt").exists()
+    assert list((tmp_path / "run" / "recon").glob("*.png"))
+
+
+def test_derive_cache_is_exact_for_load_time_resize(tmp_path):
+    """A 32-px cache derived from a 64-px one gives Track B bit-identical windows to out_px=32 at load time."""
+    from knee.data.dataset import StudyBagDataset
+    from knee.data.derive_cache import derive
+    f = make_fake_cache(tmp_path / "c", n_studies=3, px=64)
+    out = derive(f["cache"], tmp_path / "c32", 32, workers=2)
+    assert out["params"]["out_px"] == 32 and out["derived_from"]["src_out_px"] == 64
+    src, dst = CacheReader(f["cache"]), CacheReader(tmp_path / "c32")
+    assert dst.out_px == 32 and dst.study_uids == src.study_uids
+    a = StudyBagDataset(src, src.study_uids, None, eval_windows_per_series=3, train=False, out_px=32)
+    b = StudyBagDataset(dst, dst.study_uids, None, eval_windows_per_series=3, train=False, out_px=32)
+    for i in range(len(a)):
+        torch.testing.assert_close(a[i]["x"], b[i]["x"])
+    derive(f["cache"], tmp_path / "c32", 32, workers=2)  # resume: existing shards are kept
+    with pytest.raises(SystemExit):
+        derive(f["cache"], tmp_path / "c128", 128)
+
+
+def test_mae_loader_bench_runs(tmp_path):
+    import importlib.util
+    from pathlib import Path
+    f = make_fake_cache(tmp_path / "c", n_studies=4, px=48)
+    p = Path(__file__).resolve().parents[1] / "scripts" / "perf" / "mae_loader_bench.py"
+    spec = importlib.util.spec_from_file_location("mae_loader_bench", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    rows = m.main(["--cache", str(f["cache"]), "--workers", "0", "--read", "2", "--batch", "4", "--batches", "2",
+                   "--skip", "1", "--out-px", "32"] + (["--crop", "cpu"] if not _has_tv() else []))
+    assert rows and all(r["windows_per_s"] > 0 for r in rows)
+
+
+def _has_tv() -> bool:
+    try:
+        import torchvision  # noqa: F401
+        return True
+    except ImportError:
+        return False

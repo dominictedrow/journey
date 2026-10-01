@@ -98,7 +98,10 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - **Item 3 (bigger matmuls) coded** (same day, P03 log): `optim.effective_batch`, `data.eval_batch_size` (4 in the configs),
   inference `perf.studies_per_forward` + `perf.window_chunk`. Training batch stays 1 until a VRAM measurement. The
   step-2 profile now also measures these (~30–40 min of T4 total, still not pushed).
-- Tests: 133 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added).
+- **Item 4 (MAE loader) coded** (same day, P03 log): `data.gpu_crop` (on in `mae_vits.yaml`; crop + resize on the
+  GPU in one roi_align, ≤1 grey level from cv2), `knee.data.derive_cache` (256-px cache, optional), and
+  `scripts/perf/mae_loader_bench.py` (windows/s without a GPU: run it on the Windows box's SSD in S03 part 2).
+- Tests: 140 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added; MAE loader tests in `test_perf.py`).
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
@@ -115,6 +118,10 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   budget (~14 T4-h per fold) and try the second T4 per session.
 - Investigate the 2,707 multi-IOP series (a Kaggle kernel over `series_train` + a few headers).
 - Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
+
+**On the Windows box, MAE loader check (before the MAE pilot):** `python scripts/perf/mae_loader_bench.py --cache
+<cache_v1_train> --workers 4 8 12` → if gpu-crop windows/s is under ~650 (5070) and MB/s is near the SSD's limit, build
+the 256-px cache and bench it too; ask Dom before switching MAE to it ([val]).
 
 **On the Windows box, in this order:** S01 env check (`env_check` + decode bench on the SSD; skip the header scan) →
 S02 part 2 (`scripts/run_s02.ps1 -DeadZoneMm 20`, copy `<audit_out>` from the Mac or re-run the audit) → S03 part 2

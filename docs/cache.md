@@ -49,6 +49,10 @@ LR-flip augmentation by default (02 §C12).
 **Size:** 147 KB per slice at 384 px → **≈120 GB for ~819k slices** (projection; the build prints the real figure after each
 shard). At 336 px it would be ≈92 GB; at 256 px ≈54 GB.
 
+**Derived lower-resolution copy:** `python -m knee.data.derive_cache --src <cache_v1_train> --px 256` writes
+`<cache_v1_train>_256` with the same layout and indexes (manifest `params.out_px` = 256, plus `derived_from`). It uses
+the same INTER_AREA resize as `gather_windows`, so Track B with `out_px: 256` reads identical windows from either cache.
+
 ## 3. Datasets (`src/knee/data/dataset.py`)
 
 - 2.5D window = slices `[c-1, c, c+1]` of one series as 3 channels (clamped at the ends). Train centres: stratified

@@ -222,6 +222,15 @@ branch-free mask helpers). Speed-ups are **not measured yet**: that needs the T4
    rows; the limit is the 384 width, which batching doesn't change. What batching does buy: fewer small remainder
    chunks, per-step costs (head, Python, launches) amortized, and inference no longer one study per forward. The
    step-2 profile measures it (`+bs2/+bs4`, `+4studies`; ms per study), and the cap is now 40 min.
+   **Item 4, the MAE loader (coded 2026-09-30, CPU-tested):** A4 `data.gpu_crop` (on in `mae_vits.yaml`): workers
+   return raw windows + crop boxes (the same rng calls as the cv2 path), and one `torchvision.ops.roi_align` per batch
+   crops and resizes on the GPU (`mae_data.gpu_resized_crop`). On 200 real-distribution 384→256 crops it differs from
+   cv2 INTER_AREA by 0.065 grey levels on average, max 1. A5 `python -m knee.data.derive_cache --src <cache> --px 256`:
+   a 256-px copy (≈54 GB), bit-identical for Track B's load-time resize; for MAE it changes the crops (cut from 256 px
+   and enlarged), so it's [val] there and only worth it if the bench shows MAE is read-bound. `scripts/perf/
+   mae_loader_bench.py` measures windows/s per cache × workers × windows_per_read × crop, without a GPU. Not done:
+   A3's "one batch per `__getitem__`": `windows_per_read` already amortizes the per-item cost; do it only if the bench
+   shows Python per-item overhead is the limit.
 4. **After the Oct 8 gate** (architecture final): C2, C4, C5 on the chosen arms; B1 checked on real OOF; the efficiency
    submission's window budget.
 

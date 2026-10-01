@@ -13,7 +13,8 @@ master weights either way.
 
 Loader (docs/plan/03_performance_plan.md, A3): each dataset item is one series read that yields `windows_per_read`
 windows, so per-window file access and Python overhead are paid once per read. The DataLoader batches
-batch_size / windows_per_read items and concatenates them.
+batch_size / windows_per_read items and concatenates them. data.gpu_crop moves the random resized crop to the GPU
+(mae_data, A4): the workers then only read.
 """
 from __future__ import annotations
 
@@ -31,7 +32,7 @@ from torch.utils.data import DataLoader
 from knee.data.dataset import CacheReader
 from knee.model.slice_vit import SliceViT
 from knee.ssl.mae import MAE
-from knee.ssl.mae_data import MAEWindowDataset
+from knee.ssl.mae_data import MAEWindowDataset, collate_windows, gpu_resized_crop
 from knee.train import common as C
 from knee.train.optim import build_adamw, param_groups, set_lr, warmup_cosine
 
@@ -42,7 +43,7 @@ DEFAULTS: dict = {
               "drop_path": 0.0, "attn_impl": "sdpa", "grad_checkpointing": False},
     "mae": {"mask_ratio": 0.75, "dec_dim": 256, "dec_depth": 4, "dec_heads": 8, "norm_pix": True},
     "data": {"out_px": 256, "windows_per_series": 4, "windows_per_read": 1, "scale": [0.6, 1.0], "ratio": [0.85, 1.18],
-             "batch_size": 64, "workers": 6, "limit_studies": 0},
+             "batch_size": 64, "workers": 6, "limit_studies": 0, "gpu_crop": False},
     "optim": {"blr": 1.5e-4, "weight_decay": 0.05, "betas": [0.9, 0.95], "warmup_epochs": 2, "epochs": 40,
               "min_lr_ratio": 0.0, "clip": 1.0, "accum": 1},
     "ckpt_minutes": 30, "snapshot_every_epochs": 5, "log_every": 50, "recon_every_steps": 2000,
@@ -117,7 +118,8 @@ def main(argv=None) -> dict:
     dcfg = cfg["data"]
     kr = int(dcfg["windows_per_read"])
     ds = MAEWindowDataset(reader, uids, dcfg["out_px"], dcfg["windows_per_series"], scale=tuple(dcfg["scale"]),
-                          ratio=tuple(dcfg["ratio"]), seed=cfg["seed"], windows_per_read=kr)
+                          ratio=tuple(dcfg["ratio"]), seed=cfg["seed"], windows_per_read=kr,
+                          gpu_crop=bool(dcfg["gpu_crop"]))
     bs, accum = dcfg["batch_size"], cfg["optim"]["accum"]
     if bs % kr:
         raise SystemExit(f"data.batch_size {bs} must be a multiple of data.windows_per_read {kr}")
@@ -174,7 +176,14 @@ def main(argv=None) -> dict:
         check_finite("checkpoint")
         save(tag)
 
-    recon_batch = torch.cat([ds[i] for i in range(min(8, len(ds)))])[:8].to(device)
+    def to_model_input(batch) -> torch.Tensor:
+        """A loader batch → uint8 windows [N, 3, out_px, out_px] on the device (gpu_crop: crop + resize here)."""
+        if isinstance(batch, torch.Tensor):
+            return batch.to(device, non_blocking=True)
+        x, boxes = batch
+        return gpu_resized_crop(x.to(device, non_blocking=True), boxes.to(device, non_blocking=True), dcfg["out_px"])
+
+    recon_batch = to_model_input(collate_windows([ds[i] for i in range(min(8, len(ds)))]))[:8]
     sampler = C.ResumableRandomSampler(len(ds), seed=cfg["seed"])
     t_ckpt, t_start = time.time(), time.time() - state["elapsed"]
     pilot_t0, pilot_windows, pilot_skip = None, 0, 5
@@ -185,14 +194,14 @@ def main(argv=None) -> dict:
         ds.set_epoch(ep)
         sampler.set_epoch(ep, start=state["batch_in_epoch"] * ipb)
         loader = DataLoader(ds, batch_size=ipb, sampler=sampler, num_workers=dcfg["workers"], drop_last=True,
-                            collate_fn=torch.cat, pin_memory=device.type == "cuda", persistent_workers=False,
+                            collate_fn=collate_windows, pin_memory=device.type == "cuda", persistent_workers=False,
                             prefetch_factor=4 if dcfg["workers"] else None)
         t_log, n_log = time.time(), 0
         meter.reset()
         for x in loader:
             if state["batch_in_epoch"] >= batches_per_epoch:
                 break
-            x = x.to(device, non_blocking=True)
+            x = to_model_input(x)
             with C.autocast_ctx(device, cfg["precision"]):
                 loss = mae(x)["loss"]
             meter.add(loss, len(x))
