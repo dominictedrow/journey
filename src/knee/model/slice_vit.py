@@ -41,7 +41,7 @@ def init_weights(m: nn.Module) -> None:
 
 class SliceViT(nn.Module):
     def __init__(self, in_ch: int = 3, img_size: int = 256, patch: int = 16, dim: int = 384, depth: int = 12,
-                 heads: int = 6, mlp_ratio: float = 4.0, tokenizer: str = "conv_stem", stem_norm: str = "gn",
+                 heads: int = 6, mlp_ratio: float = 4.0, tokenizer: str = "conv_stem", stem_norm: str = "ln",
                  pos2d: str = "sincos", pool: str = "gap", qkv_bias: bool = True, qk_norm: bool = True,
                  layerscale: float | None = 0.1, drop: float = 0.0, attn_drop: float = 0.0, drop_path: float = 0.1,
                  attn_impl: str = "sdpa", grad_checkpointing: bool = False):

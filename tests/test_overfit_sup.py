@@ -87,13 +87,13 @@ def test_train_sup_overfits_8_studies(tmp_path, rank_w):
            "labels": {"file": str(f["labels"])}, "folds": {"file": str(f["folds"]), "fold": -1},
            "data": {"out_px": 32, "train_windows": 2, "eval_windows": 3, "batch_size": 2, "workers": 0,
                     "series_dropout": 0.0},
-           "optim": {"epochs": 150, "lr": 3e-3, "weight_decay": 0.0, "warmup_frac": 0.05, "min_lr_ratio": 0.1,
+           "optim": {"epochs": 250, "lr": 3e-3, "weight_decay": 0.0, "warmup_frac": 0.05, "min_lr_ratio": 0.1,
                      "accum": 1},
            "loss": {"rank_w": rank_w}, "select": {"top_k": 1}, "log_every": 4, "ckpt_minutes": 1e9}
     cp = tmp_path / "cfg.yaml"
     cp.write_text(yaml.safe_dump(cfg))
     res = train_sup.main(["--config", str(cp)])
-    assert res["top_epochs"] == [149]
+    assert res["top_epochs"] == [249]  # 250 epochs: the per-pixel LN stem memorizes noise images slower than GN
 
     # 1. the training loss (masked, weighted soft BCE [+ rank]) goes to ~0
     losses = [r["loss"] for r in map(json.loads, (tmp_path / "run" / "log.jsonl").read_text().splitlines())

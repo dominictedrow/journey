@@ -12,7 +12,7 @@ model:
   depth: 12
   heads: 6
   tokenizer: conv_stem
-  stem_norm: gn
+  stem_norm: ln
   pos2d: sincos
   pool: gap
   qk_norm: true

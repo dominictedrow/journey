@@ -39,7 +39,7 @@ from knee.train.optim import build_adamw, param_groups, set_lr, warmup_cosine
 DEFAULTS: dict = {
     "run_name": "mae_default", "seed": 0, "cache_dir": None, "run_dir": None, "device": "auto", "precision": "auto",
     "model": {"img_size": 256, "patch": 16, "dim": 384, "depth": 12, "heads": 6, "tokenizer": "conv_stem",
-              "stem_norm": "gn", "pos2d": "sincos", "pool": "gap", "qk_norm": True, "layerscale": 0.1,
+              "stem_norm": "ln", "pos2d": "sincos", "pool": "gap", "qk_norm": True, "layerscale": 0.1,
               "drop_path": 0.0, "attn_impl": "sdpa", "grad_checkpointing": False},
     "mae": {"mask_ratio": 0.75, "dec_dim": 256, "dec_depth": 4, "dec_heads": 8, "norm_pix": True},
     "data": {"out_px": 256, "windows_per_series": 4, "windows_per_read": 1, "scale": [0.6, 1.0], "ratio": [0.85, 1.18],

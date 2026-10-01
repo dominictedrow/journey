@@ -49,7 +49,7 @@ def test_patchify_equals_unfold_linear():
     assert pe(x).shape == (2, 4 * 5, 24)
 
 
-@pytest.mark.parametrize("norm", ["gn", "bn"])
+@pytest.mark.parametrize("norm", ["ln", "gn", "bn"])
 def test_conv_stem_grid_matches_patchify(norm):
     stem = ConvStem(3, 64, 16, norm)
     assert stem(torch.randn(2, 3, 64, 96)).shape == (2, 4 * 6, 64)
@@ -253,3 +253,33 @@ def test_return_attn_shapes():
     m2 = KneeViT(TINY).eval()
     _, attn2 = m2(fake_bag(L=6), return_attn=True)
     torch.testing.assert_close(attn2.sum(-1), torch.ones(2, 12))
+
+
+def test_attn_mil_empty_bag_is_finite():
+    """An all-padding bag gave softmax(all -inf) = NaN logits and NaN grads (review 2026-09-30). Now it gets
+    the bias-only logits, and the other bag in the batch is unchanged."""
+    torch.manual_seed(0)
+    head = AttnMILHead(8, att_dim=16, dropout=0.0)
+    nn.init.normal_(head.cls_w)
+    tokens = torch.randn(2, 5, 8, requires_grad=True)
+    mask = torch.tensor([[True, True, True, False, False], [False] * 5])
+    out = head(tokens, mask)
+    assert torch.isfinite(out).all()
+    torch.testing.assert_close(out[1], head.cls_b.detach())
+    torch.testing.assert_close(out[:1], head(tokens[:1], mask[:1]))
+    out.sum().backward()
+    assert torch.isfinite(tokens.grad).all()
+
+
+@pytest.mark.parametrize("norm,same", [("ln", True), ("gn", False)])
+def test_conv_stem_norm_is_local(norm, same):
+    """MAE zeroes the masked pixels before the stem. With norm="ln" a token outside the masked region's receptive
+    field (31 px for P=16) is identical whether or not the far region is zeroed; GroupNorm's per-image statistics
+    leak the masking into every token, a pretrain/fine-tune mismatch (review 2026-09-30)."""
+    torch.manual_seed(0)
+    stem = ConvStem(3, 64, 16, norm).eval()
+    x = torch.randn(1, 3, 64, 64)
+    x_masked = x.clone()
+    x_masked[..., 48:] = 0  # zero the right-most patch column; token column 0 sees pixels < 32
+    a, b = stem(x).reshape(1, 4, 4, 64), stem(x_masked).reshape(1, 4, 4, 64)
+    assert torch.allclose(a[:, :, 0], b[:, :, 0], atol=1e-5) == same

@@ -7,9 +7,12 @@ ConvStem (the default) = a few 3×3 stride-2 convs, then a 1×1 projection to E 
 help transformers see better"). Same output grid as PatchEmbed(P=16), but the tokens are built from overlapping local
 features, which makes AdamW training more stable and helps on small data [F §1, §7].
 
-Norm choice in the stem: GroupNorm, not the paper's BatchNorm. [derived] Our micro-batches are 1–2 studies, and MAE
-feeds images with 75% of the patches zeroed, so BatchNorm running statistics would differ between pretraining,
-fine-tuning and eval; GroupNorm has no batch statistics. BatchNorm stays an ablation (norm="bn").
+Norm choice in the stem: a per-pixel LayerNorm over channels (norm="ln"), not the paper's BatchNorm. [derived] Our
+micro-batches are 1–2 studies, and MAE feeds the stem images with 75% of the patches zeroed (ssl/mae.py), so any norm
+whose statistics span the image changes between pretraining and fine-tuning/eval: BatchNorm through its batch/running
+statistics, GroupNorm (norm="gn", the earlier default) through per-image statistics that are 75% zeros in MAE. "ln"
+normalizes each position on its own, so a visible patch is normalized the same way whether its neighbours are masked
+or not (review 2026-09-30). "gn" and "bn" stay ablations.
 """
 from __future__ import annotations
 
@@ -33,7 +36,16 @@ class PatchEmbed(nn.Module):
         return x.flatten(2).transpose(1, 2)   # [N, H/P·W/P, E], row-major patch order
 
 
+class LayerNorm2d(nn.LayerNorm):
+    """LayerNorm over the channels of each spatial position of an [N, C, H, W] map (ConvNeXt-style)."""
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return super().forward(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+
+
 def _norm2d(kind: str, ch: int) -> nn.Module:
+    if kind == "ln":
+        return LayerNorm2d(ch, eps=1e-6)
     if kind == "bn":
         return nn.BatchNorm2d(ch)
     if kind == "gn":
@@ -47,7 +59,7 @@ class ConvStem(nn.Module):
     Total stride = P, so the token grid matches PatchEmbed(P) and everything downstream is unchanged.
     """
 
-    def __init__(self, in_ch: int = 3, embed_dim: int = 384, patch: int = 16, norm: str = "gn"):
+    def __init__(self, in_ch: int = 3, embed_dim: int = 384, patch: int = 16, norm: str = "ln"):
         super().__init__()
         n = patch.bit_length() - 1
         if 2 ** n != patch or n < 1:
@@ -69,7 +81,7 @@ class ConvStem(nn.Module):
         return self.proj(x).flatten(2).transpose(1, 2)
 
 
-def build_tokenizer(kind: str, in_ch: int, embed_dim: int, patch: int, stem_norm: str = "gn") -> nn.Module:
+def build_tokenizer(kind: str, in_ch: int, embed_dim: int, patch: int, stem_norm: str = "ln") -> nn.Module:
     if kind == "conv_stem":
         return ConvStem(in_ch, embed_dim, patch, stem_norm)
     if kind == "patchify":

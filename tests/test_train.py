@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 torch = pytest.importorskip("torch")
+import torch.nn.functional as F  # noqa: E402
 
 from fake_cache import make_fake_cache  # noqa: E402
 from knee.data.dataset import CacheReader  # noqa: E402
@@ -100,6 +101,16 @@ def test_losses():
     assert soft_bce(logits, y).item() == pytest.approx(math.log(2), rel=1e-6)
     mask = torch.zeros(2, 12, dtype=torch.bool)
     assert soft_bce(logits, y, mask).item() == 0.0
+    # confidence weights are absolute multipliers: a weight-sum denominator cancelled them per 1-study micro-batch,
+    # so an all-low-confidence study trained as hard as a confident one (review 2026-09-30)
+    y1, l1 = y[:1], torch.randn(1, 12)
+    full = soft_bce(l1, y1, weights=torch.ones(1, 12))
+    assert soft_bce(l1, y1, weights=torch.full((1, 12), 0.1)).item() == pytest.approx(0.1 * full.item(), rel=1e-5)
+    # one confident label among silent ones does not get the whole study's loss
+    w1 = torch.zeros(1, 12)
+    w1[0, 0] = 1.0
+    per = F.binary_cross_entropy_with_logits(l1, y1, reduction="none")
+    assert soft_bce(l1, y1, weights=w1).item() == pytest.approx(per[0, 0].item() / 12, rel=1e-5)
     # no pairs → 0 but differentiable
     r = pairwise_rank_loss(logits, torch.ones(2, 12))
     r.backward()

@@ -88,3 +88,13 @@ def test_infer_refuses_mismatched_preprocessing(tmp_path):
     nb = _load("infer_nb2", REPO / "notebooks" / "infer.py")
     with pytest.raises(RuntimeError, match="preprocessing"):
         nb.main(["--comp-dir", str(comp), "--bundle-dir", str(bundle), "--out", str(tmp_path / "o"), "--probe", "0"])
+
+
+def test_bundle_restores_source_out_px_for_derived_cache():
+    """A derived 256-px cache's manifest says out_px=256, but its windows are 384-px renders resized with INTER_AREA.
+    The bundle must render at 384 so the arm's data.out_px resize reproduces them (review 2026-09-30)."""
+    bb = _load("build_kaggle_bundle_px", REPO / "scripts" / "build_kaggle_bundle.py")
+    params = {"version": "v1", "out_px": 256, "crop_mm": 160.0}
+    derived = {"params": params, "derived_from": {"src_out_px": 384}}
+    assert bb.preproc_from_manifest(derived) == {**params, "out_px": 384}
+    assert bb.preproc_from_manifest({"params": params}) == params

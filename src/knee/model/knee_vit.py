@@ -30,7 +30,7 @@ TYPE_KEYS = ("plane", "fluid", "contrast", "field", "slot", "series_idx")
 
 DEFAULT_CONFIG: dict = {
     "slice_vit": {"in_ch": 3, "img_size": 256, "patch": 16, "dim": 384, "depth": 12, "heads": 6, "mlp_ratio": 4.0,
-                  "tokenizer": "conv_stem", "stem_norm": "gn", "pos2d": "sincos", "pool": "gap", "qk_norm": True,
+                  "tokenizer": "conv_stem", "stem_norm": "ln", "pos2d": "sincos", "pool": "gap", "qk_norm": True,
                   "layerscale": 0.1, "drop_path": 0.1, "attn_impl": "sdpa", "grad_checkpointing": False},
     "slice_pos": {"n_freq": 8, "use_mm": False},
     "series_type": {"fields": ["plane", "fluid", "contrast", "field"], "max_series": 0},

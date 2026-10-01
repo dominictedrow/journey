@@ -18,6 +18,7 @@ interrupted build resumes at shard granularity. Memory per worker ≈ one study,
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -105,6 +106,30 @@ def merge_index(out_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     return ser, stu
 
 
+def studies_sha1(studies: list[str]) -> str:
+    return hashlib.sha1("\n".join(studies).encode()).hexdigest()
+
+
+def check_resume(old: dict, params: dict, studies: list[str], studies_per_shard: int, manifest_f: Path) -> None:
+    """A shard counts as done when its .parquet exists, but the shard → studies mapping is rebuilt from the current
+    arguments. Resuming with different params, a different study list (e.g. a --limit-studies smoke run into the same
+    --out) or a different --studies-per-shard would silently drop or duplicate studies, so refuse
+    (review 2026-09-30). Manifests from before the study hash was stored only get the params and shard-size checks."""
+    problems = []
+    if old.get("params") != params:
+        problems.append(f"params: {old.get('params')}\nvs\n{params}")
+    if old.get("studies_per_shard", studies_per_shard) != studies_per_shard:
+        problems.append(f"studies_per_shard: {old['studies_per_shard']} vs {studies_per_shard}")
+    if "studies_sha1" in old and old["studies_sha1"] != studies_sha1(studies):
+        problems.append(f"study list: {old.get('n_studies')} studies vs {len(studies)} now (different set or "
+                        f"--limit-studies)")
+    elif "studies_sha1" not in old and old.get("n_studies", len(studies)) != len(studies):
+        problems.append(f"n_studies: {old['n_studies']} vs {len(studies)}")
+    if problems:
+        raise SystemExit(f"{manifest_f} was built differently, resuming would mix shards:\n" + "\n".join(problems)
+                         + "\nUse a new --out or delete the old cache.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--split", default="train", choices=["train", "test"])
@@ -128,22 +153,20 @@ def main() -> None:
     shard_dir = a.out / "shards"
     shard_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest_f = a.out / "cache_manifest.json"
-    if manifest_f.exists():
-        old = json.loads(manifest_f.read_text())
-        if old.get("params") != params.to_dict():
-            raise SystemExit(f"{manifest_f} was built with different params:\n{old.get('params')}\nvs\n"
-                             f"{params.to_dict()}\nUse a new --out or delete the old cache.")
-
     series_csv = pd.read_csv(a.data_root / f"{a.split}_series.csv")
     series_info = series_info_from_csv(series_csv)
     studies = sorted(e.name for e in os.scandir(split_dir) if e.is_dir())
     if a.limit_studies:
         studies = studies[: a.limit_studies]
     shards = [studies[i: i + a.studies_per_shard] for i in range(0, len(studies), a.studies_per_shard)]
+
+    manifest_f = a.out / "cache_manifest.json"
+    if manifest_f.exists():
+        check_resume(json.loads(manifest_f.read_text()), params.to_dict(), studies, a.studies_per_shard, manifest_f)
     todo = [i for i in range(len(shards)) if not (shard_dir / f"shard_{i:05d}.parquet").exists()]
     manifest = {"version": params.version, "split": a.split, "params": params.to_dict(), "git_sha": git_sha(),
                 "n_studies": len(studies), "studies_per_shard": a.studies_per_shard, "n_shards": len(shards),
+                "studies_sha1": studies_sha1(studies),
                 "dtype": "uint8", "layout": "shards/shard_XXXXX.u8 raw (n, out_px, out_px) C-order",
                 "started": time.strftime("%Y-%m-%d %H:%M:%S")}
     manifest_f.write_text(json.dumps(manifest, indent=2))

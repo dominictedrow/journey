@@ -7,7 +7,7 @@ precision: auto   # bf16 on the RTX 5070 (sm_120), fp16 + loss scaling on the Ka
 model:
   kind: knee_vit
   cfg:
-    slice_vit: {img_size: 256, patch: 16, dim: 384, depth: 12, heads: 6, tokenizer: conv_stem, stem_norm: gn,
+    slice_vit: {img_size: 256, patch: 16, dim: 384, depth: 12, heads: 6, tokenizer: conv_stem, stem_norm: ln,
                 pos2d: sincos, pool: gap, qk_norm: true, layerscale: 0.1, drop_path: 0.1, attn_impl: sdpa,
                 grad_checkpointing: true}
     slice_pos: {n_freq: 8, use_mm: false}

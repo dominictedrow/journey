@@ -25,6 +25,18 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 
+def preproc_from_manifest(man: dict) -> dict:
+    """Inference PreprocParams from a cache manifest. A derived cache (knee.data.derive_cache) stores the source
+    cache's params with out_px replaced; its windows are source-resolution renders resized with INTER_AREA. Inference
+    must render at the source out_px and let the arm's data.out_px do the same resize at load, so restore it here
+    (rendering straight at the derived out_px is a different resampling path; review 2026-09-30)."""
+    pp = dict(man["params"])
+    src = man.get("derived_from")
+    if src:
+        pp["out_px"] = int(src["src_out_px"])
+    return pp
+
+
 def build(out: Path, ckpts: list[Path], weights: list[float], how: str, labels: Path | None, wheels: Path | None,
           kaggle_user: str, slug: str, preproc: dict) -> dict:
     import sys
@@ -77,7 +89,7 @@ def main() -> None:
     if len(weights) != len(a.ckpt):
         raise SystemExit("--weight must be given once per --ckpt (or not at all)")
     if a.cache_manifest:
-        preproc = json.loads(a.cache_manifest.read_text())["params"]
+        preproc = preproc_from_manifest(json.loads(a.cache_manifest.read_text()))
     else:
         preproc = {}
         print("WARNING: no --cache-manifest: inference uses the PreprocParams defaults; make sure the cache did too")

@@ -319,3 +319,23 @@ def test_predict_dirs_grouped_equals_single(synth, tmp_path, monkeypatch):
     assert timing.error.isna().all()
     np.testing.assert_allclose(retried.iloc[:, 1:].to_numpy(dtype=float), one.iloc[:, 1:].to_numpy(dtype=float),
                                rtol=1e-5, atol=1e-6)
+
+
+def test_build_cache_refuses_mismatched_resume(tmp_path):
+    """Shards count as done when their parquet exists, but the shard → studies mapping comes from the current args:
+    a --limit-studies smoke run into the real --out, or a changed --studies-per-shard, would drop or duplicate studies
+    on resume (review 2026-09-30)."""
+    studies = [f"s{i:03d}" for i in range(48)]
+    p = PARAMS.to_dict()
+    old = {"params": p, "studies_per_shard": 16, "n_studies": 40, "studies_sha1": build_cache.studies_sha1(studies[:40])}
+    mf = tmp_path / "cache_manifest.json"
+    build_cache.check_resume(old, p, studies[:40], 16, mf)  # same run: fine
+    with pytest.raises(SystemExit, match="study list"):
+        build_cache.check_resume(old, p, studies, 16, mf)
+    with pytest.raises(SystemExit, match="studies_per_shard"):
+        build_cache.check_resume(old, p, studies[:40], 8, mf)
+    with pytest.raises(SystemExit, match="params"):
+        build_cache.check_resume(old, {**p, "out_px": 64}, studies[:40], 16, mf)
+    legacy = {"params": p, "studies_per_shard": 16, "n_studies": 40}  # manifest written before the hash existed
+    with pytest.raises(SystemExit, match="n_studies"):
+        build_cache.check_resume(legacy, p, studies, 16, mf)

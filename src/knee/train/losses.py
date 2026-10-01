@@ -1,7 +1,9 @@
 """Losses for 12 independent findings on soft report labels (02 §C9).
 
 - `soft_bce`: BCE against soft targets p ∈ [0,1], each (study, finding) entry weighted by its label confidence
-  (S04's w_<label>), missing labels masked out.
+  (S04's w_<label>), missing labels masked out. The weighted sum is divided by the number of labelled entries, not
+  by the weight sum: with 1-study micro-batches a weight-sum denominator cancels the weights (an all-low-confidence
+  study would train as hard as a confident one; review 2026-09-30).
 - `pairwise_rank_loss`: the metric is AUC, i.e. "does a positive study score above a negative one". For each finding,
   softplus(-(s_pos - s_neg)) over (positive, negative) pairs, averaged, then averaged over findings (macro, like the
   metric). Public stacks use it at weight ≈ 0.05–0.12 [KT].
@@ -22,7 +24,8 @@ def soft_bce(logits: torch.Tensor, targets: torch.Tensor, label_mask: torch.Tens
     if label_mask is not None:
         w = w * label_mask.float()
     loss = F.binary_cross_entropy_with_logits(logits.float(), targets.float(), reduction="none")
-    return (loss * w).sum() / w.sum().clamp(min=1e-6)
+    n = torch.ones_like(targets) if label_mask is None else label_mask.float()
+    return (loss * w).sum() / n.sum().clamp(min=1)
 
 
 def pairwise_rank_loss(logits: torch.Tensor, targets: torch.Tensor, label_mask: torch.Tensor | None = None,

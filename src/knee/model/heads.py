@@ -17,6 +17,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
+from knee.model.attention import _safe_key_mask
 from knee.model.block import Block, CrossBlock
 from knee.model.slice_vit import init_weights
 
@@ -24,8 +25,10 @@ N_LABELS = 12
 
 
 def _masked_softmax(scores: torch.Tensor, key_mask: torch.Tensor | None, dim: int) -> torch.Tensor:
+    """An empty bag (no real window) would give softmax(all -inf) = NaN; `_safe_key_mask` unmasks key 0 there, the
+    same guard as the attention heads, and the caller zeroes that bag's pooled features."""
     if key_mask is not None:
-        scores = scores.masked_fill(~key_mask[..., None], float("-inf"))
+        scores = scores.masked_fill(~_safe_key_mask(key_mask)[..., None], float("-inf"))
     return scores.float().softmax(dim=dim)
 
 
@@ -49,6 +52,8 @@ class AttnMILHead(nn.Module):
             a = a * torch.sigmoid(self.att_u(h))
         attn = _masked_softmax(self.att_w(self.att_drop(a)), key_mask, dim=1)   # [B, L, 12], sums to 1 over L
         pooled = torch.einsum("blk,blf->bkf", attn.to(h.dtype), h)             # [B, 12, F]
+        if key_mask is not None:                                               # empty bag → logits = bias only
+            pooled = pooled * key_mask.any(dim=1)[:, None, None].to(pooled.dtype)
         logits = (pooled * self.cls_w).sum(-1) + self.cls_b                    # [B, 12]
         return (logits, attn.transpose(1, 2)) if return_attn else logits      # attn as [B, 12, L]
 
