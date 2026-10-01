@@ -12,7 +12,8 @@ GPUs give the same throughput with no gradient sync, no change to the trainer, a
 gets a STOP file (train_sup saves last.pt at its next step and exits) and no new fold starts. Re-running the same
 command resumes each unfinished fold from its last.pt. Logs: <run_name dir>/multi_fold/fold<k>.log.
 
-UNVERIFIED: whether Kaggle bills GPU quota per session or per GPU (HANDOFF §5), the Kaggle GPU session time limit,
+Quota: billed per session wall-clock, not per GPU (P04 addendum), so the second fold is free.
+UNVERIFIED: the Kaggle GPU session time limit,
 and whether 4 vCPUs feed two Track A loaders without starving them (watch studies_per_s in each fold's log.jsonl).
 """
 from __future__ import annotations

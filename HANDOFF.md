@@ -120,7 +120,7 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - Performance step 2 (from the T4 profile): Track A Kaggle config with `grad_checkpointing: false` + channels_last;
   `torch.compile` in `infer.py` with fixed-size padded window chunks (test recompiles). Ask Dom about the Track A fold
   budget (~14 T4-h per fold). The second T4 is now coded (P04): measure a 2-GPU inference pass (add it to the step-2
-  profile) and check whether Kaggle bills quota per session or per GPU before planning Track A folds two at a time.
+  profile). Quota is billed **per session, not per GPU** (P04 addendum), so plan Track A folds two at a time.
 - Investigate the 2,707 multi-IOP series (a Kaggle kernel over `series_train` + a few headers).
 - Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
 

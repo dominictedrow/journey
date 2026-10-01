@@ -126,7 +126,7 @@ Current state: see `HANDOFF.md` §4. Private GitHub remote: `dominictedrow/knees
 1. Exact i5 model and whether "16" means physical cores or threads (check Task Manager → Performance → CPU: Cores vs Logical processors) (matters for DICOM decoding throughput), and whether the Windows box has a faster internal drive for caching preprocessed volumes.
 2. ~~Total train studies~~ → resolved in S01: 4,407 studies / 58 gold / 24,371 series, measured from the CSVs (`docs/data_audit.md`).
 3. ~~Which of the 86 DICOM tags exist~~ → resolved 2026-09-30: `docs/dicom_tags.md` (88 elements incl. file meta; full corpus).
-4. Kaggle notebook GPU type and whether `RuntimeSeconds` counts the full notebook run. (Weekly quota = 30 h GPU / 20 h TPU per `kaggle quota`; CPU notebook specs measured in `docs/kaggle_env.md`.)
+4. Kaggle notebook GPU type and whether `RuntimeSeconds` counts the full notebook run. (Weekly quota = 30 h GPU / 20 h TPU per `kaggle quota`, per account, charged per session wall-clock and not per GPU, so T4 ×2 costs the same as one T4 (P04 addendum); CPU sessions have no quota; CPU notebook specs measured in `docs/kaggle_env.md`.)
 5. ~~Fallback decision date and teammates~~ → resolved 2026-09-24: Oct 8 gate with a parallel Track A; **solo**.
 6. Remaining open items are tracked in `docs/plan/02_vit_detailed_plan.md` §H.
 
