@@ -105,12 +105,24 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   test studies over every visible GPU (one spawned process per GPU, `predict.predict_dirs_multi`; arm blend once over all
   studies, so identical output), and `python -m knee.train.multi_fold --config ... --folds 0 1 2 3 4 [--hours N]` trains
   one fold per GPU from a queue. CPU-tested only; never run on a GPU.
-- Tests: 145 pytest (CPU) pass, 2 skipped (`tests/test_multi_gpu.py` added).
+- **Review fixes** (same day, log `docs/sessions_log/P05_2026-09-30.md`): six bugs from a CPU review of the perf changes
+  are fixed, each with a regression test. (1) fp16 NaN in the RankBank, (2) gradients leaking across epochs, (3) silent
+  no-training when batches < accum, (4) a run dir shared by two folds could resume the other fold (OOF leakage):
+  `train_sup` now refuses on a fold/folds-file/run_name mismatch, and under `multi_fold` an explicit `run_dir` is the
+  run root (`X/fold<k>`), (5) `multi_fold` skips folds whose `metrics.json` says they finished (`--rerun-finished`
+  overrides) and clears stale STOP files, (6) eval NaNs get an fp32 retry and are counted (`val_n_retried_fp32`,
+  `val_n_nonfinite`); an epoch still non-finite after the retry gets `val_macro_auc = NaN`, so it is never averaged in
+  (**Dom to confirm** this policy). Pure-fp16 Track A test added (resnet10t BN + CoAtNet-RMLP nano).
+- Tests: 160 pytest (CPU) pass, 2 skipped.
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
 
 **Without the Windows box (Mac + Kaggle):**
+- First real T4 ×2 training run: check `val_n_retried_fp32` / `val_n_nonfinite` in each fold's `log.jsonl` are 0 or
+  near it (non-zero = an fp16 overflow site worth fixing at the source), and that a resumed `multi_fold` prints
+  `already finished` and starts the pending folds at once. Kaggle image: confirm `hasattr(torch.compiler, "set_stance")`.
+- Dom: confirm the NaN-epoch exclusion policy (P05), or switch to "keep the finite-subset AUC and warn".
 - When Dom OKs ~0.5 h of GPU: re-version `knee-src`, then `kaggle kernels push -p notebooks/kaggle_profile --accelerator
   NvidiaTeslaT4` (step 2). Turn on `perf.compile` (and `channels_last` for Track A) in the configs only for variants
   that measure faster; `perf.half` only after an OOF check on a trained arm.

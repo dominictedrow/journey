@@ -19,8 +19,10 @@ At the end: average the top-k weights (02 §C15, public "top-3 epoch mean") → 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import copy
 import json
+import os
 import time
 from pathlib import Path
 
@@ -92,6 +94,53 @@ def resolve_dirs(cfg: dict) -> dict:
     return cfg
 
 
+# What makes a run dir "this run": a different split (fold or folds file) would resume or overwrite another fold's
+# weights and OOF (leakage); a different run_name is a different experiment. Everything else (optim.epochs, perf.*)
+# may change on resume.
+IDENTITY_KEYS = (("folds", "fold"), ("folds", "file"), ("run_name",))
+WARN_KEYS = (("labels",), ("model",))
+
+
+def _get(d: dict, keys: tuple):
+    for k in keys:
+        d = d.get(k) if isinstance(d, dict) else None
+    return d
+
+
+def _same(keys: tuple, a, b) -> bool:
+    if keys == ("folds", "fold"):
+        return a is not None and b is not None and int(a) == int(b)
+    if keys == ("folds", "file") and a and b and str(a) != str(b):
+        try:  # the same file under another spelling (relative vs absolute) is the same split
+            return os.path.samefile(a, b)
+        except OSError:
+            return False
+    return a == b
+
+
+def check_run_identity(run_dir: Path, cfg: dict) -> None:
+    """Refuse (SystemExit) to reuse a run dir written by another fold, split or run_name. The recorded config comes
+    from run_dir/config.yaml (written before the first epoch, so it also covers a crash that left only epochs/), else
+    from last.pt["cfg"] (every checkpoint stores it). Runs once per process start: one small YAML read."""
+    rec = None
+    if (run_dir / "config.yaml").exists():
+        rec = yaml.safe_load((run_dir / "config.yaml").read_text())
+    elif (run_dir / "last.pt").exists():
+        rec = torch.load(run_dir / "last.pt", map_location="cpu", weights_only=False).get("cfg")
+    if not rec:
+        return
+    for keys in IDENTITY_KEYS:
+        old, new = _get(rec, keys), _get(cfg, keys)
+        if not _same(keys, old, new):
+            raise SystemExit(f"run dir {run_dir} belongs to {'.'.join(keys)}={old!r}, but this run has {new!r}. "
+                             f"Resuming it would mix two runs (another fold's weights/OOF = leakage). Use a separate "
+                             f"run_dir per fold (leave run_dir null to get <runs>/<run_name>/fold<k>).")
+    for keys in WARN_KEYS:
+        if _get(rec, keys) != _get(cfg, keys):
+            print(f"WARNING: {'.'.join(keys)} differs from the config recorded in {run_dir}; resuming anyway",
+                  flush=True)
+
+
 def build_model(mcfg: dict) -> torch.nn.Module:
     if mcfg["kind"] == "knee_vit":
         from knee.model.knee_vit import KneeViT
@@ -138,28 +187,67 @@ def make_dataset(cfg: dict, reader: CacheReader, uids: list[str], labels: pd.Dat
     raise ValueError(f"unknown data format {d['format']!r}")
 
 
+def eager_ctx():
+    """Run compiled modules eagerly: an fp32 retry through the in-place-compiled encoder would otherwise recompile
+    every bucket shape (tens of seconds each, and it eats the recompile limit). set_stance is torch >= 2.6
+    (UNVERIFIED on the Kaggle image: check `hasattr(torch.compiler, "set_stance")` there); older torch just recompiles."""
+    if hasattr(torch.compiler, "set_stance"):
+        return torch.compiler.set_stance("force_eager")
+    return contextlib.nullcontext()
+
+
 @torch.no_grad()
 def predict(model, ds, collate, device, precision: str, workers: int, batch_size: int = 1
-            ) -> tuple[list[str], np.ndarray]:
+            ) -> tuple[list[str], np.ndarray, dict]:
     """Studies per forward = batch_size (the output doesn't depend on it: padded windows are never encoded, and the
-    head masks them; Track A's BatchNorm uses running statistics in eval)."""
+    head masks them; Track A's BatchNorm uses running statistics in eval).
+
+    A batch whose reduced-precision output isn't finite (an fp16 overflow) or whose forward raises is re-run in fp32,
+    like infer/predict.run_arm. The check reads the array already copied to the CPU, so the normal path costs nothing.
+    Returns (uids, probs, {"n_retried_fp32": batches retried, "n_nonfinite": studies still non-finite})."""
     model.eval()
     dl = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=workers, collate_fn=collate,
                     pin_memory=device.type == "cuda")
     uids, out = [], []
+    stats = {"n_retried_fp32": 0, "n_nonfinite": 0}
     for b in dl:
         b = to_device(b, device)
-        with C.autocast_ctx(device, precision):
-            logits = model(b)
-        out.append(torch.sigmoid(logits.float()).cpu().numpy())
+        p = None
+        try:
+            with C.autocast_ctx(device, precision):
+                logits = model(b)
+            p = torch.sigmoid(logits.float()).cpu().numpy()
+        except RuntimeError as e:
+            if precision == "fp32":
+                raise
+            print(f"WARNING: {precision} eval forward failed ({e}); retrying the batch in fp32", flush=True)
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+        if precision != "fp32" and (p is None or not np.isfinite(p).all()):
+            stats["n_retried_fp32"] += 1
+            with C.autocast_ctx(device, "fp32"), eager_ctx():  # autocast off; training never .half()s the weights
+                p = torch.sigmoid(model(b).float()).cpu().numpy()
+        stats["n_nonfinite"] += int((~np.isfinite(p).all(axis=1)).sum())
+        out.append(p)
         uids += list(b["study_uid"])
-    return uids, np.concatenate(out) if out else np.zeros((0, len(LABELS)))
+    return uids, (np.concatenate(out) if out else np.zeros((0, len(LABELS)))), stats
 
 
-def evaluate(uids, probs, labels: pd.DataFrame, gold: pd.DataFrame | None, lo: float, hi: float) -> dict:
+def evaluate(uids, probs, labels: pd.DataFrame, gold: pd.DataFrame | None, lo: float, hi: float,
+             n_retried: int = 0) -> dict:
+    """A study still non-finite after the fp32 retry means the weights misbehave on real inputs: that epoch's
+    val_macro_auc is NaN, so top_k_epochs ranks it last and it never gets averaged into model_avg.pt (decision
+    2026-09-30, pending Dom's confirmation). The AUC over the finite studies is kept as val_macro_auc_finite, for
+    diagnosis only."""
     y = binarize(labels.loc[uids, LABELS].to_numpy(), lo, hi)
+    n_bad = int((~np.isfinite(probs).all(axis=1)).sum()) if len(probs) else 0
     auc, n = macro_auc(y, probs)
-    res = {"val_macro_auc": auc, "val_n_findings": n, "val_n": len(uids)}
+    res = {"val_macro_auc": auc, "val_n_findings": n, "val_n": len(uids), "val_n_retried_fp32": n_retried,
+           "val_n_nonfinite": n_bad}
+    if n_bad:
+        print(f"WARNING: {n_bad} of {len(uids)} validation studies have non-finite predictions after the fp32 "
+              f"retry; val_macro_auc = NaN for this eval (finite-subset AUC {auc:.4f})", flush=True)
+        res.update(val_macro_auc=float("nan"), val_macro_auc_finite=auc)
     if gold is not None:
         g = [i for i, u in enumerate(uids) if u in gold.index]
         if g:
@@ -178,6 +266,7 @@ def main(argv=None) -> dict:
     fold = int(cfg["folds"]["fold"])
     resolve_dirs(cfg)
     run_dir = Path(cfg["run_dir"])
+    check_run_identity(run_dir, cfg)  # before anything is written to run_dir
     (run_dir / "epochs").mkdir(parents=True, exist_ok=True)
     log = C.JsonlLog(run_dir / "log.jsonl")
     device = C.pick_device(cfg["device"])
@@ -333,8 +422,10 @@ def main(argv=None) -> dict:
         check_finite("end of epoch")
         rec = {"epoch": ep}
         if va_uids:
-            uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"], dcfg["eval_batch_size"])
-            rec.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"]))
+            uids, probs, st = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"],
+                                      dcfg["eval_batch_size"])
+            rec.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"],
+                                st["n_retried_fp32"]))
             pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(
                 run_dir / "epochs" / f"oof_ep{ep:03d}.parquet", index=False)
         C.save_atomic({"model": model.state_dict(), "epoch": ep}, run_dir / "epochs" / f"ep{ep:03d}.pt")
@@ -356,18 +447,22 @@ def main(argv=None) -> dict:
               for e in keep]
     model.load_state_dict(C.average_state_dicts(states))
     C.save_atomic({"model": model.state_dict(), "epochs": keep, "cfg": cfg}, run_dir / "model_avg.pt")
-    result = {"fold": fold, "top_epochs": keep}
+    # epochs + run_name: multi_fold reads them to tell a finished fold from one whose optim.epochs was raised
+    result = {"fold": fold, "run_name": cfg["run_name"], "epochs": ocfg["epochs"], "top_epochs": keep}
     if va_uids:
-        uids, probs = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"], dcfg["eval_batch_size"])
-        result.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"]))
+        uids, probs, st = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"],
+                                  dcfg["eval_batch_size"])
+        result.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"],
+                               st["n_retried_fp32"]))
         pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(run_dir / "oof.parquet",
                                                                                      index=False)
         y = binarize(labels.loc[uids, LABELS].to_numpy(), cfg["labels"]["lo"], cfg["labels"]["hi"])
-        tab = auc_table(y, probs, "val_auc")
+        tab = auc_table(y, probs, "val_auc", nonfinite_pred="ignore")  # evaluate() already counted them
         if gold is not None:
             g = [i for i, u in enumerate(uids) if u in gold.index]
             if g:
-                tab["gold_auc"] = auc_table(gold.loc[[uids[i] for i in g], LABELS].to_numpy(), probs[g])["auc"]
+                tab["gold_auc"] = auc_table(gold.loc[[uids[i] for i in g], LABELS].to_numpy(), probs[g],
+                                            nonfinite_pred="ignore")["auc"]
         (run_dir / "auc_table.md").write_text(df_to_markdown(tab))
     (run_dir / "metrics.json").write_text(json.dumps(result, indent=2, default=float))
     print("FINAL:", result, flush=True)

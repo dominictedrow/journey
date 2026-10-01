@@ -59,5 +59,5 @@ def linear_probe(encoder: SliceViT, reader: CacheReader, labels: pd.DataFrame, f
         if ok.sum() > 10 and 0 < y_tr[ok, k].sum() < ok.sum():
             clf = LogisticRegression(C=0.1, max_iter=2000).fit(f_tr[ok], y_tr[ok, k])
             p[:, k] = clf.predict_proba(f_va)[:, 1]
-    auc, n = macro_auc(y_va, p)
+    auc, n = macro_auc(y_va, p, "ignore")  # a finding with too few train labels has no probe: its column is NaN
     return {"probe_macro_auc": auc, "probe_n_findings": n, "probe_n_train": len(tr), "probe_n_val": len(va)}

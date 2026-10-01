@@ -119,3 +119,65 @@ def test_multi_fold_launcher_runs_one_fold_per_slot(tmp_path):
     assert recs[2]["t0"] >= min(recs[0]["t1"], recs[1]["t1"]) - 0.05       # fold 2 waited for a free GPU
     assert res == {0: 0, 1: 0, 2: 3}
     assert (tmp_path / "logs" / "fold2.log").exists()
+
+
+# ------------------------------------------------------------------------------------------ multi_fold.main (bug.md, 2026-09-30)
+def _mf_main(tmp_path, monkeypatch, epochs=3, extra=()):
+    """multi_fold.main with run_folds replaced by a recorder (no training): returns (exit code, launched folds, the
+    command each fold would run, the log dir)."""
+    import yaml
+    from knee.train import multi_fold as MF
+    cfg = {"cache_dir": str(tmp_path / "cache"), "run_dir": str(tmp_path / "X"), "optim": {"epochs": epochs}}
+    (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg))
+    seen = {}
+
+    def fake_run_folds(folds, gpus, cmd_for_fold, log_dir, **kw):
+        seen.update(folds=list(folds), cmds={f: cmd_for_fold(f) for f in folds}, log_dir=Path(log_dir))
+        return {f: 0 for f in folds}
+    monkeypatch.setattr(MF, "run_folds", fake_run_folds)
+    rc = MF.main(["--config", str(tmp_path / "c.yaml"), "--folds", "0", "1", "--gpus", "0", "1", *extra])
+    return rc, seen
+
+
+def _run_dir_arg(cmd):
+    import yaml
+    return yaml.safe_load([a for a in cmd if a.startswith("run_dir=")][-1].split("=", 1)[1])
+
+
+def test_multi_fold_explicit_run_dir_is_a_root(tmp_path, monkeypatch):
+    """Bug 1: an explicit run_dir shared by every fold becomes the run root, one subdir per fold."""
+    rc, seen = _mf_main(tmp_path, monkeypatch)
+    assert seen["folds"] == [0, 1] and rc == 1  # nothing wrote metrics.json
+    assert {f: _run_dir_arg(c) for f, c in seen["cmds"].items()} == {0: str(tmp_path / "X" / "fold0"),
+                                                                     1: str(tmp_path / "X" / "fold1")}
+    assert seen["log_dir"] == tmp_path / "X" / "multi_fold"
+
+
+def test_multi_fold_skips_finished_folds(tmp_path, monkeypatch):
+    """Bug 2: a resumed multi_fold must not re-launch a fold whose metrics.json says it finished."""
+    for f in (0, 1):
+        (tmp_path / "X" / f"fold{f}").mkdir(parents=True)
+    (tmp_path / "X" / "fold0" / "metrics.json").write_text(json.dumps({"fold": 0, "epochs": 3}))
+    (tmp_path / "X" / "fold1" / "metrics.json").write_text(json.dumps({"fold": 1, "epochs": 2}))  # epochs raised
+    rc, seen = _mf_main(tmp_path, monkeypatch, epochs=3)
+    assert seen["folds"] == [1] and rc == 1
+    rc, seen = _mf_main(tmp_path, monkeypatch, epochs=3, extra=["--rerun-finished"])
+    assert seen["folds"] == [0, 1]
+    (tmp_path / "X" / "fold1" / "metrics.json").write_text(json.dumps({"fold": 1, "epochs": 3}))
+    (tmp_path / "X" / "fold0" / "metrics.json").write_text(json.dumps({"fold": 0}))  # pre-fix format: counts as done
+    seen.clear()
+    rc, seen = _mf_main(tmp_path, monkeypatch, epochs=3)
+    assert rc == 0 and seen == {}  # all done: nothing spawned
+
+
+def test_run_folds_clears_stale_stop(tmp_path):
+    """A STOP left by an earlier deadline must not pause the fold at its first step."""
+    from knee.train import multi_fold as MF
+    stop = {f: tmp_path / f"fold{f}" / "STOP" for f in (0, 1)}
+    for p in stop.values():
+        p.parent.mkdir()
+        p.touch()
+    stub = "import os, sys; sys.exit(7 if os.path.exists(sys.argv[1]) else 0)"
+    res = MF.run_folds([0, 1], ["0"], lambda f: [sys.executable, "-c", stub, str(stop[f])], tmp_path / "logs",
+                       poll_s=0.05, stop_file_for_fold=stop.get)
+    assert res == {0: 0, 1: 0} and not any(p.exists() for p in stop.values())

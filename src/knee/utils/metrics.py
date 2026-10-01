@@ -4,8 +4,14 @@ Competition metric [Kaggle]: macro-averaged AUC-ROC over the 12 findings. A find
 (common on small folds / the gold 58) has no AUC; it is skipped and reported as NaN, and `macro_auc` says how many
 findings it averaged. Soft report labels are binarized for AUC with a dead band: ≥ hi → 1, ≤ lo → 0, in between →
 excluded (HP: lo, hi).
+
+Rows with a NaN label are expected (dead band, missing findings) and skipped silently. A non-finite *prediction* with
+a finite label is skipped too, but it means the model failed on that study, so `nonfinite_pred` decides what happens:
+"warn" (default, one warning per call with per-finding counts), "ignore", or "raise".
 """
 from __future__ import annotations
+
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -23,9 +29,26 @@ def binarize(y: np.ndarray, lo: float = 0.4, hi: float = 0.6) -> np.ndarray:
     return out
 
 
-def per_finding_auc(y: np.ndarray, p: np.ndarray) -> np.ndarray:
+def check_nonfinite_pred(y: np.ndarray, p: np.ndarray, mode: str = "warn") -> np.ndarray:
+    """(k,) count per finding of rows whose label is finite but whose prediction isn't; warns / raises per `mode`."""
+    if mode not in ("warn", "ignore", "raise"):
+        raise ValueError(f"nonfinite_pred must be warn/ignore/raise, not {mode!r}")
+    hit = np.isfinite(y) & ~np.isfinite(p)
+    bad = hit.sum(axis=0)
+    if mode != "ignore" and bad.any():
+        names = LABELS if len(bad) == len(LABELS) else [str(k) for k in range(len(bad))]
+        msg = (f"{int(hit.any(axis=1).sum())} rows have a non-finite prediction with "
+               f"a finite label; dropped from the AUC: " + ", ".join(f"{n} {int(c)}" for n, c in zip(names, bad) if c))
+        if mode == "raise":
+            raise ValueError(msg)
+        warnings.warn(msg, RuntimeWarning, stacklevel=3)
+    return bad
+
+
+def per_finding_auc(y: np.ndarray, p: np.ndarray, nonfinite_pred: str = "warn") -> np.ndarray:
     """y (n, 12) in {0, 1, NaN}, p (n, 12) → (12,) AUCs, NaN where undefined."""
     y, p = np.asarray(y, dtype=np.float64), np.asarray(p, dtype=np.float64)
+    check_nonfinite_pred(y, p, nonfinite_pred)
     out = np.full(y.shape[1], np.nan)
     for k in range(y.shape[1]):
         ok = np.isfinite(y[:, k]) & np.isfinite(p[:, k])
@@ -35,22 +58,23 @@ def per_finding_auc(y: np.ndarray, p: np.ndarray) -> np.ndarray:
     return out
 
 
-def macro_auc(y: np.ndarray, p: np.ndarray) -> tuple[float, int]:
-    a = per_finding_auc(y, p)
+def macro_auc(y: np.ndarray, p: np.ndarray, nonfinite_pred: str = "warn") -> tuple[float, int]:
+    a = per_finding_auc(y, p, nonfinite_pred)
     n = int(np.isfinite(a).sum())
     return (float(np.nanmean(a)) if n else float("nan")), n
 
 
 def bootstrap_macro_auc(y: np.ndarray, p: np.ndarray, n_boot: int = 2000, seed: int = 0,
-                        alpha: float = 0.05) -> dict:
-    """Resample studies with replacement; macro AUC per replicate. Returns point, lo, hi (percentile CI)."""
+                        alpha: float = 0.05, nonfinite_pred: str = "warn") -> dict:
+    """Resample studies with replacement; macro AUC per replicate. Returns point, lo, hi (percentile CI).
+    Non-finite predictions are reported once, on the full set; the replicates stay silent."""
     y, p = np.asarray(y, dtype=np.float64), np.asarray(p, dtype=np.float64)
     rng = np.random.default_rng(seed)
-    point, _ = macro_auc(y, p)
+    point, _ = macro_auc(y, p, nonfinite_pred)
     reps = []
     for _ in range(n_boot):
         idx = rng.integers(0, len(y), len(y))
-        v, n = macro_auc(y[idx], p[idx])
+        v, n = macro_auc(y[idx], p[idx], "ignore")
         if n:
             reps.append(v)
     reps = np.asarray(reps)
@@ -68,13 +92,13 @@ def rank_blend(preds: list[np.ndarray], weights: list[float] | None = None) -> n
     return sum(wi * rank_normalize(pi) for wi, pi in zip(w, preds)) / w.sum()
 
 
-def auc_table(y: np.ndarray, p: np.ndarray, name: str = "auc") -> pd.DataFrame:
+def auc_table(y: np.ndarray, p: np.ndarray, name: str = "auc", nonfinite_pred: str = "warn") -> pd.DataFrame:
     """One row per finding + a MACRO row, with positives/negatives counted (for docs/experiments.md)."""
     y = np.asarray(y, dtype=np.float64)
-    a = per_finding_auc(y, p)
+    a = per_finding_auc(y, p, nonfinite_pred)
     df = pd.DataFrame({"finding": LABELS, name: a, "n_pos": np.nansum(y == 1, axis=0).astype(int),
                        "n_neg": np.nansum(y == 0, axis=0).astype(int)})
-    macro, n = macro_auc(y, p)
+    macro, n = macro_auc(y, p, "ignore")  # already reported by per_finding_auc above
     return pd.concat([df, pd.DataFrame([{"finding": f"MACRO ({n})", name: macro, "n_pos": -1, "n_neg": -1}])],
                      ignore_index=True)
 

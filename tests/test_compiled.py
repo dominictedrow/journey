@@ -140,3 +140,29 @@ def test_compile_encoder_same_output_on_cpu():
         assert list(m.state_dict()) == keys
         for b, r in zip(bags, refs):
             torch.testing.assert_close(m(b), r, rtol=1e-4, atol=1e-5)
+
+
+@pytest.mark.skipif(not _cpu_half_ok(), reason="this torch build has no fp16 CPU kernels")
+@pytest.mark.parametrize("backbone,px", [("resnet10t", 64), ("coatnet_rmlp_nano_rw_224", 224)])
+def test_half_trackA_runs_and_matches_fp32(backbone, px):
+    """Track A in pure fp16: BatchNorm (resnet10t) and the CoAtNet-RMLP blocks of the real backbone (nano size).
+    T4 behavior stays UNVERIFIED; this only closes the CPU-checkable gap."""
+    pytest.importorskip("timm")
+    from knee.model.fuse import prepare_for_inference
+    from knee.model.trackA import TrackAModel
+    torch.manual_seed(0)
+    m = TrackAModel({"backbone": backbone, "pretrained": False, "grad_checkpointing": False, "window_chunk": 4,
+                     "head": {"kind": "attn_mil", "att_dim": 16, "dropout": 0.0}})
+    for p in m.head.parameters():  # zero-init logit layers: make the output depend on the input
+        if p.abs().sum() == 0:
+            torch.nn.init.normal_(p, std=0.1)
+    prepare_for_inference(m)
+    b = _bag(6, px=px, n_real=5)
+    with torch.no_grad():
+        ref = m(b)
+        to_half(m)
+        assert is_half(m)
+        out = m(b)
+    assert out.dtype == torch.float16 and torch.isfinite(out).all()
+    torch.testing.assert_close(out.float(), ref, rtol=2e-2, atol=2e-2)
+    torch.testing.assert_close(torch.sigmoid(out.float()), torch.sigmoid(ref), rtol=0, atol=5e-3)

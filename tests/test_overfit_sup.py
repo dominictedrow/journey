@@ -108,7 +108,7 @@ def test_train_sup_overfits_8_studies(tmp_path, rank_w):
     labels = pd.read_parquet(f["labels"]).set_index("StudyInstanceUID")
     ds, collate = train_sup.make_dataset(cfg | {"data": {**train_sup.DEFAULTS["data"], **cfg["data"]}},
                                          CacheReader(f["cache"]), uids, labels, train=False)
-    got_uids, p = train_sup.predict(model, ds, collate, torch.device("cpu"), "fp32", 0, batch_size=3)
+    got_uids, p, _ = train_sup.predict(model, ds, collate, torch.device("cpu"), "fp32", 0, batch_size=3)
     assert got_uids == uids
     used = np.isfinite(y) & (w > 0)
     err = np.abs(p - np.nan_to_num(y))[used]

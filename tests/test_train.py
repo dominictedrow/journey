@@ -4,6 +4,7 @@ import json
 import math
 
 import numpy as np
+import pandas as pd
 import pytest
 import yaml
 
@@ -302,3 +303,108 @@ def test_train_sup_refuses_fewer_batches_than_accum(tmp_path):
     with pytest.raises(SystemExit, match="fewer than one optimizer step"):
         train_sup.main(["--config", str(_write(tmp_path / "s.yaml", _sup_cfg(tmp_path, f, accum=8,
                                                                                effective_batch=8)))])
+
+
+# ------------------------------------------------------------------------------------------ regressions (bug.md, 2026-09-30)
+def test_train_sup_refuses_another_folds_run_dir(tmp_path):
+    """Bug 1: fold 1 pointed at fold 0's run_dir must not resume fold 0's last.pt and write leaked OOF as its own."""
+    from knee.train import train_sup
+    f = make_fake_cache(tmp_path / "c", n_studies=8, px=48)
+    cfg = _sup_cfg(tmp_path, f, accum=1)
+    cfg["folds"]["fold"], cfg["optim"]["epochs"] = 0, 1
+    train_sup.main(["--config", str(_write(tmp_path / "s.yaml", cfg))])
+    run = tmp_path / "run"
+    before = {n: (run / n).read_bytes() for n in ("metrics.json", "oof.parquet", "last.pt")}
+    with pytest.raises(SystemExit, match="folds.fold=0"):
+        train_sup.main(["--config", str(tmp_path / "s.yaml"), "--set", "folds.fold=1"])
+    (run / "config.yaml").unlink()  # a run without config.yaml is identified by last.pt["cfg"]
+    with pytest.raises(SystemExit, match="folds.fold=0"):
+        train_sup.main(["--config", str(tmp_path / "s.yaml"), "--set", "folds.fold=1"])
+    with pytest.raises(SystemExit, match="run_name"):
+        train_sup.main(["--config", str(tmp_path / "s.yaml"), "--set", "run_name=other"])
+    assert {n: (run / n).read_bytes() for n in before} == before  # nothing was overwritten
+
+    # resuming the same fold with more epochs is legitimate: no false positive
+    res = train_sup.main(["--config", str(tmp_path / "s.yaml"), "--set", "optim.epochs=2"])
+    assert res["fold"] == 0 and res["epochs"] == 2 and res["run_name"] == "sup_default"
+    assert json.loads((run / "metrics.json").read_text())["epochs"] == 2
+
+
+class _NanStub(torch.nn.Module):
+    """Logits from a linear map; NaN under CPU autocast (an fp16-overflow stand-in) and, if `bad_uid`, NaN for that
+    study in every precision (weights that misbehave on a real input)."""
+
+    def __init__(self, bad_uid=None):
+        super().__init__()
+        self.lin = torch.nn.Linear(3, 12)
+        self.bad_uid = bad_uid
+
+    def forward(self, b):
+        out = self.lin(b["x"]).float()
+        if torch.is_autocast_enabled("cpu"):
+            out = out * float("nan")
+        if self.bad_uid is not None:
+            out[[u == self.bad_uid for u in b["study_uid"]]] = float("nan")
+        return out
+
+
+def _stub_data(n=12, seed=0):
+    from knee.paths import LABELS
+    g = torch.Generator().manual_seed(seed)
+    items = [{"study_uid": f"s{i}", "x": torch.randn(3, generator=g)} for i in range(n)]
+    collate = lambda xs: {"study_uid": [x["study_uid"] for x in xs], "x": torch.stack([x["x"] for x in xs])}  # noqa: E731
+    y = np.random.default_rng(seed).random((n, len(LABELS)))
+    y[:2], y[2:4] = 0.0, 1.0  # both classes in every finding
+    labels = pd.DataFrame(y, columns=LABELS, index=[it["study_uid"] for it in items])
+    return items, collate, labels
+
+
+def test_predict_retries_nonfinite_batches_in_fp32():
+    """Bug 3: an fp16/bf16 overflow during the epoch eval gets an fp32 retry instead of NaN probabilities."""
+    from knee.train import train_sup
+    items, collate, _ = _stub_data()
+    model = _NanStub()
+    uids, p, st = train_sup.predict(model, items, collate, torch.device("cpu"), "bf16_cpu", 0, batch_size=5)
+    assert uids == [it["study_uid"] for it in items] and np.isfinite(p).all()
+    assert st == {"n_retried_fp32": 3, "n_nonfinite": 0}
+    _, p32, st32 = train_sup.predict(model, items, collate, torch.device("cpu"), "fp32", 0, batch_size=5)
+    np.testing.assert_allclose(p, p32)
+    assert st32 == {"n_retried_fp32": 0, "n_nonfinite": 0}
+
+
+def test_evaluate_counts_nonfinite_and_excludes_the_epoch():
+    """Bug 3: a study still NaN after the fp32 retry is counted, the epoch's val_macro_auc is NaN, and top_k ranks
+    that epoch last."""
+    from knee.train import train_sup
+    items, collate, labels = _stub_data()
+    uids, p, st = train_sup.predict(_NanStub(bad_uid="s5"), items, collate, torch.device("cpu"), "bf16_cpu", 0,
+                                    batch_size=4)
+    assert st["n_nonfinite"] == 1 and st["n_retried_fp32"] == 3
+    with pytest.warns(RuntimeWarning, match="non-finite prediction"):
+        rec = train_sup.evaluate(uids, p, labels, None, 0.4, 0.6, st["n_retried_fp32"])
+    assert rec["val_n_nonfinite"] == 1 and rec["val_n_retried_fp32"] == 3
+    assert np.isnan(rec["val_macro_auc"]) and np.isfinite(rec["val_macro_auc_finite"])
+    hist = [{"epoch": 0, **rec}, {"epoch": 1, "val_macro_auc": 0.55}, {"epoch": 2, "val_macro_auc": 0.6}]
+    assert train_sup.top_k_epochs(hist, 2, True) == [1, 2]
+
+
+def test_per_finding_auc_nonfinite_pred_modes():
+    y = np.array([[1, 0], [0, 1], [1, np.nan], [0, 1]], dtype=float)
+    p = np.array([[0.9, 0.1], [0.2, 0.8], [0.8, np.nan], [0.1, 0.7]])
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        per_finding_auc(y, p)  # NaN prediction under a NaN label: expected, silent
+    p[0, 0] = np.nan
+    with pytest.warns(RuntimeWarning, match="1 rows have a non-finite prediction") as w:
+        a = per_finding_auc(y, p)
+    assert len(w) == 1 and a[0] == 1.0  # one warning per call; the row is still dropped
+    with pytest.raises(ValueError, match="non-finite"):
+        per_finding_auc(y, p, nonfinite_pred="raise")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert macro_auc(y, p, "ignore")[1] == 2
+        bootstrap_macro_auc(y, p, n_boot=20, nonfinite_pred="ignore")
+    with pytest.warns(RuntimeWarning) as w:
+        bootstrap_macro_auc(y, p, n_boot=20)
+    assert len(w) == 1  # once on the full set, not once per replicate
