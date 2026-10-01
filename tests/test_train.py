@@ -379,7 +379,8 @@ def test_predict_retries_nonfinite_batches_in_fp32():
     assert uids == [it["study_uid"] for it in items] and np.isfinite(p).all()
     assert st == {"n_retried_fp32": 3, "n_nonfinite": 0}
     _, p32, st32 = train_sup.predict(model, items, collate, torch.device("cpu"), "fp32", 0, batch_size=5)
-    np.testing.assert_allclose(p, p32)
+    # the retry runs one study at a time (an OOM-safe retry), so it matches the batched fp32 pass to float32 rounding
+    np.testing.assert_allclose(p, p32, rtol=0, atol=1e-6)
     assert st32 == {"n_retried_fp32": 0, "n_nonfinite": 0}
 
 

@@ -38,7 +38,7 @@ def preproc_from_manifest(man: dict) -> dict:
 
 
 def build(out: Path, ckpts: list[Path], weights: list[float], how: str, labels: Path | None, wheels: Path | None,
-          kaggle_user: str, slug: str, preproc: dict) -> dict:
+          kaggle_user: str, slug: str, preproc: dict, preproc_code_hash: str | None = None) -> dict:
     import sys
     sys.path.insert(0, str(REPO / "src"))
     from knee.paths import LABELS
@@ -64,7 +64,7 @@ def build(out: Path, ckpts: list[Path], weights: list[float], how: str, labels: 
             if whl.name.startswith("numpy-"):  # pip download adds it as a dependency; the image's numpy must stay
                 continue
             shutil.copy2(whl, out / "wheels" / whl.name)
-    spec = {"arms": arms, "how": how, "prior": prior, "preproc": preproc}
+    spec = {"arms": arms, "how": how, "prior": prior, "preproc": preproc, "preproc_code_hash": preproc_code_hash}
     (out / "arms.json").write_text(json.dumps(spec, indent=1))
     (out / "dataset-metadata.json").write_text(json.dumps(
         {"title": slug, "id": f"{kaggle_user}/{slug}", "licenses": [{"name": "CC0-1.0"}]}, indent=1))
@@ -79,21 +79,22 @@ def main() -> None:
     ap.add_argument("--how", default="mean", choices=["mean", "rank"])
     ap.add_argument("--labels", type=Path)
     ap.add_argument("--wheels", type=Path)
-    ap.add_argument("--cache-manifest", type=Path,
-                    help="the training cache's cache_manifest.json: its params become the inference PreprocParams "
-                         "(train/infer parity). Without it the code defaults are used, with a warning.")
+    ap.add_argument("--cache-manifest", type=Path, required=True,
+                    help="the training cache's cache_manifest.json: its params become the inference PreprocParams and "
+                         "its preproc_code_hash is checked by infer.py (train/infer parity)")
     ap.add_argument("--kaggle-user", default="dominictedrow")
     ap.add_argument("--slug", default="knee-bundle")
     a = ap.parse_args()
     weights = a.weight or [1.0] * len(a.ckpt)
     if len(weights) != len(a.ckpt):
         raise SystemExit("--weight must be given once per --ckpt (or not at all)")
-    if a.cache_manifest:
-        preproc = preproc_from_manifest(json.loads(a.cache_manifest.read_text()))
-    else:
-        preproc = {}
-        print("WARNING: no --cache-manifest: inference uses the PreprocParams defaults; make sure the cache did too")
-    spec = build(a.out, a.ckpt, weights, a.how, a.labels, a.wheels, a.kaggle_user, a.slug, preproc)
+    man = json.loads(a.cache_manifest.read_text())
+    preproc = preproc_from_manifest(man)
+    if not man.get("preproc_code_hash"):
+        print("WARNING: the cache manifest has no preproc_code_hash (built before 2026-09-30); infer.py can't check "
+              "that the preprocessing code is unchanged since the cache build")
+    spec = build(a.out, a.ckpt, weights, a.how, a.labels, a.wheels, a.kaggle_user, a.slug, preproc,
+                 man.get("preproc_code_hash"))
     print(json.dumps(spec, indent=1))
     print(f"\nstaged {a.out}. Upload (only with Dom's OK): kaggle datasets create -p {a.out} --dir-mode zip")
 

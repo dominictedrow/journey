@@ -104,22 +104,34 @@ def load_config(path: str | Path) -> dict:
 
 class ResumableRandomSampler(Sampler[int]):
     """A fresh permutation per epoch from (seed, epoch); `start` skips the first items (mid-epoch resume) without
-    loading them."""
+    loading them; `num_samples` stops the epoch early (train_sup: at the last full optimizer step, so no micro-batch
+    is computed and then thrown away).
 
-    def __init__(self, n: int, seed: int = 0, shuffle: bool = True):
-        self.n, self.seed, self.shuffle = n, seed, shuffle
-        self.epoch, self.start = 0, 0
+    encode_epoch=True yields `epoch * n + index` instead of `index`. The datasets decode it
+    (knee.data.dataset.decode_index), so the epoch reaches the DataLoader workers through the index itself. That lets
+    the loader keep persistent workers: a worker's dataset copy never sees `set_epoch`, and doesn't need to (review
+    2026-09-30, bug.md #10)."""
 
-    def set_epoch(self, epoch: int, start: int = 0) -> None:
-        self.epoch, self.start = epoch, start
+    def __init__(self, n: int, seed: int = 0, shuffle: bool = True, encode_epoch: bool = False):
+        self.n, self.seed, self.shuffle, self.encode_epoch = n, seed, shuffle, encode_epoch
+        self.epoch, self.start, self.num_samples = 0, 0, None
+
+    def set_epoch(self, epoch: int, start: int = 0, num_samples: int | None = None) -> None:
+        self.epoch, self.start, self.num_samples = epoch, start, num_samples
+
+    def _stop(self) -> int:
+        return self.n if self.num_samples is None else min(self.n, self.num_samples)
 
     def __iter__(self):
         order = np.random.default_rng((self.seed, self.epoch)).permutation(self.n) if self.shuffle \
             else np.arange(self.n)
-        return iter(order[self.start:].tolist())
+        order = order[self.start:self._stop()]
+        if self.encode_epoch:
+            order = order + self.epoch * self.n
+        return iter(order.tolist())
 
     def __len__(self) -> int:
-        return self.n - self.start
+        return max(0, self._stop() - self.start)
 
 
 def save_atomic(obj: dict, path: Path) -> None:
@@ -164,7 +176,9 @@ def stop_requested(run_dir: Path) -> bool:
 
 
 def average_state_dicts(states: list[dict]) -> dict:
-    """Uniform average of the float tensors (top-k epoch averaging / SWA-style); integer buffers from the first."""
+    """Uniform average of the float tensors (top-k epoch averaging / SWA-style); integer buffers from the first.
+    BatchNorm running statistics are averaged too, which is only exact if they didn't change between the epochs
+    (Track A freezes BN for that reason; trackA.py)."""
     out = {}
     for k, v in states[0].items():
         if torch.is_floating_point(v):

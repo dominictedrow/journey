@@ -39,11 +39,16 @@ class TrackAModel(nn.Module):
 
         cfg = {"backbone": "coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k", "pretrained": True, "head": {"kind": "attn_mil"},
                "window_chunk": 32, "window_dropout": 0.0, "grad_checkpointing": True, "slot_embed": True,
-               "slice_pos": False, **(cfg or {})}
+               "slice_pos": False, "freeze_bn": True, **(cfg or {})}
         self.cfg = cfg
         self.backbone = timm.create_model(cfg["backbone"], pretrained=cfg["pretrained"], num_classes=0)
         if cfg["grad_checkpointing"]:
             self.backbone.set_grad_checkpointing(True)
+        self.freeze_bn = bool(cfg["freeze_bn"])
+        if self.freeze_bn:
+            for m in self.bn_modules():
+                for prm in m.parameters(recurse=False):
+                    prm.requires_grad_(False)
         dim = self.backbone.num_features
         self.dim = dim
         # Optional extras on top of the public recipe (off = Raptor exactly). Zero/small init, so they start neutral.
@@ -60,24 +65,46 @@ class TrackAModel(nn.Module):
         self.chunk_buckets: list[int] | None = None  # set by compile_encoder
         self.channels_last = False
 
+    def bn_modules(self) -> list[nn.Module]:
+        """The backbone's BatchNorm layers (timm's BatchNormAct2d subclasses nn.BatchNorm2d)."""
+        return [m for m in self.backbone.modules() if isinstance(m, nn.modules.batchnorm._BatchNorm)]
+
+    def train(self, mode: bool = True):
+        """freeze_bn (default): BatchNorm stays in eval mode (pretrained running statistics, frozen affine) while the
+        rest trains. A batch here is the windows of one or two knees, highly correlated, so batch statistics are noisy
+        and the running averages built from them don't match what eval sees; top-k epoch averaging would also average
+        running statistics that drift between epochs, and with timm's gradient checkpointing the recompute in
+        backward updates them a second time (review 2026-09-30, bug.md #6)."""
+        super().train(mode)
+        if mode and self.freeze_bn:
+            for m in self.bn_modules():
+                m.eval()
+        return self
+
     def use_channels_last(self) -> None:
         """NHWC weights and inputs: cuDNN's tensor-core layout (−5% train, −3% inference on the T4, §2b). Exact."""
         self.channels_last = True
         self.backbone.to(memory_format=torch.channels_last)
 
     def compile_encoder(self, mode: str | None = None, buckets: list[int] | None = None, min_bucket: int = 4) -> None:
-        """torch.compile the backbone in place, fed only fixed chunk shapes. Exact in eval. In training, BatchNorm sees
-        the padded copies in the ragged chunk's batch statistics (knee.model.compiled explains why that's small)."""
+        """torch.compile the backbone in place, fed only fixed chunk shapes. Exact in eval, and in training with
+        freeze_bn (the default); with freeze_bn off, BatchNorm sees the padded copies in the ragged chunk's batch
+        statistics (knee.model.compiled explains why that's small)."""
         self.chunk_buckets = sorted(buckets) if buckets else default_buckets(self.window_chunk, min_bucket)
         compile_module(self.backbone, mode)
 
-    def encode_windows(self, x: torch.Tensor) -> torch.Tensor:
+    def _encode_chunk(self, x: torch.Tensor) -> torch.Tensor:
+        """uint8 chunk → normalized float → backbone. Casting per chunk keeps only one chunk in float at a time (the
+        whole Track A eval bag in fp32 is ~0.4 GB; review 2026-09-30)."""
         dt = self.mean.dtype  # fp32 normally; fp16 after to_half
         x = ((x.float() / 255.0 - self.mean.float()) / self.std.float()).to(dt)
         if self.channels_last:
             x = x.contiguous(memory_format=torch.channels_last)
-        outs = encode_chunks(self.backbone, x, self.window_chunk, self.chunk_buckets)
-        return torch.cat(outs) if outs else x.new_zeros((0, self.dim), dtype=dt)
+        return self.backbone(x)
+
+    def encode_windows(self, x: torch.Tensor) -> torch.Tensor:
+        outs = encode_chunks(self._encode_chunk, x, self.window_chunk, self.chunk_buckets)
+        return torch.cat(outs) if outs else x.new_zeros((0, self.dim), dtype=self.mean.dtype)
 
     def forward(self, batch: dict, return_attn: bool = False):
         if batch["x"].ndim == 6:

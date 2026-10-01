@@ -81,8 +81,10 @@ class KneeViT(nn.Module):
     def encode_windows(self, x: torch.Tensor) -> torch.Tensor:
         """uint8 or float [n, C, H, W] → [n, E], in chunks of window_chunk."""
         dt = self.encoder.norm.weight.dtype  # fp32 normally (autocast casts inside); fp16 after to_half
-        outs = encode_chunks(self.encoder, (to_input(x) if x.dtype == torch.uint8 else x).to(dt), self.window_chunk,
-                             self.chunk_buckets)
+
+        def enc(c: torch.Tensor) -> torch.Tensor:  # cast per chunk: only one chunk is float at a time
+            return self.encoder((to_input(c) if c.dtype == torch.uint8 else c).to(dt))
+        outs = encode_chunks(enc, x, self.window_chunk, self.chunk_buckets)
         return torch.cat(outs) if outs else x.new_zeros((0, self.encoder.dim), dtype=dt)
 
     def forward(self, batch: dict, return_attn: bool = False):

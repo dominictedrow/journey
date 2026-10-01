@@ -115,6 +115,32 @@ def probe(comp: Path, test_series, max_series: int = 400) -> dict:
     return out
 
 
+def check_preproc(spec: dict, params_cls, version: str, code_hash: str, allow_drift: bool = False):
+    """Train/infer parity (review 2026-09-30): the bundle must carry the training cache's full PreprocParams (a
+    missing block or field would silently fall back to the code defaults), the same PREPROC_VERSION, and the same
+    preprocessing code hash. Returns the PreprocParams to use."""
+    from dataclasses import fields
+    pp = spec.get("preproc")
+    if not pp:
+        raise RuntimeError("arms.json has no preprocessing block ('preproc'); rebuild the bundle with --cache-manifest")
+    missing = [f.name for f in fields(params_cls) if f.name not in pp]
+    if missing:
+        raise RuntimeError(f"arms.json preprocessing block lacks {missing}; rebuild the bundle with --cache-manifest")
+    if pp["version"] != version:
+        raise RuntimeError(f"bundle was trained on preprocessing {pp['version']}, code is {version}")
+    want = spec.get("preproc_code_hash")
+    if want is None:
+        log.warning("bundle has no preproc_code_hash (cache built before 2026-09-30): preprocessing code unchecked")
+    elif want != code_hash:
+        msg = (f"preprocessing code hash {code_hash} differs from the training cache's {want}: the test windows "
+               f"may not match training. Rebuild the cache, or pass --allow-preproc-drift if the change is known "
+               f"not to affect pixels")
+        if not allow_drift:
+            raise RuntimeError(msg)
+        log.warning(msg)
+    return params_cls(**pp)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--comp-dir")
@@ -122,6 +148,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="/kaggle/working")
     ap.add_argument("--workers", type=int, default=max((os.cpu_count() or 2) - 1, 0))
     ap.add_argument("--probe", type=int, default=1, help="1 = run the test-data probe (first submissions)")
+    ap.add_argument("--deadline-hours", type=float, default=8.0,
+                    help="multi-GPU: a shard still running this long after the start is killed and its studies get "
+                         "the fallback row (the notebook cap is 9 h; a lost submission scores nothing)")
+    ap.add_argument("--allow-preproc-drift", action="store_true",
+                    help="run even if the preprocessing code differs from the one that built the training cache")
     ap.add_argument("--gpus", default="auto",
                     help="'auto' = every visible GPU (Kaggle T4 ×2 → one process per GPU, studies split between them); "
                          "an int caps the count; 1 = the single-process path. --workers is split across the GPUs")
@@ -145,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     import pandas as pd
     import torch
 
-    from knee.data.preprocess import PREPROC_VERSION, PreprocParams, series_info_from_csv
+    from knee.data.preprocess import PREPROC_VERSION, PreprocParams, preproc_code_hash, series_info_from_csv
     from knee.infer.predict import load_arm, predict_dirs, predict_dirs_multi, write_submission
     from knee.paths import LABELS
     hw = hardware()
@@ -171,10 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     arms = [load_arm(ck, device, perf) for ck, perf in arm_specs] if n_dev <= 1 else None
     weights = [float(arm.get("weight", 1.0)) for arm in spec["arms"]]
     prior = np.asarray(spec.get("prior", [0.5] * len(LABELS)), dtype=np.float64)
-    pp = spec.get("preproc", {})
-    if pp.get("version", PREPROC_VERSION) != PREPROC_VERSION:  # train/infer parity: same preprocessing code version
-        raise RuntimeError(f"bundle was trained on preprocessing {pp['version']}, code is {PREPROC_VERSION}")
-    params = PreprocParams(**pp)
+    params = check_preproc(spec, PreprocParams, PREPROC_VERSION, preproc_code_hash(), a.allow_preproc_drift)
     T["load_arms"] = time.time() - t
 
     t = time.time()
@@ -191,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
         pred, timing, multi = predict_dirs_multi(
             dirs, series_info_from_csv(test_series), arm_specs, [f"cuda:{i}" for i in range(n_dev)], out / "shards",
             params, workers_per_device=-(-a.workers // n_dev), weights=weights, how=spec.get("how", "mean"),
-            fallback=prior, studies_per_forward=spf, cost=cost)
+            fallback=prior, studies_per_forward=spf, cost=cost, deadline=t_all + a.deadline_hours * 3600)
         log.info("multi-GPU %s", json.dumps(multi))
     T["predict"] = time.time() - t
 

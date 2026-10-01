@@ -33,8 +33,12 @@ def derive_shard(src: Path, dst: Path, src_px: int, px: int) -> int:
     if dst.exists():
         return dst.stat().st_size // (px * px)
     n = src.stat().st_size // (src_px * src_px)
-    mm = np.memmap(src, dtype=np.uint8, mode="r", shape=(n, src_px, src_px))
     tmp = dst.with_suffix(".u8.tmp")
+    if n == 0:  # a shard whose studies all failed is 0 bytes; np.memmap can't map an empty file
+        tmp.write_bytes(b"")
+        os.replace(tmp, dst)
+        return 0
+    mm = np.memmap(src, dtype=np.uint8, mode="r", shape=(n, src_px, src_px))
     with open(tmp, "wb") as fh:
         for i in range(0, n, CHUNK):
             block = np.asarray(mm[i: i + CHUNK])

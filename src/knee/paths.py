@@ -19,11 +19,27 @@ LABELS = [
 ]
 
 
+def _need(val: Path | None, key: str) -> Path:
+    if val is None:
+        raise KeyError(f"'{key}' not set: add it to {CONFIG_FILE} or set KNEE_{key.upper()}")
+    return val
+
+
 @dataclass(frozen=True)
 class Paths:
-    data_root: Path
+    """cache_root is required. data_root and audit_out are checked when read, not at load: only the tools that use
+    them need them (a Kaggle training run has no audit_out; review 2026-09-30)."""
+    _data_root: Path | None
     cache_root: Path
-    audit_out: Path
+    _audit_out: Path | None = None
+
+    @property
+    def data_root(self) -> Path:
+        return _need(self._data_root, "data_root")
+
+    @property
+    def audit_out(self) -> Path:
+        return _need(self._audit_out, "audit_out")
 
     @property
     def train_csv(self) -> Path:
@@ -44,10 +60,12 @@ def load_paths(config_file: Path | None = None) -> Paths:
     if f.exists():
         cfg = yaml.safe_load(f.read_text()) or {}
 
-    def get(key: str) -> Path:
+    def get(key: str, required: bool = True) -> Path | None:
         val = os.environ.get(f"KNEE_{key.upper()}") or cfg.get(key)
         if not val:
-            raise KeyError(f"'{key}' not set: add it to {CONFIG_FILE} or set KNEE_{key.upper()}")
+            if required:
+                raise KeyError(f"'{key}' not set: add it to {CONFIG_FILE} or set KNEE_{key.upper()}")
+            return None
         return Path(val)
 
-    return Paths(get("data_root"), get("cache_root"), get("audit_out"))
+    return Paths(get("data_root", required=False), get("cache_root"), get("audit_out", required=False))

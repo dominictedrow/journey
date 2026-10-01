@@ -12,7 +12,10 @@ from typing import Callable
 import torch
 from torch import nn
 
-NO_DECAY_NAMES = ("cls_token", "queries", "mask_token", "pos2d.table", "series_type.tables", "slot_embed.tables")
+# slice_pos.proj maps slice positions to an embedding: a position table in all but form, so no decay. The heads'
+# cls_w stays decayed on purpose: it is the classifier weight (a Linear in all but form), which ViT recipes decay.
+NO_DECAY_NAMES = ("cls_token", "queries", "mask_token", "pos2d.table", "series_type.tables", "slot_embed.tables",
+                  "slice_pos.proj.weight")
 
 
 def no_weight_decay(name: str, p: torch.Tensor) -> bool:

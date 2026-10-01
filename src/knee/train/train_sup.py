@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import copy
+import hashlib
 import json
 import os
 import time
@@ -32,7 +33,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from knee.data.dataset import CacheReader, StudyBagDataset, StudyWindowsDataset, collate_bag
+from knee.data.dataset import CacheReader, StudyBagDataset, StudyWindowsDataset, collate_bag, worker_init
 from knee.paths import LABELS
 from knee.train import common as C
 from knee.train.losses import RankBank, pairwise_rank_loss, soft_bce
@@ -59,7 +60,7 @@ DEFAULTS: dict = {
     "ckpt_minutes": 30, "log_every": 50,
     # docs/plan/03_performance_plan.md. compile (B4): torch.compile the window encoder at fixed chunk shapes (ragged
     # chunks padded up to `buckets`, default powers of two ≥ min_bucket); CUDA/Linux only. channels_last (B3): Track A
-    # only. Both exact, except that Track A's BatchNorm sees the padded copies in training (knee.model.compiled).
+    # only. Both exact (with Track A's default freeze_bn; without it, BatchNorm sees the padded copies in training).
     "perf": {"compile": False, "compile_mode": None, "buckets": None, "min_bucket": 4, "channels_last": False},
 }
 
@@ -111,11 +112,29 @@ def _same(keys: tuple, a, b) -> bool:
     if keys == ("folds", "fold"):
         return a is not None and b is not None and int(a) == int(b)
     if keys == ("folds", "file") and a and b and str(a) != str(b):
-        try:  # the same file under another spelling (relative vs absolute) is the same split
-            return os.path.samefile(a, b)
-        except OSError:
-            return False
+        return _same_file(Path(a), Path(b))
     return a == b
+
+
+def _sha1(path: Path) -> str:
+    return hashlib.sha1(path.read_bytes()).hexdigest()
+
+
+def _same_file(old: Path, new: Path) -> bool:
+    """The same folds file under another spelling (relative vs absolute), as a copy (same bytes), or, when the
+    recorded path no longer exists (a Kaggle input re-mounted at another /kaggle/input/<slug>), by file name. The
+    file-name fallback warns: it can't prove the split is the same."""
+    if old.exists() and new.exists():
+        try:
+            if os.path.samefile(old, new):
+                return True
+        except OSError:
+            pass
+        return _sha1(old) == _sha1(new)
+    if not old.exists() and old.name == new.name:
+        print(f"WARNING: recorded folds file {old} no longer exists; accepting {new} by file name", flush=True)
+        return True
+    return False
 
 
 def check_run_identity(run_dir: Path, cfg: dict) -> None:
@@ -196,23 +215,37 @@ def eager_ctx():
     return contextlib.nullcontext()
 
 
-@torch.no_grad()
-def predict(model, ds, collate, device, precision: str, workers: int, batch_size: int = 1
-            ) -> tuple[list[str], np.ndarray, dict]:
-    """Studies per forward = batch_size (the output doesn't depend on it: padded windows are never encoded, and the
-    head masks them; Track A's BatchNorm uses running statistics in eval).
+def eval_loader(ds, collate, device, workers: int, batch_size: int = 1, persistent: bool = False) -> DataLoader:
+    return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=workers, collate_fn=collate,
+                      pin_memory=device.type == "cuda", worker_init_fn=worker_init if workers else None,
+                      persistent_workers=persistent and workers > 0)
 
-    A batch whose reduced-precision output isn't finite (an fp16 overflow) or whose forward raises is re-run in fp32,
-    like infer/predict.run_arm. The check reads the array already copied to the CPU, so the normal path costs nothing.
+
+def split_batch(b: dict) -> list[dict]:
+    """A collated batch → one batch of 1 per study (tensors and lists sliced along dim 0). Padding stays, masked."""
+    n = len(b["study_uid"])
+    return [{k: v[i:i + 1] for k, v in b.items()} for i in range(n)]
+
+
+@torch.no_grad()
+def predict(model, ds, collate, device, precision: str, workers: int, batch_size: int = 1,
+            loader: DataLoader | None = None) -> tuple[list[str], np.ndarray, dict]:
+    """Studies per forward = batch_size (the output doesn't depend on it: padded windows are never encoded, and the
+    head masks them; Track A's BatchNorm uses running statistics in eval). `loader` reuses a (persistent) DataLoader
+    over `ds` instead of building one.
+
+    A batch whose reduced-precision output isn't finite (an fp16 overflow) or whose forward raises (e.g. CUDA OOM) is
+    re-run in fp32, one study at a time. The retry runs after the except block: inside it, the traceback still holds
+    the failed forward's frames and their activations, so empty_cache can't free them (review 2026-09-30). The check
+    reads the array already copied to the CPU, so the normal path costs nothing.
     Returns (uids, probs, {"n_retried_fp32": batches retried, "n_nonfinite": studies still non-finite})."""
     model.eval()
-    dl = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=workers, collate_fn=collate,
-                    pin_memory=device.type == "cuda")
+    dl = loader if loader is not None else eval_loader(ds, collate, device, workers, batch_size)
     uids, out = [], []
     stats = {"n_retried_fp32": 0, "n_nonfinite": 0}
     for b in dl:
         b = to_device(b, device)
-        p = None
+        p, err = None, None
         try:
             with C.autocast_ctx(device, precision):
                 logits = model(b)
@@ -220,13 +253,17 @@ def predict(model, ds, collate, device, precision: str, workers: int, batch_size
         except RuntimeError as e:
             if precision == "fp32":
                 raise
-            print(f"WARNING: {precision} eval forward failed ({e}); retrying the batch in fp32", flush=True)
+            err = str(e)
+        logits = None
+        if precision != "fp32" and (p is None or not np.isfinite(p).all()):
+            if err is not None:
+                print(f"WARNING: {precision} eval forward failed ({err[:200]}); retrying in fp32, one study at a "
+                      f"time", flush=True)
             if device.type == "cuda":
                 torch.cuda.empty_cache()
-        if precision != "fp32" and (p is None or not np.isfinite(p).all()):
             stats["n_retried_fp32"] += 1
             with C.autocast_ctx(device, "fp32"), eager_ctx():  # autocast off; training never .half()s the weights
-                p = torch.sigmoid(model(b).float()).cpu().numpy()
+                p = np.concatenate([torch.sigmoid(model(bi).float()).cpu().numpy() for bi in split_batch(b)])
         stats["n_nonfinite"] += int((~np.isfinite(p).all(axis=1)).sum())
         out.append(p)
         uids += list(b["study_uid"])
@@ -234,11 +271,12 @@ def predict(model, ds, collate, device, precision: str, workers: int, batch_size
 
 
 def evaluate(uids, probs, labels: pd.DataFrame, gold: pd.DataFrame | None, lo: float, hi: float,
-             n_retried: int = 0) -> dict:
+             n_retried: int = 0, n_boot: int = 1000) -> dict:
     """A study still non-finite after the fp32 retry means the weights misbehave on real inputs: that epoch's
     val_macro_auc is NaN, so top_k_epochs ranks it last and it never gets averaged into model_avg.pt (decision
     2026-09-30, pending Dom's confirmation). The AUC over the finite studies is kept as val_macro_auc_finite, for
-    diagnosis only."""
+    diagnosis only. n_boot: the gold CI is never used for selection, so per-epoch evals use fewer replicates
+    (~10 s at 1000)."""
     y = binarize(labels.loc[uids, LABELS].to_numpy(), lo, hi)
     n_bad = int((~np.isfinite(probs).all(axis=1)).sum()) if len(probs) else 0
     auc, n = macro_auc(y, probs)
@@ -252,7 +290,7 @@ def evaluate(uids, probs, labels: pd.DataFrame, gold: pd.DataFrame | None, lo: f
         g = [i for i, u in enumerate(uids) if u in gold.index]
         if g:
             yg = gold.loc[[uids[i] for i in g], LABELS].to_numpy()
-            bs = bootstrap_macro_auc(yg, probs[g], n_boot=1000)
+            bs = bootstrap_macro_auc(yg, probs[g], n_boot=n_boot)
             res.update({"gold_macro_auc": bs["auc"], "gold_lo": bs["lo"], "gold_hi": bs["hi"], "gold_n": len(g)})
     return res
 
@@ -336,6 +374,8 @@ def main(argv=None) -> dict:
             scaler.load_state_dict(ck["scaler"])
         state = ck["state"]
         C.set_rng_state(ck["rng"])
+        if ck.get("rank_bank"):
+            bank.load_state_dict(ck["rank_bank"], device)
         print(f"resumed: epoch {state['epoch']} batch {state['batch_in_epoch']}")
     (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False))
     n_params = sum(p.numel() for p in model.parameters())
@@ -357,25 +397,33 @@ def main(argv=None) -> dict:
     def checkpoint() -> None:
         check_finite("checkpoint")
         C.save_atomic({"model": model.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(),
-                       "state": state, "rng": C.rng_state(), "cfg": cfg}, last)
+                       "state": state, "rng": C.rng_state(), "cfg": cfg, "rank_bank": bank.state_dict()}, last)
 
-    sampler = C.ResumableRandomSampler(len(ds_tr), seed=cfg["seed"])
+    # The epoch travels inside the sampler's indices (encode_epoch), so both loaders are built once and keep their
+    # workers: on Windows (spawn) a new loader per epoch re-imports torch and re-pickles the cache index into every
+    # worker, for training and again for each eval (review 2026-09-30, bug.md #10).
+    sampler = C.ResumableRandomSampler(len(ds_tr), seed=cfg["seed"], encode_epoch=True)
+    persistent = dcfg["workers"] > 0
+    dl = DataLoader(ds_tr, batch_size=bs, sampler=sampler, num_workers=dcfg["workers"], collate_fn=collate,
+                    drop_last=True, pin_memory=device.type == "cuda", persistent_workers=persistent,
+                    worker_init_fn=worker_init if dcfg["workers"] else None)
+    dl_va = eval_loader(ds_va, collate, device, dcfg["workers"], dcfg["eval_batch_size"], persistent) if va_uids \
+        else None
+    # Stop each epoch at its last full optimizer step: the trailing batches_per_epoch % accum micro-batches would be
+    # forward/backward-ed and then dropped by the zero_grad below.
+    used_batches = steps_per_epoch * accum
     t_ckpt = time.time()
     while state["epoch"] < ocfg["epochs"]:
         ep = state["epoch"]
-        ds_tr.set_epoch(ep)
-        sampler.set_epoch(ep, start=state["batch_in_epoch"] * bs)
-        dl = DataLoader(ds_tr, batch_size=bs, sampler=sampler, num_workers=dcfg["workers"], collate_fn=collate,
-                        drop_last=True, pin_memory=device.type == "cuda")
+        sampler.set_epoch(ep, start=state["batch_in_epoch"] * bs, num_samples=used_batches * bs)
         model.train()
-        # The last batches_per_epoch % accum micro-batches of the previous epoch were backpropagated but never
-        # stepped; drop them so they don't inflate this epoch's first step (checkpoints only happen at accum
-        # boundaries, so a resume never carries partial gradients either).
+        # Partial gradients never cross an epoch (each epoch ends on a step, and checkpoints only happen at accum
+        # boundaries); this is a guard.
         opt.zero_grad(set_to_none=True)
         t0, run_n = time.time(), 0
         meter.reset()
         for b in dl:
-            if state["batch_in_epoch"] >= batches_per_epoch:
+            if state["batch_in_epoch"] >= used_batches:
                 break
             w = torch.from_numpy(np.stack([w_of[u] for u in b["study_uid"]]))
             b = to_device(b, device)
@@ -423,37 +471,64 @@ def main(argv=None) -> dict:
         rec = {"epoch": ep}
         if va_uids:
             uids, probs, st = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"],
-                                      dcfg["eval_batch_size"])
+                                      dcfg["eval_batch_size"], loader=dl_va)
             rec.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"],
-                                st["n_retried_fp32"]))
+                                st["n_retried_fp32"], n_boot=200))
             pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(
                 run_dir / "epochs" / f"oof_ep{ep:03d}.parquet", index=False)
         C.save_atomic({"model": model.state_dict(), "epoch": ep}, run_dir / "epochs" / f"ep{ep:03d}.pt")
         state["history"].append(rec)
         log.write(**rec)
         print(f"epoch {ep}: {rec}", flush=True)
-        keep = top_k_epochs(state["history"], cfg["select"]["top_k"], bool(va_uids))
-        for f in (run_dir / "epochs").glob("ep*.pt"):
-            if int(f.stem[2:]) not in keep and int(f.stem[2:]) != ep:
-                f.unlink()
         state["epoch"] += 1
         state["batch_in_epoch"] = 0
         checkpoint()
         t_ckpt = time.time()
+        # Prune only after last.pt records this epoch: pruning first, then a kill before the checkpoint, would resume
+        # with a history whose top-k still names a file that's gone (review 2026-09-30).
+        keep = top_k_epochs(state["history"], cfg["select"]["top_k"], bool(va_uids))
+        for f in (run_dir / "epochs").glob("ep*.pt"):
+            if int(f.stem[2:]) not in keep:
+                f.unlink()
+        # A deadline (multi_fold --hours) that lands during the eval above must stop here, not one epoch later.
+        if state["epoch"] < ocfg["epochs"] and C.stop_requested(run_dir):
+            print(f"STOP: saved {last} after epoch {ep}; re-run the same command to resume.")
+            return {"stopped": True}
 
     # ---- final: average the top-k epochs, evaluate, write the outputs
-    keep = top_k_epochs(state["history"], cfg["select"]["top_k"], bool(va_uids))
+    keep = [e for e in top_k_epochs(state["history"], cfg["select"]["top_k"], bool(va_uids))
+            if (run_dir / "epochs" / f"ep{e:03d}.pt").exists()]
+    if not keep:
+        raise SystemExit(f"no top-k epoch weights left in {run_dir / 'epochs'}")
     states = [torch.load(run_dir / "epochs" / f"ep{e:03d}.pt", map_location="cpu", weights_only=False)["model"]
               for e in keep]
     model.load_state_dict(C.average_state_dicts(states))
-    C.save_atomic({"model": model.state_dict(), "epochs": keep, "cfg": cfg}, run_dir / "model_avg.pt")
     # epochs + run_name: multi_fold reads them to tell a finished fold from one whose optim.epochs was raised
     result = {"fold": fold, "run_name": cfg["run_name"], "epochs": ocfg["epochs"], "top_epochs": keep}
+    avg_state, used = model.state_dict(), keep
     if va_uids:
         uids, probs, st = predict(model, ds_va, collate, device, cfg["precision"], dcfg["workers"],
-                                  dcfg["eval_batch_size"])
-        result.update(evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"],
-                               st["n_retried_fp32"]))
+                                  dcfg["eval_batch_size"], loader=dl_va)
+        res = evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"], st["n_retried_fp32"])
+        # The single best epoch is logged next to the average; if the average is worse (e.g. averaged BatchNorm
+        # statistics that don't match the averaged weights), the best epoch is used instead. Its OOF and metrics
+        # were already computed at its epoch end, so this costs no extra eval.
+        best = top_k_epochs(state["history"], 1, True)[0]
+        best_rec = next(r for r in state["history"] if r["epoch"] == best)
+        b_auc, a_auc = best_rec.get("val_macro_auc", np.nan), res["val_macro_auc"]
+        result.update(best_epoch=best, best_epoch_val_macro_auc=b_auc, avg_val_macro_auc=a_auc)
+        if len(keep) > 1 and np.isfinite(b_auc) and not (a_auc >= b_auc):
+            print(f"WARNING: top-{len(keep)} average (val AUC {a_auc}) is worse than epoch {best} alone ({b_auc}); "
+                  f"using epoch {best}", flush=True)
+            best_f = run_dir / "epochs" / f"ep{best:03d}.pt"
+            avg_state = torch.load(best_f, map_location="cpu", weights_only=False)["model"]
+            used = [best]
+            oof = pd.read_parquet(run_dir / "epochs" / f"oof_ep{best:03d}.parquet").set_index("StudyInstanceUID")
+            uids, probs = list(oof.index), oof[LABELS].to_numpy()
+            res = evaluate(uids, probs, labels, gold, cfg["labels"]["lo"], cfg["labels"]["hi"],
+                           int(best_rec.get("val_n_retried_fp32", 0)))
+        result.update(res)
+        result["used_epochs"] = used
         pd.DataFrame(probs, columns=LABELS).assign(StudyInstanceUID=uids).to_parquet(run_dir / "oof.parquet",
                                                                                      index=False)
         y = binarize(labels.loc[uids, LABELS].to_numpy(), cfg["labels"]["lo"], cfg["labels"]["hi"])
@@ -464,6 +539,7 @@ def main(argv=None) -> dict:
                 tab["gold_auc"] = auc_table(gold.loc[[uids[i] for i in g], LABELS].to_numpy(), probs[g],
                                             nonfinite_pred="ignore")["auc"]
         (run_dir / "auc_table.md").write_text(df_to_markdown(tab))
+    C.save_atomic({"model": avg_state, "epochs": used, "cfg": cfg}, run_dir / "model_avg.pt")
     (run_dir / "metrics.json").write_text(json.dumps(result, indent=2, default=float))
     print("FINAL:", result, flush=True)
     return result

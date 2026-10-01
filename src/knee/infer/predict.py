@@ -22,7 +22,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from knee.data.dataset import SPAN, bag_sample, collate_bag, slots_sample
+from knee.data.dataset import SPAN, bag_sample, collate_bag, slots_sample, worker_init
 from knee.data.preprocess import PreprocParams, preprocess_study
 from knee.paths import LABELS
 from knee.utils.metrics import rank_normalize
@@ -70,6 +70,16 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     return model, ck["cfg"]["data"]
 
 
+def sample_key(data_cfg: dict) -> tuple:
+    """What an arm's input depends on. Arms with the same key (e.g. the 5 folds of one recipe) get the same windows,
+    so each study's windows are built, sent from the worker and copied to the GPU once, not once per arm (review
+    2026-09-30, bug.md #7)."""
+    if data_cfg["format"] == "bag":
+        return ("bag", data_cfg["train_windows"], data_cfg["eval_windows"], data_cfg["out_px"],
+                data_cfg.get("max_series"))
+    return ("slots", data_cfg["eval_windows"], data_cfg["out_px"])
+
+
 def arm_sample(series: list, data_cfg: dict) -> dict:
     """ProcessedSeries list → one study's (uncollated) model input for an arm, built by the training code."""
     pairs = [(s.pixels, {**s.meta, "positions_mm": s.positions_mm, "n_slices": len(s.pixels)}) for s in series]
@@ -105,10 +115,17 @@ def n_windows(sample: dict) -> int:
 
 
 class TestStudies(Dataset):
-    """Worker-side preprocessing: one item = (uid, per-arm inputs or None, error, seconds)."""
+    """Worker-side preprocessing: one item = (uid, {sample key: input} or None, error, seconds).
+
+    Only the series some arm can use are decoded: with slots-only arms (Track A), the unslotted series are skipped
+    (slot assignment needs only the headers; review 2026-09-30)."""
 
     def __init__(self, study_dirs: list[Path], series_info: dict, params: PreprocParams, data_cfgs: list[dict]):
-        self.dirs, self.info, self.params, self.data_cfgs = study_dirs, series_info, params, data_cfgs
+        self.dirs, self.info, self.params = study_dirs, series_info, params
+        self.cfgs = {}
+        for c in data_cfgs:
+            self.cfgs.setdefault(sample_key(c), c)
+        self.render = "slots" if all(c["format"] == "slots" for c in data_cfgs) else "all"
 
     def __len__(self) -> int:
         return len(self.dirs)
@@ -117,9 +134,9 @@ class TestStudies(Dataset):
         d = Path(self.dirs[i])
         t0 = time.time()
         try:
-            series, _ = preprocess_study(d, self.info, self.params)
-            inputs = [arm_sample(series, c) for c in self.data_cfgs]
-            if all(n_windows(b) == 0 for b in inputs):
+            series, _ = preprocess_study(d, self.info, self.params, render=self.render)
+            inputs = {k: arm_sample(series, c) for k, c in self.cfgs.items()}
+            if all(n_windows(b) == 0 for b in inputs.values()):
                 raise ValueError("no usable windows")
             return d.name, inputs, None, time.time() - t0
         except Exception as e:  # noqa: BLE001 - a bad study must not kill the submission
@@ -128,7 +145,8 @@ class TestStudies(Dataset):
 
 @torch.no_grad()
 def run_arm(model, batch: dict, device) -> np.ndarray:
-    """→ [B, 12] probabilities for a batch of B studies. fp16 on CUDA (the T4 has no bf16 tensor cores [W]): autocast, or plain fp16 if the model was loaded with
+    """→ [B, 12] probabilities for a batch of B studies (rows may still be non-finite after the retry: the caller
+    replaces those). fp16 on CUDA (the T4 has no bf16 tensor cores [W]): autocast, or plain fp16 if the model was loaded with
     perf.half (autocast would bring back the fp32 LayerNorm casts). fp32 retry if it fails or gives NaN/inf."""
     from knee.model.compiled import is_half
     b = {k: v.to(device, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
@@ -142,7 +160,8 @@ def run_arm(model, batch: dict, device) -> np.ndarray:
             log.warning("non-finite fp16 output; retrying in fp32")
         except RuntimeError as e:
             log.warning("fp16 forward failed (%s); retrying in fp32", e)
-            torch.cuda.empty_cache()
+        # empty_cache here, not in the except: there the traceback still holds the failed forward's activations
+        torch.cuda.empty_cache()
         if half:  # fp16 → fp32 → fp16 is lossless, so the retry leaves the weights exactly as they were
             model.float()
             try:
@@ -191,19 +210,36 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
     k = max(1, int(studies_per_forward))
     ds = TestStudies(study_dirs, series_info, params, [c for _, c in arms])
     dl = DataLoader(ds, batch_size=None, shuffle=False, num_workers=workers,
-                    prefetch_factor=max(2, k) if workers else None)
+                    prefetch_factor=max(2, k) if workers else None, worker_init_fn=worker_init if workers else None)
     uids, per_arm, rows = [], [[] for _ in arms], []
+    keys = [sample_key(c) for _, c in arms]
 
-    def forward(group: list[tuple[str, list]]) -> list[list[np.ndarray]]:
-        """[(uid, per-arm samples)] → per study, per arm, 12 probabilities."""
+    def forward(group: list[tuple[str, dict]]) -> list[list[np.ndarray]]:
+        """[(uid, {sample key: input})] → per study, per arm, 12 probabilities. One collate + host→device copy per
+        distinct sample key, shared by every arm with that key."""
         out = [[] for _ in group]
+        on_dev: dict = {}
         for a, (m, cfg) in enumerate(arms):
-            p = run_arm(m, collate_arm([inp[a] for _, inp in group], cfg), device)
+            if keys[a] not in on_dev:
+                batch = collate_arm([inp[keys[a]] for _, inp in group], cfg)
+                on_dev[keys[a]] = {kk: v.to(device, non_blocking=True) if torch.is_tensor(v) else v
+                                   for kk, v in batch.items()}
+            p = run_arm(m, on_dev[keys[a]], device)
             for i in range(len(group)):
                 out[i].append(p[i])
         return out
 
-    def flush(group: list[tuple[str, list, float]]) -> None:
+    def finite_or_fallback(uid: str, probs: list[np.ndarray], err):
+        """A study whose output is still non-finite after the fp32 retry gets the fallback row for that arm (and the
+        error column says so) instead of reaching write_submission (review 2026-09-30, bug.md #8)."""
+        bad = [a for a, p in enumerate(probs) if not np.isfinite(p).all()]
+        if not bad:
+            return probs, err
+        log.warning("study %s: non-finite output from arm(s) %s after the fp32 retry → fallback row for them", uid, bad)
+        probs = [fallback if a in bad else p for a, p in enumerate(probs)]
+        return probs, (err + "; " if err else "") + f"non-finite output from arm(s) {bad}"
+
+    def flush(group: list[tuple[str, dict, float]]) -> None:
         t0 = time.time()
         probs, errs = None, [None] * len(group)
         try:
@@ -230,6 +266,8 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
             if p is None:
                 log.warning("study %s → fallback row (%s)", uid, errs[i])
                 p = [fallback] * len(arms)
+            else:
+                p, errs[i] = finite_or_fallback(uid, p, errs[i])
             emit(uid, p, errs[i], t_pre, dt)
 
     def emit(uid, probs, err, t_pre, t_model) -> None:
@@ -238,7 +276,7 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
             per_arm[a].append(p)
         rows.append({"StudyInstanceUID": uid, "error": err, "preprocess_s": t_pre, "model_s": t_model})
 
-    group: list[tuple[str, list, float]] = []
+    group: list[tuple[str, dict, float]] = []
     for uid, inputs, err, t_pre in dl:
         if inputs is None:
             log.warning("study %s → fallback row (%s)", uid, err)
@@ -300,13 +338,17 @@ def predict_dirs_multi(study_dirs: list[Path], series_info: dict, arm_specs: lis
                        devices: list[str], work_dir: str | Path, params: PreprocParams = PreprocParams(),
                        workers_per_device: int = 1, weights: list[float] | None = None, how: str = "mean",
                        fallback: np.ndarray | None = None, studies_per_forward: int = 1,
-                       cost: dict[str, float] | None = None) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+                       cost: dict[str, float] | None = None, deadline: float | None = None
+                       ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """predict_dirs over several devices at once → (predictions, timing log with a `device` column, info).
 
     arm_specs = [(checkpoint path, perf dict)]: each child loads its own copy. The arm blend runs once here over all
     studies, so the output is the same as predict_dirs on one device. If a child dies (CUDA error, host OOM), its
     shard is re-run once in this process on the same device after the others finish; only if that fails too do its
-    studies get the fallback row (write_submission fills them). Spawned, not forked: CUDA can't be used in a fork."""
+    studies get the fallback row (write_submission fills them). Spawned, not forked: CUDA can't be used in a fork.
+
+    deadline (a time.time() value): a shard still running then is killed and its studies get the fallback row, with
+    no re-run, so a hung child can't run the notebook into the 9 h cap and lose the whole submission."""
     import multiprocessing as mp
     import pickle
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
@@ -325,12 +367,26 @@ def predict_dirs_multi(study_dirs: list[Path], series_info: dict, arm_specs: lis
         jobs.append((k, dev, idx, args, out, p))
         log.info("shard %d → %s: %d studies, cost %.0f", k, dev, len(idx),
                  sum((cost or {}).get(Path(study_dirs[i]).name, 1.0) for i in idx))
-    info: dict = {"devices": list(devices), "shard_sizes": [len(s) for s in shards], "retried": [], "lost": []}
+    info: dict = {"devices": list(devices), "shard_sizes": [len(s) for s in shards], "retried": [], "lost": [],
+                  "timed_out": []}
     results = []
     for k, dev, idx, args, out, p in jobs:
-        p.join()
+        p.join(None if deadline is None else max(0.0, deadline - time.time()))
+        if p.is_alive():
+            log.error("shard %d on %s still running at the deadline; killing it, its %d studies get the fallback row",
+                      k, dev, len(idx))
+            p.kill()  # its DataLoader workers exit on their own when their parent dies
+            p.join(30)
+            info["timed_out"].append(k)
+            info["lost"].append(k)
+            continue
         if p.exitcode == 0 and out.exists():
             results.append(pickle.loads(out.read_bytes()))
+            continue
+        if deadline is not None and time.time() > deadline:
+            log.error("shard %d on %s exited with %s after the deadline; no re-run, its %d studies get the fallback "
+                      "row", k, dev, p.exitcode, len(idx))
+            info["lost"].append(k)
             continue
         log.error("shard %d on %s exited with %s; re-running it in the main process", k, dev, p.exitcode)
         info["retried"].append(k)
@@ -354,13 +410,15 @@ def write_submission(pred: pd.DataFrame, expected_uids: list[str], out: str | Pa
     """Exactly one row per expected study, in the expected order, submission column order; missing → fallback."""
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
     sub = pd.DataFrame({"StudyInstanceUID": list(expected_uids)}).merge(pred, on="StudyInstanceUID", how="left")
-    missing = sub[LABELS].isna().any(axis=1)
-    if missing.any():
-        log.warning("%d studies without predictions → fallback", int(missing.sum()))
-        sub.loc[missing, LABELS] = fallback
+    # missing (NaN from the merge) or non-finite (inf/NaN that got past predict_raw) → the whole row is the fallback.
+    # Never an assert on the values: that would lose the whole submission after the full run (review 2026-09-30).
+    bad = ~np.isfinite(sub[LABELS].to_numpy(dtype=np.float64)).all(axis=1)
+    if bad.any():
+        log.warning("%d studies without (finite) predictions → fallback", int(bad.sum()))
+        sub.loc[bad, LABELS] = fallback
     sub = sub[SUBMISSION_COLUMNS]
     assert list(sub.columns) == SUBMISSION_COLUMNS
     assert sub.StudyInstanceUID.tolist() == list(expected_uids) and sub.StudyInstanceUID.is_unique
-    assert np.isfinite(sub[LABELS].to_numpy()).all()
+    assert np.isfinite(sub[LABELS].to_numpy(dtype=np.float64)).all()  # holds by construction (fallback is finite)
     sub.to_csv(out, index=False)
     return sub

@@ -37,6 +37,24 @@ _DUP_TOL_MM = 0.05       # slices closer than this along the normal share a posi
 _ORIENT_TOL = 0.995      # |cos| between a slice normal and the series' majority normal (~5.7°)
 
 
+# The modules whose code decides the cached pixels and metadata. Their hash goes into the cache manifest and from
+# there into the Kaggle bundle; notebooks/infer.py refuses a bundle whose hash differs from the code it runs, since a
+# preprocessing edit after the cache build means test windows no longer match training (PREPROC_VERSION alone is a
+# manual string; review 2026-09-30).
+PREPROC_MODULES = ("preprocess", "dicom_io", "crop_resize", "geometry", "normalize", "series_meta", "series_select")
+
+
+def preproc_code_hash() -> str:
+    """sha1 over the PREPROC_MODULES sources (line endings normalized, so a Windows checkout hashes the same)."""
+    import hashlib
+    h = hashlib.sha1()
+    here = Path(__file__).resolve().parent
+    for name in PREPROC_MODULES:
+        h.update(name.encode() + b"\0")
+        h.update((here / f"{name}.py").read_bytes().replace(b"\r\n", b"\n"))
+    return h.hexdigest()[:16]
+
+
 @dataclass(frozen=True)
 class PreprocParams:
     crop_mm: float = CR.CROP_MM
@@ -120,13 +138,7 @@ def _read_series(series_dir: Path, series_uid: str, plane_csv: str | None) -> _S
             n_dup_dropped += len(files) - int(sum(sel))
             files = [f for f, k in zip(files, sel) if k]
             pos = pos[np.asarray(sel)]
-        order = sorted(range(len(files)), key=lambda i: (round(pos[i] / _DUP_TOL_MM), _inst(files[i])))
-        kept, last = [], None
-        for i in order:
-            b = round(pos[i] / _DUP_TOL_MM)
-            if b != last:
-                kept.append(i)
-                last = b
+        kept = _dedup_positions(pos, files)
         n_dup_dropped += len(files) - len(kept)
         files = [files[i] for i in kept]
         pos = pos[kept]
@@ -171,6 +183,21 @@ def _read_series(series_dir: Path, series_uid: str, plane_csv: str | None) -> _S
     return _SeriesHeaders(series_uid, files, pos, iop, plane, meta)
 
 
+def _dedup_positions(pos: np.ndarray, files: list) -> list[int]:
+    """Indices to keep, one per position cluster. A cluster = slices whose positions are within _DUP_TOL_MM of the
+    cluster's first (lowest) position; the lowest InstanceNumber wins, then the file path. Clustering, not fixed
+    round(pos / tol) buckets: two near-identical positions on either side of a bucket edge would both survive
+    (review 2026-09-30)."""
+    order = sorted(range(len(files)), key=lambda i: (pos[i], _inst(files[i]), str(files[i].path)))
+    clusters: list[list[int]] = []
+    for i in order:
+        if clusters and pos[i] - pos[clusters[-1][0]] < _DUP_TOL_MM:
+            clusters[-1].append(i)
+        else:
+            clusters.append([i])
+    return [min(c, key=lambda i: (_inst(files[i]), str(files[i].path))) for c in clusters]
+
+
 def _inst(f) -> int:
     try:
         return int(f.header.get("InstanceNumber"))
@@ -208,16 +235,35 @@ def _render_series(sh: _SeriesHeaders, mirror: bool, p: PreprocParams) -> Proces
     return ProcessedSeries(sh.series_uid, out, pos, valid_a, meta)
 
 
+def _fluid(meta: dict, info: dict) -> tuple[int | None, bool]:
+    """(the CSV flag, the fluid flag used): the CSV's Fluid_Sensitive when given, else the header fat-sat."""
+    csv_fluid = info.get("fluid")
+    return (None if csv_fluid is None else int(csv_fluid),
+            bool(csv_fluid) if csv_fluid is not None else bool(meta["fat_sat_header"]))
+
+
+def _slot_rows(items: list[tuple[str, dict, int]]) -> list[dict]:
+    """[(series_uid, meta, n usable slices)] → assign_slots input."""
+    return [{"series_uid": uid, "plane": m["plane"], "fluid": m["fluid"], "contrast_class": m["contrast_class"],
+             "n_slices": n, "series_number": m["series_number"]} for uid, m, n in items]
+
+
 def preprocess_study(study_dir: str | os.PathLike, series_info: dict[str, dict] | None = None,
-                     params: PreprocParams = PreprocParams(), series_uids: list[str] | None = None
-                     ) -> tuple[list[ProcessedSeries], dict]:
+                     params: PreprocParams = PreprocParams(), series_uids: list[str] | None = None,
+                     render: str = "all") -> tuple[list[ProcessedSeries], dict]:
     """Process every series of one study folder.
 
     series_info: {SeriesInstanceUID: {"fluid": 0/1, "plane": "Sagittal"...}} from train_series.csv / test_series.csv.
     series_uids: restrict to these series (default: every sub-folder).
+    render: "all" decodes every series (the cache, Track B). "slots" decodes only the series that get a slot (Track
+    A inference: about 10% of the decode is series no slot uses; review 2026-09-30). The slots are chosen from the
+    headers (file counts) first, then re-assigned among the decoded series from their decoded slice counts, exactly as
+    "all" does; the two agree unless a slice fails to decode (none in the train corpus, docs/data_audit.md).
     Returns (series in folder-name order, study meta with laterality and slots). Never raises for bad data: a series
     that can't be read is left out and logged.
     """
+    if render not in ("all", "slots"):
+        raise ValueError(f"render must be 'all' or 'slots', not {render!r}")
     study_dir = Path(study_dir)
     series_info = series_info or {}
     dirs = sorted(e.name for e in os.scandir(study_dir) if e.is_dir())
@@ -231,27 +277,26 @@ def preprocess_study(study_dir: str | os.PathLike, series_info: dict[str, dict] 
             log.exception("series %s failed in header pass: %s", uid, e)
             sh = None
         if sh is not None:
+            sh.meta["fluid_csv"], sh.meta["fluid"] = _fluid(sh.meta, series_info.get(uid) or {})
             headers.append(sh)
 
     lat, lat_src = G.resolve_study_laterality([s.meta["laterality_tag"] for s in headers],
                                               [s.meta["center_x"] for s in headers], params.lat_dead_zone_mm)
     mirror = params.canonicalize_laterality and lat == "L"
+    to_render = headers
+    if render == "slots":
+        pre = set(assign_slots(_slot_rows([(h.series_uid, h.meta, len(h.files)) for h in headers])).values())
+        to_render = [h for h in headers if h.series_uid in pre]
     out = []
-    for sh in headers:
+    for sh in to_render:
         try:
             ps = _render_series(sh, mirror, params)
         except Exception as e:  # noqa: BLE001
             log.exception("series %s failed in render: %s", sh.series_uid, e)
             continue
-        info = series_info.get(sh.series_uid) or {}
-        csv_fluid = info.get("fluid")
-        ps.meta["fluid_csv"] = None if csv_fluid is None else int(csv_fluid)
-        ps.meta["fluid"] = bool(csv_fluid) if csv_fluid is not None else bool(ps.meta["fat_sat_header"])
         out.append(ps)
 
-    slots = assign_slots([{"series_uid": s.series_uid, "plane": s.meta["plane"], "fluid": s.meta["fluid"],
-                           "contrast_class": s.meta["contrast_class"], "n_slices": int(s.valid.sum()),
-                           "series_number": s.meta["series_number"]} for s in out])
+    slots = assign_slots(_slot_rows([(s.series_uid, s.meta, int(s.valid.sum())) for s in out]))
     slot_of = {uid: slot for slot, uid in slots.items()}
     for s in out:
         s.meta["slot"] = slot_of.get(s.series_uid)

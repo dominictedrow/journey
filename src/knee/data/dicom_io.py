@@ -110,16 +110,31 @@ def read_series_headers(series_dir: str | os.PathLike) -> pd.DataFrame:
 
 
 def decode_pixels(ds: pydicom.Dataset, path: str = "?") -> np.ndarray | None:
-    """float32 (rows, cols) after the modality LUT (RescaleSlope/Intercept). MONOCHROME1 is inverted so that
-    bright always means high signal (none seen in the corpus [KD]; kept as insurance). None if it can't decode."""
+    """float32 (rows, cols) after the modality LUT (RescaleSlope/Intercept). MONOCHROME1 is negated so that bright
+    always means high signal (none seen in the corpus [KD]; kept as insurance). Negation, not max − x: a per-slice
+    max would shift each slice differently, and the per-series window takes care of the offset. None if it can't
+    decode.
+
+    A linear rescale is applied in float32: pydicom's apply_modality_lut returns float64 (2× the memory of the slice
+    for every Philips slice; review 2026-09-30). A real Modality LUT Sequence still goes through pydicom."""
     try:
         arr = ds.pixel_array
         if arr.ndim != 2:
             log.warning("unsupported pixel shape %s in %s (multi-frame/colour); slice skipped", arr.shape, path)
             return None
-        img = apply_modality_lut(arr, ds).astype(np.float32, copy=False)
+        if "ModalityLUTSequence" in ds:
+            img = apply_modality_lut(arr, ds).astype(np.float32, copy=False)
+        else:
+            img = arr.astype(np.float32)
+            slope, icpt = ds.get("RescaleSlope"), ds.get("RescaleIntercept")
+            slope = 1.0 if slope is None else float(slope)
+            icpt = 0.0 if icpt is None else float(icpt)
+            if slope != 1.0:
+                img *= np.float32(slope)
+            if icpt != 0.0:
+                img += np.float32(icpt)
         if str(ds.get("PhotometricInterpretation", "")).upper() == "MONOCHROME1":
-            img = img.max() - img
+            img = -img
         return img
     except Exception as e:  # noqa: BLE001
         log.warning("pixel decode failed %s: %s: %s", path, type(e).__name__, e)

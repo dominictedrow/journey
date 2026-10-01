@@ -26,6 +26,20 @@ SPAN = (0.02, 0.98)  # HP: fraction of the ordered stack that window centres cov
 FIELD_STRENGTHS = ["1.5T", "3T", "other"]
 
 
+def worker_init(_worker_id: int = 0) -> None:
+    """DataLoader worker_init_fn: one cv2 thread per worker. cv2's default pool is one thread per core, so N workers
+    (× KNEE_IO_THREADS file threads) oversubscribe a 4-vCPU Kaggle box (review 2026-09-30, bug.md #9). The DataLoader
+    already sets torch's intra-op threads to 1 in its workers; cv2 has no such default."""
+    cv2.setNumThreads(1)
+
+
+def decode_index(i: int, n: int, epoch: int) -> tuple[int, int]:
+    """A dataset index → (epoch, index). Indices ≥ n come from ResumableRandomSampler(encode_epoch=True), which
+    folds the epoch into the index so persistent DataLoader workers see it (their dataset copy never gets set_epoch).
+    Plain indices keep the dataset's own epoch."""
+    return divmod(int(i), n) if i >= n else (epoch, int(i))
+
+
 # ------------------------------------------------------------------------------------------ window helpers (pure)
 def _span_idx(n: int, span: tuple[float, float]) -> tuple[int, int]:
     lo = int(np.floor(span[0] * (n - 1)))
@@ -90,10 +104,23 @@ def type_ids(meta: dict) -> dict[str, int]:
 TYPE_FIELDS = ("plane", "fluid", "contrast", "field", "slot")
 
 
+def usable(series: list[tuple[np.ndarray, dict]]) -> list[tuple[np.ndarray, dict]]:
+    """Drop series with no slices or with no slice that decoded (`valid` all False / n_decode_fail = n): their pixels
+    are all zeros, so they would only add black windows (review 2026-09-30). A partly failed series is kept."""
+    out = []
+    for vol, row in series:
+        n = len(vol)
+        valid = row.get("valid")
+        n_ok = int(np.sum(valid)) if valid is not None and len(valid) == n else n - int(row.get("n_decode_fail") or 0)
+        if n > 0 and n_ok > 0:
+            out.append((vol, row))
+    return out
+
+
 def slots_sample(series: list[tuple[np.ndarray, dict]], W: int, px: int, train: bool, rng: np.random.Generator,
                  span=SPAN, slot_dropout: float = 0.0) -> dict[str, np.ndarray]:
     """Track A grid: x (5, W, 3, px, px) uint8, slot_mask (5,), z (5, W). Missing slots are zeros, mask False."""
-    by_slot = {row["slot"]: (vol, row) for vol, row in series if row.get("slot") in SLOTS and len(vol) > 0}
+    by_slot = {row["slot"]: (vol, row) for vol, row in usable(series) if row.get("slot") in SLOTS}
     x = np.zeros((len(SLOTS), W, 3, px, px), dtype=np.uint8)
     z = np.zeros((len(SLOTS), W), dtype=np.float32)
     mask = np.zeros(len(SLOTS), dtype=bool)
@@ -118,15 +145,22 @@ def slots_sample(series: list[tuple[np.ndarray, dict]], W: int, px: int, train: 
 def bag_sample(series: list[tuple[np.ndarray, dict]], K: int, K_eval: int | None, px: int, train: bool,
                rng: np.random.Generator, span=SPAN, series_dropout: float = 0.0,
                max_series: int | None = None) -> dict[str, np.ndarray]:
-    """Track B bag: x (L, 3, px, px) uint8 + per-window series_idx, z, z_mm and type ids (L,). L = 0 if no series."""
-    series = [(v, r) for v, r in series if len(v) > 0]
+    """Track B bag: x (L, 3, px, px) uint8 + per-window series_idx, z, z_mm and type ids (L,). L = 0 if no series.
+
+    max_series (eval): the slotted series first, in slot order, then the rest in their given order. Folder order
+    alone is UID order, i.e. arbitrary."""
+    series = usable(series)
     if train and series_dropout > 0 and len(series) > 1:
         keep = rng.random(len(series)) >= series_dropout
         if not keep.any():
             keep[rng.integers(len(series))] = True
         series = [s for s, k in zip(series, keep) if k]
     if max_series is not None and len(series) > max_series:
-        pick = rng.choice(len(series), max_series, replace=False) if train else np.arange(max_series)
+        if train:
+            pick = rng.choice(len(series), max_series, replace=False)
+        else:
+            rank = [SLOTS.index(r.get("slot")) if r.get("slot") in SLOTS else len(SLOTS) for _, r in series]
+            pick = sorted(range(len(series)), key=lambda j: (rank[j], j))[:max_series]
         series = [series[j] for j in sorted(pick)]
     xs, sid, z, zmm = [np.zeros((0, 3, px, px), np.uint8)], [np.zeros(0, np.int64)], [np.zeros(0, np.float32)], \
         [np.zeros(0, np.float32)]
@@ -219,8 +253,9 @@ class StudyWindowsDataset(Dataset):
         return len(self.uids)
 
     def __getitem__(self, i: int) -> dict:
+        epoch, i = decode_index(i, len(self.uids), self.epoch)
         uid = self.uids[i]
-        rng = np.random.default_rng((self.seed, self.epoch, i))
+        rng = np.random.default_rng((self.seed, epoch, i))
         series = [(self.r.pixels(s), s) for s in self.r.series(uid)]
         out = slots_sample(series, self.W, self.px, self.train, rng, self.span, self.slot_dropout)
         y, ym = _labels_for(self.labels, uid)
@@ -253,8 +288,9 @@ class StudyBagDataset(Dataset):
         return len(self.uids)
 
     def __getitem__(self, i: int) -> dict:
+        epoch, i = decode_index(i, len(self.uids), self.epoch)
         uid = self.uids[i]
-        rng = np.random.default_rng((self.seed, self.epoch, i))
+        rng = np.random.default_rng((self.seed, epoch, i))
         series = [(self.r.pixels(s), s) for s in self.r.series(uid)]
         out = bag_sample(series, self.K, self.K_eval, self.px, self.train, rng, self.span, self.series_dropout,
                          self.max_series)

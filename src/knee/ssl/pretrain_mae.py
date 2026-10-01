@@ -29,7 +29,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from knee.data.dataset import CacheReader
+from knee.data.dataset import CacheReader, worker_init
 from knee.model.slice_vit import SliceViT
 from knee.ssl.mae import MAE
 from knee.ssl.mae_data import MAEWindowDataset, collate_windows, gpu_resized_crop
@@ -41,7 +41,8 @@ DEFAULTS: dict = {
     "model": {"img_size": 256, "patch": 16, "dim": 384, "depth": 12, "heads": 6, "tokenizer": "conv_stem",
               "stem_norm": "ln", "pos2d": "sincos", "pool": "gap", "qk_norm": True, "layerscale": 0.1,
               "drop_path": 0.0, "attn_impl": "sdpa", "grad_checkpointing": False},
-    "mae": {"mask_ratio": 0.75, "dec_dim": 256, "dec_depth": 4, "dec_heads": 8, "norm_pix": True},
+    "mae": {"mask_ratio": 0.75, "dec_dim": 256, "dec_depth": 4, "dec_heads": 8, "norm_pix": True,
+            "norm_pix_eps": 1e-6},
     "data": {"out_px": 256, "windows_per_series": 4, "windows_per_read": 1, "scale": [0.6, 1.0], "ratio": [0.85, 1.18],
              "batch_size": 64, "workers": 6, "limit_studies": 0, "gpu_crop": False},
     "optim": {"blr": 1.5e-4, "weight_decay": 0.05, "betas": [0.9, 0.95], "warmup_epochs": 2, "epochs": 40,
@@ -59,6 +60,33 @@ def merge(base: dict, over: dict) -> dict:
     for k, v in (over or {}).items():
         out[k] = merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
     return out
+
+
+# Keys whose change on resume would silently change the run: the data order (dataset items, sampler positions) or the
+# schedule (total_steps, warmup, base LR) that last.pt's step counter refers to (review 2026-09-30).
+RESUME_KEYS = (("seed",), ("cache_dir",), ("data", "windows_per_series"), ("data", "windows_per_read"),
+               ("data", "batch_size"), ("data", "limit_studies"), ("optim", "accum"), ("optim", "epochs"),
+               ("optim", "blr"), ("optim", "warmup_epochs"), ("optim", "min_lr_ratio"), ("model",), ("mae",))
+
+
+def check_resume_cfg(old: dict, new: dict, allow: bool = False) -> None:
+    """Refuse (SystemExit) to resume last.pt under a config that changes the data order or the LR schedule;
+    --allow-config-change resumes anyway (e.g. to extend optim.epochs on purpose, accepting the schedule jump)."""
+    diffs = []
+    for keys in RESUME_KEYS:
+        a, b = old, new
+        for k in keys:
+            a = a.get(k) if isinstance(a, dict) else None
+            b = b.get(k) if isinstance(b, dict) else None
+        if a != b:
+            diffs.append(f"{'.'.join(keys)}: {a!r} → {b!r}")
+    if not diffs:
+        return
+    msg = "last.pt was written under a different config:\n  " + "\n  ".join(diffs)
+    if not allow:
+        raise SystemExit(msg + "\nResuming would silently change the data order or LR schedule. Use a new run_dir, "
+                               "or --allow-config-change to resume anyway.")
+    print("WARNING: " + msg, flush=True)
 
 
 def build(cfg: dict) -> MAE:
@@ -85,6 +113,8 @@ def main(argv=None) -> dict:
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--pilot", type=int, default=0, help="run N optimizer steps, write pilot.json, no resume")
     ap.add_argument("--set", nargs="*", default=[], help="overrides like optim.epochs=10 data.batch_size=32")
+    ap.add_argument("--allow-config-change", action="store_true",
+                    help="resume last.pt even if the config changes the data order or LR schedule")
     a = ap.parse_args(argv)
     cfg = merge(DEFAULTS, C.load_config(a.config))
     for kv in a.set:
@@ -144,6 +174,7 @@ def main(argv=None) -> dict:
     last = run_dir / "last.pt"
     if last.exists() and not a.pilot:
         ck = torch.load(last, map_location="cpu", weights_only=False)
+        check_resume_cfg(merge(DEFAULTS, ck.get("cfg") or {}), cfg, a.allow_config_change)
         mae.load_state_dict(ck["model"])
         opt.load_state_dict(ck["opt"])
         if ck.get("scaler"):
@@ -183,7 +214,8 @@ def main(argv=None) -> dict:
         x, boxes = batch
         return gpu_resized_crop(x.to(device, non_blocking=True), boxes.to(device, non_blocking=True), dcfg["out_px"])
 
-    recon_batch = to_model_input(collate_windows([ds[i] for i in range(min(8, len(ds)))]))[:8]
+    # 8 items = 8 series reads of kr windows each; one window per read → 8 different series in the grid
+    recon_batch = to_model_input(collate_windows([ds[i] for i in range(min(8, len(ds)))]))[::kr][:8]
     sampler = C.ResumableRandomSampler(len(ds), seed=cfg["seed"])
     t_ckpt, t_start = time.time(), time.time() - state["elapsed"]
     pilot_t0, pilot_windows, pilot_skip = None, 0, 5
@@ -195,7 +227,11 @@ def main(argv=None) -> dict:
         sampler.set_epoch(ep, start=state["batch_in_epoch"] * ipb)
         loader = DataLoader(ds, batch_size=ipb, sampler=sampler, num_workers=dcfg["workers"], drop_last=True,
                             collate_fn=collate_windows, pin_memory=device.type == "cuda", persistent_workers=False,
-                            prefetch_factor=4 if dcfg["workers"] else None)
+                            prefetch_factor=4 if dcfg["workers"] else None,
+                            worker_init_fn=worker_init if dcfg["workers"] else None)
+        # The trailing batches_per_epoch % accum micro-batches of the last epoch were backpropagated but never
+        # stepped; don't let them leak into this epoch's first step (only matters with accum > 1).
+        opt.zero_grad(set_to_none=True)
         t_log, n_log = time.time(), 0
         meter.reset()
         for x in loader:

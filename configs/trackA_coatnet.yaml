@@ -11,6 +11,7 @@ model:
     pretrained: true
     head: {kind: attn_mil, att_dim: 256, dropout: 0.2, gated: false}  # Raptor exactly
     grad_checkpointing: true
+    freeze_bn: true        # BN in eval mode + frozen affine: a batch is 1 knee (review 2026-09-30, bug.md #6)
     window_chunk: 16
     window_dropout: 0.0
     slot_embed: true       # our addition (zero-init, starts neutral); false = the public recipe

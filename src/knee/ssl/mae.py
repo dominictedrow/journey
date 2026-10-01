@@ -53,9 +53,14 @@ def random_masking(n_img: int, n_tok: int, ratio: float, device, generator=None)
 class MAE(nn.Module):
     def __init__(self, encoder: SliceViT, mask_ratio: float = 0.75, dec_dim: int = 256, dec_depth: int = 4,
                  dec_heads: int = 8, norm_pix: bool = True, zero_masked_pixels: bool | None = None,
-                 in_ch: int = 3):
+                 in_ch: int = 3, norm_pix_eps: float = 1e-6):
+        """norm_pix_eps: the variance floor of the per-patch target normalization, in model-input units (to_input:
+        one grey level = 1/255/0.5 ≈ 0.008). At 1e-6 (the MAE paper's) a background patch with a grey level or two of
+        noise (variance ~1e-4) is stretched to unit variance, so the decoder is asked to predict noise; ~1e-2 keeps
+        such patches near 0. An ablation for the MAE pilot (review 2026-09-30); the default is unchanged."""
         super().__init__()
         self.encoder, self.mask_ratio, self.norm_pix, self.in_ch = encoder, mask_ratio, norm_pix, in_ch
+        self.norm_pix_eps = float(norm_pix_eps)
         self.p = encoder.patch
         self.zero_masked_pixels = isinstance(encoder.tokenizer, ConvStem) if zero_masked_pixels is None \
             else zero_masked_pixels
@@ -103,7 +108,7 @@ class MAE(nn.Module):
         target = patchify(x.float(), self.p)
         if self.norm_pix:
             mu, var = target.mean(-1, keepdim=True), target.var(-1, keepdim=True)
-            target = (target - mu) / (var + 1e-6).sqrt()
+            target = (target - mu) / (var + self.norm_pix_eps).sqrt()
         per_patch = (pred - target).square().mean(-1)                                  # [N, n]
         loss = (per_patch * mask).sum() / mask.sum().clamp(min=1)
         return {"loss": loss, "pred": pred, "mask": mask, "target": target, "grid": grid}
@@ -117,7 +122,7 @@ class MAE(nn.Module):
         tp = patchify(x, self.p)
         pred = out["pred"]
         if self.norm_pix:
-            pred = pred * (tp.var(-1, keepdim=True) + 1e-6).sqrt() + tp.mean(-1, keepdim=True)
+            pred = pred * (tp.var(-1, keepdim=True) + self.norm_pix_eps).sqrt() + tp.mean(-1, keepdim=True)
         else:  # the target was the normalized model input
             pred = pred * INPUT_STD + INPUT_MEAN
         m = out["mask"][..., None]

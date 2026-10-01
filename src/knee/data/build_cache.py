@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from knee.data.preprocess import PreprocParams, preprocess_study, series_info_from_csv
+from knee.data.preprocess import PreprocParams, preproc_code_hash, preprocess_study, series_info_from_csv
 from knee.paths import REPO_ROOT, load_paths
 
 log = logging.getLogger(__name__)
@@ -125,6 +125,8 @@ def check_resume(old: dict, params: dict, studies: list[str], studies_per_shard:
                         f"--limit-studies)")
     elif "studies_sha1" not in old and old.get("n_studies", len(studies)) != len(studies):
         problems.append(f"n_studies: {old['n_studies']} vs {len(studies)}")
+    if "preproc_code_hash" in old and old["preproc_code_hash"] != preproc_code_hash():
+        problems.append(f"preprocessing code changed: {old['preproc_code_hash']} vs {preproc_code_hash()} now")
     if problems:
         raise SystemExit(f"{manifest_f} was built differently, resuming would mix shards:\n" + "\n".join(problems)
                          + "\nUse a new --out or delete the old cache.")
@@ -166,7 +168,7 @@ def main() -> None:
     todo = [i for i in range(len(shards)) if not (shard_dir / f"shard_{i:05d}.parquet").exists()]
     manifest = {"version": params.version, "split": a.split, "params": params.to_dict(), "git_sha": git_sha(),
                 "n_studies": len(studies), "studies_per_shard": a.studies_per_shard, "n_shards": len(shards),
-                "studies_sha1": studies_sha1(studies),
+                "studies_sha1": studies_sha1(studies), "preproc_code_hash": preproc_code_hash(),
                 "dtype": "uint8", "layout": "shards/shard_XXXXX.u8 raw (n, out_px, out_px) C-order",
                 "started": time.strftime("%Y-%m-%d %H:%M:%S")}
     manifest_f.write_text(json.dumps(manifest, indent=2))

@@ -40,12 +40,13 @@ def pairwise_rank_loss(logits: torch.Tensor, targets: torch.Tensor, label_mask: 
     invalid ones are zeroed, which is the same mean per finding, then the mean over findings that have a pair."""
     s, y = logits.float(), targets.float()
     m = torch.ones_like(y, dtype=torch.bool) if label_mask is None else label_mask.bool()
-    pos, neg = m & (y > pos_thr), m & (y < neg_thr)                                  # [B, K]
+    # inclusive, like utils.metrics.binarize (≥ hi / ≤ lo), so the loss and the metric agree on who is positive
+    pos, neg = m & (y >= pos_thr), m & (y <= neg_thr)                                # [B, K]
     terms = [(s[:, None, :] - s[None, :, :], pos[:, None, :] & neg[None, :, :])]    # [B, B, K]
     if ref_logits is not None and len(ref_logits):
         rs, ry = ref_logits.float().detach(), ref_targets.float()
         rm = torch.ones_like(ry, dtype=torch.bool) if ref_mask is None else ref_mask.bool()
-        rpos, rneg = rm & (ry > pos_thr), rm & (ry < neg_thr)
+        rpos, rneg = rm & (ry >= pos_thr), rm & (ry <= neg_thr)
         terms += [(s[:, None, :] - rs[None, :, :], pos[:, None, :] & rneg[None, :, :]),   # [B, R, K]
                   (rs[:, None, :] - s[None, :, :], rpos[:, None, :] & neg[None, :, :])]   # [R, B, K]
     # where, not multiply: 0 · NaN = NaN, so one non-finite logit would poison every finding's mean
@@ -80,3 +81,13 @@ class RankBank:
             self.logits = torch.cat([self.logits, l])[-self.size:]
             self.targets = torch.cat([self.targets, t])[-self.size:]
             self.mask = torch.cat([self.mask, m])[-self.size:]
+
+    def state_dict(self) -> dict:
+        """Saved in train_sup's last.pt, so a resume ranks against the same bank instead of an empty one."""
+        return {"size": self.size, "logits": self.logits, "targets": self.targets, "mask": self.mask}
+
+    def load_state_dict(self, state: dict, device=None) -> None:
+        def mv(t):
+            return None if t is None else t.to(device) if device is not None else t
+        self.size = int(state.get("size", self.size))
+        self.logits, self.targets, self.mask = mv(state["logits"]), mv(state["targets"]), mv(state["mask"])

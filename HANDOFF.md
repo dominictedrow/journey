@@ -113,7 +113,14 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   overrides) and clears stale STOP files, (6) eval NaNs get an fp32 retry and are counted (`val_n_retried_fp32`,
   `val_n_nonfinite`); an epoch still non-finite after the retry gets `val_macro_auc = NaN`, so it is never averaged in
   (**Dom to confirm** this policy). Pure-fp16 Track A test added (resnet10t BN + CoAtNet-RMLP nano).
-- Tests: 160 pytest (CPU) pass, 2 skipped.
+- **Review fixes, third batch** (same day, log `docs/sessions_log/P06_2026-09-30.md`; `bug.md` is now all fixed except
+  the MAE LR sweep, a GPU experiment). Behaviour changes to know: Track A `freeze_bn: true` (BN frozen; **Dom to
+  confirm**), and `train_sup` uses the best single epoch when the top-k average scores worse (**Dom to confirm**).
+  Train/eval loaders keep persistent workers (epoch encoded in the sampler index). Inference shares windows across
+  arms with the same data config, replaces non-finite outputs with the fallback row, and decodes only slotted series
+  for Track A. `infer.py --deadline-hours` kills a hung shard. Bundles now need `--cache-manifest`: `infer.py` checks
+  the full PreprocParams plus a preprocessing code hash (`preproc_code_hash`) against the cache's.
+- Tests: 193 pytest (CPU) pass, 2 skipped.
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
@@ -137,7 +144,7 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - Full agent-reader run only if Dom overrides the go rule (diversity argument; costs subscription time, not money).
 
 **On the Windows box, MAE loader check (before the MAE pilot):** `python scripts/perf/mae_loader_bench.py --cache
-<cache_v1_train> --workers 4 8 12` → if gpu-crop windows/s is under ~650 (5070) and MB/s is near the SSD's limit, build
+<cache_v1_train> --workers 4 8 12 --cv2-threads 1 default` (the second value measures bug.md #9) → if gpu-crop windows/s is under ~650 (5070) and MB/s is near the SSD's limit, build
 the 256-px cache and bench it too; ask Dom before switching MAE to it ([val]).
 
 **On the Windows box, in this order:** S01 env check (`env_check` + decode bench on the SSD; skip the header scan) →
