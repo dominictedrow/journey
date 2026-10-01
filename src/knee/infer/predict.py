@@ -29,20 +29,37 @@ log = logging.getLogger(__name__)
 SUBMISSION_COLUMNS = ["StudyInstanceUID", *LABELS]
 
 
-def load_arm(ckpt: str | Path, device) -> tuple[torch.nn.Module, dict]:
+PERF_DEFAULTS = {"half": False, "compile": False, "compile_mode": None, "channels_last": False, "min_bucket": 4}
+
+
+def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.nn.Module, dict]:
     """A train_sup model_avg.pt → (model in eval mode with inference folds applied, its data config). Never downloads
-    weights."""
+    weights.
+
+    perf (arms.json "perf", all off by default; docs/plan/03_performance_plan.md):
+    - half: the whole model in fp16, run without autocast (B1). Changes numerics: check the OOF AUC before using it.
+    - compile: torch.compile the window encoder at fixed chunk shapes (B4). CUDA/Linux only; exact.
+    - channels_last: Track A backbone in NHWC (B3). Exact."""
+    from knee.model.compiled import to_half
+    from knee.model.fuse import prepare_for_inference
     from knee.train.train_sup import build_model
+    perf = {**PERF_DEFAULTS, **(perf or {})}
     ck = torch.load(ckpt, map_location="cpu", weights_only=False)
     mcfg = ck["cfg"]["model"]
     if mcfg["kind"] == "trackA":
         mcfg = {**mcfg, "cfg": {**mcfg.get("cfg", {}), "pretrained": False, "grad_checkpointing": False}}
     model = build_model(mcfg)
     model.load_state_dict(ck["model"])
-    from knee.model.fuse import prepare_for_inference
     folded = prepare_for_inference(model)  # exact LayerScale fold (conv+BN off: slower in eager on the T4)
-    log.info("arm %s: folded %s", Path(ckpt).name, folded)
-    return model.to(device), ck["cfg"]["data"]
+    model.to(device)
+    if perf["half"] and device.type == "cuda":
+        to_half(model)
+    if perf["channels_last"] and hasattr(model, "use_channels_last"):
+        model.use_channels_last()
+    if perf["compile"] and device.type == "cuda":
+        model.compile_encoder(perf["compile_mode"], min_bucket=perf["min_bucket"])
+    log.info("arm %s: folded %s, perf %s", Path(ckpt).name, folded, perf)
+    return model, ck["cfg"]["data"]
 
 
 def arm_input(series: list, data_cfg: dict) -> dict:
@@ -88,11 +105,14 @@ class TestStudies(Dataset):
 
 @torch.no_grad()
 def run_arm(model, batch: dict, device) -> np.ndarray:
-    """fp16 autocast on CUDA (the T4 has no bf16 tensor cores [W]); fp32 retry if it fails or gives NaN/inf."""
+    """fp16 on CUDA (the T4 has no bf16 tensor cores [W]): autocast, or plain fp16 if the model was loaded with
+    perf.half (autocast would bring back the fp32 LayerNorm casts). fp32 retry if it fails or gives NaN/inf."""
+    from knee.model.compiled import is_half
     b = {k: v.to(device, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
     if device.type == "cuda":
+        half = is_half(model)
         try:
-            with torch.autocast("cuda", dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.float16, enabled=not half):
                 p = torch.sigmoid(model(b).float())
             if torch.isfinite(p).all():
                 return p[0].cpu().numpy()
@@ -100,6 +120,12 @@ def run_arm(model, batch: dict, device) -> np.ndarray:
         except RuntimeError as e:
             log.warning("fp16 forward failed (%s); retrying in fp32", e)
             torch.cuda.empty_cache()
+        if half:  # fp16 → fp32 → fp16 is lossless, so the retry leaves the weights exactly as they were
+            model.float()
+            try:
+                return torch.sigmoid(model(b).float())[0].cpu().numpy()
+            finally:
+                model.half()
     return torch.sigmoid(model(b).float())[0].cpu().numpy()
 
 

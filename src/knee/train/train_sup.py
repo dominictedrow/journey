@@ -51,6 +51,10 @@ DEFAULTS: dict = {
     "loss": {"rank_w": 0.05, "rank_bank": 256, "pos_thr": 0.6, "neg_thr": 0.4},
     "select": {"top_k": 3},
     "ckpt_minutes": 30, "log_every": 50,
+    # docs/plan/03_performance_plan.md. compile (B4): torch.compile the window encoder at fixed chunk shapes (ragged
+    # chunks padded up to `buckets`, default powers of two ≥ min_bucket); CUDA/Linux only. channels_last (B3): Track A
+    # only. Both exact, except that Track A's BatchNorm sees the padded copies in training (knee.model.compiled).
+    "perf": {"compile": False, "compile_mode": None, "buckets": None, "min_bucket": 4, "channels_last": False},
 }
 
 
@@ -189,6 +193,12 @@ def main(argv=None) -> dict:
         print(f"loaded encoder {cfg['init']['encoder']} (epoch {ck.get('epoch')}); missing {missing}, "
               f"unexpected {unexpected}")
     model.to(device)
+    pcfg = cfg["perf"]
+    if pcfg["channels_last"] and hasattr(model, "use_channels_last"):
+        model.use_channels_last()
+    if pcfg["compile"] and device.type == "cuda":
+        model.compile_encoder(pcfg["compile_mode"], pcfg["buckets"], pcfg["min_bucket"])
+        torch.backends.cudnn.benchmark = True  # only a few conv shapes now, so autotuning each once pays off
     ocfg, dcfg = cfg["optim"], cfg["data"]
     bs, accum = dcfg["batch_size"], ocfg["accum"]
     batches_per_epoch = len(ds_tr) // bs

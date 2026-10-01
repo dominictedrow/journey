@@ -47,6 +47,9 @@ DEFAULTS: dict = {
               "min_lr_ratio": 0.0, "clip": 1.0, "accum": 1},
     "ckpt_minutes": 30, "snapshot_every_epochs": 5, "log_every": 50, "recon_every_steps": 2000,
     "probe": {"labels": None, "folds": None, "every_epochs": 5, "fold": 0},
+    # torch.compile the whole MAE step (docs/plan/03_performance_plan.md B4). Batches are fixed-shape (drop_last), so
+    # one graph; CUDA/Linux only. Exact (same maths, fused kernels).
+    "perf": {"compile": False, "compile_mode": None},
 }
 
 
@@ -129,6 +132,9 @@ def main(argv=None) -> dict:
     base_lr = ocfg["blr"] * bs * accum / 256
 
     mae = build(cfg).to(device)
+    if cfg["perf"]["compile"] and device.type == "cuda":
+        from knee.model.compiled import compile_module
+        compile_module(mae, cfg["perf"]["compile_mode"])
     opt = build_adamw(param_groups(mae, base_lr, ocfg["weight_decay"]), ocfg["betas"],
                       fused=True if device.type == "cuda" else None)
     scaler = C.make_scaler(device, cfg["precision"])

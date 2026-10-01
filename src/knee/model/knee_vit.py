@@ -21,6 +21,7 @@ import copy
 import torch
 from torch import nn
 
+from knee.model.compiled import compile_module, default_buckets, encode_chunks
 from knee.model.heads import build_head
 from knee.model.pos_embed import SeriesTypeEmbed, SlicePosEmbed
 from knee.model.slice_vit import SliceViT, to_input
@@ -69,11 +70,20 @@ class KneeViT(nn.Module):
         self.head = build_head(cfg["head"]["kind"], dim, **head_kw)
         self.window_chunk = int(cfg["window_chunk"])
         self.window_dropout = float(cfg["window_dropout"])
+        self.chunk_buckets: list[int] | None = None  # set by compile_encoder: pad ragged chunks to fixed shapes
+
+    def compile_encoder(self, mode: str | None = None, buckets: list[int] | None = None, min_bucket: int = 4) -> None:
+        """torch.compile the SliceViT in place, fed only fixed chunk shapes (knee.model.compiled). The output doesn't
+        change: SliceViT treats windows independently, so padding a chunk can't affect the real windows."""
+        self.chunk_buckets = sorted(buckets) if buckets else default_buckets(self.window_chunk, min_bucket)
+        compile_module(self.encoder, mode)
 
     def encode_windows(self, x: torch.Tensor) -> torch.Tensor:
         """uint8 or float [n, C, H, W] → [n, E], in chunks of window_chunk."""
-        outs = [self.encoder(to_input(c) if c.dtype == torch.uint8 else c) for c in x.split(self.window_chunk)]
-        return torch.cat(outs) if outs else x.new_zeros((0, self.encoder.dim), dtype=torch.float32)
+        dt = self.encoder.norm.weight.dtype  # fp32 normally (autocast casts inside); fp16 after to_half
+        outs = encode_chunks(self.encoder, (to_input(x) if x.dtype == torch.uint8 else x).to(dt), self.window_chunk,
+                             self.chunk_buckets)
+        return torch.cat(outs) if outs else x.new_zeros((0, self.encoder.dim), dtype=dt)
 
     def forward(self, batch: dict, return_attn: bool = False):
         x, mask = batch["x"], drop_windows(batch["window_mask"], self.window_dropout if self.training else 0.0)

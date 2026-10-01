@@ -6,7 +6,9 @@ Inputs attached to the kernel:
 - our **bundle** dataset (built by `scripts/build_kaggle_bundle.py`, uploaded only with Dom's OK):
       knee_src/knee/...   the repo's `src/knee` package: the same preprocessing + window code as training
       arms.json           {"arms": [{"ckpt": "weights/<name>.pt", "weight": 1.0}, ...], "how": "mean"|"rank",
-                           "prior": [12 floats] (fallback row), "preproc": {PreprocParams overrides}}
+                           "prior": [12 floats] (fallback row), "preproc": {PreprocParams overrides},
+                           "perf": {"half", "compile", "channels_last", ...} (predict.PERF_DEFAULTS; an arm's own
+                           "perf" overrides it)}
       weights/*.pt        train_sup `model_avg.pt` checkpoints
       wheels/*.whl        optional offline wheels (pylibjpeg, openjpeg, libjpeg, gdcm; timm if the image lacks it)
 
@@ -156,7 +158,8 @@ def main(argv: list[str] | None = None) -> int:
     t = time.time()
     spec = json.loads((bundle / "arms.json").read_text())
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    arms = [load_arm(bundle / arm["ckpt"], device) for arm in spec["arms"]]
+    arms = [load_arm(bundle / arm["ckpt"], device, {**spec.get("perf", {}), **arm.get("perf", {})})
+            for arm in spec["arms"]]
     weights = [float(arm.get("weight", 1.0)) for arm in spec["arms"]]
     prior = np.asarray(spec.get("prior", [0.5] * len(LABELS)), dtype=np.float64)
     pp = spec.get("preproc", {})

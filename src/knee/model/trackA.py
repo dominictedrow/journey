@@ -12,6 +12,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
+from knee.model.compiled import compile_module, default_buckets, encode_chunks
 from knee.model.heads import build_head
 from knee.model.knee_vit import drop_windows
 from knee.model.pos_embed import SeriesTypeEmbed, SlicePosEmbed
@@ -56,10 +57,27 @@ class TrackAModel(nn.Module):
         self.register_buffer("std", torch.tensor(IMAGENET_STD).view(1, 3, 1, 1), persistent=False)
         self.window_chunk = int(cfg["window_chunk"])
         self.window_dropout = float(cfg["window_dropout"])
+        self.chunk_buckets: list[int] | None = None  # set by compile_encoder
+        self.channels_last = False
+
+    def use_channels_last(self) -> None:
+        """NHWC weights and inputs: cuDNN's tensor-core layout (−5% train, −3% inference on the T4, §2b). Exact."""
+        self.channels_last = True
+        self.backbone.to(memory_format=torch.channels_last)
+
+    def compile_encoder(self, mode: str | None = None, buckets: list[int] | None = None, min_bucket: int = 4) -> None:
+        """torch.compile the backbone in place, fed only fixed chunk shapes. Exact in eval. In training, BatchNorm sees
+        the padded copies in the ragged chunk's batch statistics (knee.model.compiled explains why that's small)."""
+        self.chunk_buckets = sorted(buckets) if buckets else default_buckets(self.window_chunk, min_bucket)
+        compile_module(self.backbone, mode)
 
     def encode_windows(self, x: torch.Tensor) -> torch.Tensor:
-        outs = [self.backbone((c.float() / 255.0 - self.mean) / self.std) for c in x.split(self.window_chunk)]
-        return torch.cat(outs) if outs else x.new_zeros((0, self.dim), dtype=torch.float32)
+        dt = self.mean.dtype  # fp32 normally; fp16 after to_half
+        x = ((x.float() / 255.0 - self.mean.float()) / self.std.float()).to(dt)
+        if self.channels_last:
+            x = x.contiguous(memory_format=torch.channels_last)
+        outs = encode_chunks(self.backbone, x, self.window_chunk, self.chunk_buckets)
+        return torch.cat(outs) if outs else x.new_zeros((0, self.dim), dtype=dt)
 
     def forward(self, batch: dict, return_attn: bool = False):
         if batch["x"].ndim == 6:

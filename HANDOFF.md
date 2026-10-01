@@ -90,12 +90,20 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   cuts inference 37–48%; ckpt off + channels_last cuts Track A training 28% (11.3 GB peak); CoAtNet attention already
   uses the mem-efficient kernel; the conv+BN fold was slower and is now off by default. Track A ≈ 14 T4-h per fold
   after those fixes. `knee-src` re-versioned to `eff48b0` (verified by a full download).
-- Tests: 117 pytest (CPU) pass, 2 skipped (`tests/test_perf.py` added).
+- **Performance step 2 coded** (2026-09-30, `03_performance_plan.md` §5 item 3, log `docs/sessions_log/P03_2026-09-30.md`):
+  torch.compile in training (Track A, Track B, MAE) and inference at fixed chunk buckets (`knee.model.compiled`), and
+  pure-fp16 inference (`perf.half`). All behind `perf` switches, off by default. CPU-tested only; the T4 profile
+  (`PROFILE_SET=step2`, ~20–30 min) is **not pushed** (Dom: wait). `knee-src` is **stale** (still `eff48b0`):
+  re-version it before any Kaggle run.
+- Tests: 131 pytest (CPU) pass, 2 skipped (`tests/test_compiled.py` added).
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
 
 **Without the Windows box (Mac + Kaggle):**
+- When Dom OKs ~0.5 h of GPU: re-version `knee-src`, then `kaggle kernels push -p notebooks/kaggle_profile --accelerator
+  NvidiaTeslaT4` (step 2). Turn on `perf.compile` (and `channels_last` for Track A) in the configs only for variants
+  that measure faster; `perf.half` only after an OOF check on a trained arm.
 - Decide what else Kaggle should do. Options: a Kaggle-side preprocessing cache (≤ 20 GB per kernel output, so a smaller
   resolution or series subset) and Track A training on T4 ×2 (30 h/week). The measured I/O makes a full read ≈ 45 min at 16
   workers. Ask Dom before spending GPU quota.

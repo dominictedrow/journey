@@ -202,7 +202,20 @@ branch-free mask helpers). Speed-ups are **not measured yet**: that needs the T4
 2. ~~One real GPU profile~~ **Done (§2b).** Settled: C1 (off wherever VRAM allows), B3 (small win), B4 (works on the T4,
    biggest win; needs fixed chunk shapes), B5 (nothing to do). B2's conv/BN fold is off by default. Next: C1 + B3 in the
    Track A config for Kaggle training, compile with padded chunks in `infer.py`, then A1/A2 measured in a real inference run.
-3. **After the Oct 8 gate** (architecture final): C2, C4, C5, B1 on the chosen arms; the efficiency submission's window budget.
+3. **Step 2 (coded 2026-09-30, CPU-tested, not yet measured on a GPU; Dom asked for it):** B4 in *training* and
+   inference at fixed shapes, and B1. `knee.model.compiled`: a bag is split into **bucket** chunk sizes (powers of two
+   from `min_bucket` to `window_chunk`; 44 → 32 + 8 + 4), and only a remainder below the smallest bucket is padded
+   (with copies of real windows), so the encoder sees a handful of shapes and each compiles once (`dynamic=False`,
+   in-place `nn.Module.compile`, so the state_dict keys don't change). Switches, all off by default: `perf.compile` /
+   `perf.channels_last` in `train_sup`, `perf.compile` in `pretrain_mae`, and `perf.{half, compile, channels_last}` in
+   `arms.json` for `load_arm`. Pure half runs without autocast; `run_arm` keeps the fp32 retry. **Exactness:** SliceViT
+   bucketed = plain (values and gradients, tested); Track A is exact in eval, but in training BatchNorm's batch
+   statistics come from different window groups → [val]. Half is [val]: feature error ~0.04–0.15% vs fp32 on CPU.
+   **Measurement:** `notebooks/kaggle_profile` with `PROFILE_SET=step2` (the default now; cycles 3 bag sizes per
+   workload, reports the compute share and graph counts, 30-min cap). Estimated at 20–30 min of T4 quota; **not pushed**
+   (Dom, 2026-09-30: wait). Needs `knee-src` re-versioned first.
+4. **After the Oct 8 gate** (architecture final): C2, C4, C5 on the chosen arms; B1 checked on real OOF; the efficiency
+   submission's window budget.
 
 ## 6. What needs a real GPU (the T4 profile: done 2026-09-30, §2b)
 

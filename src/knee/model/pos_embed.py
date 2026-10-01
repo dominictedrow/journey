@@ -83,15 +83,15 @@ class SlicePosEmbed(nn.Module):
     def __init__(self, dim: int, n_freq: int = 8, use_mm: bool = False, mm_scale: float = 100.0):
         super().__init__()
         self.n_freq, self.use_mm, self.mm_scale = n_freq, use_mm, mm_scale
-        self.register_buffer("freqs", 2 * math.pi * 2.0 ** torch.arange(n_freq, dtype=torch.float32),
-                             persistent=False)
         n_in = 2 * n_freq * (2 if use_mm else 1)
         self.proj = nn.Linear(n_in, dim)
         nn.init.zeros_(self.proj.weight)
         nn.init.zeros_(self.proj.bias)
 
     def _feat(self, v: torch.Tensor) -> torch.Tensor:
-        a = v.float()[..., None] * self.freqs
+        # built in fp32 on every call, not stored as a buffer: model.half() would round 2π·2^7 ≈ 804 to a step of 0.5
+        freqs = 2 * math.pi * 2.0 ** torch.arange(self.n_freq, dtype=torch.float32, device=v.device)
+        a = v.float()[..., None] * freqs
         return torch.cat([a.sin(), a.cos()], dim=-1)
 
     def forward(self, tokens: torch.Tensor, z: torch.Tensor, z_mm: torch.Tensor | None = None) -> torch.Tensor:
@@ -100,7 +100,7 @@ class SlicePosEmbed(nn.Module):
             if z_mm is None:
                 raise ValueError("SlicePosEmbed(use_mm=True) needs z_mm")
             f = torch.cat([f, self._feat(z_mm / self.mm_scale)], dim=-1)
-        return tokens + self.proj(f).to(tokens.dtype)
+        return tokens + self.proj(f.to(self.proj.weight.dtype)).to(tokens.dtype)
 
 
 class SeriesTypeEmbed(nn.Module):

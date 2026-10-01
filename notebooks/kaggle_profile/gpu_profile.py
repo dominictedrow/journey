@@ -9,6 +9,12 @@ B4 (torch.compile on sm75) and B5 (which SDPA kernel CoAtNet's biased attention 
 
 Outputs in /kaggle/working/profile/: results.json (everything) and summary.md (the table for the plan doc).
 
+PROFILE_SET selects the workloads: "step1" = the 2026-09-30 profile above; "step2" (default) = performance step 2:
+torch.compile in training and inference at fixed chunk buckets (knee.model.compiled), pure-fp16 inference, compiled
+MAE. Step 2 cycles every step through several bag sizes (as real studies do), so recompiles and padding are paid for
+in the timing, and reports the compute share (gemm/conv + attention) of GPU kernel time. It stops starting new
+variants after STEP2_BUDGET_MIN minutes.
+
 Push (Dom's OK given 2026-09-30): kaggle kernels push -p notebooks/kaggle_profile --accelerator NvidiaTeslaT4
 CPU smoke test (tiny sizes, no CUDA): PROFILE_SMOKE=1 KNEE_SRC=src python notebooks/kaggle_profile/gpu_profile.py
 """
@@ -28,6 +34,8 @@ from pathlib import Path
 import torch
 
 SMOKE = os.environ.get("PROFILE_SMOKE") == "1"
+PROFILE_SET = os.environ.get("PROFILE_SET", "step2")
+STEP2_BUDGET_MIN = float(os.environ.get("STEP2_BUDGET_MIN", "30"))
 WORK = Path("/kaggle/working/profile") if not SMOKE else Path(os.environ.get("PERF_OUT", ".")) / "profile_smoke"
 WORK.mkdir(parents=True, exist_ok=True)
 
@@ -109,7 +117,9 @@ def amp():
 
 
 # ---- kernel categories (names are CUDA kernel names from the profiler)
-CATS = [("attention", r"fmha|flash|attention|mem_eff|efficient_attention"),
+CATS = [("gemm_conv", r"triton_tem|triton_mm|triton_bmm"),       # inductor matmul templates (max-autotune)
+        ("fused_triton", r"^triton_"),                             # inductor's fused pointwise/reduction kernels
+        ("attention", r"fmha|flash|attention|mem_eff|efficient_attention"),
         ("softmax", r"softmax"),
         ("gemm_conv", r"gemm|cutlass|xmma|s1688|h1688|s884|h884|turing_|volta_|conv|implicit|wgrad|dgrad|cudnn|winograd"),
         ("norm", r"layer_norm|layernorm|batch_norm|batchnorm|group_norm|welford|bn_fw|bn_bw|native_norm"),
@@ -167,6 +177,7 @@ def bench(name: str, variant: str, step, per_iter_div: int = 1, extra: dict | No
         for _ in range(WARM):
             step()
         sync()
+        rec["warmup_s"] = round(time.time() - t_first, 2)  # step 2: every bag size seen once = every compile paid
         times = []
         for _ in range(ITERS):
             if DEV.type == "cuda":
@@ -176,6 +187,7 @@ def bench(name: str, variant: str, step, per_iter_div: int = 1, extra: dict | No
             else:
                 t = time.perf_counter(); step(); times.append((time.perf_counter() - t) * 1000)
         rec["ms_median"] = round(statistics.median(times) / per_iter_div, 2)
+        rec["ms_mean"] = round(statistics.mean(times) / per_iter_div, 2)  # step 2 cycles bag sizes: compare means
         rec["ms_min"] = round(min(times) / per_iter_div, 2)
         rec["peak_vram_gb"] = round(torch.cuda.max_memory_allocated() / 1e9, 3) if DEV.type == "cuda" else None
         acts = [torch.profiler.ProfilerActivity.CPU] + ([torch.profiler.ProfilerActivity.CUDA] if DEV.type == "cuda" else [])
@@ -186,6 +198,8 @@ def bench(name: str, variant: str, step, per_iter_div: int = 1, extra: dict | No
         kb = kernel_breakdown(prof)
         kb["total_ms"] = round(kb["total_ms"] / PROF / per_iter_div, 2)
         kb["cats_ms"] = {k: round(v / PROF / per_iter_div, 2) for k, v in kb["cats_ms"].items()}
+        c = kb["cats_ms"]
+        kb["compute_share"] = round((c.get("gemm_conv", 0) + c.get("attention", 0)) / max(kb["total_ms"], 1e-9), 3)
         rec["kernels"] = kb
         # CPU-side dispatch: wall time of the profiled steps vs GPU busy time (GPU idle ⇒ launch/host bound)
         rec["gpu_busy_frac"] = round(kb["total_ms"] / max(rec["ms_median"], 1e-6), 3) if DEV.type == "cuda" else None
@@ -378,16 +392,204 @@ def run_trackA():
     free(m, b)
 
 
+# ===================================================================================================== step 2
+from knee.model.compiled import compile_module, to_half  # noqa: E402
+
+if SMOKE:
+    CYC = {"B_tr": [3, 5, 7], "B_ev": [6, 8, 10], "A_tr": [2, 3, 4], "A_ev": [4, 6, 7]}
+else:  # sizes real studies produce: B 8 per series × ~5.5 series ± series dropout; A 3 per slot × 3–5 slots
+    CYC = {"B_tr": [38, 44, 51], "B_ev": [80, 88, 96], "A_tr": [9, 12, 15], "A_ev": [48, 54, 60]}
+
+
+def over_budget() -> bool:
+    return time.time() - T0 > STEP2_BUDGET_MIN * 60
+
+
+def cycling(bags, fn):
+    """One step = fn(next bag). ITERS and PROF are multiples of len(bags), so every size is timed equally."""
+    state = {"i": 0}
+
+    def step():
+        fn(bags[state["i"] % len(bags)])
+        state["i"] += 1
+    return step
+
+
+def train_on(model, sc):
+    tgt = torch.rand(1, 12, device=DEV)
+    lossf = torch.nn.BCEWithLogitsLoss()
+
+    def f(b):
+        with amp():
+            lg = logits_of(model(b))
+        sc.scale(lossf(lg.float(), tgt)).backward()
+    return f
+
+
+def infer_on(model, half: bool):
+    def f(b):
+        with torch.no_grad(), torch.autocast(DEV.type, dtype=AMP_DTYPE, enabled=DEV.type == "cuda" and not half):
+            model(b)
+    return f
+
+
+def graphs() -> int:
+    from torch._dynamo.utils import counters
+    return int(counters["stats"]["unique_graphs"])
+
+
+def fresh():
+    from torch._dynamo.utils import counters
+    torch._dynamo.reset()
+    counters.clear()  # graphs() then counts this variant only
+    if DEV.type == "cuda":
+        torch.cuda.empty_cache()
+
+
+def bench2(name, variant, step, compiled: bool):
+    if over_budget():
+        log(f"== {name} [{variant}] skipped: over the {STEP2_BUDGET_MIN} min budget")
+        RESULTS["runs"].append({"workload": name, "variant": variant, "status": "skipped (budget)"})
+        return None
+    if compiled and DEV.type != "cuda" and not SMOKE:
+        return None
+    rec = bench(name, variant, step, extra={"sizes": CYC.get(name.replace("_train", "_tr").replace("_infer", "_ev"))})
+    rec["graphs"] = graphs() if compiled else 0
+    (WORK / "results.json").write_text(json.dumps(RESULTS, indent=1))
+    return rec
+
+
+def rel_err(a, b) -> float:
+    return float((a.float() - b.float()).norm() / b.float().norm().clamp(min=1e-12))
+
+
+def step2_trackB():
+    cfg = copy.deepcopy(CFG_B)
+    cfg["slice_vit"]["grad_checkpointing"] = False  # C1: off on the T4 (§2b)
+    bags = [bag(n, SZ["B_px"]) for n in CYC["B_tr"]]
+    for comp in (False, True):
+        fresh()
+        m = KneeViT(cfg).to(DEV).train()
+        if comp:
+            m.compile_encoder()
+        bench2("B_train", "ckpt_off" + ("+compile" if comp else ""), cycling(bags, train_on(m, scaler_())), comp)
+        free(m)
+    free(*bags)
+
+    bags = [bag(n, SZ["B_px"]) for n in CYC["B_ev"]]
+    base = KneeViT(CFG_B).to(DEV).eval()
+    prepare_for_inference(base)
+    for half in (False, True):
+        for comp in (False, True):
+            fresh()
+            m = copy.deepcopy(base)
+            if half:
+                to_half(m)
+            if comp:
+                m.compile_encoder()
+            v = ("half" if half else "autocast") + "+folded" + ("+compile" if comp else "")
+            bench2("B_infer", v, cycling(bags, infer_on(m, half)), comp)
+            free(m)
+    # fp16 numerics: window features of the pure-half encoder vs autocast vs fp32 (random weights)
+    x = bags[0]["x"][0]
+    with torch.no_grad():
+        f32 = base.encode_windows(x)
+        with amp():
+            fa = base.encode_windows(x)
+        mh = to_half(copy.deepcopy(base))
+        fh = mh.encode_windows(x)
+    RESULTS.setdefault("accuracy", {})["B_features"] = {
+        "autocast_vs_fp32": rel_err(fa, f32), "half_vs_fp32": rel_err(fh, f32), "half_vs_autocast": rel_err(fh, fa),
+        "half_finite": bool(torch.isfinite(fh).all())}
+    log("B accuracy", RESULTS["accuracy"]["B_features"])
+    free(base, mh, *bags)
+
+
+def step2_mae():
+    for comp in (False, True):
+        fresh()
+        enc = SliceViT(**CFG_MAE_ENC)
+        mae = MAE(enc, **CFG_MAE).to(DEV).train()
+        if comp:
+            compile_module(mae)
+        sc = scaler_()
+        x = torch.randint(0, 255, (SZ["MAE_n"], 3, SZ["MAE_px"], SZ["MAE_px"]), dtype=torch.uint8, device=DEV)
+        opt = torch.optim.AdamW(mae.parameters(), lr=1e-4, betas=(0.9, 0.95), weight_decay=0.05,
+                                fused=DEV.type == "cuda")
+
+        def step():
+            with amp():
+                out = mae(x)
+            sc.scale(out["loss"]).backward()
+            sc.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(mae.parameters(), 1.0)
+            sc.step(opt)
+            sc.update()
+            opt.zero_grad(set_to_none=True)
+        bench2("MAE", f"bs{SZ['MAE_n']}" + ("+compile" if comp else ""), step, comp)
+        free(mae, x, opt)
+
+
+def step2_trackA():
+    from knee.model.trackA import TrackAModel
+    cfg = copy.deepcopy(CFG_A)
+    cfg["grad_checkpointing"] = False  # C1
+    bags = [bag(n, SZ["A_px"]) for n in CYC["A_tr"]]
+    for comp in (False, True):
+        fresh()
+        m = TrackAModel(cfg).to(DEV).train()
+        m.use_channels_last()
+        if comp:
+            m.compile_encoder()
+        bench2("A_train", "ckpt_off+cl" + ("+compile" if comp else ""), cycling(bags, train_on(m, scaler_())), comp)
+        free(m)
+    free(*bags)
+
+    bags = [bag(n, SZ["A_px"]) for n in CYC["A_ev"]]
+    base = TrackAModel(cfg).to(DEV).eval()
+    prepare_for_inference(base)
+    for half in (False, True):
+        for comp in (False, True):
+            fresh()
+            m = copy.deepcopy(base)
+            if half:
+                to_half(m)
+            m.use_channels_last()
+            if comp:
+                m.compile_encoder()
+            v = ("half" if half else "autocast") + "+cl" + ("+compile" if comp else "")
+            bench2("A_infer", v, cycling(bags, infer_on(m, half)), comp)
+            free(m)
+    x = bags[0]["x"][0][:8]
+    with torch.no_grad():
+        f32 = base.encode_windows(x)
+        with amp():
+            fa = base.encode_windows(x)
+        mh = to_half(copy.deepcopy(base))
+        fh = mh.encode_windows(x)
+    RESULTS.setdefault("accuracy", {})["A_features"] = {
+        "autocast_vs_fp32": rel_err(fa, f32), "half_vs_fp32": rel_err(fh, f32), "half_vs_autocast": rel_err(fh, fa),
+        "half_finite": bool(torch.isfinite(fh).all())}
+    log("A accuracy", RESULTS["accuracy"]["A_features"])
+    free(base, mh, *bags)
+
+
 def write_summary():
-    lines = ["| workload | variant | status | ms (median) | peak VRAM GB | GPU busy | gemm_conv | attention | softmax | "
-             "norm | cast_copy | elementwise | other | first step s |", "|" + "---|" * 14]
+    lines = ["| workload | variant | status | ms (mean) | ms (median) | peak VRAM GB | GPU busy | compute share | "
+             "gemm_conv | attention | softmax | norm | cast_copy | elementwise | fused_triton | other | warm-up s | "
+             "graphs |", "|" + "---|" * 18]
     for r in RESULTS["runs"]:
-        k = r.get("kernels", {}).get("cats_ms", {})
+        kn = r.get("kernels", {})
+        k = kn.get("cats_ms", {})
         lines.append("| " + " | ".join(str(x) for x in [
-            r["workload"], r["variant"], r["status"], r.get("ms_median", ""), r.get("peak_vram_gb", ""),
-            r.get("gpu_busy_frac", ""), *[k.get(c, "") for c in ("gemm_conv", "attention", "softmax", "norm",
-                                                                  "cast_copy", "elementwise", "other")],
-            r.get("first_step_s", "")]) + " |")
+            r["workload"], r["variant"], r["status"], r.get("ms_mean", ""), r.get("ms_median", ""),
+            r.get("peak_vram_gb", ""), r.get("gpu_busy_frac", ""), kn.get("compute_share", ""),
+            *[k.get(c, "") for c in ("gemm_conv", "attention", "softmax", "norm", "cast_copy", "elementwise",
+                                     "fused_triton", "other")],
+            r.get("warmup_s", r.get("first_step_s", "")), r.get("graphs", "")]) + " |")
+    if RESULTS.get("accuracy"):
+        lines += ["", "fp16 numerics (relative L2 error of window features, random weights):",
+                  "```", json.dumps(RESULTS["accuracy"], indent=1), "```"]
     attn = collections.Counter()
     for r in RESULTS["runs"]:
         if r["workload"].startswith("A_"):
@@ -403,9 +605,15 @@ def write_summary():
 if __name__ == "__main__":
     torch.manual_seed(0)
     env_info()
-    for fn in (run_trackB, run_mae, run_trackA):
-        # as in the trainers: cudnn autotuning only for MAE (fixed shapes); train_sup leaves it off (bag sizes vary)
-        torch.backends.cudnn.benchmark = fn is run_mae
+    if PROFILE_SET == "step2":
+        WARM, ITERS, PROF = 3, (3 if SMOKE else 12), 3  # multiples of the 3 cycled bag sizes
+        fns = (step2_trackB, step2_mae, step2_trackA)
+    else:
+        fns = (run_trackB, run_mae, run_trackA)
+    for fn in fns:
+        # step 1, as in the trainers: cudnn autotuning only for MAE (fixed shapes). Step 2: on everywhere, since the
+        # buckets fix the shapes (train_sup turns it on with perf.compile); eager baselines get it too, for fairness.
+        torch.backends.cudnn.benchmark = fn is run_mae or PROFILE_SET == "step2"
         try:
             fn()
         except Exception:  # noqa: BLE001
