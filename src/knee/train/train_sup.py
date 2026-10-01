@@ -225,7 +225,10 @@ def main(argv=None) -> dict:
             raise SystemExit(f"optim.effective_batch {ocfg['effective_batch']} must be a multiple of data.batch_size {bs}")
         accum = ocfg["accum"] = ocfg["effective_batch"] // bs
     batches_per_epoch = len(ds_tr) // bs
-    steps_per_epoch = max(1, batches_per_epoch // accum)
+    if batches_per_epoch < accum:
+        raise SystemExit(f"{len(ds_tr)} train studies at batch_size {bs} = {batches_per_epoch} batches per epoch: "
+                         f"fewer than one optimizer step (accum {accum}); lower optim.effective_batch / accum")
+    steps_per_epoch = batches_per_epoch // accum
     total_steps = ocfg["epochs"] * steps_per_epoch
     warmup = int(ocfg["warmup_frac"] * total_steps)
     groups = build_param_groups(model, ocfg)
@@ -276,6 +279,10 @@ def main(argv=None) -> dict:
         dl = DataLoader(ds_tr, batch_size=bs, sampler=sampler, num_workers=dcfg["workers"], collate_fn=collate,
                         drop_last=True, pin_memory=device.type == "cuda")
         model.train()
+        # The last batches_per_epoch % accum micro-batches of the previous epoch were backpropagated but never
+        # stepped; drop them so they don't inflate this epoch's first step (checkpoints only happen at accum
+        # boundaries, so a resume never carries partial gradients either).
+        opt.zero_grad(set_to_none=True)
         t0, run_n = time.time(), 0
         meter.reset()
         for b in dl:

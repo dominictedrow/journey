@@ -235,3 +235,70 @@ def test_train_sup_effective_batch(tmp_path):
     cfg["optim"]["effective_batch"] = 5
     with pytest.raises(SystemExit):
         train_sup.main(["--config", str(_write(tmp_path / "sup2.yaml", {**cfg, "run_dir": str(tmp_path / "r2")}))])
+
+
+# ------------------------------------------------------------------------------------------ regressions (2026-09-30 review)
+def test_rank_bank_ignores_non_finite_rows():
+    """One overflowed fp16 forward must not make the rank loss NaN for the next `size` studies."""
+    bank = RankBank(256)
+    bank.push(torch.full((1, 12), float("nan")), torch.ones(1, 12), torch.ones(1, 12, dtype=torch.bool))
+    bank.push(torch.tensor([[float("inf")] * 11 + [0.0]]), torch.zeros(1, 12), torch.ones(1, 12, dtype=torch.bool))
+    bank.push(torch.randn(4, 12), torch.tensor([[1.0] * 12, [0.0] * 12] * 2), torch.ones(4, 12, dtype=torch.bool))
+    rl, rt, rm = bank.get()
+    assert torch.isfinite(rl).all() and not rm[:2].any() and rm[2:].all()
+    cur = torch.zeros(1, 12, requires_grad=True)
+    loss = pairwise_rank_loss(cur, torch.zeros(1, 12), None, rl, rt, rm)
+    loss.backward()
+    assert torch.isfinite(loss) and loss.item() > 0 and torch.isfinite(cur.grad).all()
+
+
+def test_rank_loss_ignores_nan_outside_pairs():
+    """A NaN logit in an entry that forms no pair (masked) must not leak into the loss."""
+    s = torch.tensor([[2.0, float("nan")], [-2.0, 0.0]])
+    t = torch.tensor([[1.0, 1.0], [0.0, 0.0]])
+    m = torch.tensor([[True, False], [True, True]])
+    assert torch.isfinite(pairwise_rank_loss(s, t, m))
+
+
+def _sup_cfg(tmp_path, f, **optim):
+    return {"cache_dir": str(f["cache"]), "run_dir": str(tmp_path / "run"), "device": "cpu", "precision": "fp32",
+            "model": {"kind": "knee_vit", "cfg": {"slice_vit": TINY_VIT}}, "labels": {"file": str(f["labels"])},
+            "folds": {"file": str(f["folds"]), "fold": -1},
+            "data": {"out_px": 32, "train_windows": 2, "batch_size": 1, "workers": 0},
+            "optim": {"epochs": 2, **optim}, "select": {"top_k": 1}, "log_every": 1000}
+
+
+def test_train_sup_no_gradient_leak_across_epochs(tmp_path, monkeypatch):
+    """7 studies at accum 3: the 7th micro-batch's gradient must not reach the next epoch's first step. Counts the
+    backward passes that reached the head between a zero_grad and each optimizer step."""
+    from knee.train import train_sup
+    f = make_fake_cache(tmp_path / "c", n_studies=7, px=48)
+    count, per_step = [0], []
+    build = train_sup.build_model
+
+    def build_with_hook(mcfg):
+        m = build(mcfg)
+        m.head.cls_b.register_hook(lambda g: count.__setitem__(0, count[0] + 1))
+        return m
+    monkeypatch.setattr(train_sup, "build_model", build_with_hook)
+    step, zero = torch.optim.AdamW.step, torch.optim.AdamW.zero_grad
+
+    def spy_step(self, *a, **k):
+        per_step.append(count[0])
+        return step(self, *a, **k)
+
+    def spy_zero(self, *a, **k):
+        count[0] = 0
+        return zero(self, *a, **k)
+    monkeypatch.setattr(torch.optim.AdamW, "step", spy_step)
+    monkeypatch.setattr(torch.optim.AdamW, "zero_grad", spy_zero)
+    train_sup.main(["--config", str(_write(tmp_path / "s.yaml", _sup_cfg(tmp_path, f, accum=3)))])
+    assert per_step == [3, 3, 3, 3], per_step  # without the per-epoch zero_grad: [3, 3, 4, 3]
+
+
+def test_train_sup_refuses_fewer_batches_than_accum(tmp_path):
+    from knee.train import train_sup
+    f = make_fake_cache(tmp_path / "c", n_studies=5, px=48)
+    with pytest.raises(SystemExit, match="fewer than one optimizer step"):
+        train_sup.main(["--config", str(_write(tmp_path / "s.yaml", _sup_cfg(tmp_path, f, accum=8,
+                                                                               effective_batch=8)))])

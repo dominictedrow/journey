@@ -45,7 +45,8 @@ def pairwise_rank_loss(logits: torch.Tensor, targets: torch.Tensor, label_mask: 
         rpos, rneg = rm & (ry > pos_thr), rm & (ry < neg_thr)
         terms += [(s[:, None, :] - rs[None, :, :], pos[:, None, :] & rneg[None, :, :]),   # [B, R, K]
                   (rs[:, None, :] - s[None, :, :], rpos[:, None, :] & neg[None, :, :])]   # [R, B, K]
-    num = sum((F.softplus(-d) * w).sum(dim=(0, 1)) for d, w in terms)                  # [K]
+    # where, not multiply: 0 · NaN = NaN, so one non-finite logit would poison every finding's mean
+    num = sum(torch.where(w, F.softplus(-d), 0.0).sum(dim=(0, 1)) for d, w in terms)   # [K]
     cnt = sum(w.sum(dim=(0, 1)) for _, w in terms)                                     # [K]
     has = cnt > 0
     per_label = torch.where(has, num / cnt.clamp(min=1), num * 0.0)
@@ -64,7 +65,12 @@ class RankBank:
 
     @torch.no_grad()
     def push(self, logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor) -> None:
+        """Rows with a non-finite logit (an fp16 overflow) are stored fully masked with zero logits, branch-free: a
+        NaN in the bank would otherwise make the rank loss NaN for the next `size` studies, the scaler would skip
+        every one of those steps, and each skip halves the loss scale."""
         l, t, m = logits.detach().float(), targets.detach().float(), mask.detach().bool()
+        ok = torch.isfinite(l).all(dim=1, keepdim=True)
+        l, m = torch.where(ok, l, 0.0), m & ok
         if self.logits is None:
             self.logits, self.targets, self.mask = l, t, m
         else:
