@@ -59,8 +59,8 @@ DEFAULTS: dict = {
     "select": {"top_k": 3},
     "ckpt_minutes": 30, "log_every": 50,
     # docs/plan/03_performance_plan.md. compile (B4): torch.compile the window encoder at fixed chunk shapes (ragged
-    # chunks padded up to `buckets`, default powers of two ≥ min_bucket); CUDA/Linux only. channels_last (B3): Track A
-    # only. Both exact (with Track A's default freeze_bn; without it, BatchNorm sees the padded copies in training).
+    # chunks padded up to `buckets`, default powers of two ≥ min_bucket); CUDA/Linux only. channels_last (B3): Track A's
+    # backbone, or Track B's conv stem. Both exact (with Track A's default freeze_bn; without it, BatchNorm sees the padded copies in training).
     "perf": {"compile": False, "compile_mode": None, "buckets": None, "min_bucket": 4, "channels_last": False},
 }
 
@@ -313,6 +313,9 @@ def main(argv=None) -> dict:
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
+        # cuDNN autotunes each conv shape once. The shapes are bounded even without compile: a chunk holds at most
+        # window_chunk windows (Track A trains on 3–15 windows per study, so ≤ 5 shapes), so tuning is a one-off cost.
+        torch.backends.cudnn.benchmark = True
 
     # ---- data
     reader = CacheReader(cfg["cache_dir"])
@@ -344,7 +347,6 @@ def main(argv=None) -> dict:
         model.use_channels_last()
     if pcfg["compile"] and device.type == "cuda":
         model.compile_encoder(pcfg["compile_mode"], pcfg["buckets"], pcfg["min_bucket"])
-        torch.backends.cudnn.benchmark = True  # only a few conv shapes now, so autotuning each once pays off
     ocfg, dcfg = cfg["optim"], cfg["data"]
     bs, accum = dcfg["batch_size"], ocfg["accum"]
     if ocfg["effective_batch"]:

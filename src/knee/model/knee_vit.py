@@ -72,6 +72,10 @@ class KneeViT(nn.Module):
         self.window_dropout = float(cfg["window_dropout"])
         self.chunk_buckets: list[int] | None = None  # set by compile_encoder: pad ragged chunks to fixed shapes
 
+    def use_channels_last(self) -> None:
+        """The SliceViT conv stem in NHWC (exact; SliceViT.use_channels_last)."""
+        self.encoder.use_channels_last()
+
     def compile_encoder(self, mode: str | None = None, buckets: list[int] | None = None, min_bucket: int = 4) -> None:
         """torch.compile the SliceViT in place, fed only fixed chunk shapes (knee.model.compiled). The output doesn't
         change: SliceViT treats windows independently, so padding a chunk can't affect the real windows."""

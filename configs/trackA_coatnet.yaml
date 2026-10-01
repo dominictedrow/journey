@@ -10,7 +10,7 @@ model:
     backbone: coatnet_rmlp_2_rw_384.sw_in12k_ft_in1k   # downloads once from the HF hub on the Windows box
     pretrained: true
     head: {kind: attn_mil, att_dim: 256, dropout: 0.2, gated: false}  # Raptor exactly
-    grad_checkpointing: true
+    grad_checkpointing: true   # true / false / a list of stages, e.g. [0, 1] (trackA.set_grad_checkpointing)
     freeze_bn: true        # BN in eval mode + frozen affine: a batch is 1 knee (review 2026-09-30, bug.md #6)
     window_chunk: 16
     window_dropout: 0.0

@@ -46,7 +46,7 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     - window_chunk: windows per encoder call at inference (plan §4 item 3: bigger matmuls). Training's value is set by
       its VRAM (activations kept for backward); inference keeps none, so it can be larger. Exact for SliceViT and for
       Track A in eval (BatchNorm uses running statistics)."""
-    from knee.model.compiled import to_half
+    from knee.model.compiled import load_compile_cache, to_half
     from knee.model.fuse import prepare_for_inference
     from knee.train.train_sup import build_model
     perf = {**PERF_DEFAULTS, **(perf or {})}
@@ -58,6 +58,11 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     model.load_state_dict(ck["model"])
     folded = prepare_for_inference(model)  # exact LayerScale fold (conv+BN off: slower in eager on the T4)
     model.to(device)
+    if device.type == "cuda":
+        # cuDNN autotunes each conv shape once and reuses the fastest kernel. Inference sees only a few shapes (fixed
+        # chunk sizes, plus compile buckets when on), so the one-off tuning pays back after a few studies. Exact up to
+        # float rounding (a different algorithm for the same conv).
+        torch.backends.cudnn.benchmark = True
     if perf["window_chunk"]:
         model.window_chunk = int(perf["window_chunk"])
     if perf["half"] and device.type == "cuda":
@@ -65,6 +70,7 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     if perf["channels_last"] and hasattr(model, "use_channels_last"):
         model.use_channels_last()
     if perf["compile"] and device.type == "cuda":
+        load_compile_cache()  # once per process; a no-op without $KNEE_COMPILE_CACHE_IN
         model.compile_encoder(perf["compile_mode"], min_bucket=perf["min_bucket"])
     log.info("arm %s: folded %s, perf %s", Path(ckpt).name, folded, perf)
     return model, ck["cfg"]["data"]
@@ -209,8 +215,11 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
     k = max(1, int(studies_per_forward))
     ds = TestStudies(study_dirs, series_info, params, [c for _, c in arms])
+    # pin_memory: the `non_blocking=True` copies below are only asynchronous from page-locked memory; from ordinary
+    # (pageable) memory the copy runs synchronously and the CPU stops queueing work while it lasts.
     dl = DataLoader(ds, batch_size=None, shuffle=False, num_workers=workers,
-                    prefetch_factor=max(2, k) if workers else None, worker_init_fn=worker_init if workers else None)
+                    prefetch_factor=max(2, k) if workers else None, worker_init_fn=worker_init if workers else None,
+                    pin_memory=torch.device(device).type == "cuda")
     uids, per_arm, rows = [], [[] for _ in arms], []
     keys = [sample_key(c) for _, c in arms]
 
@@ -328,6 +337,8 @@ def _shard_worker(device: str, arm_specs: list[tuple[str, dict]], study_dirs: li
     uids, per_arm, timing = predict_raw(study_dirs, series_info, arms, dev, params, workers, fallback,
                                         studies_per_forward)
     timing["device"] = device
+    from knee.model.compiled import save_compile_cache
+    save_compile_cache(device)  # no-op without $KNEE_COMPILE_CACHE_OUT or without compiled arms
     tmp = out + ".tmp"
     with open(tmp, "wb") as f:
         pickle.dump({"uids": uids, "per_arm": per_arm, "timing": timing, "load_s": t_load}, f)

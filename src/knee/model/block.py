@@ -10,6 +10,13 @@ identity path, so deep stacks train without warmup tricks (post-norm, the origin
 LayerScale: each branch output is multiplied by a learned per-channel vector initialized small (HP ≈ 0.1), so each
 block starts close to the identity. DropPath (stochastic depth): in training, drop a sample's whole branch with
 probability p and rescale the survivors by 1/(1-p); identity in eval.
+
+`add_branch` computes `x + DropPath(LayerScale(branch))` as one `torch.addcmul` with a tiny [N, 1, E] scale (γ times
+the per-sample keep/(1-p) factor) instead of up to four full passes over the token tensor (γ-mul, mask-mul, /keep, add).
+Same maths, so the same output up to float rounding; it matters in eager mode (the Windows box, any run without
+torch.compile), where each pass is a separate bandwidth-bound kernel (docs/plan/03_performance_plan.md B6). Dtype
+behaviour is unchanged: under autocast the fp32 γ promotes the branch, so the residual stream stays fp32 in training
+(after the inference fold, γ is gone and it stays in the compute dtype).
 """
 from __future__ import annotations
 
@@ -25,12 +32,18 @@ class DropPath(nn.Module):
         super().__init__()
         self.p = p
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.p == 0.0 or not self.training:
-            return x
+    def active(self) -> bool:
+        return self.p > 0.0 and self.training
+
+    def scale(self, x: torch.Tensor) -> torch.Tensor:
+        """[N, 1, ..., 1]: 0 for a dropped sample, 1/(1-p) for a kept one (one draw per sample)."""
         keep = 1.0 - self.p
-        mask = x.new_empty((x.shape[0],) + (1,) * (x.ndim - 1)).bernoulli_(keep)  # one draw per sample
-        return x * mask / keep
+        return x.new_empty((x.shape[0],) + (1,) * (x.ndim - 1)).bernoulli_(keep).div_(keep)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not self.active():
+            return x
+        return x * self.scale(x)  # the scale is tiny: one pass over x, not two (x * mask / keep)
 
     def extra_repr(self) -> str:
         return f"p={self.p}"
@@ -43,6 +56,17 @@ class LayerScale(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x if self.gamma is None else x * self.gamma
+
+
+def add_branch(x: torch.Tensor, branch: torch.Tensor, ls: LayerScale, dp: DropPath) -> torch.Tensor:
+    """x + dp(ls(branch)) in one kernel (see the module docstring)."""
+    scale = ls.gamma
+    if dp.active():
+        s = dp.scale(branch)  # [N, 1, 1] in the branch dtype
+        scale = s if scale is None else s * scale  # → [N, 1, E], promoted like ls(branch) would be
+    if scale is None:
+        return x + branch
+    return torch.addcmul(x, branch, scale)
 
 
 class Block(nn.Module):
@@ -59,8 +83,8 @@ class Block(nn.Module):
         self.drop_path = DropPath(drop_path)
 
     def forward(self, x: torch.Tensor, key_mask: torch.Tensor | None = None) -> torch.Tensor:
-        x = x + self.drop_path(self.ls1(self.attn(self.norm1(x), key_mask)))
-        return x + self.drop_path(self.ls2(self.mlp(self.norm2(x))))
+        x = add_branch(x, self.attn(self.norm1(x), key_mask), self.ls1, self.drop_path)
+        return add_branch(x, self.mlp(self.norm2(x)), self.ls2, self.drop_path)
 
 
 class CrossBlock(nn.Module):
@@ -83,6 +107,6 @@ class CrossBlock(nn.Module):
                 return_attn: bool = False):
         r = self.attn(self.norm_q(q), self.norm_ctx(ctx), key_mask, return_attn)
         a, attn = r if return_attn else (r, None)
-        q = q + self.drop_path(self.ls1(a))
-        q = q + self.drop_path(self.ls2(self.mlp(self.norm2(q))))
+        q = add_branch(q, a, self.ls1, self.drop_path)
+        q = add_branch(q, self.mlp(self.norm2(q)), self.ls2, self.drop_path)
         return (q, attn) if return_attn else q

@@ -97,6 +97,62 @@ def compile_module(m: nn.Module, mode: str | None = None) -> nn.Module:
     return m
 
 
+# ---- compile cache across sessions (PyTorch "Mega-Cache", torch >= 2.7). The scored Kaggle run counts compile time
+# (measured 49 s Track B, 86 s Track A per process on the T4, §2b, and every GPU process compiles its own copy).
+# A T4 session saves the compiled artifacts (save_compile_cache → <out>/compile_cache_<device>.bin); shipped in the
+# bundle as compile_cache.bin, the next run loads them before compiling, so inductor/Triton codegen becomes a cache
+# hit (Dynamo still traces). PyTorch validates the artifacts against the torch + Triton versions and the GPU, so they
+# only help on the same Kaggle image (pin the notebook's environment) and the same GPU type; on a mismatch they are
+# ignored and compilation runs as usual. Speed-up UNVERIFIED until a T4 run measures it.
+COMPILE_CACHE_IN = "KNEE_COMPILE_CACHE_IN"    # file to load, set by notebooks/infer.py
+COMPILE_CACHE_OUT = "KNEE_COMPILE_CACHE_OUT"  # directory to save into
+_cache_loaded = False
+
+
+def load_compile_cache() -> bool:
+    """Load the artifacts named by $KNEE_COMPILE_CACHE_IN once per process. Never raises: a bad or stale cache only
+    costs the compile it would have saved."""
+    import logging
+    import os
+    global _cache_loaded
+    path = os.environ.get(COMPILE_CACHE_IN)
+    if _cache_loaded or not path or not os.path.isfile(path) or not hasattr(torch.compiler, "load_cache_artifacts"):
+        return False
+    _cache_loaded = True
+    try:
+        with open(path, "rb") as f:
+            info = torch.compiler.load_cache_artifacts(f.read())
+        if info is None:  # torch logs why (corrupt, or another torch/Triton/GPU) and returns None
+            logging.getLogger(__name__).warning("compile cache %s rejected; compiling from scratch", path)
+            return False
+        logging.getLogger(__name__).info("compile cache loaded from %s", path)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger(__name__).warning("compile cache %s not loaded: %s", path, e)
+        return False
+
+
+def save_compile_cache(tag: str) -> str | None:
+    """Write this process's compile artifacts to $KNEE_COMPILE_CACHE_OUT/compile_cache_<tag>.bin. Never raises."""
+    import logging
+    import os
+    out = os.environ.get(COMPILE_CACHE_OUT)
+    if not out or not hasattr(torch.compiler, "save_cache_artifacts"):
+        return None
+    try:
+        r = torch.compiler.save_cache_artifacts()
+        if not r or not r[0]:  # nothing was compiled in this process
+            return None
+        os.makedirs(out, exist_ok=True)
+        path = os.path.join(out, f"compile_cache_{tag.replace(':', '')}.bin")
+        with open(path, "wb") as f:
+            f.write(r[0])
+        return path
+    except Exception as e:  # noqa: BLE001
+        logging.getLogger(__name__).warning("compile cache not saved: %s", e)
+        return None
+
+
 def is_half(model: nn.Module) -> bool:
     p = next(model.parameters(), None)
     return p is not None and p.dtype == torch.float16

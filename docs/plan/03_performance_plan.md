@@ -241,3 +241,49 @@ A Kaggle GPU kernel with synthetic inputs (no cache needed) that runs, per workl
 by op type), peak VRAM with checkpointing on vs off, channels_last on vs off, `torch.compile` on the T4 (does Triton run on
 sm75?), and which SDPA backend CoAtNet's biased attention uses in training. Output: this doc's §2 table with measured
 columns. Needs Dom's OK (GPU quota).
+
+## 7. Pass 3: final review of the model and Kaggle specifics (2026-10-01, Mac, CPU only; log `P07_2026-10-01.md`)
+
+Dom asked for one more pass for any memory or compute optimization left, plus anything specific to Kaggle GPUs and
+notebooks. Everything below is exact (same maths, float rounding only) unless marked. None of it is measured on a GPU
+yet: the new variants are in the step-2 profile kernel (`ckpt_off+cl` for Track B, `bs128+cl` for MAE, `ckpt_s01+cl`
+for Track A; the fused residual is in every SliceViT variant, so `B_train ckpt_off` vs P02's 235 ms shows its effect).
+
+| # | Change | Where | Evidence so far |
+|---|---|---|---|
+| P3-1 | **Fused residual branch** (B6): `x + DropPath(LayerScale(branch))` is one `torch.addcmul` with an [N, 1, E] scale, instead of up to four full passes (γ-mul, mask-mul, /keep, add). `DropPath` alone also went from two passes to one | `model/block.py` `add_branch` | CPU: 3.7 → 0.9 ms per branch at Track B size. Eager only; under compile it was fused already. Est. ~5% of a Track B / MAE eager step (UNVERIFIED) |
+| P3-2 | **channels_last SliceViT stem** (B3 for Track B/MAE): in NCHW, every `LayerNorm2d` copies its feature map to NHWC and back, at the model's largest tensors (48×128×128 per window) | `SliceViT.use_channels_last`, `perf.channels_last` in `train_sup` (now also Track B) and `pretrain_mae` | CPU: stem copy ops 48 → 21 per fwd+bwd. Matters most for MAE (stem runs on all 128 full images). Off by default until the T4 says it's faster |
+| P3-3 | **Track A per-stage gradient checkpointing**: `grad_checkpointing: [0, 1]`. Stages 0–1 keep 43% of the activations for 24% of the forward FLOPs; stage 2 keeps 52% for 63% | `TrackAModel.set_grad_checkpointing`, `scripts/perf/stage_memory.py` | Measured on CPU (saved-tensor hooks + flop counter). Est. +8% step vs ckpt off (−17% vs full ckpt) at roughly 60% of ckpt-off activation memory: the way to fit the 5070's 12 GB without full ckpt (UNVERIFIED) |
+| P3-4 | **Track B config: gradient checkpointing off** (C1) | `configs/trackB_vits_mil.yaml` | Measured on the T4 (§2b): −18%, 3.7 GB peak, fits both GPUs |
+| P3-5 | **cuDNN autotuning** (`cudnn.benchmark`) in every CUDA training run and in `load_arm`, not only with compile. The conv shapes are bounded (≤ window_chunk sizes), so tuning is one-off | `train_sup.py`, `predict.py` | Standard; size UNVERIFIED |
+| P3-6 | **Pinned memory in the inference loader**: the `non_blocking=True` copies were synchronous (pageable memory) | `predict.predict_raw` | Standard; small |
+| P3-7 | **Compile cache across Kaggle sessions** (PyTorch Mega-Cache): `infer.py` saves `<out>/compile_cache/compile_cache_<device>.bin`; put one in the bundle as `compile_cache.bin` and the next run loads it before compiling | `model/compiled.py`, `predict.py`, `notebooks/infer.py` | CPU round trip works. Compile was 49 s (B) / 86 s (A) per GPU process, all counted in the scored runtime. Only valid on the same torch + Triton + GPU, so pin the notebook's environment |
+
+**Checked and left alone** (already optimal, or not worth the risk):
+- Attention: SDPA everywhere; on the T4 (sm75) the memory-efficient kernel is the best there is (no FlashAttention below
+  sm80, §2b item 4). QK-norm's two extra LayerNorms are fused by compile; a hand fusion would change the model.
+- Optimizer: fused AdamW, `zero_grad(set_to_none=True)`, TF32 on, no per-step `.item()`: all in place.
+- The residual stream stays **fp32 in training** under autocast (the fp32 LayerScale γ promotes it). That costs
+  bandwidth but is the safer choice for fp16 training on the T4; inference folds γ away, so it runs in fp16 there.
+  Not changed.
+- `torch.inference_mode` instead of `no_grad`: a tiny gain, and the fp32 retry's `model.float()` under inference mode
+  would create inference-tensor parameters. Not worth it.
+- GELU tanh approximation, RMSNorm, token pruning, INT8: change numerics → [val]/[arch], after the Oct 8 gate (C4, C5).
+- `x[mask]` / `tokens[mask] = feats` sync once per forward: unavoidable with variable bags, and the CPU is far ahead.
+- Track A input normalization folded into the stem conv: not exact (zero padding at the borders), skipped.
+
+**Kaggle GPU / notebook specifics (research 2026-10-01):**
+- **Don't pick the P100 accelerator.** Kaggle's image runs torch 2.10.0+cu128 (P02), and PyTorch removed Maxwell/Pascal
+  (sm50–sm60) from its CUDA 12.8+ builds, so a P100 session has no kernels for our code. T4 ×2 is the only usable GPU.
+  [Source: PyTorch dev-discuss, "Maxwell and Pascal architecture support removed in CUDA 12.8 and 12.9 builds"]
+- **Compile cache needs a pinned environment.** Mega-Cache artifacts are validated against the torch and Triton
+  versions and the GPU; a mismatch just recompiles. Kaggle kernels can pin the image ("Pin to original environment";
+  `dockerImagePinningType: original` via the API), which also guards against an image update changing numerics
+  between the validation run and the scored run. [Source: PyTorch compile caching tutorial; Kaggle API kernel metadata]
+- **T4 sustained clocks**: the T4 is a 70 W card, and power/thermal throttling of compute-heavy work is documented
+  (Jia et al. 2019, "Dissecting the NVidia Turing T4 GPU via Microbenchmarking"). Our profile medians come from short
+  runs; a multi-hour training run may be slower. UNVERIFIED for Kaggle's T4s: log `nvidia-smi --query-gpu=clocks.sm,
+  power.draw,temperature.gpu --format=csv -l 60` in the first long run and re-budget if clocks drop.
+- Already known and in place: no bf16 tensor cores (fp16 + GradScaler), quota billed per session (so T4 ×2 = 2
+  folds at once), `/kaggle/input` is NFS (thread the reads), 4 vCPU in CPU sessions (GPU-session CPU count still
+  UNVERIFIED: `hardware()` in `infer.py` records it).

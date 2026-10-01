@@ -42,8 +42,7 @@ class TrackAModel(nn.Module):
                "slice_pos": False, "freeze_bn": True, **(cfg or {})}
         self.cfg = cfg
         self.backbone = timm.create_model(cfg["backbone"], pretrained=cfg["pretrained"], num_classes=0)
-        if cfg["grad_checkpointing"]:
-            self.backbone.set_grad_checkpointing(True)
+        self.set_grad_checkpointing(cfg["grad_checkpointing"])
         self.freeze_bn = bool(cfg["freeze_bn"])
         if self.freeze_bn:
             for m in self.bn_modules():
@@ -64,6 +63,25 @@ class TrackAModel(nn.Module):
         self.window_dropout = float(cfg["window_dropout"])
         self.chunk_buckets: list[int] | None = None  # set by compile_encoder
         self.channels_last = False
+
+    def set_grad_checkpointing(self, which) -> None:
+        """True/False = every stage (timm's switch), or a list of stage indices to checkpoint only those.
+
+        Selective is the cheaper trade. Per window of coatnet_rmlp_2 at 384 px (measured 2026-10-01 with
+        saved-tensor hooks + the flop counter on CPU; scripts/perf/stage_memory.py): stages 0–1 (MBConv at 96² and
+        48²) keep ~43% of the activations but cost ~24% of the forward FLOPs; stage 2 (transformer, 24²) keeps ~52%
+        for ~63%. So `[0, 1]` recomputes about a quarter of the forward (+~8% step time, UNVERIFIED on a GPU) and
+        frees roughly 40% of the activation memory, versus +30% for checkpointing everything (T4, §2b)."""
+        if isinstance(which, bool) or which is None:
+            self.backbone.set_grad_checkpointing(bool(which))
+            return
+        stages = list(self.backbone.stages)
+        bad = [i for i in which if not 0 <= int(i) < len(stages)]
+        if bad:
+            raise ValueError(f"grad_checkpointing stages {bad} out of range (backbone has {len(stages)} stages)")
+        self.backbone.set_grad_checkpointing(False)
+        for i in which:
+            stages[int(i)].grad_checkpointing = True
 
     def bn_modules(self) -> list[nn.Module]:
         """The backbone's BatchNorm layers (timm's BatchNormAct2d subclasses nn.BatchNorm2d)."""

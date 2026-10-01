@@ -50,8 +50,9 @@ DEFAULTS: dict = {
     "ckpt_minutes": 30, "snapshot_every_epochs": 5, "log_every": 50, "recon_every_steps": 2000,
     "probe": {"labels": None, "folds": None, "every_epochs": 5, "fold": 0},
     # torch.compile the whole MAE step (docs/plan/03_performance_plan.md B4). Batches are fixed-shape (drop_last), so
-    # one graph; CUDA/Linux only. Exact (same maths, fused kernels).
-    "perf": {"compile": False, "compile_mode": None},
+    # one graph; CUDA/Linux only. Exact (same maths, fused kernels). channels_last (B3): the conv stem in NHWC, which
+    # removes a full copy of every stem feature map around each LayerNorm2d (SliceViT.use_channels_last). Exact.
+    "perf": {"compile": False, "compile_mode": None, "channels_last": False},
 }
 
 
@@ -164,6 +165,8 @@ def main(argv=None) -> dict:
     base_lr = ocfg["blr"] * bs * accum / 256
 
     mae = build(cfg).to(device)
+    if cfg["perf"].get("channels_last"):
+        mae.encoder.use_channels_last()
     if cfg["perf"]["compile"] and device.type == "cuda":
         from knee.model.compiled import compile_module
         compile_module(mae, cfg["perf"]["compile_mode"])

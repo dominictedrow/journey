@@ -50,6 +50,7 @@ class SliceViT(nn.Module):
             raise ValueError(f"unknown pool {pool!r}")
         self.dim, self.depth, self.patch, self.pool_kind = dim, depth, patch, pool
         self.grad_checkpointing = grad_checkpointing
+        self.channels_last = False  # use_channels_last()
         self.tokenizer = build_tokenizer(tokenizer, in_ch, dim, patch, stem_norm)
         self.pos2d = PosEmbed2D(dim, pos2d, (img_size // patch, img_size // patch))
         self.cls_token = nn.Parameter(torch.zeros(1, 1, dim)) if pool == "cls" else None
@@ -62,10 +63,21 @@ class SliceViT(nn.Module):
         if self.cls_token is not None:
             nn.init.trunc_normal_(self.cls_token, std=1e-6)  # near-zero init [F §5]
 
+    def use_channels_last(self) -> None:
+        """NHWC tokenizer weights and inputs (docs/plan/03_performance_plan.md B3). Exact. In NCHW, the conv stem's
+        LayerNorm2d permutes to channels-last and back around every norm, and LayerNorm needs contiguous input, so each
+        stem stage copies its whole feature map (the largest tensors in the model: 48 × 128 × 128 per window) before
+        the norm and again into the next conv. In NHWC those permutes are free views, the convs run cuDNN's NHWC
+        tensor-core path, and the final flatten/transpose to tokens is a view too."""
+        self.channels_last = True
+        self.tokenizer.to(memory_format=torch.channels_last)
+
     # ---- pieces (shared with MAE)
     def tokenize(self, x: torch.Tensor) -> tuple[torch.Tensor, tuple[int, int]]:
         """[N, C, H, W] → patch tokens + in-plane position [N, n, E], and the (gh, gw) grid. No [CLS] yet."""
         grid = self.tokenizer.grid(x.shape[-2], x.shape[-1])
+        if self.channels_last:
+            x = x.contiguous(memory_format=torch.channels_last)
         return self.pos2d(self.tokenizer(x), grid), grid
 
     def add_cls(self, t: torch.Tensor) -> torch.Tensor:

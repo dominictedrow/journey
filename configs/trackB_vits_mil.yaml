@@ -9,7 +9,7 @@ model:
   cfg:
     slice_vit: {img_size: 256, patch: 16, dim: 384, depth: 12, heads: 6, tokenizer: conv_stem, stem_norm: ln,
                 pos2d: sincos, pool: gap, qk_norm: true, layerscale: 0.1, drop_path: 0.1, attn_impl: sdpa,
-                grad_checkpointing: true}
+                grad_checkpointing: false}   # off: −18% step time, 3.7 GB peak on the T4 (03 plan §2b)
     slice_pos: {n_freq: 8, use_mm: false}
     series_type: {fields: [plane, fluid, contrast, field], max_series: 0}
     head: {kind: attn_mil, att_dim: 256, dropout: 0.2, gated: false}   # then: {kind: finding_query, heads: 6}

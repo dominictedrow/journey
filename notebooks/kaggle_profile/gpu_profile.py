@@ -502,6 +502,13 @@ def step2_trackB():
             m.compile_encoder()
         bench2("B_train", "ckpt_off" + ("+compile" if comp else ""), cycling(bags, train_on(m, scaler_())), comp)
         free(m)
+    # pass 3 (2026-10-01): the conv stem in NHWC, eager (the fused residual branch is in every variant now; compare
+    # ckpt_off with P02's 235 ms for its effect)
+    fresh()
+    m = KneeViT(cfg).to(DEV).train()
+    m.use_channels_last()
+    bench2("B_train", "ckpt_off+cl", cycling(bags, train_on(m, scaler_())), False)
+    free(m)
     free(*bags)
     for k in (2, 4):  # item 3: several studies per micro-batch (ms per study; OOM is recorded, not fatal)
         fresh()
@@ -552,10 +559,12 @@ def step2_trackB():
 
 
 def step2_mae():
-    for comp in (False, True):
+    for comp, cl in ((False, False), (False, True), (True, False)):  # cl = pass 3's NHWC stem (eager)
         fresh()
         enc = SliceViT(**CFG_MAE_ENC)
         mae = MAE(enc, **CFG_MAE).to(DEV).train()
+        if cl:
+            mae.encoder.use_channels_last()
         if comp:
             compile_module(mae)
         sc = scaler_()
@@ -572,7 +581,7 @@ def step2_mae():
             sc.step(opt)
             sc.update()
             opt.zero_grad(set_to_none=True)
-        bench2("MAE", f"bs{SZ['MAE_n']}" + ("+compile" if comp else ""), step, comp)
+        bench2("MAE", f"bs{SZ['MAE_n']}" + ("+cl" if cl else "") + ("+compile" if comp else ""), step, comp)
         free(mae, x, opt)
 
 
@@ -589,6 +598,13 @@ def step2_trackA():
             m.compile_encoder()
         bench2("A_train", "ckpt_off+cl" + ("+compile" if comp else ""), cycling(bags, train_on(m, scaler_())), comp)
         free(m)
+    # pass 3: checkpoint only stages 0-1 (most activations per FLOP; scripts/perf/stage_memory.py). The question is
+    # whether its peak VRAM fits the 5070's 12 GB with headroom and what it costs over ckpt_off.
+    fresh()
+    m = TrackAModel({**cfg, "grad_checkpointing": [0, 1]}).to(DEV).train()
+    m.use_channels_last()
+    bench2("A_train", "ckpt_s01+cl", cycling(bags, train_on(m, scaler_())), False)
+    free(m)
     free(*bags)
 
     bags = [bag(n, SZ["A_px"]) for n in CYC["A_ev"]]

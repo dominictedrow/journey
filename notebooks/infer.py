@@ -11,6 +11,8 @@ Inputs attached to the kernel:
                            (predict.PERF_DEFAULTS; an arm's own "perf" overrides it, except studies_per_forward)}
       weights/*.pt        train_sup `model_avg.pt` checkpoints
       wheels/*.whl        optional offline wheels (pylibjpeg, openjpeg, libjpeg, gdcm; timm if the image lacks it)
+      compile_cache.bin   optional torch.compile artifacts from an earlier run on the same image + GPU type (copy one
+                          of the run's `<out>/compile_cache/compile_cache_<device>.bin`); skips most compile time
 
 Stages (each timed; the efficiency score is linear in total runtime): setup → probe (optional) → load arms →
 preprocess + model per study (DataLoader workers overlap DICOM decode with the GPU) → write + assert submission.
@@ -169,6 +171,11 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     log.info("competition dir %s; bundle dir %s", comp, bundle)
     install_wheels(bundle)
+    # torch.compile artifacts (knee.model.compiled): load the bundle's if any, and save this run's for the next bundle.
+    # Environment variables, so the spawned per-GPU processes see them too.
+    if (bundle / "compile_cache.bin").is_file():
+        os.environ["KNEE_COMPILE_CACHE_IN"] = str(bundle / "compile_cache.bin")
+    os.environ.setdefault("KNEE_COMPILE_CACHE_OUT", str(out / "compile_cache"))
     if (bundle / "knee_src").is_dir():
         sys.path.insert(0, str(bundle / "knee_src"))
 
@@ -213,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
         pred, timing = predict_dirs(dirs, series_info_from_csv(test_series), arms, device, params,
                                     workers=a.workers, weights=weights, how=spec.get("how", "mean"), fallback=prior,
                                     studies_per_forward=spf)
+        from knee.model.compiled import save_compile_cache
+        save_compile_cache(str(device))
     else:
         # the series count is the only per-study cost known before reading a file (UNVERIFIED as a proxy for slices)
         cost = test_series.groupby(test_series.StudyInstanceUID.astype(str)).size().astype(float).to_dict()

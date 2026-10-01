@@ -56,7 +56,7 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no GPU)._
+_Last updated: 2026-10-01 (on the Mac + Kaggle CPU kernels; no Windows box, no GPU)._
 
 - **S01 code** (part 1): `src/knee/audit/`. **The S01 data audit ran on Kaggle** (2026-09-30, private kernel
   `dominictedrow/knee-audit` = `notebooks/kaggle_audit/`, 31 min): full corpus, 819,078 train files, all Explicit VR LE,
@@ -120,7 +120,13 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   arms with the same data config, replaces non-finite outputs with the fallback row, and decodes only slotted series
   for Track A. `infer.py --deadline-hours` kills a hung shard. Bundles now need `--cache-manifest`: `infer.py` checks
   the full PreprocParams plus a preprocessing code hash (`preproc_code_hash`) against the cache's.
-- Tests: 193 pytest (CPU) pass, 2 skipped.
+- **Performance pass 3** (2026-10-01, `03_performance_plan.md` §7, log `docs/sessions_log/P07_2026-10-01.md`): fused
+  residual branch (`block.add_branch`), channels_last SliceViT stem (`perf.channels_last` for Track B and MAE, off by
+  default), Track A per-stage checkpointing (`grad_checkpointing: [0, 1]`, config still `true`), Track B config
+  `grad_checkpointing: false` (measured), cuDNN benchmark + pinned inference memory, compile cache across Kaggle
+  sessions (`compile_cache.bin` in the bundle). Kaggle: **never use the P100** (no sm_60 kernels in the cu128 image);
+  pin the notebook environment. CPU-tested only. `knee-src` is stale: re-version before any Kaggle run.
+- Tests: 207 pytest (CPU) pass, 2 skipped.
 - Submissions made: none. Long jobs running: none.
 
 ## 5. Next session
@@ -130,7 +136,8 @@ _Last updated: 2026-09-30 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   near it (non-zero = an fp16 overflow site worth fixing at the source), and that a resumed `multi_fold` prints
   `already finished` and starts the pending folds at once. Kaggle image: confirm `hasattr(torch.compiler, "set_stance")`.
 - Dom: confirm the NaN-epoch exclusion policy (P05), or switch to "keep the finite-subset AUC and warn".
-- When Dom OKs ~0.5 h of GPU: re-version `knee-src`, then `kaggle kernels push -p notebooks/kaggle_profile --accelerator
+- When Dom OKs ~0.5 h of GPU (the step-2 profile now also measures pass 3: `B_train ckpt_off+cl`, `MAE bs128+cl`,
+  `A_train ckpt_s01+cl`; log `nvidia-smi` clocks/power in long runs, the T4 may throttle): re-version `knee-src`, then `kaggle kernels push -p notebooks/kaggle_profile --accelerator
   NvidiaTeslaT4` (step 2). Turn on `perf.compile` (and `channels_last` for Track A) in the configs only for variants
   that measure faster; `perf.half` only after an OOF check on a trained arm.
 - Decide what else Kaggle should do. Options: a Kaggle-side preprocessing cache (≤ 20 GB per kernel output, so a smaller
