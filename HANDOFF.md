@@ -123,7 +123,7 @@ _Last updated: 2026-10-01 (on the Mac + Kaggle CPU kernels; no Windows box, no G
 - **Performance pass 3** (2026-10-01, `03_performance_plan.md` §7, log `docs/sessions_log/P07_2026-10-01.md`): fused
   residual branch (`block.add_branch`), channels_last SliceViT stem (`perf.channels_last` for Track B and MAE, off by
   default), Track A per-stage checkpointing (`grad_checkpointing: [0, 1]`, config still `true`), Track B config
-  `grad_checkpointing: false` (measured), cuDNN benchmark + pinned inference memory, compile cache across Kaggle
+  `grad_checkpointing: false` (measured), cuDNN benchmark with compile + pinned inference copies, compile cache across Kaggle
   sessions (`compile_cache.bin` in the bundle). Kaggle: **never use the P100** (no sm_60 kernels in the cu128 image);
   pin the notebook environment. CPU-tested only. `knee-src` is stale: re-version before any Kaggle run.
 - Tests: 207 pytest (CPU) pass, 2 skipped.

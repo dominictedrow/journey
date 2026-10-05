@@ -50,17 +50,18 @@ class PosEmbed2D(nn.Module):
         if kind == "learned":
             self.table = nn.Parameter(torch.zeros(1, base_grid[0] * base_grid[1], dim))
             nn.init.trunc_normal_(self.table, std=0.02)
-        self._cache: dict = {}
+        else:
+            # The base-grid table as a non-persistent buffer (not in state_dict; follows .to()/.half()). It replaces a
+            # dict cache filled inside forward: torch.compile guarded on that dict, so the first graph was compiled
+            # twice, once with the cache empty and once filled (review 2026-10-01).
+            self.register_buffer("sincos", sincos_2d(*self.base_grid, dim)[None], persistent=False)
 
     def table_for(self, grid: tuple[int, int], device) -> torch.Tensor:
         gh, gw = grid
         if self.kind == "sincos":
-            key = (gh, gw, str(device))
-            t = self._cache.get(key)
-            if t is None:
-                t = sincos_2d(gh, gw, self.dim, device)[None]
-                self._cache[key] = t
-            return t
+            if (gh, gw) == self.base_grid:
+                return self.sincos
+            return sincos_2d(gh, gw, self.dim, device)[None]  # other grids (MAE at a lower resolution): a few tiny ops
         if (gh, gw) == self.base_grid:
             return self.table
         bh, bw = self.base_grid

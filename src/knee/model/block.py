@@ -35,10 +35,10 @@ class DropPath(nn.Module):
     def active(self) -> bool:
         return self.p > 0.0 and self.training
 
-    def scale(self, x: torch.Tensor) -> torch.Tensor:
-        """[N, 1, ..., 1]: 0 for a dropped sample, 1/(1-p) for a kept one (one draw per sample)."""
+    def scale(self, x: torch.Tensor, dtype: torch.dtype | None = None) -> torch.Tensor:
+        """[N, 1, ..., 1]: 0 for a dropped sample, 1/(1-p) for a kept one (one draw per sample), in `dtype` (x's)."""
         keep = 1.0 - self.p
-        return x.new_empty((x.shape[0],) + (1,) * (x.ndim - 1)).bernoulli_(keep).div_(keep)
+        return x.new_empty((x.shape[0],) + (1,) * (x.ndim - 1), dtype=dtype).bernoulli_(keep).div_(keep)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self.active():
@@ -62,7 +62,10 @@ def add_branch(x: torch.Tensor, branch: torch.Tensor, ls: LayerScale, dp: DropPa
     """x + dp(ls(branch)) in one kernel (see the module docstring)."""
     scale = ls.gamma
     if dp.active():
-        s = dp.scale(branch)  # [N, 1, 1] in the branch dtype
+        # [N, 1, 1], drawn in at least fp32: a bf16 mask stores 1/keep as 1.1094 instead of 1.1111 at p=0.1, a
+        # systematic shrink (review 2026-10-01). With LayerScale off this promotes the residual stream to fp32, the
+        # same as γ does with it on.
+        s = dp.scale(branch, torch.promote_types(branch.dtype, torch.float32))
         scale = s if scale is None else s * scale  # → [N, 1, E], promoted like ls(branch) would be
     if scale is None:
         return x + branch

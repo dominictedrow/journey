@@ -58,10 +58,10 @@ def load_arm(ckpt: str | Path, device, perf: dict | None = None) -> tuple[torch.
     model.load_state_dict(ck["model"])
     folded = prepare_for_inference(model)  # exact LayerScale fold (conv+BN off: slower in eager on the T4)
     model.to(device)
-    if device.type == "cuda":
-        # cuDNN autotunes each conv shape once and reuses the fastest kernel. Inference sees only a few shapes (fixed
-        # chunk sizes, plus compile buckets when on), so the one-off tuning pays back after a few studies. Exact up to
-        # float rounding (a different algorithm for the same conv).
+    if device.type == "cuda" and perf["compile"]:
+        # cuDNN autotunes each conv shape once and reuses the fastest kernel. Only with compile: its buckets bound the
+        # chunk shapes. Eager, a bag's last chunk can be any size up to window_chunk (64 shapes for Track B), each tuned
+        # anew inside the scored runtime (review 2026-10-01). Exact up to float rounding.
         torch.backends.cudnn.benchmark = True
     if perf["window_chunk"]:
         model.window_chunk = int(perf["window_chunk"])
@@ -215,11 +215,12 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
     fallback = np.full(len(LABELS), 0.5) if fallback is None else np.asarray(fallback, dtype=np.float64)
     k = max(1, int(studies_per_forward))
     ds = TestStudies(study_dirs, series_info, params, [c for _, c in arms])
-    # pin_memory: the `non_blocking=True` copies below are only asynchronous from page-locked memory; from ordinary
-    # (pageable) memory the copy runs synchronously and the CPU stops queueing work while it lasts.
     dl = DataLoader(ds, batch_size=None, shuffle=False, num_workers=workers,
-                    prefetch_factor=max(2, k) if workers else None, worker_init_fn=worker_init if workers else None,
-                    pin_memory=torch.device(device).type == "cuda")
+                    prefetch_factor=max(2, k) if workers else None, worker_init_fn=worker_init if workers else None)
+    # The `non_blocking=True` copies below are only asynchronous from page-locked memory. collate_arm builds new
+    # (pageable) tensors, so the batch is pinned after collate; DataLoader(pin_memory=True) would pin the per-study
+    # inputs before the stack and leave the copy synchronous (review 2026-10-01).
+    pin = torch.device(device).type == "cuda"
     uids, per_arm, rows = [], [[] for _ in arms], []
     keys = [sample_key(c) for _, c in arms]
 
@@ -231,8 +232,8 @@ def predict_raw(study_dirs: list[Path], series_info: dict, arms: list[tuple[torc
         for a, (m, cfg) in enumerate(arms):
             if keys[a] not in on_dev:
                 batch = collate_arm([inp[keys[a]] for _, inp in group], cfg)
-                on_dev[keys[a]] = {kk: v.to(device, non_blocking=True) if torch.is_tensor(v) else v
-                                   for kk, v in batch.items()}
+                on_dev[keys[a]] = {kk: (v.pin_memory() if pin else v).to(device, non_blocking=True)
+                                   if torch.is_tensor(v) else v for kk, v in batch.items()}
             p = run_arm(m, on_dev[keys[a]], device)
             for i in range(len(group)):
                 out[i].append(p[i])

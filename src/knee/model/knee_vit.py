@@ -57,6 +57,19 @@ def drop_windows(mask: torch.Tensor, p: float) -> torch.Tensor:
     return keep | (first & none_left[:, None])  # branch-free: no GPU→CPU sync
 
 
+def real_index(mask: torch.Tensor) -> torch.Tensor:
+    """Flat indices [n_real] of the real windows of a [B, L] mask. This is the forward's one GPU→CPU sync (n_real sets
+    the encoder's shapes), taken before any encoder work is queued. Bool-mask indexing (`x[mask]`, `tokens[mask] = f`)
+    syncs at both ends, and the second sync waits for the whole encoder before the head can be queued (review
+    2026-10-01)."""
+    return mask.flatten().nonzero().squeeze(1)
+
+
+def scatter_windows(feats: torch.Tensor, idx: torch.Tensor, B: int, L: int) -> torch.Tensor:
+    """[n_real, E] → [B, L, E] with zeros at the padding (the inverse of gathering rows `idx`; no sync)."""
+    return feats.new_zeros((B * L, feats.shape[-1])).index_copy(0, idx, feats).view(B, L, -1)
+
+
 class KneeViT(nn.Module):
     def __init__(self, cfg: dict | None = None):
         super().__init__()
@@ -94,9 +107,9 @@ class KneeViT(nn.Module):
     def forward(self, batch: dict, return_attn: bool = False):
         x, mask = batch["x"], drop_windows(batch["window_mask"], self.window_dropout if self.training else 0.0)
         B, L = mask.shape
-        feats = self.encode_windows(x[mask])                                   # [n_real, E]
-        tokens = feats.new_zeros((B, L, feats.shape[-1]))
-        tokens[mask] = feats
+        idx = real_index(mask)
+        feats = self.encode_windows(x.flatten(0, 1).index_select(0, idx))     # [n_real, E]
+        tokens = scatter_windows(feats, idx, B, L)
         tokens = self.slice_pos(tokens, batch["z"], batch.get("z_mm"))
         tokens = self.series_type(tokens, {k: batch[k] for k in TYPE_KEYS if k in batch})
         return self.head(tokens, mask, return_attn=return_attn)

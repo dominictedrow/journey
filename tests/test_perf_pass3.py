@@ -48,6 +48,20 @@ def test_add_branch_keeps_dtype_promotion():
     assert add_branch(x, b, LayerScale(8, None), DropPath(0.0)).dtype == torch.bfloat16
 
 
+
+def test_add_branch_bf16_mask_matches_reference():
+    """Under bf16 autocast the old path drew the DropPath mask in γ's fp32; a bf16 mask stores 1/keep as 1.1094
+    instead of 1.1111 at p=0.1 (review 2026-10-01). Values, not just the dtype."""
+    ls, dp = LayerScale(8, 0.1), DropPath(0.1)
+    x = torch.randn(64, 3, 8, dtype=torch.bfloat16)
+    b = torch.randn(64, 3, 8, dtype=torch.bfloat16)
+    torch.manual_seed(2)
+    out = add_branch(x, b, ls, dp)
+    torch.manual_seed(2)
+    ref = _reference_branch(x, b, ls, dp)
+    torch.testing.assert_close(out, ref, rtol=1e-6, atol=1e-6)
+    assert dp.scale(b, torch.float32).dtype == torch.float32 and dp.scale(b).dtype == torch.bfloat16
+
 @pytest.mark.parametrize("cls", [Block, CrossBlock])
 def test_blocks_use_fused_branch_same_output(cls):
     torch.manual_seed(0)
@@ -129,6 +143,34 @@ def test_trackA_stage_checkpointing_same_grads():
             torch.testing.assert_close(pb.grad, pa.grad, rtol=1e-4, atol=1e-6, msg=n)
 
 
+
+def test_trackA_checkpointed_stages_recompute():
+    """The gradient test above passes with or without checkpointing; this one checks that exactly the listed stages
+    run their blocks a second time in backward."""
+    pytest.importorskip("timm")
+    from knee.model.trackA import TrackAModel
+    m = TrackAModel({"backbone": "coatnet_nano_rw_224", "pretrained": False, "grad_checkpointing": [0, 1],
+                     "window_chunk": 4}).train()
+    calls = [0] * len(m.backbone.stages)
+    for i, st in enumerate(m.backbone.stages):  # wrap forward: module hooks don't fire on the checkpoint recompute
+        blk, fwd = st.blocks[0], st.blocks[0].forward
+
+        def counted(*a, fwd=fwd, i=i, **k):
+            calls[i] += 1
+            return fwd(*a, **k)
+        blk.forward = counted
+    m.backbone(torch.randn(1, 3, 224, 224)).sum().backward()
+    assert calls == [2, 2] + [1] * (len(calls) - 2)
+
+
+def test_trackA_stage_checkpointing_config_backbone():
+    """Stage indices on the backbone the config actually uses (4 stages), not only the nano model."""
+    pytest.importorskip("timm")
+    from knee.model.trackA import TrackAModel
+    m = TrackAModel({"backbone": "coatnet_rmlp_2_rw_384", "pretrained": False, "grad_checkpointing": [0, 1],
+                     "window_chunk": 4})
+    assert [s.grad_checkpointing for s in m.backbone.stages] == [True, True, False, False]
+
 def test_compile_cache_helpers_are_noops_without_env(monkeypatch, tmp_path):
     from knee.model import compiled
     monkeypatch.delenv(compiled.COMPILE_CACHE_IN, raising=False)
@@ -146,3 +188,63 @@ def test_compile_cache_helpers_are_noops_without_env(monkeypatch, tmp_path):
     monkeypatch.setenv(compiled.COMPILE_CACHE_IN, str(bad))
     monkeypatch.setattr(compiled, "_cache_loaded", False)
     assert compiled.load_compile_cache() is False
+
+
+# ---- model review 2026-10-01 (second pass)
+
+def test_droppath_scale_fp32_without_layerscale():
+    """With LayerScale off, a bf16 keep factor rounds 1/0.9 down to 1.1094; the factor is now drawn in fp32."""
+    dp = DropPath(0.1).train()
+    torch.manual_seed(0)
+    y = add_branch(torch.zeros(4096, 1, 2, dtype=torch.bfloat16), torch.ones(4096, 1, 2, dtype=torch.bfloat16),
+                   LayerScale(2, None), dp)
+    assert y.dtype == torch.float32
+    kept = y[y != 0]
+    assert kept.numel() and torch.allclose(kept, torch.tensor(1 / 0.9))
+
+
+def test_sincos_pos2d_compiles_once_per_shape():
+    """The dict cache in PosEmbed2D made Dynamo compile the first shape twice (cache empty, then filled)."""
+    from torch._dynamo.utils import counters
+    m = SliceViT(dim=32, depth=1, heads=2, img_size=32).eval()
+    assert not any("sincos" in k for k in m.state_dict())  # non-persistent: old checkpoints load unchanged
+    m.compile(backend="eager", dynamic=False)
+    counters.clear()
+    with torch.no_grad():
+        for n in (2, 2, 4, 4):
+            m(torch.randn(n, 3, 32, 32))
+    assert counters["stats"]["unique_graphs"] == 2
+
+
+def test_sincos_pos2d_other_grid_matches_base():
+    from knee.model.pos_embed import PosEmbed2D, sincos_2d
+    pe = PosEmbed2D(32, "sincos", (4, 4))
+    assert torch.equal(pe.table_for((4, 4), "cpu"), sincos_2d(4, 4, 32)[None])
+    assert torch.equal(pe.table_for((2, 3), "cpu"), sincos_2d(2, 3, 32)[None])
+
+
+def test_index_gather_scatter_matches_bool_mask():
+    """KneeViT.forward gathers/scatters real windows by index (one sync) instead of bool masks (two); same output and
+    gradients as the old x[mask] / tokens[mask] = feats."""
+    from knee.model.knee_vit import KneeViT
+    torch.manual_seed(0)
+    m = KneeViT({"slice_vit": {"dim": 32, "depth": 1, "heads": 2, "img_size": 32}}).eval()  # eval: no dropout
+    for p in m.parameters():  # non-zero head weights so gradients reach the encoder
+        if p.ndim and not p.abs().sum():
+            torch.nn.init.normal_(p, std=0.1)
+    B, L = 2, 5
+    mask = torch.tensor([[1, 1, 1, 0, 0], [1, 1, 1, 1, 1]], dtype=torch.bool)
+    types_ = {k: torch.zeros(B, L, dtype=torch.long) for k in ("plane", "fluid", "contrast", "field")}
+    batch = {"x": torch.randint(0, 256, (B, L, 3, 32, 32), dtype=torch.uint8), "window_mask": mask,
+             "z": torch.rand(B, L), **types_}
+    out = m(batch)
+    out.sum().backward()
+    grads = [p.grad.clone() for p in m.parameters()]
+    m.zero_grad()
+    feats = m.encode_windows(batch["x"][mask])
+    tok = feats.new_zeros((B, L, feats.shape[-1]))
+    tok[mask] = feats
+    ref = m.head(m.series_type(m.slice_pos(tok, batch["z"]), types_), mask)
+    ref.sum().backward()
+    assert torch.equal(out, ref)
+    assert all(torch.equal(g, p.grad) for g, p in zip(grads, m.parameters()))

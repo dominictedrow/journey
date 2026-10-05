@@ -68,7 +68,8 @@ class SliceViT(nn.Module):
         LayerNorm2d permutes to channels-last and back around every norm, and LayerNorm needs contiguous input, so each
         stem stage copies its whole feature map (the largest tensors in the model: 48 × 128 × 128 per window) before
         the norm and again into the next conv. In NHWC those permutes are free views, the convs run cuDNN's NHWC
-        tensor-core path, and the final flatten/transpose to tokens is a view too."""
+        tensor-core path. The final flatten to tokens copies once (an NHWC-strided map can't be flattened over H, W as a
+        view), but only the small [N, E, h, w] output."""
         self.channels_last = True
         self.tokenizer.to(memory_format=torch.channels_last)
 

@@ -313,9 +313,10 @@ def main(argv=None) -> dict:
     if device.type == "cuda":
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
-        # cuDNN autotunes each conv shape once. The shapes are bounded even without compile: a chunk holds at most
-        # window_chunk windows (Track A trains on 3–15 windows per study, so ≤ 5 shapes), so tuning is a one-off cost.
-        torch.backends.cudnn.benchmark = True
+        # cuDNN autotunes each conv shape once. Only with compile, whose buckets bound the chunk shapes: eager, a
+        # bag's last chunk can be any size up to window_chunk (64 for Track B), and every new shape is tuned again,
+        # with trial workspaces that add OOM pressure on the 12 GB box (review 2026-10-01).
+        torch.backends.cudnn.benchmark = bool(cfg["perf"]["compile"])
 
     # ---- data
     reader = CacheReader(cfg["cache_dir"])

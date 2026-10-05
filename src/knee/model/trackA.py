@@ -14,7 +14,7 @@ from torch import nn
 
 from knee.model.compiled import compile_module, default_buckets, encode_chunks
 from knee.model.heads import build_head
-from knee.model.knee_vit import drop_windows
+from knee.model.knee_vit import drop_windows, real_index, scatter_windows
 from knee.model.pos_embed import SeriesTypeEmbed, SlicePosEmbed
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
@@ -129,9 +129,9 @@ class TrackAModel(nn.Module):
             batch = slots_to_bag(batch)
         mask = drop_windows(batch["window_mask"], self.window_dropout if self.training else 0.0)
         B, L = mask.shape
-        feats = self.encode_windows(batch["x"][mask])
-        tokens = feats.new_zeros((B, L, feats.shape[-1]))
-        tokens[mask] = feats
+        idx = real_index(mask)
+        feats = self.encode_windows(batch["x"].flatten(0, 1).index_select(0, idx))
+        tokens = scatter_windows(feats, idx, B, L)
         if self.slot_embed is not None:
             tokens = self.slot_embed(tokens, {"slot": batch["slot"]})
         if self.slice_pos is not None:
