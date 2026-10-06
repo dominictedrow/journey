@@ -12,6 +12,7 @@ My path through learning machine learning, from hand-written fundamentals to AI-
 | [`Vibe_models/cnn_1`](Vibe_models/cnn_1/) | MNIST handwritten-digit CNN, built with Claude Code as pair programmer | Me + AI |
 | [`Vibe_models/cnn_2`](Vibe_models/cnn_2/) | Cats vs Dogs CNN classifier, built with Claude Code as pair programmer | Me + AI |
 | [`J_trade_ML/`](J_trade_ML/) | XAUUSD (gold) trading ML research: data pipeline and many model architectures | **My mentor. Not my code.** |
+| [`claude-setup/`](claude-setup/) | My global Claude Code `CLAUDE.md` and the commands to reinstall my plugins and skills | Me |
 
 ## Notes
 
