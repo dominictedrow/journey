@@ -9,7 +9,14 @@ mkdir -p ~/.claude
 curl -fsSL https://raw.githubusercontent.com/dominictedrow/journey/main/claude-setup/CLAUDE.md -o ~/.claude/CLAUDE.md
 ```
 
-`CLAUDE.md` refers to custom agents (`master`, `slave`, `qa`, `code-reviewer`, `research`) that live in `~/.claude/agents/`. Copy those over separately.
+`CLAUDE.md` refers to the custom agents in [`agents/`](agents/) (`master`, `slave`, `qa`, `code-reviewer`, `research`). Install them too:
+
+```bash
+mkdir -p ~/.claude/agents
+for a in master slave qa code-reviewer research; do
+  curl -fsSL https://raw.githubusercontent.com/dominictedrow/journey/main/claude-setup/agents/$a.md -o ~/.claude/agents/$a.md
+done
+```
 
 ## 2. Plugin marketplaces
 
