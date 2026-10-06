@@ -1,0 +1,6 @@
+/Users/dominictedrow/miniconda3/envs/cnn_2/lib/python3.13/site-packages/PIL/TiffImagePlugin.py:950: UserWarning: Truncated File Read
+  warnings.warn(str(msg))
+Total files seen: 24959
+Kept (RGB, saved as .npz): 24898
+Skipped (non-RGB): 61
+Skipped (unreadable): 0

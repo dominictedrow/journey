@@ -1,0 +1,1 @@
+Predicted_High: 0.4582846760749817, Predicted_Low: 0.4858664274215698

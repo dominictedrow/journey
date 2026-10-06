@@ -1,0 +1,21 @@
+.DS_Store
+._*
+.claude/
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# J_trade_ML (mentor code) data and weights
+J_trade_ML/graphify-out/
+J_trade_ML/model_training/data/
+J_trade_ML/**/*.db
+J_trade_ML/**/*.pkl
+J_trade_ML/**/*.h5
+J_trade_ML/**/*.ckpt
+J_trade_ML/**/*.weights
+
+# cnn_2 data and checkpoints
+Vibe_models/cnn_2/dataset/
+Vibe_models/cnn_2/processed/
+Vibe_models/cnn_2/processed_180x202_backup/
+Vibe_models/cnn_2/checkpoints/

@@ -1,0 +1,15 @@
+each seq_len output from  x = SimpleRNN(rnn_units, return_sequences=True)(x)
+
+
+separately connect to the same theFractalDenseLayer, where every unit within each seq_len creates it's own fractals connecting to the same FractalDenseLayer, then based on fractal_percent, each unit in each separate seq_len across featues, creates it's own fractal pattern, that can potentially connect up to fractal_percent of the total units in FractalDenseLayer (100 percent is a normal fully connected layer. The SimpleRNN selected fractal unit connections from each seq_len connected to the same FractalDenseLayer determine what percentage of units in the shared FractalDenseLayer, being that each unit creates it's own fractal, the fractal pattern for each unit is learned during training, as the fractals change during training for each connected unit. use probabilities for each unit connected to the shared FractalDenseLayer to make sure that that by the time all unit fractals are connected for a pass, that all units in the shared FractalDenseLayer are connected at least once. 
+
+Make sure that the fractal work as indented as fractals, and that each units in each seq_len for each sequence is only randomly connected as fractal patterns to selected units in the shared FractalDenseLayer, based on the fractal_percent as described.
+
+if over 100% for fractal_percent, that would mean that units will connect to the same unit in the FractalDenseLayer more than once, so for every unit connection connected more than once, multiplies the connected unit in FractalDenseLayer by it's sum, rather than contributing to the sum by adding to the sum.
+
+But it's computationally expensive. we need to change it. rather than each unit having it's own fractal, let's make each row of units for each seq_len have their own fractals. So each seq_len connects to the same shared FractalDenseLayer using the same concept of fractal_percent that all units in each seq_len can connect to from the output of:
+
+x = SimpleRNN(rnn_units, use_bias=True, return_sequences=True)(x)
+    x = LayerNormalization(epsilon=1e-6)(x)
+
+that connect to the same shared FractalDenseLayer. 

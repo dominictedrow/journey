@@ -1,0 +1,631 @@
+2024-11-02 01:32:55 - Script1: 
+2024-11-02 01:32:55 - Script1: 
+2024-11-02 01:32:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:32:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:32:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:32:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:32:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:32:55 - Script1: Open trades:
+2024-11-02 01:32:55 - Script1: 
+2024-11-02 01:32:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:32:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:32:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:32:55 - Script1: 
+2024-11-02 01:30:55 - Script1: 
+2024-11-02 01:30:55 - Script1: 
+2024-11-02 01:30:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:30:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:30:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:30:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:30:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:30:55 - Script1: Open trades:
+2024-11-02 01:30:55 - Script1: 
+2024-11-02 01:30:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:30:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:30:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:30:55 - Script1: 
+2024-11-02 01:28:55 - Script1: 
+2024-11-02 01:28:55 - Script1: 
+2024-11-02 01:28:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:28:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:28:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:28:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:28:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:28:55 - Script1: Open trades:
+2024-11-02 01:28:55 - Script1: 
+2024-11-02 01:28:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:28:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:28:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:28:55 - Script1: 
+2024-11-02 01:26:55 - Script1: 
+2024-11-02 01:26:55 - Script1: 
+2024-11-02 01:26:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:26:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:26:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:26:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:26:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:26:55 - Script1: Open trades:
+2024-11-02 01:26:55 - Script1: 
+2024-11-02 01:26:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:26:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:26:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:26:55 - Script1: 
+2024-11-02 01:24:55 - Script1: 
+2024-11-02 01:24:55 - Script1: 
+2024-11-02 01:24:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:24:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:24:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:24:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:24:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:24:55 - Script1: Open trades:
+2024-11-02 01:24:55 - Script1: 
+2024-11-02 01:24:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:24:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:24:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:24:55 - Script1: 
+2024-11-02 01:22:55 - Script1: 
+2024-11-02 01:22:55 - Script1: 
+2024-11-02 01:22:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:22:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:22:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:22:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:22:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:22:55 - Script1: Open trades:
+2024-11-02 01:22:55 - Script1: 
+2024-11-02 01:22:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:22:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:22:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:22:55 - Script1: 
+2024-11-02 01:20:55 - Script1: 
+2024-11-02 01:20:55 - Script1: 
+2024-11-02 01:20:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:20:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:20:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:20:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:20:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:20:55 - Script1: Open trades:
+2024-11-02 01:20:55 - Script1: 
+2024-11-02 01:20:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:20:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:20:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:20:55 - Script1: 
+2024-11-02 01:18:55 - Script1: 
+2024-11-02 01:18:55 - Script1: 
+2024-11-02 01:18:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:18:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:18:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:18:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:18:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:18:55 - Script1: Open trades:
+2024-11-02 01:18:55 - Script1: 
+2024-11-02 01:18:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:18:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:18:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:18:55 - Script1: 
+2024-11-02 01:16:55 - Script1: 
+2024-11-02 01:16:55 - Script1: 
+2024-11-02 01:16:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:16:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:16:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:16:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:16:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:16:55 - Script1: Open trades:
+2024-11-02 01:16:55 - Script1: 
+2024-11-02 01:16:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:16:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:16:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:16:55 - Script1: 
+2024-11-02 01:14:55 - Script1: 
+2024-11-02 01:14:55 - Script1: 
+2024-11-02 01:14:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:14:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:14:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:14:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:14:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:14:55 - Script1: Open trades:
+2024-11-02 01:14:55 - Script1: 
+2024-11-02 01:14:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:14:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:14:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:14:55 - Script1: 
+2024-11-02 01:14:23 - Script6: Data managed successfully. Next run in one hour.
+2024-11-02 01:12:55 - Script1: 
+2024-11-02 01:12:55 - Script1: 
+2024-11-02 01:12:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:12:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:12:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:12:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:12:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:12:55 - Script1: Open trades:
+2024-11-02 01:12:55 - Script1: 
+2024-11-02 01:12:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:12:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:12:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:12:55 - Script1: 
+2024-11-02 01:10:56 - Script1: 
+2024-11-02 01:10:55 - Script1: 
+2024-11-02 01:10:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:10:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:10:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:10:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:10:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:10:55 - Script1: Open trades:
+2024-11-02 01:10:55 - Script1: 
+2024-11-02 01:10:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:10:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:10:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:10:55 - Script1: 
+2024-11-02 01:08:56 - Script1: 
+2024-11-02 01:08:56 - Script1: 
+2024-11-02 01:08:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:08:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:08:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:08:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:08:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:08:56 - Script1: Open trades:
+2024-11-02 01:08:56 - Script1: 
+2024-11-02 01:08:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:08:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:08:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:08:55 - Script1: 
+2024-11-02 01:06:56 - Script1: 
+2024-11-02 01:06:56 - Script1: 
+2024-11-02 01:06:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:06:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:06:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:06:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:06:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:06:56 - Script1: Open trades:
+2024-11-02 01:06:56 - Script1: 
+2024-11-02 01:06:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:06:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:06:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:06:56 - Script1: 
+2024-11-02 01:04:56 - Script1: 
+2024-11-02 01:04:56 - Script1: 
+2024-11-02 01:04:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:04:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:04:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:04:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:04:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:04:56 - Script1: Open trades:
+2024-11-02 01:04:56 - Script1: 
+2024-11-02 01:04:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:04:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:04:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:04:56 - Script1: 
+2024-11-02 01:02:56 - Script1: 
+2024-11-02 01:02:56 - Script1: 
+2024-11-02 01:02:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:02:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:02:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:02:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:02:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:02:56 - Script1: Open trades:
+2024-11-02 01:02:56 - Script1: 
+2024-11-02 01:02:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:02:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:02:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:02:56 - Script1: 
+2024-11-02 01:00:56 - Script1: 
+2024-11-02 01:00:56 - Script1: 
+2024-11-02 01:00:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 01:00:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 01:00:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 01:00:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 01:00:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 01:00:56 - Script1: Open trades:
+2024-11-02 01:00:56 - Script1: 
+2024-11-02 01:00:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 01:00:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 01:00:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 01:00:56 - Script1: 
+2024-11-02 00:58:56 - Script1: 
+2024-11-02 00:58:56 - Script1: 
+2024-11-02 00:58:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:58:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:58:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:58:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:58:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:58:56 - Script1: Open trades:
+2024-11-02 00:58:56 - Script1: 
+2024-11-02 00:58:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:58:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:58:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:58:56 - Script1: 
+2024-11-02 00:56:56 - Script1: 
+2024-11-02 00:56:56 - Script1: 
+2024-11-02 00:56:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:56:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:56:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:56:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:56:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:56:56 - Script1: Open trades:
+2024-11-02 00:56:56 - Script1: 
+2024-11-02 00:56:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:56:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:56:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:56:56 - Script1: 
+2024-11-02 00:54:56 - Script1: 
+2024-11-02 00:54:56 - Script1: 
+2024-11-02 00:54:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:54:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:54:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:54:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:54:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:54:56 - Script1: Open trades:
+2024-11-02 00:54:56 - Script1: 
+2024-11-02 00:54:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:54:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:54:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:54:56 - Script1: 
+2024-11-02 00:52:56 - Script1: 
+2024-11-02 00:52:56 - Script1: 
+2024-11-02 00:52:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:52:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:52:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:52:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:52:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:52:56 - Script1: Open trades:
+2024-11-02 00:52:56 - Script1: 
+2024-11-02 00:52:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:52:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:52:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:52:56 - Script1: 
+2024-11-02 00:50:55 - Script1: 
+2024-11-02 00:50:55 - Script1: 
+2024-11-02 00:50:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:50:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:50:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:50:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:50:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:50:55 - Script1: Open trades:
+2024-11-02 00:50:55 - Script1: 
+2024-11-02 00:50:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:50:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:50:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:50:55 - Script1: 
+2024-11-02 00:48:56 - Script1: 
+2024-11-02 00:48:56 - Script1: 
+2024-11-02 00:48:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:48:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:48:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:48:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:48:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:48:56 - Script1: Open trades:
+2024-11-02 00:48:56 - Script1: 
+2024-11-02 00:48:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:48:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:48:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:48:56 - Script1: 
+2024-11-02 00:46:56 - Script1: 
+2024-11-02 00:46:56 - Script1: 
+2024-11-02 00:46:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:46:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:46:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:46:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:46:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:46:56 - Script1: Open trades:
+2024-11-02 00:46:56 - Script1: 
+2024-11-02 00:46:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:46:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:46:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:46:56 - Script1: 
+2024-11-02 00:44:56 - Script1: 
+2024-11-02 00:44:56 - Script1: 
+2024-11-02 00:44:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:44:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:44:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:44:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:44:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:44:56 - Script1: Open trades:
+2024-11-02 00:44:56 - Script1: 
+2024-11-02 00:44:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:44:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:44:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:44:56 - Script1: 
+2024-11-02 00:42:56 - Script1: 
+2024-11-02 00:42:56 - Script1: 
+2024-11-02 00:42:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:42:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:42:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:42:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:42:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:42:56 - Script1: Open trades:
+2024-11-02 00:42:56 - Script1: 
+2024-11-02 00:42:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:42:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:42:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:42:56 - Script1: 
+2024-11-02 00:40:56 - Script1: 
+2024-11-02 00:40:56 - Script1: 
+2024-11-02 00:40:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:40:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:40:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:40:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:40:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:40:56 - Script1: Open trades:
+2024-11-02 00:40:56 - Script1: 
+2024-11-02 00:40:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:40:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:40:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:40:56 - Script1: 
+2024-11-02 00:38:56 - Script1: 
+2024-11-02 00:38:56 - Script1: 
+2024-11-02 00:38:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:38:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:38:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:38:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:38:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:38:56 - Script1: Open trades:
+2024-11-02 00:38:56 - Script1: 
+2024-11-02 00:38:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:38:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:38:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:38:56 - Script1: 
+2024-11-02 00:36:56 - Script1: 
+2024-11-02 00:36:56 - Script1: 
+2024-11-02 00:36:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:36:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:36:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:36:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:36:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:36:56 - Script1: Open trades:
+2024-11-02 00:36:56 - Script1: 
+2024-11-02 00:36:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:36:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:36:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:36:56 - Script1: 
+2024-11-02 00:34:55 - Script1: 
+2024-11-02 00:34:55 - Script1: 
+2024-11-02 00:34:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:34:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:34:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:34:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:34:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:34:55 - Script1: Open trades:
+2024-11-02 00:34:55 - Script1: 
+2024-11-02 00:34:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:34:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:34:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:34:55 - Script1: 
+2024-11-02 00:32:55 - Script1: 
+2024-11-02 00:32:55 - Script1: 
+2024-11-02 00:32:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:32:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:32:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:32:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:32:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:32:55 - Script1: Open trades:
+2024-11-02 00:32:55 - Script1: 
+2024-11-02 00:32:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:32:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:32:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:32:55 - Script1: 
+2024-11-02 00:30:55 - Script1: 
+2024-11-02 00:30:55 - Script1: 
+2024-11-02 00:30:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:30:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:30:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:30:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:30:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:30:55 - Script1: Open trades:
+2024-11-02 00:30:55 - Script1: 
+2024-11-02 00:30:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:30:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:30:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:30:55 - Script1: 
+2024-11-02 00:28:55 - Script1: 
+2024-11-02 00:28:55 - Script1: 
+2024-11-02 00:28:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:28:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:28:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:28:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:28:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:28:55 - Script1: Open trades:
+2024-11-02 00:28:55 - Script1: 
+2024-11-02 00:28:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:28:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:28:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:28:55 - Script1: 
+2024-11-02 00:26:55 - Script1: 
+2024-11-02 00:26:55 - Script1: 
+2024-11-02 00:26:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:26:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:26:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:26:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:26:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:26:55 - Script1: Open trades:
+2024-11-02 00:26:55 - Script1: 
+2024-11-02 00:26:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:26:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:26:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:26:55 - Script1: 
+2024-11-02 00:24:56 - Script1: 
+2024-11-02 00:24:56 - Script1: 
+2024-11-02 00:24:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:24:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:24:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:24:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:24:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:24:55 - Script1: Open trades:
+2024-11-02 00:24:55 - Script1: 
+2024-11-02 00:24:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:24:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:24:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:24:55 - Script1: 
+2024-11-02 00:22:56 - Script1: 
+2024-11-02 00:22:56 - Script1: 
+2024-11-02 00:22:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:22:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:22:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:22:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:22:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:22:56 - Script1: Open trades:
+2024-11-02 00:22:56 - Script1: 
+2024-11-02 00:22:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:22:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:22:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:22:56 - Script1: 
+2024-11-02 00:20:56 - Script1: 
+2024-11-02 00:20:56 - Script1: 
+2024-11-02 00:20:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:20:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:20:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:20:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:20:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:20:56 - Script1: Open trades:
+2024-11-02 00:20:56 - Script1: 
+2024-11-02 00:20:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:20:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:20:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:20:56 - Script1: 
+2024-11-02 00:18:56 - Script1: 
+2024-11-02 00:18:56 - Script1: 
+2024-11-02 00:18:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:18:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:18:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:18:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:18:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:18:56 - Script1: Open trades:
+2024-11-02 00:18:56 - Script1: 
+2024-11-02 00:18:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:18:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:18:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:18:56 - Script1: 
+2024-11-02 00:16:56 - Script1: 
+2024-11-02 00:16:56 - Script1: 
+2024-11-02 00:16:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:16:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:16:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:16:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:16:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:16:56 - Script1: Open trades:
+2024-11-02 00:16:56 - Script1: 
+2024-11-02 00:16:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:16:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:16:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:16:56 - Script1: 
+2024-11-02 00:15:15 - Script6: Data managed successfully. Next run in one hour.
+2024-11-02 00:14:56 - Script1: 
+2024-11-02 00:14:56 - Script1: 
+2024-11-02 00:14:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:14:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:14:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:14:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:14:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:14:56 - Script1: Open trades:
+2024-11-02 00:14:56 - Script1: 
+2024-11-02 00:14:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:14:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:14:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:14:56 - Script1: 
+2024-11-02 00:12:56 - Script1: 
+2024-11-02 00:12:56 - Script1: 
+2024-11-02 00:12:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:12:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:12:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:12:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:12:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:12:56 - Script1: Open trades:
+2024-11-02 00:12:56 - Script1: 
+2024-11-02 00:12:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:12:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:12:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:12:56 - Script1: 
+2024-11-02 00:10:55 - Script1: 
+2024-11-02 00:10:55 - Script1: 
+2024-11-02 00:10:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:10:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:10:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:10:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:10:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:10:55 - Script1: Open trades:
+2024-11-02 00:10:55 - Script1: 
+2024-11-02 00:10:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:10:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:10:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:10:55 - Script1: 
+2024-11-02 00:08:55 - Script1: 
+2024-11-02 00:08:55 - Script1: 
+2024-11-02 00:08:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:08:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:08:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:08:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:08:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:08:55 - Script1: Open trades:
+2024-11-02 00:08:55 - Script1: 
+2024-11-02 00:08:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:08:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:08:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:08:55 - Script1: 
+2024-11-02 00:06:55 - Script1: 
+2024-11-02 00:06:55 - Script1: 
+2024-11-02 00:06:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:06:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:06:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:06:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:06:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:06:55 - Script1: Open trades:
+2024-11-02 00:06:55 - Script1: 
+2024-11-02 00:06:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:06:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:06:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:06:55 - Script1: 
+2024-11-02 00:04:56 - Script1: 
+2024-11-02 00:04:56 - Script1: 
+2024-11-02 00:04:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:04:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:04:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:04:55 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:04:55 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:04:55 - Script1: Open trades:
+2024-11-02 00:04:55 - Script1: 
+2024-11-02 00:04:55 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:04:55 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:04:55 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:04:55 - Script1: 
+2024-11-02 00:02:56 - Script1: 
+2024-11-02 00:02:56 - Script1: 
+2024-11-02 00:02:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:02:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:02:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:02:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:02:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:02:56 - Script1: Open trades:
+2024-11-02 00:02:56 - Script1: 
+2024-11-02 00:02:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:02:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:02:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:02:56 - Script1: 
+2024-11-02 00:00:56 - Script1: 
+2024-11-02 00:00:56 - Script1: 
+2024-11-02 00:00:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-02 00:00:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-02 00:00:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-02 00:00:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-02 00:00:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-02 00:00:56 - Script1: Open trades:
+2024-11-02 00:00:56 - Script1: 
+2024-11-02 00:00:56 - Script1: Open orders: 5 trade(s) open
+2024-11-02 00:00:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-02 00:00:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3127.7525, 'balance': 5311.08, 'equity': 5338.45}
+2024-11-02 00:00:56 - Script1: 
+2024-11-01 23:58:56 - Script1: 
+2024-11-01 23:58:56 - Script1: 
+2024-11-01 23:58:56 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-01 23:58:56 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-01 23:58:56 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5
+2024-11-01 23:58:56 - Script1: Ticket 4101793: GBPCHF - buy Strategy_M15
+2024-11-01 23:58:56 - Script1: Ticket 4101817: USDCHF - buy Strategy_M5
+2024-11-01 23:58:56 - Script1: Open trades:
+2024-11-01 23:58:56 - Script1: 
+2024-11-01 23:58:56 - Script1: Open orders: 5 trade(s) open
+2024-11-01 23:58:56 - Script1: Dynamic lot size updated: 0.25
+2024-11-01 23:58:56 - Script1: Account info: {'name': 'Jason Drury', 'number': 322766, 'currency': 'USD', 'leverage': 100, 'free_margin': 3193.4525, 'balance': 5311.08, 'equity': 5404.15}
+2024-11-01 23:58:56 - Script1: 
+2024-11-01 23:56:55 - Script1: 
+2024-11-01 23:56:55 - Script1: 
+2024-11-01 23:56:55 - Script1: Ticket 4101382: XAUUSD - buy Strategy_M15
+2024-11-01 23:56:55 - Script1: Ticket 4101383: XAUUSD - buy Strategy_M30
+2024-11-01 23:56:55 - Script1: Ticket 4101637: EURUSD - buy Strategy_M5

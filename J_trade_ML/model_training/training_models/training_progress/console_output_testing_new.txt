@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "c:\Users\crgon\OneDrive\Desktop\trading\model_training\training_models\TTCM_SEQ_stacked_multi_main_testing_new_16b.py", line 167, in <module>
+    from numba.cuda.cudadrv.libs import get_libdevice
+ModuleNotFoundError: No module named 'numba'
