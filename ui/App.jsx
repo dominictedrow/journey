@@ -30,10 +30,13 @@ export default function App() {
 
   async function runSkill(id, input) {
     setRunningId(id);
-    const envelope = await window.cwork.skills.run(id, input);
-    setResults((prev) => ({ ...prev, [id]: envelope }));
-    setRunningId(null);
-    return envelope;
+    try {
+      const envelope = await window.cwork.skills.run(id, input);
+      setResults((prev) => ({ ...prev, [id]: envelope }));
+      return envelope;
+    } finally {
+      setRunningId(null);
+    }
   }
 
   const activeSkill = skills.find((s) => s.id === tab);

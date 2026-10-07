@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('node:path');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 
 const registry = require('./registry');
@@ -16,6 +17,21 @@ const DEV_SERVER_URL = 'http://localhost:5173';
 // disk directly — it can't reach into an asar archive the way Electron's
 // own `require()`/`loadFile()` can.
 const RESOURCES_ROOT = isDev ? path.join(__dirname, '..') : process.resourcesPath;
+
+// Finder/Dock launches (and packaged builds) inherit launchd's minimal PATH,
+// which has neither conda nor the `claude` CLI that skills shell out to —
+// prepend their usual install dirs so skill runs work however the app starts.
+const EXTRA_PATH_DIRS = [
+  path.join(os.homedir(), '.local', 'bin'),
+  path.join(os.homedir(), 'miniconda3', 'condabin'),
+  path.join(os.homedir(), 'anaconda3', 'condabin'),
+  '/opt/homebrew/bin',
+  '/usr/local/bin',
+];
+const SKILL_ENV = {
+  ...process.env,
+  PATH: [...EXTRA_PATH_DIRS, process.env.PATH || '/usr/bin:/bin'].join(path.delimiter),
+};
 
 // Vite dev mode injects its React Fast Refresh preamble as an inline
 // <script> tag, so script-src needs 'unsafe-inline' in dev only — the
@@ -112,9 +128,34 @@ ipcMain.handle('skills:run', (event, id, input) => {
   }
 
   return new Promise((resolve) => {
-    const child = spawn('conda', args, { shell: false, cwd: RESOURCES_ROOT });
+    let settled = false;
+    function finish(envelope) {
+      if (settled) return;
+      settled = true;
+      db.recordSkillRun(skill.id, envelope);
+      resolve(envelope);
+    }
+
+    function failure(error) {
+      return {
+        skill: skill.id,
+        ok: false,
+        ran_at: new Date().toISOString(),
+        summary: 'Skill failed to produce a valid envelope',
+        sections: [],
+        error,
+      };
+    }
+
+    const child = spawn('conda', args, { shell: false, cwd: RESOURCES_ROOT, env: SKILL_ENV });
     let stdout = '';
     let stderr = '';
+
+    // Without this, a missing `conda` (ENOENT) is an unhandled 'error' event
+    // and the promise never settles, leaving the UI stuck on "Running…".
+    child.on('error', (err) => {
+      finish(failure(`could not start conda: ${err.message}`));
+    });
 
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
@@ -132,17 +173,9 @@ ipcMain.handle('skills:run', (event, id, input) => {
       try {
         envelope = JSON.parse(stdout.trim());
       } catch {
-        envelope = {
-          skill: skill.id,
-          ok: false,
-          ran_at: new Date().toISOString(),
-          summary: 'Skill failed to produce a valid envelope',
-          sections: [],
-          error: stderr.trim() || `process exited with code ${code}`,
-        };
+        envelope = failure(stderr.trim() || `process exited with code ${code}`);
       }
-      db.recordSkillRun(skill.id, envelope);
-      resolve(envelope);
+      finish(envelope);
     });
   });
 });

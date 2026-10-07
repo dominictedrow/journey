@@ -11,10 +11,15 @@ no scheduling info of its own. Only entries with `kind: 'scheduled'` and a
 `schedule` field get an agent; on-demand skills and Assignments (no schedule
 at all — it's manual CRUD) are skipped.
 
-Each agent runs `conda run -n c_work python -m skills.<id>` with no CLI
-input, exactly the scheduled-skill invocation contract in plan.md. The conda
-executable's absolute path is resolved here (via PATH, at install time) and
-baked into the plist, since launchd agents don't inherit a login shell's PATH.
+Each agent runs `conda run -n c_work python scripts/run_scheduled.py <id>`,
+which invokes `python -m skills.<id>` with no CLI input (the scheduled-skill
+contract in plan.md) and then caches the envelope in `skill_runs` so the
+result shows up in the app. The conda executable's absolute path is resolved
+here (via PATH, at install time) and baked into the plist, since launchd
+agents don't inherit a login shell's PATH; the plist also gets a PATH that
+includes the `claude` CLI's directory for skills that call it.
+
+Re-run `install` whenever the repo moves — WorkingDirectory is baked in too.
 """
 
 import json
@@ -41,9 +46,14 @@ PLIST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
         <string>-n</string>
         <string>c_work</string>
         <string>python</string>
-        <string>-m</string>
-        <string>skills.{skill_id}</string>
+        <string>scripts/run_scheduled.py</string>
+        <string>{skill_id}</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>{path}</string>
+    </dict>
     <key>WorkingDirectory</key>
     <string>{repo_root}</string>
     <key>StartCalendarInterval</key>
@@ -88,6 +98,18 @@ def _agent_target(skill_id):
     return f"gui/{_uid()}/{LABEL_PREFIX}.{skill_id}"
 
 
+def _agent_path():
+    # Directories of conda and claude (resolved now, from the installing
+    # shell's PATH) ahead of the system defaults launchd would otherwise use.
+    dirs = []
+    for tool in ("conda", "claude"):
+        found = shutil.which(tool)
+        if found and str(Path(found).parent) not in dirs:
+            dirs.append(str(Path(found).parent))
+    dirs += ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+    return ":".join(dirs)
+
+
 def _render_plist(skill_id, schedule, conda_path):
     fields = {"Hour": schedule.get("hour"), "Minute": schedule.get("minute", 0)}
     if "day" in schedule:
@@ -106,6 +128,7 @@ def _render_plist(skill_id, schedule, conda_path):
         repo_root=REPO_ROOT,
         calendar_entries=calendar_entries,
         log_dir=LOG_DIR,
+        path=_agent_path(),
     )
 
 
