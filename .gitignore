@@ -16,3 +16,4 @@ release/
 # macOS
 .DS_Store
 .gstack/
+._*
