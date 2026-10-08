@@ -15,8 +15,8 @@ param(
     [switch]$SkipChecks
 )
 $ErrorActionPreference = "Stop"
-$py = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
-if (-not (Test-Path $py)) { throw "No venv at $py; see the setup lines at the top of scripts\run_s01.ps1." }
+$py = if ($env:KNEE_PY) { $env:KNEE_PY } else { Join-Path $env:USERPROFILE "miniconda3\envs\knees\python.exe" }  # conda env `knees`
+if (-not (Test-Path $py)) { throw "No python at $py; set KNEE_PY to the knees env python" }
 Set-Location (Join-Path $PSScriptRoot "..")
 
 function Step($name, [scriptblock]$cmd) {
@@ -62,7 +62,7 @@ if (-not $SkipChecks -and -not $Launch) {
 
 if ($Launch) {
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
-    $p = Start-Process -FilePath $py -ArgumentList @("-m", "knee.ssl.pretrain_mae", "--config", $Config) `
+    $p = Start-Process -FilePath $py -ArgumentList @("-m", "knee.ssl.pretrain_mae", "--config", $Config, "--set", "probe.labels=$cacheRoot\labels\labels_v0.parquet", "probe.folds=$cacheRoot\labels\folds_v0.csv") `
         -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru `
         -RedirectStandardOutput "$runDir\stdout.log" -RedirectStandardError "$runDir\stderr.log"
     $p.Id | Out-File -Encoding ascii "$runDir\pid.txt"

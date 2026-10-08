@@ -99,7 +99,18 @@ class GpuMeter:
 
 
 def load_config(path: str | Path) -> dict:
-    return yaml.safe_load(Path(path).read_text()) or {}
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+
+
+def parse_set_value(v: str):
+    """A `--set k=v` value as YAML, except that PyYAML (YAML 1.1) leaves "3e-3" a string (it wants "3.0e-3")."""
+    out = yaml.safe_load(v)
+    if isinstance(out, str):
+        try:
+            return float(out)
+        except ValueError:
+            pass
+    return out
 
 
 class ResumableRandomSampler(Sampler[int]):
@@ -163,7 +174,7 @@ class JsonlLog:
 
     def write(self, **rec) -> None:
         rec = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), **rec}
-        with open(self.path, "a") as fh:
+        with open(self.path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, default=float) + "\n")
 
 

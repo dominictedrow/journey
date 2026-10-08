@@ -56,7 +56,7 @@ reading order below.
 
 ## 4. Current state (update every session)
 
-_Last updated: 2026-10-01 (on the Mac + Kaggle CPU kernels; no Windows box, no GPU)._
+_Last updated: 2026-10-07 (Windows box + Kaggle; AB.md session)._
 
 - **S01 code** (part 1): `src/knee/audit/`. **The S01 data audit ran on Kaggle** (2026-09-30, private kernel
   `dominictedrow/knee-audit` = `notebooks/kaggle_audit/`, 31 min): full corpus, 819,078 train files, all Explicit VR LE,
@@ -126,10 +126,36 @@ _Last updated: 2026-10-01 (on the Mac + Kaggle CPU kernels; no Windows box, no G
   `grad_checkpointing: false` (measured), cuDNN benchmark with compile + pinned inference copies, compile cache across Kaggle
   sessions (`compile_cache.bin` in the bundle). Kaggle: **never use the P100** (no sm_60 kernels in the cu128 image);
   pin the notebook environment. CPU-tested only. `knee-src` is stale: re-version before any Kaggle run.
-- Tests: 207 pytest (CPU) pass, 2 skipped.
-- Submissions made: none. Long jobs running: none.
+- **First GPU runs on the Windows box** (2026-10-07, `docs/experiments.md` E003): the S02 train cache is built (4,407
+  studies, 0 errors, 112.5 GB at `C:/knee_cache/cache_v1_train`; labels_v0/folds_v0 in `C:/knee_cache/labels`; the
+  conda env is `knees`, there is no `.venv`, so `scripts/run_s0*.ps1` need adjusting). Track A smoke runs: peak VRAM
+  4.6 GB (ckpt all) / 5.0 GB (ckpt [0,1] + channels_last, +24% faster); ckpt off hits the 12 GB ceiling (Kaggle-only).
+  No fp32 retries or non-finite values in bf16. `tests/test_gpu_equiv.py` (GPU only) holds partial checkpointing and
+  channels_last to exactness with TF32 off. `trackA_coatnet.yaml` has `labels.file`/`folds.file` null: pass them with
+  `--set`. A stray Jupyter kernel can exhaust the commit limit; close notebooks before long runs.
+- **AB.md session** (2026-10-07; plan = `AB.md`, Dom's answers in `docs/decisions.md`): Track A on Kaggle T4 ×2, Track B on
+  the 5070. **Cache on Kaggle:** private datasets `knee-cache-v1-s0..s5` (46 `.u8` each) + `knee-cache-v1-index`
+  (manifest, indexes, labels_v0, folds_v0, configs), staged by `scripts/stage_kaggle_cache.py`, rebuilt in a kernel by
+  `knee.kaggle_farm.build_farm` (symlink farm). CPU kernel `knee-cachecheck`: 276/276 shards, bytes = manifest, loader
+  7 / 12.5 / 19.7 studies/s at 1/2/3 workers (a T4 needs ~1), **kernel output mounts as input** at
+  `/kaggle/input/notebooks/<user>/<kernel>/`. `knee-src` re-versioned 2026-10-07 (listing verified; download 404'd right after).
+  **Track A preflight = E004:** resume, infer parity (max |diff| 3e-3), folds all pass; overfit inconclusive (slow
+  fitting, not wiring); **full fold 0, 2 epochs: val 0.735 → 0.774** → cleared for Kaggle. Training kernel
+  `notebooks/kaggle_train/` written, not pushed. T4 profile (`knee-profile` v2, step 2) pushed 2026-10-07.
+  Windows: Kaggle CLI needs a relative `-p` path; `--set` exponent floats now parse (`C.parse_set_value`).
+- Tests: 218 pytest pass, 2 skipped (on the 5070 the GPU-only equivalence tests run too).
+- Submissions made: none. Long jobs running: none on the 5070 (MAE not launched yet).
 
 ## 5. Next session
+
+**AB.md, in order (2026-10-07):**
+1. Read the `knee-profile` v2 output (`kaggle kernels output dominictedrow/knee-profile`), log it as an E-entry, and set
+   `EXTRA_SETS` in `notebooks/kaggle_train/train.py` from the Track A picks (ckpt off vs [0,1] × channels_last × compile).
+2. Smoke session (Dom's OK, ~1 h quota): `HOURS = 0.75`, push `notebooks/kaggle_train` with `--accelerator NvidiaTeslaT4`;
+   pass criteria in AB.md 3.5. Then check that a second session can mount the first's output (self-attachment of the same
+   kernel is UNVERIFIED; fall back to two alternating kernel slugs).
+3. Long run: folds 0+1, 2 per session; first submission as soon as fold 0 finishes (bundle, Dom's OK).
+4. 5070: MAE loader bench → pilot (`scripts/run_s03.ps1`) → set `optim.epochs` to fit ≤ ~24 h (Dom approves) → `-Launch`.
 
 **Without the Windows box (Mac + Kaggle):**
 - First real T4 ×2 training run: check `val_n_retried_fp32` / `val_n_nonfinite` in each fold's `log.jsonl` are 0 or

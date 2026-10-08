@@ -1,0 +1,15 @@
+{
+  "id": "dominictedrow/knee-cachecheck",
+  "title": "knee-cachecheck",
+  "code_file": "probe.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": false,
+  "competition_sources": [],
+  "dataset_sources": ["dominictedrow/knee-src", "dominictedrow/knee-cache-v1-index",
+                      "dominictedrow/knee-cache-v1-s0", "dominictedrow/knee-cache-v1-s1", "dominictedrow/knee-cache-v1-s2",
+                      "dominictedrow/knee-cache-v1-s3", "dominictedrow/knee-cache-v1-s4", "dominictedrow/knee-cache-v1-s5"],
+  "kernel_sources": ["dominictedrow/knee-audit"]
+}

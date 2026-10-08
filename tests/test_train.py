@@ -199,7 +199,7 @@ def test_train_sup_knee_vit(tmp_path, head):
     res = train_sup.main(["--config", str(cp)])
     assert len(res["top_epochs"]) == 2 and np.isfinite(res["val_macro_auc"])
     assert (tmp_path / "run" / "oof.parquet").exists() and (tmp_path / "run" / "auc_table.md").exists()
-    assert json.loads((tmp_path / "run" / "metrics.json").read_text())["fold"] == 0
+    assert json.loads((tmp_path / "run" / "metrics.json").read_text(encoding="utf-8"))["fold"] == 0
 
 
 def test_train_sup_init_from_mae_encoder(tmp_path):
@@ -243,7 +243,7 @@ def test_train_sup_effective_batch(tmp_path):
            "optim": {"epochs": 1, "accum": 99, "effective_batch": 4}, "select": {"top_k": 1}}
     res = train_sup.main(["--config", str(_write(tmp_path / "sup.yaml", cfg))])
     assert np.isfinite(res["val_macro_auc"])
-    assert yaml.safe_load((tmp_path / "run" / "config.yaml").read_text())["optim"]["accum"] == 2
+    assert yaml.safe_load((tmp_path / "run" / "config.yaml").read_text(encoding="utf-8"))["optim"]["accum"] == 2
     cfg["optim"]["effective_batch"] = 5
     with pytest.raises(SystemExit):
         train_sup.main(["--config", str(_write(tmp_path / "sup2.yaml", {**cfg, "run_dir": str(tmp_path / "r2")}))])
@@ -338,7 +338,7 @@ def test_train_sup_refuses_another_folds_run_dir(tmp_path):
     # resuming the same fold with more epochs is legitimate: no false positive
     res = train_sup.main(["--config", str(tmp_path / "s.yaml"), "--set", "optim.epochs=2"])
     assert res["fold"] == 0 and res["epochs"] == 2 and res["run_name"] == "sup_default"
-    assert json.loads((run / "metrics.json").read_text())["epochs"] == 2
+    assert json.loads((run / "metrics.json").read_text(encoding="utf-8"))["epochs"] == 2
 
 
 class _NanStub(torch.nn.Module):
@@ -420,3 +420,10 @@ def test_per_finding_auc_nonfinite_pred_modes():
     with pytest.warns(RuntimeWarning) as w:
         bootstrap_macro_auc(y, p, n_boot=20)
     assert len(w) == 1  # once on the full set, not once per replicate
+
+
+def test_set_value_parses_exponent_floats():
+    from knee.train.common import parse_set_value
+    assert parse_set_value("3e-3") == 0.003 and parse_set_value("1.0e-3") == 0.001
+    assert parse_set_value("[0,1]") == [0, 1] and parse_set_value("null") is None
+    assert parse_set_value("C:/x/y.csv") == "C:/x/y.csv" and parse_set_value("nan") != parse_set_value("nan")

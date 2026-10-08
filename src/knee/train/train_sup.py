@@ -81,7 +81,7 @@ def load_cfg(path: str | Path, sets: list[str]) -> dict:
         *path_, last = k.split(".")
         for p in path_:
             d = d[p]
-        d[last] = yaml.safe_load(v)
+        d[last] = C.parse_set_value(v)
     return cfg
 
 
@@ -143,7 +143,7 @@ def check_run_identity(run_dir: Path, cfg: dict) -> None:
     from last.pt["cfg"] (every checkpoint stores it). Runs once per process start: one small YAML read."""
     rec = None
     if (run_dir / "config.yaml").exists():
-        rec = yaml.safe_load((run_dir / "config.yaml").read_text())
+        rec = yaml.safe_load((run_dir / "config.yaml").read_text(encoding="utf-8"))
     elif (run_dir / "last.pt").exists():
         rec = torch.load(run_dir / "last.pt", map_location="cpu", weights_only=False).get("cfg")
     if not rec:
@@ -380,7 +380,7 @@ def main(argv=None) -> dict:
         if ck.get("rank_bank"):
             bank.load_state_dict(ck["rank_bank"], device)
         print(f"resumed: epoch {state['epoch']} batch {state['batch_in_epoch']}")
-    (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False))
+    (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False), encoding="utf-8")
     n_params = sum(p.numel() for p in model.parameters())
     print(f"fold {fold}: {len(tr_uids)} train / {len(va_uids)} val studies; {steps_per_epoch} steps/epoch; "
           f"{n_params / 1e6:.1f}M params; {len(groups)} param groups; device {device}, {cfg['precision']}",
@@ -541,9 +541,9 @@ def main(argv=None) -> dict:
             if g:
                 tab["gold_auc"] = auc_table(gold.loc[[uids[i] for i in g], LABELS].to_numpy(), probs[g],
                                             nonfinite_pred="ignore")["auc"]
-        (run_dir / "auc_table.md").write_text(df_to_markdown(tab))
+        (run_dir / "auc_table.md").write_text(df_to_markdown(tab), encoding="utf-8")
     C.save_atomic({"model": avg_state, "epochs": used, "cfg": cfg}, run_dir / "model_avg.pt")
-    (run_dir / "metrics.json").write_text(json.dumps(result, indent=2, default=float))
+    (run_dir / "metrics.json").write_text(json.dumps(result, indent=2, default=float), encoding="utf-8")
     print("FINAL:", result, flush=True)
     return result
 

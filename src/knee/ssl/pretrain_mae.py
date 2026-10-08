@@ -124,7 +124,7 @@ def main(argv=None) -> dict:
         *path, last = k.split(".")
         for p in path:
             d = d[p]
-        d[last] = yaml.safe_load(v)
+        d[last] = C.parse_set_value(v)
 
     if cfg["cache_dir"] is None or cfg["run_dir"] is None:
         from knee.paths import load_paths
@@ -185,7 +185,7 @@ def main(argv=None) -> dict:
         state = ck["state"]
         C.set_rng_state(ck["rng"])
         print(f"resumed from {last}: epoch {state['epoch']} batch {state['batch_in_epoch']} step {state['step']}")
-    (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False))
+    (run_dir / "config.yaml").write_text(yaml.safe_dump({**cfg, "git_sha": C.git_sha()}, sort_keys=False), encoding="utf-8")
     n_params = sum(p.numel() for p in mae.encoder.parameters())
     print(f"{len(ds.n)} series, {ds.n_windows} windows/epoch ({kr} per read), {steps_per_epoch} steps/epoch, "
           f"{total_steps} total, lr {base_lr:.2e}, encoder {n_params / 1e6:.1f}M params, device {device}, "
@@ -324,7 +324,7 @@ def main(argv=None) -> dict:
                   "hours_total": epoch_h * ocfg["epochs"], "batch_size": bs, "accum": accum,
                   "measured_steps": state["step"] - pilot_skip, "device": str(device),
                   "gpu": torch.cuda.get_device_name() if device.type == "cuda" else None}
-        (run_dir / "pilot.json").write_text(yaml.safe_dump(result, sort_keys=False))
+        (run_dir / "pilot.json").write_text(yaml.safe_dump(result, sort_keys=False), encoding="utf-8")
         print("PILOT:", result, flush=True)
     elif state["epoch"] >= ocfg["epochs"]:
         C.save_atomic({"encoder": mae.encoder.state_dict(), "model_cfg": cfg["model"], "epoch": state["epoch"],

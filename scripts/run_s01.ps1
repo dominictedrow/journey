@@ -14,8 +14,8 @@ param(
     [switch]$SkipScan         # skip the (long) full header scan if it already finished
 )
 $ErrorActionPreference = "Stop"
-$py = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
-if (-not (Test-Path $py)) { throw "No venv at $py; see the setup lines at the top of this script." }
+$py = if ($env:KNEE_PY) { $env:KNEE_PY } else { Join-Path $env:USERPROFILE "miniconda3\envs\knees\python.exe" }  # conda env `knees`
+if (-not (Test-Path $py)) { throw "No python at $py; set KNEE_PY to the knees env python" }
 Set-Location (Join-Path $PSScriptRoot "..")
 
 function Step($name, [scriptblock]$cmd) {
