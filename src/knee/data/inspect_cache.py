@@ -81,14 +81,14 @@ def bench(cache: Path, workers: int, batches: int, out_px: int | None) -> dict:
         while it < batches:
             for b in dl:
                 if t0 is None:
-                    first = time.time()
+                    first = time.perf_counter()
                     t0 = first
                     continue  # exclude worker start-up from the rate
                 n_studies += len(b["study_uid"])
                 it += 1
                 if it >= batches:
                     break
-        el = time.time() - t0 if t0 else float("nan")
+        el = time.perf_counter() - t0 if t0 else float("nan")
         res[name] = {"studies_per_s": n_studies / el if el else float("nan"), "batches": it,
                      "x_shape": tuple(b["x"].shape)}
         print(f"{name}: {res[name]['studies_per_s']:.1f} studies/s, x {res[name]['x_shape']}", flush=True)

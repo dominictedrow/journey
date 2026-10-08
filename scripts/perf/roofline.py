@@ -7,7 +7,7 @@ EFF_C, EFF_B = 0.5, 0.75       # achieved fraction of peak for GEMMs / for bandw
 LAUNCH = 10e-6                 # eager PyTorch CPU cost per aten op (dispatch + launch), UNVERIFIED on Windows
 res = []
 for f in sorted(glob.glob(f"{S}/ops_*.json")):
-    res += json.load(open(f))
+    res += json.load(open(f, encoding="utf-8"))
 for r in res:
     print(f"\n=== {r['tag']}")
     ops = r["ops"]

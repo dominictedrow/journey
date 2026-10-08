@@ -50,7 +50,7 @@ def derive_shard(src: Path, dst: Path, src_px: int, px: int) -> int:
 
 def derive(src_dir: Path, dst_dir: Path, px: int, workers: int = 4) -> dict:
     src_dir, dst_dir = Path(src_dir), Path(dst_dir)
-    man = json.loads((src_dir / "cache_manifest.json").read_text())
+    man = json.loads((src_dir / "cache_manifest.json").read_text(encoding="utf-8"))
     src_px = int(man["params"]["out_px"])
     if px >= src_px:
         raise SystemExit(f"--px {px} must be smaller than the source's {src_px} (this only shrinks)")
@@ -58,7 +58,7 @@ def derive(src_dir: Path, dst_dir: Path, px: int, workers: int = 4) -> dict:
     derived = {"src": str(src_dir), "src_out_px": src_px, "interp": "cv2.INTER_AREA",
                "src_git_sha": man.get("git_sha")}
     mf = dst_dir / "cache_manifest.json"
-    if mf.exists() and json.loads(mf.read_text()).get("derived_from", {}).get("src_out_px") != src_px:
+    if mf.exists() and json.loads(mf.read_text(encoding="utf-8")).get("derived_from", {}).get("src_out_px") != src_px:
         raise SystemExit(f"{mf} exists and wasn't derived from a {src_px}-px cache; use a new --dst")
     shards = sorted((src_dir / "shards").glob("shard_?????.u8"))
     t0 = time.time()
@@ -69,7 +69,7 @@ def derive(src_dir: Path, dst_dir: Path, px: int, workers: int = 4) -> dict:
     out = {**man, "params": {**man["params"], "out_px": px}, "derived_from": derived,
            "bytes": int(sum(f.stat().st_size for f in (dst_dir / "shards").glob("shard_?????.u8"))),
            "derived_seconds": round(time.time() - t0, 1), "derived_n_slices": int(n_slices)}
-    mf.write_text(json.dumps(out, indent=2))
+    mf.write_text(json.dumps(out, indent=2), encoding="utf-8")
     return out
 
 

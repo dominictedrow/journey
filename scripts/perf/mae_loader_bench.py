@@ -37,14 +37,14 @@ def bench(cache: Path, workers: int, kr: int, gpu_crop: bool, batch: int, batche
     t0 = None
     for i, b in enumerate(dl):
         if i == skip:
-            t0 = time.time()
+            t0 = time.perf_counter()
         elif i > skip:
             x = b if not isinstance(b, tuple) else b[0]
             n += len(x)
             nbytes += len(x) * 3 * r.out_px * r.out_px  # slices actually read are fewer when windows overlap
         if i >= skip + batches:
             break
-    dt = time.time() - t0 if t0 else float("nan")
+    dt = time.perf_counter() - t0 if t0 else float("nan")
     return {"cache_px": r.out_px, "workers": workers, "windows_per_read": kr, "crop": "gpu" if gpu_crop else "cpu",
             "cv2_threads": "1" if cv2_1thread else "default",
             "windows_per_s": n / dt, "MB_per_s_upper": nbytes / dt / 1e6, "batches": batches}

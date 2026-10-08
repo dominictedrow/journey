@@ -51,7 +51,7 @@ def load_dotenv(path: Path = REPO_ROOT / ".env") -> None:
     """Minimal .env reader (KEY=VALUE lines) so the key never has to be typed into a shell history."""
     if not path.exists():
         return
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
@@ -91,20 +91,20 @@ class Run:
     def batches(self) -> list[dict]:
         if not self.ledger.exists():
             return []
-        return [json.loads(x) for x in self.ledger.read_text().splitlines() if x.strip()]
+        return [json.loads(x) for x in self.ledger.read_text(encoding="utf-8").splitlines() if x.strip()]
 
     def write_batches(self, rows: list[dict]) -> None:
         tmp = self.ledger.with_suffix(".tmp")
-        tmp.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        tmp.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
         tmp.replace(self.ledger)
 
     def save_raw(self, cid: str, rec: dict) -> None:
         tmp = self.raw / f"{cid}.tmp"
-        tmp.write_text(json.dumps(rec, ensure_ascii=False))
+        tmp.write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
         tmp.replace(self.raw / f"{cid}.json")
 
     def load_raw(self) -> list[dict]:
-        return [json.loads(f.read_text()) for f in sorted(self.raw.glob("r*.json"))]
+        return [json.loads(f.read_text(encoding="utf-8")) for f in sorted(self.raw.glob("r*.json"))]
 
     def done_uids(self) -> set[str]:
         out = set()
@@ -191,7 +191,7 @@ def cost_summary(run: Run, n_total: int) -> dict:
 
 def total_spent(claude_dir: Path) -> float:
     """$ across every run folder (pilots of several models + full runs): the budget is for all labeling."""
-    return float(sum(cost_of(json.loads(f.read_text())) for f in claude_dir.glob("*/raw/r*.json")))
+    return float(sum(cost_of(json.loads(f.read_text(encoding="utf-8"))) for f in claude_dir.glob("*/raw/r*.json")))
 
 
 # ---------------------------------------------------------------------------------------------------- commands

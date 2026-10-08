@@ -161,7 +161,7 @@ def main() -> None:
             r["SeriesInstanceUID"] = sd.rsplit("/", 1)[-1]
             r.setdefault("StudyInstanceUID", sd.split("/", 1)[0])
             series_rows.append(r)
-        info = json.loads(Path(pq.replace(".parquet", ".json")).read_text())
+        info = json.loads(Path(pq.replace(".parquet", ".json")).read_text(encoding="utf-8"))
         counts.update(info["counts"])
         other_files += info["other_files"]
         for k, v in info["examples"].items():
@@ -175,7 +175,7 @@ def main() -> None:
     studies = summarize_studies(series[series.csv_match != "right_only"])
     studies.to_parquet(a.out / f"study_{a.split}.parquet", index=False)
     (a.out / f"tags_{a.split}.json").write_text(json.dumps(
-        {"n_files": n_files, "counts": counts, "examples": examples, "other_files": other_files}, indent=1))
+        {"n_files": n_files, "counts": counts, "examples": examples, "other_files": other_files}, indent=1), encoding="utf-8")
     print(f"{len(series)} series, {len(studies)} studies, {n_files} files, {len(counts)} distinct tags")
     print(series.csv_match.value_counts().to_string())
 

@@ -191,7 +191,7 @@ def main() -> None:
     res["real_warm_decode_by_syntax"] = per_ts
 
     res["real_cold_throughput"] = bench_corpus(root, scan.path.tolist(), a.workers, a.files_per_config)
-    (a.out / "decode_bench.json").write_text(json.dumps(res, indent=2))
+    (a.out / "decode_bench.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

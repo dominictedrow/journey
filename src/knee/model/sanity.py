@@ -72,7 +72,7 @@ def sup_step(H: int, L: int, E: int, depth: int, ckpt: bool, head: str, device) 
     torch.cuda.reset_peak_memory_stats()
     for i in range(4):
         torch.cuda.synchronize()
-        t0 = time.time()
+        t0 = time.perf_counter()
         with torch.autocast("cuda", dtype=train_dtype()):
             loss = F.binary_cross_entropy_with_logits(m(b).float(), torch.rand(1, 12, device=device))
         loss.backward()
@@ -80,7 +80,7 @@ def sup_step(H: int, L: int, E: int, depth: int, ckpt: bool, head: str, device) 
         opt.zero_grad(set_to_none=True)
         torch.cuda.synchronize()
         if i:
-            times.append(time.time() - t0)
+            times.append(time.perf_counter() - t0)
     return torch.cuda.max_memory_allocated() / 1e9, 1000 * sum(times) / len(times)
 
 
@@ -93,7 +93,7 @@ def mae_steps(H: int, bs: int, E: int, depth: int, device) -> tuple[float, float
     for i in range(6):
         if i == 2:
             torch.cuda.synchronize()
-            t0 = time.time()
+            t0 = time.perf_counter()
         with torch.autocast("cuda", dtype=train_dtype()):
             loss = mae(x)["loss"]
         loss.backward()
@@ -101,7 +101,7 @@ def mae_steps(H: int, bs: int, E: int, depth: int, device) -> tuple[float, float
         opt.zero_grad(set_to_none=True)
         n += bs if i >= 2 else 0
     torch.cuda.synchronize()
-    return torch.cuda.max_memory_allocated() / 1e9, n / (time.time() - t0)
+    return torch.cuda.max_memory_allocated() / 1e9, n / (time.perf_counter() - t0)
 
 
 def main(argv=None) -> None:
@@ -139,7 +139,7 @@ def main(argv=None) -> None:
         print(row, flush=True)
         lines.append(row)
     a.out.parent.mkdir(parents=True, exist_ok=True)
-    a.out.write_text("\n".join(lines) + "\n")
+    a.out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {a.out}")
 
 

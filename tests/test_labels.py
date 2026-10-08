@@ -275,9 +275,9 @@ def test_build_labels_end_to_end(tmp_path, monkeypatch):
     assert lab[LABELS].notna().all().all() and len(lab) == len(df)
     folds = pd.read_csv(cache / "labels" / "folds_t.csv")
     assert list(folds.columns) == ["StudyInstanceUID", "fold"] and set(folds.fold) == set(range(5))
-    md = docs.read_text()
+    md = docs.read_text(encoding="utf-8")
     assert "final blend" in md and "report number" not in md  # no report text in the committed doc
-    assert "report number" in (cache / "labels" / "disagreements_t.md").read_text()
+    assert "report number" in (cache / "labels" / "disagreements_t.md").read_text(encoding="utf-8")
 
 
 def test_submit_collect_with_fake_client(tmp_path, monkeypatch):
@@ -326,7 +326,7 @@ def test_submit_collect_with_fake_client(tmp_path, monkeypatch):
     with pytest.raises(SystemExit):
         run2 = RD.Run(tmp_path / "run2")
         for f in run.raw.glob("r*.json"):
-            run2.save_raw(f.stem, json.loads(f.read_text()))
+            run2.save_raw(f.stem, json.loads(f.read_text(encoding="utf-8")))
         RD.cmd_submit(types.SimpleNamespace(**{**vars(args), "split": "full", "budget": 0.001}), run2, reports)
     assert len(RD.parse_run(run)) == 30 * 12
 
@@ -349,18 +349,18 @@ def test_agent_reader_export_ingest_roundtrip(tmp_path):
     AR.cmd_export(A, run, reports)
     shards = sorted((run.root / "shards").glob("s*.jsonl"))
     assert [s.stem for s in shards] == ["s0000", "s0001", "s0002"]
-    ids = [json.loads(x)["id"] for s in shards for x in s.read_text().splitlines()]
+    ids = [json.loads(x)["id"] for s in shards for x in s.read_text(encoding="utf-8").splitlines()]
     assert sorted(ids) == sorted(RD.custom_id(u) for u in df.StudyInstanceUID)  # every study once
     assert ids[:5] != [RD.custom_id(u) for u in df.StudyInstanceUID[:5]]  # shuffled: gold not first
-    assert "uid" not in shards[0].read_text() and "1.2." not in shards[0].read_text()  # blinded
+    assert "uid" not in shards[0].read_text(encoding="utf-8") and "1.2." not in shards[0].read_text(encoding="utf-8")  # blinded
 
-    first = [json.loads(x)["id"] for x in shards[0].read_text().splitlines()]
+    first = [json.loads(x)["id"] for x in shards[0].read_text(encoding="utf-8").splitlines()]
     lines = [json.dumps({"id": c, "language": "English", "knee_side": "left",
                          "f": {"acl": ["absent", 0, False, False, "ACL intact"]}}) for c in first[:-2]]
     lines.append(json.dumps({"id": first[-2], "f": {"acl": ["torn", 3, False, False, ""]}}))  # bad state
     (run.root / "out" / "s0000.jsonl").write_text("\n".join(lines) + "\nnot json\n")
     AR.cmd_ingest(A, run, reports)
-    log = json.loads((run.root / "ingest_log.json").read_text())["s0000"]
+    log = json.loads((run.root / "ingest_log.json").read_text(encoding="utf-8"))["s0000"]
     assert log["accepted"] == 10 and len(log["rejected"]) == 2 and len(log["missing"]) == 2
     assert len(run.done_uids()) == 10
     long = RD.parse_run(run)
@@ -368,7 +368,7 @@ def test_agent_reader_export_ingest_roundtrip(tmp_path):
     assert (acl.bin == "absent").all() and long[long.label == "MCL"].bin.isna().all()  # omitted = not_mentioned
     AR.cmd_export(A, run, reports)  # s0001/s0002 still open, s0000's 2 failures re-exported
     new = sorted((run.root / "shards").glob("s*.jsonl"))[-1]
-    assert new.stem == "s0003" and len(new.read_text().splitlines()) == 2
+    assert new.stem == "s0003" and len(new.read_text(encoding="utf-8").splitlines()) == 2
     assert "AGENT_INSTRUCTIONS.md" in AR.dispatch_prompt(run.root, ["s0001"])
 
 

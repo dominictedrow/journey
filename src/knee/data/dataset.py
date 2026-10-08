@@ -187,7 +187,7 @@ class CacheReader:
 
     def __init__(self, cache_dir: str | Path):
         self.cache_dir = Path(cache_dir)
-        self.manifest = json.loads((self.cache_dir / "cache_manifest.json").read_text())
+        self.manifest = json.loads((self.cache_dir / "cache_manifest.json").read_text(encoding="utf-8"))
         self.out_px = int(self.manifest["params"]["out_px"])
         ser = pd.read_parquet(self.cache_dir / "series_index.parquet")
         self.studies = pd.read_parquet(self.cache_dir / "study_index.parquet").set_index("study_uid")

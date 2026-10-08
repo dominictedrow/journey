@@ -104,7 +104,7 @@ def download(root: Path) -> dict:
         d.mkdir(exist_ok=True)
         if s.slug not in licenses:
             subprocess.run(["kaggle", "datasets", "metadata", s.slug, "-p", str(d)], check=True, capture_output=True)
-            meta = json.loads((d / "dataset-metadata.json").read_text())
+            meta = json.loads((d / "dataset-metadata.json").read_text(encoding="utf-8"))
             meta = meta.get("info", meta)
             licenses[s.slug] = [x.get("name") for x in meta.get("licenses", [])]
         f = d / s.file
@@ -120,7 +120,7 @@ def download(root: Path) -> dict:
                                        "license": licenses[s.slug], "sha256": _sha256(f)}
         if licenses[s.slug] != ["CC0-1.0"]:
             print(f"WARNING {s.slug}: license {licenses[s.slug]} (expected CC0-1.0); check before using")
-    (root / "manifest.json").write_text(json.dumps(manifest, indent=1))
+    (root / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest
 
 

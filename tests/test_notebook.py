@@ -53,7 +53,7 @@ def test_infer_script_end_to_end(tmp_path):
     bb = _load("build_kaggle_bundle", REPO / "scripts" / "build_kaggle_bundle.py")
     bundle = tmp_path / "bundle"
     spec = bb.build(bundle, [tmp_path / "model_avg.pt"] * 2, [1.0, 2.0], "mean", tmp_path / "labels.parquet", None,
-                    "someone", "knee-bundle", json.loads(manifest.read_text())["params"])
+                    "someone", "knee-bundle", json.loads(manifest.read_text(encoding="utf-8"))["params"])
     assert (bundle / "knee_src" / "knee" / "infer" / "predict.py").exists()
     assert not list((bundle / "knee_src").rglob("__pycache__"))
     assert spec["prior"] == pytest.approx([0.3] * 12)
@@ -70,7 +70,7 @@ def test_infer_script_end_to_end(tmp_path):
     assert sub.StudyInstanceUID.astype(str).tolist() == ["9.2", "9.1", "9.3"]
     np.testing.assert_allclose(sub.iloc[0, 1:].to_numpy(float), 0.5)   # zero-init heads
     np.testing.assert_allclose(sub.iloc[2, 1:].to_numpy(float), 0.3)   # missing folder → prior
-    summ = json.loads((out / "run_summary.json").read_text())
+    summ = json.loads((out / "run_summary.json").read_text(encoding="utf-8"))
     assert summ["n_studies"] == 3 and summ["n_errors"] == 1
     assert summ["probe"]["fluid_eq_fatsup"] == 1.0
     assert sum(summ["probe"]["transfer_syntaxes"].values()) == 6

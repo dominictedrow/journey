@@ -96,7 +96,7 @@ def test_train_sup_overfits_8_studies(tmp_path, rank_w):
     assert res["top_epochs"] == [249]  # 250 epochs: the per-pixel LN stem memorizes noise images slower than GN
 
     # 1. the training loss (masked, weighted soft BCE [+ rank]) goes to ~0
-    losses = [r["loss"] for r in map(json.loads, (tmp_path / "run" / "log.jsonl").read_text().splitlines())
+    losses = [r["loss"] for r in map(json.loads, (tmp_path / "run" / "log.jsonl").read_text(encoding="utf-8").splitlines())
               if "loss" in r]
     assert losses[0] > 0.5, losses[:3]           # starts near ln 2 (zero-init head)
     assert losses[-1] < 0.02, losses[-5:]

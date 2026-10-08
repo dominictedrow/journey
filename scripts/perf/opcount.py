@@ -91,7 +91,7 @@ results = []
 which = sys.argv[1:] or ["B_train", "B_infer", "MAE", "A_train", "A_infer"]
 
 if "B_train" in which or "B_infer" in which:
-    cfgB = yaml.safe_load(open(f"{REPO}/configs/trackB_vits_mil.yaml"))["model"]["cfg"]
+    cfgB = yaml.safe_load(open(f"{REPO}/configs/trackB_vits_mil.yaml", encoding="utf-8"))["model"]["cfg"]
     mB = KneeViT(cfgB)
     Ltr, Lev, n = 44, 88, 4          # 5.5 series × 8 train / × 16 eval windows; run 4, scale
     if "B_train" in which:
@@ -109,7 +109,7 @@ if "B_train" in which or "B_infer" in which:
         results.append(run("TrackB inference (1 study, 88 win @256)", infB, Lev / n))
 
 if "MAE" in which:
-    c = yaml.safe_load(open(f"{REPO}/configs/mae_vits.yaml"))
+    c = yaml.safe_load(open(f"{REPO}/configs/mae_vits.yaml", encoding="utf-8"))
     mc = dict(c["model"]); mc.pop("grad_checkpointing", None)
     enc = SliceViT(**mc, grad_checkpointing=False)
     mae = MAE(enc, **c["mae"]).train()
@@ -121,7 +121,7 @@ if "MAE" in which:
     results.append(run("MAE step (128 windows @256, mask .75)", stepM, 128 / n))
 
 if "A_train" in which or "A_infer" in which:
-    cfgA = yaml.safe_load(open(f"{REPO}/configs/trackA_coatnet.yaml"))["model"]["cfg"]
+    cfgA = yaml.safe_load(open(f"{REPO}/configs/trackA_coatnet.yaml", encoding="utf-8"))["model"]["cfg"]
     cfgA["pretrained"] = False
     mA = TrackAModel(cfgA)
     n = 2
@@ -142,5 +142,5 @@ if "A_train" in which or "A_infer" in which:
         results.append(run("TrackA inference (1 study, 60 win @384)", infA, 60 / n))
 
 OUT = Path(__import__("os").environ.get("PERF_OUT", "."))
-json.dump(results, open(OUT / f"ops_{'_'.join(which)}.json", "w"))
+json.dump(results, open(OUT / f"ops_{'_'.join(which)}.json", "w", encoding="utf-8"))
 print("done", [r["tag"] for r in results])

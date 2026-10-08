@@ -58,7 +58,7 @@ def load_paths(config_file: Path | None = None) -> Paths:
     cfg: dict = {}
     f = Path(config_file) if config_file else CONFIG_FILE
     if f.exists():
-        cfg = yaml.safe_load(f.read_text()) or {}
+        cfg = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
 
     def get(key: str, required: bool = True) -> Path | None:
         val = os.environ.get(f"KNEE_{key.upper()}") or cfg.get(key)

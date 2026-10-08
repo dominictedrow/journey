@@ -127,7 +127,7 @@ def scan_shard(shard_id: int, series_dirs: list[str], root: str, out_dir: str) -
     df.to_parquet(out_p / f"part-{shard_id:05d}.parquet", index=False)
     info = {"shard": shard_id, "n_series": len(series_dirs), "n_files": len(rows), "counts": counts,
             "examples": examples, "other_files": other_files, "seconds": time.time() - t0}
-    (out_p / f"part-{shard_id:05d}.json").write_text(json.dumps(info))
+    (out_p / f"part-{shard_id:05d}.json").write_text(json.dumps(info), encoding="utf-8")
     return {"shard": shard_id, "n_files": len(rows), "seconds": info["seconds"]}
 
 
@@ -166,7 +166,7 @@ def main() -> None:
     shards = [series[i: i + a.series_per_shard] for i in range(0, len(series), a.series_per_shard)]
     todo = [i for i in range(len(shards)) if not (out_dir / f"part-{i:05d}.json").exists()]
     (out_dir / "_listing.json").write_text(json.dumps({"n_series": len(series), "loose_entries": loose,
-                                                        "series_per_shard": a.series_per_shard}))
+                                                        "series_per_shard": a.series_per_shard}), encoding="utf-8")
     print(f"{len(series)} series in {len(shards)} shards; {len(todo)} to do; {len(loose)} loose entries; "
           f"{a.workers} workers")
 

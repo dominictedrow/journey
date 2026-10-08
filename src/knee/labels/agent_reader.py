@@ -157,10 +157,10 @@ def cmd_export(a, run: Run, reports: pd.DataFrame) -> None:
     shard_dir, out_dir = run.root / "shards", run.root / "out"
     shard_dir.mkdir(exist_ok=True)
     out_dir.mkdir(exist_ok=True)
-    (run.root / "AGENT_INSTRUCTIONS.md").write_text(instructions())
+    (run.root / "AGENT_INSTRUCTIONS.md").write_text(instructions(), encoding="utf-8")
     existing = sorted(shard_dir.glob("s*.jsonl"))
     open_ids = {json.loads(x)["id"] for s in existing if not (out_dir / s.name).exists()
-                for x in s.read_text().splitlines() if x.strip()}
+                for x in s.read_text(encoding="utf-8").splitlines() if x.strip()}
     uids = (pilot_uids(reports, a.n_random, a.seed) if a.split == "pilot"
             else scan_uids(reports, a.n_scan, a.seed + 1, a.n_random) if a.split == "scan"
             else reports.StudyInstanceUID.tolist())
@@ -178,7 +178,7 @@ def cmd_export(a, run: Run, reports: pd.DataFrame) -> None:
         name = f"s{start + j:04d}"
         lines = [json.dumps({"id": custom_id(u), "report": text[u].strip()}, ensure_ascii=False)
                  for u in todo[i: i + a.shard_size]]
-        (shard_dir / f"{name}.jsonl").write_text("\n".join(lines) + "\n")
+        (shard_dir / f"{name}.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
         names.append(name)
     print(f"exported {len(todo)} reports → {len(names)} shards {names[0]}..{names[-1]} in {shard_dir}")
 
@@ -188,9 +188,9 @@ def cmd_ingest(a, run: Run, reports: pd.DataFrame) -> None:
     log = {}
     for out in sorted((run.root / "out").glob("s*.jsonl")):
         shard = run.root / "shards" / out.name
-        want = [json.loads(x)["id"] for x in shard.read_text().splitlines() if x.strip()] if shard.exists() else []
+        want = [json.loads(x)["id"] for x in shard.read_text(encoding="utf-8").splitlines() if x.strip()] if shard.exists() else []
         acc, rej, seen = 0, [], set()
-        for n, raw in enumerate(out.read_text().splitlines(), 1):
+        for n, raw in enumerate(out.read_text(encoding="utf-8").splitlines(), 1):
             if not raw.strip():
                 continue
             try:
@@ -207,7 +207,7 @@ def cmd_ingest(a, run: Run, reports: pd.DataFrame) -> None:
             seen.add(cid)
             acc += 1
         log[out.stem] = {"accepted": acc, "rejected": rej, "missing": [c for c in want if c not in seen]}
-    (run.root / "ingest_log.json").write_text(json.dumps(log, indent=1))
+    (run.root / "ingest_log.json").write_text(json.dumps(log, indent=1), encoding="utf-8")
     bad = {k: v for k, v in log.items() if v["rejected"] or v["missing"]}
     print(f"ingested {sum(v['accepted'] for v in log.values())} lines from {len(log)} shard outputs; "
           f"{len(bad)} shards with rejects/missing (details in ingest_log.json)")

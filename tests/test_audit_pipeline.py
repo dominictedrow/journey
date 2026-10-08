@@ -56,7 +56,7 @@ def test_pipeline(tmp_path: Path):
     assert len(df) == 6
     assert df.set_index(df.path.str.rsplit("/", n=1).str[-1]).loc["trunc.dcm", "truncated"]
     assert df.set_index(df.path.str.rsplit("/", n=1).str[-1]).loc["notes.txt", "error"] is not None
-    info = json.loads((out / "part-00000.json").read_text())
+    info = json.loads((out / "part-00000.json").read_text(encoding="utf-8"))
     assert any(f.endswith("notes.txt") for f in info["other_files"])
 
     # Summary ignores the bad files for geometry.

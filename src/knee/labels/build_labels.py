@@ -85,7 +85,7 @@ def main() -> None:
     gold = gold_frame(train)
     nongold = [u for u in uids if u not in gold.index]
     root = PS.public_dir(paths.cache_root)
-    manifest = json.loads((root / "manifest.json").read_text()) if (root / "manifest.json").exists() else {}
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8")) if (root / "manifest.json").exists() else {}
 
     frames = {n: PS.load(n, root) for n in a.readers}
     refs = {s.name: PS.load(s.name, root) for s in PS.SOURCES if s.role == "reference" and s.name not in frames}
@@ -166,9 +166,9 @@ def main() -> None:
           "calibration_maps": cmaps, "ablations": abl, "leak_check": leaks, "folds": fchk,
           "site_mode": a.site_mode if site is not None else "none (no site proxy yet)", "cost": cost,
           "licenses": {k: v.get("license") for k, v in manifest.get("sources", {}).items()}}
-    (out / f"qa_{a.version}.json").write_text(json.dumps(qa, indent=1, default=float))
+    (out / f"qa_{a.version}.json").write_text(json.dumps(qa, indent=1, default=float), encoding="utf-8")
     write_disagreements(out / f"disagreements_{a.version}.md", train, gold, frames, p, claude_long)
-    a.docs.write_text(render_md(qa, per_finding, prev, stat, agree, fprev, manifest))
+    a.docs.write_text(render_md(qa, per_finding, prev, stat, agree, fprev, manifest), encoding="utf-8")
     print(f"wrote {out}/labels_{a.version}.parquet, folds_{a.version}.csv, qa, disagreements; {a.docs}")
     print(f"final blend gold macro AUC {_fmt(abl['**final blend**'])}; folds {fchk['sizes']} gold {fchk['gold_per_fold']}")
 
@@ -205,7 +205,7 @@ def write_disagreements(path: Path, train: pd.DataFrame, gold: pd.DataFrame, fra
         vals = ", ".join(f"{nm}={R[j, r, c]:.2f}" for j, nm in enumerate(names))
         L += [f"### {k} — blend {p.loc[u, k]:.2f} — …{u[-10:]}", f"- readers: {vals}",
               f"- claude: {q.get((u, k), 'n/a')}", f"- report: {rep[u][:1200]}", ""]
-    path.write_text("\n".join(L))
+    path.write_text("\n".join(L), encoding="utf-8")
 
 
 def render_md(qa, per_finding, prev, stat, agree, fprev, manifest) -> str:

@@ -263,12 +263,12 @@ def to_markdown(res: dict) -> str:
 
 
 def write_env_md(md: str, path: Path) -> None:
-    text = path.read_text() if path.exists() else "# Environment\n\nHand-written notes go outside the generated block.\n\n"
+    text = path.read_text(encoding="utf-8") if path.exists() else "# Environment\n\nHand-written notes go outside the generated block.\n\n"
     if BEGIN in text and END in text:
         text = text[: text.index(BEGIN)] + md + text[text.index(END) + len(END):]
     else:
         text = text.rstrip() + "\n\n" + md + "\n"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
 
 
 def main() -> None:
@@ -301,7 +301,7 @@ def main() -> None:
     write_env_md(md, a.md)
     if json_out:
         json_out.parent.mkdir(parents=True, exist_ok=True)
-        json_out.write_text(json.dumps(res, indent=2, default=str))
+        json_out.write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
     print(md)
 
 

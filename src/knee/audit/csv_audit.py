@@ -153,7 +153,7 @@ def audit(data_root: Path, out_dir: Path) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame({"StudyInstanceUID": train.StudyInstanceUID, "report_hash": h, "language_guess": langs,
                   "is_gold": n_labeled == 12}).to_csv(out_dir / "report_groups.csv", index=False)
-    (out_dir / "csv_audit.json").write_text(json.dumps(res, indent=2))
+    (out_dir / "csv_audit.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
     return res
 
 

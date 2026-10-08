@@ -65,9 +65,9 @@ def build(out: Path, ckpts: list[Path], weights: list[float], how: str, labels: 
                 continue
             shutil.copy2(whl, out / "wheels" / whl.name)
     spec = {"arms": arms, "how": how, "prior": prior, "preproc": preproc, "preproc_code_hash": preproc_code_hash}
-    (out / "arms.json").write_text(json.dumps(spec, indent=1))
+    (out / "arms.json").write_text(json.dumps(spec, indent=1), encoding="utf-8")
     (out / "dataset-metadata.json").write_text(json.dumps(
-        {"title": slug, "id": f"{kaggle_user}/{slug}", "licenses": [{"name": "CC0-1.0"}]}, indent=1))
+        {"title": slug, "id": f"{kaggle_user}/{slug}", "licenses": [{"name": "CC0-1.0"}]}, indent=1), encoding="utf-8")
     return spec
 
 
@@ -88,7 +88,7 @@ def main() -> None:
     weights = a.weight or [1.0] * len(a.ckpt)
     if len(weights) != len(a.ckpt):
         raise SystemExit("--weight must be given once per --ckpt (or not at all)")
-    man = json.loads(a.cache_manifest.read_text())
+    man = json.loads(a.cache_manifest.read_text(encoding="utf-8"))
     preproc = preproc_from_manifest(man)
     if not man.get("preproc_code_hash"):
         print("WARNING: the cache manifest has no preproc_code_hash (built before 2026-09-30); infer.py can't check "

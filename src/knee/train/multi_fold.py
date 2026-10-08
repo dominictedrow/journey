@@ -68,7 +68,7 @@ def run_folds(folds: list[int], gpus: list[str], cmd_for_fold: Callable[[int], l
             f, g = pending.pop(0), free.pop(0)
             if stop_file_for_fold is not None:  # a STOP that exists before launch is left over from an old deadline
                 stop_file_for_fold(f).unlink(missing_ok=True)
-            fh = open(log_dir / f"fold{f}.log", "a")
+            fh = open(log_dir / f"fold{f}.log", "a", encoding="utf-8")
             e = {**os.environ, **(env or {}), "CUDA_VISIBLE_DEVICES": g, "PYTHONUNBUFFERED": "1"}
             proc = subprocess.Popen(cmd_for_fold(f), stdout=fh, stderr=subprocess.STDOUT, env=e)
             running[f] = (proc, g, fh, time.time())
@@ -103,7 +103,7 @@ def is_finished(run_dir: str | Path, fold: int, epochs: int) -> bool:
     p = Path(run_dir) / "metrics.json"
     if not p.exists():
         return False
-    m = json.loads(p.read_text())
+    m = json.loads(p.read_text(encoding="utf-8"))
     return int(m.get("fold", fold)) == fold and int(m.get("epochs", epochs)) >= epochs
 
 

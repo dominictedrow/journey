@@ -113,7 +113,7 @@ def test_multi_fold_launcher_runs_one_fold_per_slot(tmp_path):
     res = MF.run_folds([0, 1, 2], ["0", "1"], lambda fold: [sys.executable, str(stub), str(tmp_path),
                                                             f"folds.fold={fold}"],
                        tmp_path / "logs", poll_s=0.05)
-    recs = {r["fold"]: r for r in (json.loads((tmp_path / f"f{k}.json").read_text()) for k in range(3))}
+    recs = {r["fold"]: r for r in (json.loads((tmp_path / f"f{k}.json").read_text(encoding="utf-8")) for k in range(3))}
     assert recs[0]["gpu"] != recs[1]["gpu"]                       # folds 0 and 1 ran on different GPUs …
     assert recs[0]["t0"] < recs[1]["t1"] and recs[1]["t0"] < recs[0]["t1"]  # … at the same time
     assert recs[2]["t0"] >= min(recs[0]["t1"], recs[1]["t1"]) - 0.05       # fold 2 waited for a free GPU

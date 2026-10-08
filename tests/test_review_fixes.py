@@ -445,7 +445,7 @@ def test_bundle_carries_the_code_hash(tmp_path):
     bb = _load("build_kaggle_bundle_hash", REPO / "scripts" / "build_kaggle_bundle.py")
     ck = _tiny_arm_ckpt(tmp_path / "m.pt")
     spec = bb.build(tmp_path / "b", [ck], [1.0], "mean", None, None, "u", "s", PreprocParams().to_dict(), "abc")
-    assert json.loads((tmp_path / "b" / "arms.json").read_text())["preproc_code_hash"] == "abc" == \
+    assert json.loads((tmp_path / "b" / "arms.json").read_text(encoding="utf-8"))["preproc_code_hash"] == "abc" == \
         spec["preproc_code_hash"]
 
 

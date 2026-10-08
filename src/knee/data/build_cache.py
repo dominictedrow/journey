@@ -164,14 +164,14 @@ def main() -> None:
 
     manifest_f = a.out / "cache_manifest.json"
     if manifest_f.exists():
-        check_resume(json.loads(manifest_f.read_text()), params.to_dict(), studies, a.studies_per_shard, manifest_f)
+        check_resume(json.loads(manifest_f.read_text(encoding="utf-8")), params.to_dict(), studies, a.studies_per_shard, manifest_f)
     todo = [i for i in range(len(shards)) if not (shard_dir / f"shard_{i:05d}.parquet").exists()]
     manifest = {"version": params.version, "split": a.split, "params": params.to_dict(), "git_sha": git_sha(),
                 "n_studies": len(studies), "studies_per_shard": a.studies_per_shard, "n_shards": len(shards),
                 "studies_sha1": studies_sha1(studies), "preproc_code_hash": preproc_code_hash(),
                 "dtype": "uint8", "layout": "shards/shard_XXXXX.u8 raw (n, out_px, out_px) C-order",
                 "started": time.strftime("%Y-%m-%d %H:%M:%S")}
-    manifest_f.write_text(json.dumps(manifest, indent=2))
+    manifest_f.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"{len(studies)} studies in {len(shards)} shards; {len(todo)} to do; {a.workers} workers → {a.out}",
           flush=True)
 
@@ -199,7 +199,7 @@ def main() -> None:
                      "workers": a.workers, "n_series": int(len(ser)), "n_slices": int(ser.n_slices.sum()),
                      "n_study_errors": int(stu.error.notna().sum()), "bytes": int(total_bytes),
                      "sum_study_seconds": float(stu.seconds.sum())})
-    manifest_f.write_text(json.dumps(manifest, indent=2))
+    manifest_f.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(json.dumps({k: manifest[k] for k in ("n_studies", "n_series", "n_slices", "n_study_errors", "bytes",
                                                 "wall_seconds_this_run")}, indent=2))
 
