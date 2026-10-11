@@ -115,7 +115,7 @@ def main(argv=None) -> int:
     ap.add_argument("--gpus", nargs="*", default=None, help="GPU indices (default: all visible)")
     ap.add_argument("--hours", type=float, default=None, help="wall-clock budget; then STOP + resume later")
     ap.add_argument("--workers-per-job", type=int, default=None,
-                    help="data.workers per fold (default: CPUs // jobs - 1, at least 1)")
+                    help="data.workers per fold (default: the config's data.workers, capped at CPUs // jobs - 1, at least 1)")
     ap.add_argument("--rerun-finished", action="store_true",
                     help="also launch folds whose metrics.json says they finished (redo top-k average + eval)")
     ap.add_argument("--set", nargs="*", default=[], help="train_sup overrides, passed to every fold")
@@ -147,7 +147,9 @@ def main(argv=None) -> int:
         print("[multi_fold] nothing to run", flush=True)
         return 0
     n_jobs = min(len(gpus), len(pending))
-    workers = a.workers_per_job if a.workers_per_job is not None else max(1, (os.cpu_count() or 2) // n_jobs - 1)
+    # cap at the config's data.workers: on one GPU, CPUs - 1 workers (15 on the Windows box) ran 16 GB of RAM out
+    workers = a.workers_per_job if a.workers_per_job is not None else max(
+        1, min(int(cfgs[a.folds[0]]["data"]["workers"]), (os.cpu_count() or 2) // n_jobs - 1))
 
     def cmd(f: int) -> list[str]:
         extra = [f"run_dir={json.dumps(str(run_dir[f]))}"] if explicit is not None else []  # JSON = valid YAML

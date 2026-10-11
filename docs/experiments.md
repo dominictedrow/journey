@@ -16,6 +16,64 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E011 — First submission: Track A fold 0 epoch 9, single model — 2026-10-10 — session (Windows box + Kaggle)
+- Checkpoint: `knee-train-2` fold0 `epochs/ep009.pt` wrapped with its config (`C:/knee_cache/sub1/trackA_f0_ep9.pt`), val 0.903.
+- Bundle: private dataset `knee-bundle` (wrapper folders p_src/p_w/p_wh kept by zip mode → `infer.py` `in_bundle`).
+  Kernel `knee-submit` v2, T4, internet off, fp16 autocast, no compile. Kaggle image is Python 3.13: the cp312 decoder
+  wheels don't install (uncompressed test DICOMs don't need them).
+- **Public LB 0.915** (submission 57033689). Top of the public LB on 2026-10-10: 0.964.
+- Verdict: valid baseline. Gap to the top is ~0.05.
+
+### E010 — Track A folds 0+1, Kaggle session 2 (`knee-train-2` v1) — 2026-10-09 — session (Windows box + Kaggle)
+- Resumed from the smoke output (E008) via `kernel_sources` (alternate slug); 8.5 h; 0 retries / non-finite in every epoch.
+- Val macro AUC by epoch (of 16): fold 0 0.728, 0.803, 0.830, 0.850, 0.865, 0.880, 0.888, 0.897, 0.901, **0.903** (ep 9);
+  fold 1 0.721 … **0.896** (ep 8). ~1.3 studies/s per T4. Gold-12 at fold 0 ep 9: 0.850.
+- Session 3 pushed 2026-10-09 as `knee-train` v2 (mounts `knee-train-2`) to finish both folds.
+
+### E009b — Track B folds 1–2 (MAE init, 2 loader workers) — 2026-10-09 — session (Windows box)
+- Fold 1: val **0.831**, gold-12 0.822. Fold 2: val **0.852**, gold-12 0.804. (Fold 0: 0.857, E009.) 0 retries / non-finite.
+- 2 workers (a stuck exited process held 13.5 GB commit) → 7.4 h (fold 1) and 14.7 h (fold 2: 8.9 → 1.3 studies/s mid-run).
+
+### E009 — Track B fine-tune fold 0: MAE init vs random init — 2026-10-08 — session (Windows box)
+- Track: B. `configs/trackB_vits_mil.yaml` (20 epochs, eff. batch 16, LLRD 0.75, drop path 0.1), labels_v0 / folds_v0 fold 0
+  (3,525 / 882), gold = train.csv. RTX 5070 bf16, ~13 studies/s, 7.6 GB peak, ~2.1 h (MAE) / ~2.3 h (scratch). 0 retries, 0 non-finite.
+- Init `encoder_final.pt` (E007; strict load, 0 missing/unexpected): **val macro AUC 0.857** (ep 19; top-3 avg 0.856), gold-12
+  0.697 [0.58, 0.79]. Still creeping up at the end (0.855 → 0.857 over the last 5 epochs).
+- Random-init control (`run_name=trackB_vits_mil_scratch`): **val 0.769**, gold-12 0.583 [0.44, 0.72].
+- MAE buys **+0.088 val AUC** and wins on all 12 findings (largest: Fracture +0.15, MCL +0.12, Medial Meniscus +0.12, Baker's +0.12).
+- Per-finding tables: `C:/knee_cache/runs/trackB_vits_mil{,_scratch}/fold0/auc_table.md`. Gold-12 is n = 12, noise.
+- Verdict: **keep**. Beats Track A's 2-epoch floor (0.774, E004); the real gate comparison waits for Track A fold 0 at 16 epochs.
+
+### E008 — Track A smoke session on Kaggle T4 ×2 (`knee-train` v1) — 2026-10-08 — session (Windows box + Kaggle)
+- Track: A. Folds 0+1, one per T4, `HOURS=0.75`, fp16, ckpt off + channels_last + compile (E006), workers 1, eff. batch 24.
+- 146 steps/epoch; both folds reached step 100 (loss 0.50 → 0.46 / 0.50 → 0.48), 0 non-finite, loss scale 32768,
+  peak 10.3 GB. STOP saved `last.pt` (878 MB) in both folds.
+- Steady state: **1.25 studies/s per GPU** (0.8 s/study vs the profile's 0.53 s). GPU util 99% (the loader keeps up); the
+  T4s sit at the 70 W **power cap** (throttle reason 0x4, SW power cap), SM clock 525–1260 MHz. → ~52 min/epoch incl. val, ~14 h per fold for 16 epochs.
+- Not yet tested: resume in a second session from this output, `already finished`, `val_n_retried_fp32` (no epoch finished).
+- Verdict: **pass, with a speed caveat** (power-limited, not a bug). The resume check rides on the first long session.
+
+### E007 — MAE pretraining, SliceViT-S/16 @256, 60 epochs (Track B) — 2026-10-08 — session (Windows box)
+- Track: B. Config `configs/mae_vits.yaml` (dec_depth 2, mask 0.75, bs 128, blr 1.5e-4, workers 4, gpu_crop), epochs 60
+  (Dom). RTX 5070, bf16, ~950 windows/s, 6.05 GB peak, 07:42 → 10:17 (2.6 h incl. probes). 0 non-finite.
+- Loss 1.08 → 0.57. Probe macro AUC (labels_v0, fold 0, 1500/600): ep5 0.753, 10 0.767, 20 0.776, 30 0.781, 40 0.782,
+  45–60 0.783 (flat from ~ep 40).
+- Output: `C:/knee_cache/runs/mae_vits_p16_256/encoder_final.pt` (+ snapshots every 5 epochs).
+- Verdict: **keep** — next is the Track B fine-tune on fold 0 from `encoder_final.pt` plus the random-init control.
+
+### E006 — Kaggle T4 profile, step 2 (`knee-profile` v2) — 2026-10-08 — session (Windows box + Kaggle)
+- Track: A/B/MAE (performance). Kaggle T4, fp16 autocast, random weights. Output: `kaggle kernels output dominictedrow/knee-profile`
+  (`profile/summary.md`, `results.json`). (E005 = the MAE loader bench in `configs/mae_vits.yaml`; entry not yet written.)
+- **A_train** (median ms/step, peak GB): ckpt off+cl 722 / 11.5; **ckpt off+cl+compile 527 / 9.7** (warm-up 249 s,
+  2 graphs); ckpt [0,1]+cl 802 / 6.7. → Kaggle Track A uses `grad_checkpointing=false perf.channels_last=true
+  perf.compile=true` (`notebooks/kaggle_train/train.py` EXTRA_SETS).
+- **A_infer**: compile cuts 1027 → 740 ms (autocast+cl); half+cl+compile 707 ms at 2.0 GB; 4 studies/forward adds nothing.
+- **B_train**: compile 862 → 172 ms (5×); bs4 171 ms/4 studies at 11.1 GB. channels_last alone: no gain.
+- **B_infer**: compile halves it (222 → 115 ms); half ≈ autocast once compiled.
+- **MAE bs128**: compile 483 → 296 ms; channels_last slower (506 ms) → keep it off.
+- fp16 numerics: relative L2 vs fp32 ≤ 8.4e-4 (A, half), all finite.
+- Verdict: **keep** — compile on for every T4 workload; channels_last only for Track A.
+
 ### E004 — Track A preflight before Kaggle (AB.md Part 2) — 2026-10-07 — session (Windows box)
 - Track: A (correctness). Machine: Windows box, RTX 5070, bf16, `grad_checkpointing [0,1]` + channels_last, 2 loader
   workers (Dom's `prepare.py` held ~9 GB of the 16 GB RAM). Git: `37f0e69` + uncommitted tree (AB.md work).

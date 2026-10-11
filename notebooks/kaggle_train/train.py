@@ -16,9 +16,11 @@ import sys
 from pathlib import Path
 
 FOLDS = [0, 1]
-HOURS = 8.5            # session cap − 30 min (9 h plan; AB.md Part 3.6)
-EXTRA_SETS = []        # the kaggle_profile picks, e.g. ["model.cfg.grad_checkpointing=false", "perf.channels_last=true"]
-RUNS_SLUGS = ["knee-trackA-runs", "knee-train"]  # previous runs: a dataset or this kernel's own earlier output
+HOURS = 8.5            # session cap − 30 min (9 h plan; AB.md Part 3.6); smoke session was 0.75
+REQUIRE_PREV = True    # resume sessions: fail fast instead of silently training from scratch
+# knee-profile v2 (2026-10-08): ckpt off + cl + compile = 527 ms/step median, 9.7 GB (vs 722 ms uncompiled)
+EXTRA_SETS = ["model.cfg.grad_checkpointing=false", "perf.channels_last=true", "perf.compile=true"]
+RUNS_SLUGS = ["knee-trackA-runs", "knee-train", "knee-train-2"]  # previous runs: a dataset or this kernel's own earlier output
 
 WORK = Path("/kaggle/working")
 src = next(Path(d) for p in ("/kaggle/input/datasets/*/knee-src", "/kaggle/input/datasets/*/knee-src/*",
@@ -35,6 +37,8 @@ print("input:", sorted(glob.glob("/kaggle/input/*")) + sorted(glob.glob("/kaggle
 runs = WORK / "runs" / "trackA"
 prev = [Path(d) for s in RUNS_SLUGS for p in ("/kaggle/input/{s}", "/kaggle/input/*/*/{s}", "/kaggle/input/{s}/*")
         for d in glob.glob(f"{p.format(s=s)}/runs/trackA") + glob.glob(f"{p.format(s=s)}/trackA")]
+if REQUIRE_PREV and not prev:
+    raise SystemExit(f"no previous runs found for {RUNS_SLUGS}: {sorted(glob.glob('/kaggle/input/*/*/*'))}")
 if prev and not runs.exists():
     print("resuming from", prev[0], flush=True)
     shutil.copytree(prev[0], runs)

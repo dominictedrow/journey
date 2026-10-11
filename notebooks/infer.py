@@ -65,12 +65,19 @@ def sh(cmd: str) -> str:
         return f"({e})"
 
 
+def in_bundle(bundle: Path, rel: str) -> Path:
+    """bundle/rel, or bundle/*/rel: `kaggle datasets create --dir-mode zip` keeps an upload's wrapper folder (knee-bundle
+    2026-10-10: p_src/knee_src/...), so a staged extra level may or may not survive."""
+    return next((Path(d) for d in [bundle / rel, *sorted(glob.glob(str(bundle / "*" / rel)))] if Path(d).exists()),
+                bundle / rel)
+
+
 def install_wheels(bundle: Path) -> None:
     """pip install --no-index from the bundle, only for decoders the image lacks.
 
     --no-deps: `pip download` also fetches numpy (2.5.3 on 2026-09-29) while the image ships numpy 2.0.2 under torch;
     the decoders only need the image's numpy, so never let pip touch it (knee-probe run, docs/kaggle_env.md)."""
-    wheels = bundle / "wheels"
+    wheels = in_bundle(bundle, "wheels")
     missing = [p for p in WHEEL_PKGS if importlib.util.find_spec(WHEEL_MODULES[p]) is None]
     if not missing or not wheels.is_dir():
         log.info("wheels: nothing to install (missing=%s, wheels dir=%s)", missing, wheels.is_dir())
@@ -176,8 +183,8 @@ def main(argv: list[str] | None = None) -> int:
     if (bundle / "compile_cache.bin").is_file():
         os.environ["KNEE_COMPILE_CACHE_IN"] = str(bundle / "compile_cache.bin")
     os.environ.setdefault("KNEE_COMPILE_CACHE_OUT", str(out / "compile_cache"))
-    if (bundle / "knee_src").is_dir():
-        sys.path.insert(0, str(bundle / "knee_src"))
+    if in_bundle(bundle, "knee_src").is_dir():
+        sys.path.insert(0, str(in_bundle(bundle, "knee_src")))
 
     import numpy as np
     import pandas as pd
@@ -203,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     spec = json.loads((bundle / "arms.json").read_text())
     n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
     n_dev = n_gpu if a.gpus == "auto" else min(int(a.gpus), n_gpu)
-    arm_specs = [(str(bundle / arm["ckpt"]), {**spec.get("perf", {}), **arm.get("perf", {})}) for arm in spec["arms"]]
+    arm_specs = [(str(in_bundle(bundle, arm["ckpt"])), {**spec.get("perf", {}), **arm.get("perf", {})}) for arm in spec["arms"]]
     device = torch.device("cuda" if n_gpu else "cpu")
     # several GPUs: each shard process loads its own arms (timed inside predict); one GPU/CPU: load them here
     arms = [load_arm(ck, device, perf) for ck, perf in arm_specs] if n_dev <= 1 else None
