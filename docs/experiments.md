@@ -16,6 +16,19 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E012 — Track A folds 0+1 finished; A+B blend check; 2-fold submission — 2026-10-11 — session (Windows box + Kaggle)
+- Kaggle session 3 (`knee-train` v2): fold 0 final **0.910** (ep 15; top-3 avg 0.909), fold 1 **0.907**; gold-12 0.87 / 0.94.
+  Runs copied to `C:/knee_cache/trackA_runs/fold{0,1}`.
+- Track B folds 3: val 0.848, gold-12 0.84 (fold 4 relaunched after a loader OOM). Folds 0–3 mean 0.847.
+- Track B fold 4 (2026-10-11, 1 loader worker, 4.04 h): val **0.860** (ep 19 alone beat top-3 avg 0.8596), gold-11 0.82.
+  **5-fold Track B: val mean 0.849** (0.857/0.831/0.852/0.848/0.860), gold mean 0.80. Likely cause of both fold-4 OOMs (UNVERIFIED): a
+  zombie fold-2 `train_sup` (PID 17520, from 2026-10-08) still holding 13.5 GB of committed memory that taskkill
+  could not free; reboot to clear it.
+- **A+B rank blend on fold 0–1 OOF (labels_v0, lo/hi 0.4/0.6): B adds nothing.** w_B 0 → 0.9085 mean, 0.1 → 0.9081,
+  0.3 → 0.9034, 0.5 → 0.8928; gold-24 falls likewise (0.913 → 0.889 at 0.3). Only Effusion/Synovitis gain (+0.002/+0.004 at 0.3).
+- Submission 57082082: `knee-bundle` v2 (folds 0+1 `model_avg.pt`, mean), `knee-submit` v3, T4 ×2. Public LB: pending.
+- Kaggle runs one GPU session at a time on this account: `knee-train-2` (folds 2+3) queued behind `knee-submit`.
+
 ### E011 — First submission: Track A fold 0 epoch 9, single model — 2026-10-10 — session (Windows box + Kaggle)
 - Checkpoint: `knee-train-2` fold0 `epochs/ep009.pt` wrapped with its config (`C:/knee_cache/sub1/trackA_f0_ep9.pt`), val 0.903.
 - Bundle: private dataset `knee-bundle` (wrapper folders p_src/p_w/p_wh kept by zip mode → `infer.py` `in_bundle`).
