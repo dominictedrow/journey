@@ -156,6 +156,10 @@ def test_blend_silence_semantics():
     p2, _, _ = blend({"pilkwang": a, "steven_v1": b, "lixin": lix}, uids, BlendConfig(silence="skip"))
     assert p2.loc["s1", "ACL"] == pytest.approx((0.05 + 0.0) / 2)
     assert ((w >= 0) & (w <= 1)).all().all() and ((p >= 0) & (p <= 1)).all().all()
+    # v1 (E016): silent cells become a soft negative; known and filled cells are unchanged
+    p3, w3, _ = blend({"pilkwang": a, "steven_v1": b, "lixin": lix}, uids, BlendConfig(silent_cell_p=0.15))
+    assert p3.loc["s2", "ACL"] == 0.15 and w3.loc["s2", "ACL"] == 0.50
+    assert p3.loc["s1", "ACL"] == p.loc["s1", "ACL"] and p3.loc["s1", "Synovitis"] == p.loc["s1", "Synovitis"]
 
 
 def test_blend_weight_rewards_agreement():

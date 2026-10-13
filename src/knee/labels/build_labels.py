@@ -72,6 +72,7 @@ def main() -> None:
     ap.add_argument("--no-claude", action="store_true")
     ap.add_argument("--no-calibrate", action="store_true")
     ap.add_argument("--weight-mode", default="agree_cert", choices=["agree_cert", "certainty", "ones"])
+    ap.add_argument("--silent-cell-p", type=float, default=None, help="v1: 0.15 (E016); default = v0 behaviour")
     ap.add_argument("--site-mode", default="stratify", choices=["stratify", "group", "none"])
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--docs", type=Path, default=REPO_ROOT / "docs" / "labels.md")
@@ -107,7 +108,7 @@ def main() -> None:
     elif not a.no_claude:
         print(f"note: {cpath} not found → building without our Claude reader")
 
-    cfg = BlendConfig(weight_mode=a.weight_mode)
+    cfg = BlendConfig(weight_mode=a.weight_mode, silent_cell_p=a.silent_cell_p)
     p, w, status = blend(frames, uids, cfg)
 
     # ---- gold ablations (all out-of-fold w.r.t. gold: nothing below is fitted on gold except the out-of-fold calibration)

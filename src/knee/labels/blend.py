@@ -43,6 +43,10 @@ class BlendConfig:
     silent_p: float = 0.50                  # "unknown": the readers' own convention (steven 0.5, laymond/pilkwang UNK)
     silence: str = "vote"                   # "vote" | "skip" (see module docstring, step 2)
     silent_w: float = 0.10
+    # Silent cells (nobody spoke, no fill) only. None = silent_p (v0). E016: on gold, 4 of 99 silent cells are positive,
+    # so v1 treats silence as a soft negative: p = silent_cell_p at weight silent_cell_w (HP placeholders).
+    silent_cell_p: float | None = None
+    silent_cell_w: float = 0.50
     fill_w: float = 0.30
     # target ← source: (p when source=0, p when source=1), linear in the blended source p. Placeholders [KL].
     fills: dict = field(default_factory=lambda: {"Synovitis": ("Effusion", 0.22, 0.63),
@@ -96,8 +100,9 @@ def blend(readers: dict[str, pd.DataFrame], uids: list[str], cfg: BlendConfig | 
         w[m, t] = cfg.fill_w
         status[m, t] = "fill"
     still = ~np.isfinite(p)
-    p[still] = cfg.silent_p
-    w[still] = cfg.silent_w
+    neg = cfg.silent_cell_p is not None
+    p[still] = cfg.silent_cell_p if neg else cfg.silent_p
+    w[still] = cfg.silent_cell_w if neg else cfg.silent_w
 
     mk = lambda a: pd.DataFrame(a, index=pd.Index(uids, name="StudyInstanceUID"), columns=LABELS)  # noqa: E731
     return mk(np.clip(p, 0.0, 1.0)), mk(np.clip(w, 0.0, 1.0)), mk(status)
