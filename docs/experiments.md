@@ -16,6 +16,20 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E016 — Label noise in labels_v0 vs gold-58 — 2026-10-12 — session (Windows box)
+- No training. `scripts/label_noise_check.py` (public readers, `BlendConfig()` defaults = labels_v0).
+- **Silent cells (no reader mentions the finding) are almost always negative on gold**: 4 / 99 positive (ACL 0/4, MCL 0/6,
+  Medial OA 0/13, Lateral OA 0/17, Baker's 1/28, Fracture 1/21, Contusion 1/9, Lateral Meniscus 1/7). v0 gives them
+  p = 0.5 at w = 0.1, so training mostly ignores them and validation masks them (0.4 < p < 0.6). Share of non-gold cells
+  masked in validation: Synovitis 51%, Baker's 44%, Fracture 34%, Lateral OA 27%, Contusion 23%, Medial OA 21%.
+- Setting only silent cells to 0.15: gold macro 0.889 → **0.899** (Lateral OA 0.821 → 0.887, Fracture 0.817 → 0.891;
+  Baker's −0.005, Lateral Meniscus −0.005). n = 58 (CI about ±0.04), but the 4/99 count is the stronger evidence.
+- **Synovitis validation is circular**: 67% of cells are Effusion fills (gold positive rate 30% on filled cells), so the
+  val Synovitis AUC (A 0.963) mostly measures Effusion. Gold Synovitis for the label blend: 0.752. Dropping the
+  fills: 0.661, so the fill still helps on gold.
+- Hard disagreements (label ≥ 0.6 vs gold, outside the band): Effusion 15/55, Contusion 13/42, Lateral OA 10/40.
+- Dropping lixin: 0.890 (no change in macro; Synovitis +0.05, Contusion −0.03; noise at n = 58).
+
 ### E015 — Track B distilled from Track A, fold 4 pilot — 2026-10-12 — session (Windows box) — RUNNING
 - Track: B. `trackB_vits_mil.yaml` + MAE init (E007), identical to the E012 fold-4 baseline (val **0.860**) except
   `labels.teacher = C:/knee_cache/labels/teacher_A_f01.parquet` (Track A folds 0+1 `oof.parquet` concatenated, 1,764 studies),
