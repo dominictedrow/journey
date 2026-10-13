@@ -16,15 +16,17 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
-### E018 — Track A fold 0 on labels_v1 (5070) — 2026-10-12 — session (Windows box) — RUNNING
+### E018 — Track A fold 0 on labels_v1 (5070) — 2026-10-12 — session (Windows box)
 - labels_v1 = v0 + silent cells → p 0.15, w 0.5 (`build_labels --version v1 --no-claude --silent-cell-p 0.15`;
   `docs/labels_v1.md`). Gold-58 label AUC **0.899 [0.863, 0.931]** vs v0 0.889. Its `folds_v1.csv` differs from v0
   (stratified on labels): **runs keep folds_v0** so they compare with E012 and the Kaggle folds.
 - Run: `trackA_coatnet.yaml`, only change labels_v1; 5070 bf16, ckpt [0,1] + channels_last, workers 4: 3.8 studies/s,
-  5.0 GB peak, ~5.6 h for 16 epochs (vs ~14 h per fold on a T4). `C:/knee_cache/runs/trackA_lv1/fold0`,
-  logs `C:/knee_cache/logs/trackA_lv1_f0.{out,err}`.
-- Compare with E012 fold 0 (v0): val 0.910 on v0 labels, 0.8825 on silent-fixed labels, gold-12 0.875. Scoring v1 runs on
-  v0 val labels is not fair to v1 (v0 masks the silent cells), so the silent-fixed score + gold decide.
+  5.0 GB peak, finished overnight (16 epochs; best single epoch 14 used). `C:/knee_cache/runs/trackA_lv1/fold0`.
+- Fold-0 OOF, v0-trained (E012) → v1-trained: **on v1 labels 0.8824 → 0.8990 (+0.017), 11 of 12 findings up**
+  (MCL +0.032, Baker's +0.033, Medial OA +0.029, Lateral OA +0.025, Lateral Meniscus +0.022, Fracture +0.020; ACL −0.003);
+  on v0 labels (silent cells masked) 0.9098 → 0.9067; gold-12 0.875 → **0.902** [0.82, 0.97] (n = 12, noise).
+- Verdict: **keep labels_v1.** The only metric that drops is the one that hides the cells v1 changes. All later
+  Track A runs use labels_v1 + folds_v0; the ablation queue (`scripts/queue_5070.ps1`) compares against this run.
 - E015 (Track B distillation pilot) stopped after epoch 1 at Dom's call (B dropped); resumable from its `last.pt`.
 
 ### E017 — Track A eval windows per slot (fold 0, `model_avg.pt`, no retraining) — 2026-10-12 — session (Windows box)
