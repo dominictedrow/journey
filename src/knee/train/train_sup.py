@@ -44,7 +44,9 @@ DEFAULTS: dict = {
     "run_name": "sup_default", "seed": 0, "device": "auto", "precision": "auto", "cache_dir": None, "run_dir": None,
     "model": {"kind": "knee_vit", "cfg": {}},
     "init": {"encoder": None},
-    "labels": {"file": None, "lo": 0.4, "hi": 0.6},
+    # teacher (optional): parquet of StudyInstanceUID + 12 probabilities (e.g. Track A OOF). Training targets become
+    # (1 - teacher_w) * report + teacher_w * teacher; validation and selection always use `file` alone (E014)
+    "labels": {"file": None, "lo": 0.4, "hi": 0.6, "teacher": None, "teacher_w": 0.5},
     "folds": {"file": None, "fold": 0},
     "gold": {"file": None},
     "data": {"format": "bag", "out_px": 256, "train_windows": 8, "eval_windows": 16, "series_dropout": 0.1,
@@ -192,6 +194,19 @@ def to_device(batch: dict, device) -> dict:
     return {k: v.to(device, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
 
 
+def blend_teacher(labels: pd.DataFrame, teacher: pd.DataFrame, a: float) -> pd.DataFrame:
+    """Distillation targets: y = (1-a)*report + a*teacher, w = (1-a)*w + a (the teacher always gives a label).
+    A NaN report label takes the teacher's value. Studies without a teacher row are unchanged."""
+    out = labels.copy()
+    uids = labels.index.intersection(teacher.index)
+    y, t = out.loc[uids, LABELS].to_numpy(np.float64), teacher.loc[uids, LABELS].to_numpy(np.float64)
+    out.loc[uids, LABELS] = np.where(np.isnan(y), t, (1 - a) * y + a * t)
+    wcols = [f"w_{k}" for k in LABELS]
+    if set(wcols) <= set(out.columns):
+        out.loc[uids, wcols] = (1 - a) * out.loc[uids, wcols].fillna(1.0).to_numpy() + a
+    return out
+
+
 def make_dataset(cfg: dict, reader: CacheReader, uids: list[str], labels: pd.DataFrame | None, train: bool):
     d = cfg["data"]
     if d["format"] == "bag":
@@ -329,10 +344,16 @@ def main(argv=None) -> dict:
     tr_uids = [u for u in have if folds.loc[u, "fold"] != fold]
     va_uids = [u for u in have if folds.loc[u, "fold"] == fold] if fold >= 0 else []
     wcols = [f"w_{k}" for k in LABELS]
-    weights = (labels[wcols].fillna(1.0).to_numpy(np.float32) if set(wcols) <= set(labels.columns)
-               else np.ones((len(labels), len(LABELS)), np.float32))
-    w_of = dict(zip(labels.index, weights))
-    ds_tr, collate = make_dataset(cfg, reader, tr_uids, labels, train=True)
+    tr_labels = labels
+    if cfg["labels"]["teacher"]:
+        teacher = pd.read_parquet(cfg["labels"]["teacher"]).set_index("StudyInstanceUID")
+        tr_labels = blend_teacher(labels, teacher, cfg["labels"]["teacher_w"])
+        print(f"teacher {cfg['labels']['teacher']} (w {cfg['labels']['teacher_w']}): "
+              f"{len(set(tr_uids) & set(teacher.index))}/{len(tr_uids)} train studies")
+    weights = (tr_labels[wcols].fillna(1.0).to_numpy(np.float32) if set(wcols) <= set(tr_labels.columns)
+               else np.ones((len(tr_labels), len(LABELS)), np.float32))
+    w_of = dict(zip(tr_labels.index, weights))
+    ds_tr, collate = make_dataset(cfg, reader, tr_uids, tr_labels, train=True)
     ds_va, _ = make_dataset(cfg, reader, va_uids, labels, train=False)
 
     # ---- model + optimizer

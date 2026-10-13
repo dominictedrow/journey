@@ -16,6 +16,22 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E015 — Track B distilled from Track A, fold 4 pilot — 2026-10-12 — session (Windows box) — RUNNING
+- Track: B. `trackB_vits_mil.yaml` + MAE init (E007), identical to the E012 fold-4 baseline (val **0.860**) except
+  `labels.teacher = C:/knee_cache/labels/teacher_A_f01.parquet` (Track A folds 0+1 `oof.parquet` concatenated, 1,764 studies),
+  `teacher_w 0.5`, `data.workers 2`. The teacher covers 1,764 / 3,526 train studies; validation stays on labels_v0.
+- Run: `C:/knee_cache/runs/trackB_vits_mil_kd/fold4`, logs `C:/knee_cache/logs/kd_fold4.{out,err}`, started ~22:50, ~2–4 h.
+- Pass rule: val above 0.860 (most of all on the meniscus/ACL rows of E014) → rebuild the teacher from A's 5-fold OOF and run B v2 at 384 px.
+
+### E014 — Track A vs Track B per finding (folds 0+1 val, labels_v0) — 2026-10-12 — session (Windows box)
+- No new training: mean of each fold's `auc_table.md` (A = `trackA_runs/fold{0,1}`, B = `runs/trackB_vits_mil/fold{0,1}`).
+- Gap A − B: Synovitis 0.000, Effusion 0.015, Medial OA 0.040, Fracture 0.047, MCL 0.059, Lateral OA 0.059, PF OA 0.060,
+  Contusion 0.071, ACL 0.083, Baker's 0.097, Medial Meniscus 0.102, **Lateral Meniscus 0.143**; macro 0.909 vs 0.844.
+- Reading: B never wins. It keeps up on diffuse fluid findings and loses most on thin structures (menisci, ACL, Baker's),
+  which points to input detail: B sees 256 px in 16-px patches (~8 mm/token over the 130 mm crop) vs A's 384 px with conv
+  stages at stride 4. Pretraining scale (ImageNet-12k vs 60 MAE epochs on our slices) is the other difference; this
+  table can't separate the two (UNVERIFIED which dominates). E012: blending B into A adds nothing.
+
 ### E013 — Track B 5-fold submission — 2026-10-12 — session (Windows box + Kaggle)
 - Bundle: private dataset `knee-bundle-b` (5× `trackB_vits_mil/fold*/model_avg.pt`, mean, prior = labels_v0, staged in
   `C:/knee_cache/sub3/up`); kernel `knee-submit-b` v1 (= `notebooks/infer.py` with `BUNDLE_SLUG = "knee-bundle-b"`), T4.
