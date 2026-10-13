@@ -15,12 +15,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-FOLDS = [0, 1]
+FOLDS = [1, 2]
 HOURS = 8.5            # session cap − 30 min (9 h plan; AB.md Part 3.6); smoke session was 0.75
-REQUIRE_PREV = True    # resume sessions: fail fast instead of silently training from scratch
+REQUIRE_PREV = False   # True on resume sessions: fail fast instead of silently training from scratch
 # knee-profile v2 (2026-10-08): ckpt off + cl + compile = 527 ms/step median, 9.7 GB (vs 722 ms uncompiled)
 EXTRA_SETS = ["model.cfg.grad_checkpointing=false", "perf.channels_last=true", "perf.compile=true"]
-RUNS_SLUGS = ["knee-trackA-runs", "knee-train", "knee-train-2"]  # previous runs: a dataset or this kernel's own earlier output
+RUNS_SLUGS = []        # previous runs to resume (v1 session 2: ["knee-train-v1"]). v0 runs must never be mounted here
+LABELS_SLUG, LABELS_FILE = "knee-labels-v1", "labels_v1.parquet"   # E018: labels_v1 beats v0
+RUN_NAME = "trackA_coatnet384_lv1"
 
 WORK = Path("/kaggle/working")
 src = next(Path(d) for p in ("/kaggle/input/datasets/*/knee-src", "/kaggle/input/datasets/*/knee-src/*",
@@ -34,6 +36,8 @@ comp = next(Path(d) for p in ("/kaggle/input/competitions/*", "/kaggle/input/*")
 cache, idx = build_farm(Path("/tmp/cache"))
 print("input:", sorted(glob.glob("/kaggle/input/*")) + sorted(glob.glob("/kaggle/input/*/*/*")), flush=True)
 
+labels_file = next(Path(d) for p in (f"/kaggle/input/datasets/*/{LABELS_SLUG}", f"/kaggle/input/{LABELS_SLUG}")
+                   for d in sorted(glob.glob(f"{p}/{LABELS_FILE}")))
 runs = WORK / "runs" / "trackA"
 prev = [Path(d) for s in RUNS_SLUGS for p in ("/kaggle/input/{s}", "/kaggle/input/*/*/{s}", "/kaggle/input/{s}/*")
         for d in glob.glob(f"{p.format(s=s)}/runs/trackA") + glob.glob(f"{p.format(s=s)}/trackA")]
@@ -49,7 +53,7 @@ subprocess.Popen(["nvidia-smi", "--query-gpu=timestamp,index,utilization.gpu,clo
 
 cmd = [sys.executable, "-m", "knee.train.multi_fold", "--config", str(idx / "trackA_coatnet.yaml"),
        "--folds", *map(str, FOLDS), "--hours", str(HOURS), "--set", "cache_dir=/tmp/cache", f"run_dir={runs}",
-       f"labels.file={idx / 'labels_v0.parquet'}", f"folds.file={idx / 'folds_v0.csv'}",
+       f"labels.file={labels_file}", f"folds.file={idx / 'folds_v0.csv'}", f"run_name={RUN_NAME}",
        f"gold.file={comp / 'train.csv'}", *EXTRA_SETS]
 print(" ".join(cmd), flush=True)
 rc = subprocess.run(cmd, env={**os.environ, "PYTHONPATH": str(src)}).returncode

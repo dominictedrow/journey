@@ -1,6 +1,6 @@
 {
-  "id": "dominictedrow/knee-train",
-  "title": "knee-train",
+  "id": "dominictedrow/knee-train-v1",
+  "title": "knee-train-v1",
   "code_file": "train.py",
   "language": "python",
   "kernel_type": "script",
@@ -8,7 +8,7 @@
   "enable_gpu": true,
   "enable_internet": true,
   "competition_sources": ["rsna-knee-abnormality-detection"],
-  "dataset_sources": ["dominictedrow/knee-src", "dominictedrow/knee-cache-v1-index",
+  "dataset_sources": ["dominictedrow/knee-src", "dominictedrow/knee-cache-v1-index", "dominictedrow/knee-labels-v1",
                       "dominictedrow/knee-cache-v1-s0", "dominictedrow/knee-cache-v1-s1", "dominictedrow/knee-cache-v1-s2",
                       "dominictedrow/knee-cache-v1-s3", "dominictedrow/knee-cache-v1-s4", "dominictedrow/knee-cache-v1-s5"],
   "kernel_sources": []

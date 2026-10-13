@@ -16,6 +16,14 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E019 — Kaggle: v0 folds 2+3 status; v1 folds 1+2 session 1 (`knee-train-v1` v1) — 2026-10-13 — session (Windows box + Kaggle)
+- `knee-train-2` (v0, logs only in `C:/knee_cache/kt2_logs_v2`) ran one 8.5 h session and stopped unfinished: fold 2 at
+  epoch 9/16 (val 0.897, gold-11 0.912), fold 3 at epoch 8/16 (val 0.903). **Abandoned** (Dom: drop v0, train v1).
+- Quota on 2026-10-13: 15.76 h GPU left, refresh 2026-10-17 (30 h) → ~46 h to Oct 22.
+- Pushed `knee-train-v1` v1: labels_v1 (private dataset `knee-labels-v1`), folds_v0, folds 1+2, fresh runs
+  (`run_name=trackA_coatnet384_lv1`, nothing mounted), same Kaggle recipe as E010. Session 2 = a second slug mounting
+  `knee-train-v1` with `REQUIRE_PREV = True`. Folds 3+4 after the Oct 17 refresh.
+
 ### E018 — Track A fold 0 on labels_v1 (5070) — 2026-10-12 — session (Windows box)
 - labels_v1 = v0 + silent cells → p 0.15, w 0.5 (`build_labels --version v1 --no-claude --silent-cell-p 0.15`;
   `docs/labels_v1.md`). Gold-58 label AUC **0.899 [0.863, 0.931]** vs v0 0.889. Its `folds_v1.csv` differs from v0
