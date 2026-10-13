@@ -16,6 +16,12 @@ One entry per run (training, labeling, or submission). Newest at the top. A resu
 
 ## Runs
 
+### E013 — Track B 5-fold submission — 2026-10-12 — session (Windows box + Kaggle)
+- Bundle: private dataset `knee-bundle-b` (5× `trackB_vits_mil/fold*/model_avg.pt`, mean, prior = labels_v0, staged in
+  `C:/knee_cache/sub3/up`); kernel `knee-submit-b` v1 (= `notebooks/infer.py` with `BUNDLE_SLUG = "knee-bundle-b"`), T4.
+  `knee-bundle` (Track A) left untouched. Stub run: 3 studies, 0 errors, 37 s total.
+- Submission 57127904. Public LB: pending. (Track A folds 0+1 = 0.924, 57082082.)
+
 ### E012 — Track A folds 0+1 finished; A+B blend check; 2-fold submission — 2026-10-11 — session (Windows box + Kaggle)
 - Kaggle session 3 (`knee-train` v2): fold 0 final **0.910** (ep 15; top-3 avg 0.909), fold 1 **0.907**; gold-12 0.87 / 0.94.
   Runs copied to `C:/knee_cache/trackA_runs/fold{0,1}`.
