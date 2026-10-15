@@ -19,3 +19,6 @@ Vibe_models/cnn_2/dataset/
 Vibe_models/cnn_2/processed/
 Vibe_models/cnn_2/processed_180x202_backup/
 Vibe_models/cnn_2/checkpoints/
+
+# nano-gpt tokenized data (train.bin ~18GB)
+Manual_models/nano-gpt_manual/*.bin
