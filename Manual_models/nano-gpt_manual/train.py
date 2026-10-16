@@ -30,11 +30,6 @@ class Feed(nn.Module):
         self.layer2 =  nn.Linear(hidden_dim, hidden_dim)
         self.layer3 =  nn.Linear(hidden_dim, shape)
     
-    def init_weights(self,m):
-        if isinstance(m, nn.Linear):
-            nn.init.kaiming_normal(m.weight)
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.001)
 
     def forward(self,x):
         x = self.layer2(self.layer1(x))
@@ -52,11 +47,7 @@ class AttentionBlock(nn.Module):
         self.linear = Feed(embed_dim1, 3*embed_dim1)
         self.apply(self.init_weights) #initializes weights
     
-    def init_weights(self, m):
-        if isinstance(m,nn.LayerNorm):
-            nn.init.kaiming_normal(m.weights)
-        elif isinstance(m, nn.MultiheadAttention):
-            nn.init.kaiming_normal(m.weights)
+
         
     def forward(self, x,embed_dim1):  
         x = self.attention(x)
@@ -71,30 +62,30 @@ class Output(nn.Module):
         self.linear = nn.Linear(embed_dim1)
         self.softmax = nn.Softmax()
 
-    def init_weights(self,m):
-        if isinstance(m, nn.Linear):
-            nn.init.kaiming_normal(m.weight)
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.001)
-    
     def forward(self,x):
         x = self.softmax(self.linear(x))
         return x
 
 
-
+def init_weights(self,m):
+        if isinstance(m, nn.Linear):
+            nn.init.kaiming_normal(m.weight)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0.001)
+        elif isinstance(m, nn.Embedding):
+            nn.init.kaiming_normal(m.weight)
+        elif isinstance(m,nn.LayerNorm):
+            nn.init.kaiming_normal(m.weights)
+        elif isinstance(m, nn.MultiheadAttention):
+            nn.init.kaiming_normal(m.weights)
 
 class Model(nn.Module):
-    def __init__(self,  vocab_size, batch_size, embed_dim1, chunk):
+    def __init__(self,  vocab_size, batch_size, embed_dim1):
         self.token_emb = nn.Embedding(vocab_size, embed_dim1) #Creates a token embedding layer
         self.pos_emb = nn.Embedding(batch_size, embed_dim1) #Creates a positional embedding layer
         self.out = Output(embed_dim1)
         self.blocks = nn.ModuleList([AttentionBlock for _ in range(32)])
 
-    def init_weights(self,m):
-        if isinstance(m, nn.Embedding):
-        # Xavier/Glorot initialization for Linear layers (ideal for Tanh/Sigmoid)
-            nn.init.kaiming_normal(m.weight)
 
     def foward(self,x):
         x = self.pos_emb(x) + self.token_emb(x)
@@ -103,6 +94,11 @@ class Model(nn.Module):
         x = self.out(x)
         return x
     
+
+
+
+Model.apply(init_weights)
+
 
 
 train_input, train_targets = preprocess('train.bin', 32, 8)
