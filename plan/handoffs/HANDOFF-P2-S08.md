@@ -24,7 +24,7 @@
 - none
 
 ## Next session starts with
-- P2.7: `tests/test_parity.py` — 200 random shard spectra (use `src_row`) vs on-the-fly `featurize` (reuse the comparison in `scripts/check_shards.py`). Then P2 exit: tag `p2-data`.
+- P2.7 DONE in-session: tests/test_parity.py (200 spectra: 120 train + 20 per val split; all fields incl. vocab ids) passes in 13 s. P2 closed, tag p2-data. Next: P3.1.
 
 ## Open questions for Dom
 - none
