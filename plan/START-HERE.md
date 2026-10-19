@@ -36,14 +36,15 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P0 — Environment, repo, metric
-current_step: P0.1
-session_count: 0
-last_handoff: none
+current_step: P0.5
+session_count: 1
+last_handoff: plan/handoffs/HANDOFF-P0-S01.md
+repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: unknown — confirm in P0.5)
-pending_gates: none
-blockers: Repo is on the Windows drive (C:\Users\blazi\kaggle\Envenda) and WSL is not installed — P0.1 gate
-next_action: Start P0.1
+pending_gates: none (P0.5 questions open: daily submission limit, number of final picks)
+blockers: W&B API key needed for P0.6 (Dom runs wandb login)
+next_action: P0.5 — record Dom's answers in plan/COMPETITION.md; then P0.6; then tag p0-env
 <!-- STATE:END -->
