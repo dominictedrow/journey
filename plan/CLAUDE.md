@@ -1,7 +1,7 @@
 # CLAUDE.md — project rules for the CASMI 2026 build
 
 ## Repo layout (as of 2026-10-18)
-- Root `~/casmi` in WSL Ubuntu-24.04 (ext4); the Windows copy `C:\Users\blazi\kaggle\Envenda` is stale. Git branch `main`, remote `origin` = https://github.com/dominictedrow/envenda (private).
+- Root `~/casmi` in WSL Ubuntu-24.04 (ext4); the Windows copy was deleted 2026-10-19 (D-021). Git branch `main`, remote `origin` = https://github.com/dominictedrow/envenda (private).
 - `plan/` — these docs plus `plan/handoffs/`. `data/` — raw competition files (gitignored): `train.parquet` (3.03 GB, 2,539,608 rows, 21 row groups, ZSTD), `test.parquet` (4.8 MB, 1,213 rows), `sample_submission.csv` (400 ids + header).
 - Code dirs `casmi/`, `scripts/`, `tests/`, `reports/`, `runs/`, `logs/` at the repo root (P0.3). Env: conda `casmi` in `~/miniforge3` (Python 3.12, torch 2.11+cu128, RDKit 2026.03.3).
 - Machine: Windows 11, system Python 3.14, `nvidia-smi` shows only the RTX 5070; WSL2 Ubuntu-24.04 with 12 GB RAM cap (`.wslconfig`).

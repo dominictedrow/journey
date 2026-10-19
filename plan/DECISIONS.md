@@ -22,3 +22,4 @@
 | D-018 | 2026-10-18 | P1.4 option B: keep formula decomposition + subformula scoring, add M+1/M isotope-ratio score from in-MS2 isotope peaks (P2.2, P2.4, P7.2) | Dom | MS2 has M+1 peak in 21% train / 50% test |
 | D-019 | 2026-10-18 | P2.3 validation design approved as written (timsTOF queries; V-lib/V-pool/V-novel + scaffold slice; ik14-grouped; equal weights). Sizes 1000/2000/1000/1000, seed 2026 | Dom | Sizes agent-chosen; only 2,509 enveda mols have other-lib spectra |
 | D-020 | 2026-10-18 | Drop [2M…] adducts from training (13.4% of kept rows); ablate in P5 | Dom | No test spectra use them |
+| D-021 | 2026-10-19 | Delete stale Windows repo copy (only commit baf9d88, already on main; data/ identical in WSL) | Dom | Empty folder left until the Claude Code session that lived there closes |

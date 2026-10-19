@@ -39,7 +39,7 @@ current_phase: P2 — Structures, splits, physics features, shards
 current_step: P2.5 (build running) -> P2.6
 session_count: 7
 last_handoff: plan/handoffs/HANDOFF-P2-S07.md
-repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
+repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
 background_jobs: PID 5033 scripts/build_shards.py -> logs/shards_v1.log (started 2026-10-19 12:35; see handoff for check/relaunch)
 best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
