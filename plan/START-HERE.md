@@ -36,9 +36,9 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P2 — Structures, splits, physics features, shards
-current_step: P2.4
-session_count: 5
-last_handoff: plan/handoffs/HANDOFF-P2-S05.md
+current_step: P2.5
+session_count: 6
+last_handoff: plan/handoffs/HANDOFF-P2-S06.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
@@ -46,5 +46,5 @@ best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: 5/day)
 pending_gates: none
 blockers: none (final-pick count assumed 2; Dom to confirm)
-next_action: Start P2.4 (physics feature cache). Splits frozen: data/processed/v1/splits.parquet (D-019); [2M] dropped (D-020).
+next_action: Start P2.5 (shard writer; estimate disk first, gate if > 40 GB). P2.4 done: casmi.features.featurize (formula top16 0.996 on V-pool).
 <!-- STATE:END -->
