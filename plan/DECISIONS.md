@@ -24,3 +24,4 @@
 | D-020 | 2026-10-18 | Drop [2M…] adducts from training (13.4% of kept rows); ablate in P5 | Dom | No test spectra use them |
 | D-021 | 2026-10-19 | Delete stale Windows repo copy (only commit baf9d88, already on main; data/ identical in WSL) | Dom | Empty folder left until the Claude Code session that lived there closes |
 | D-022 | 2026-10-19 | Final submissions selectable = 2 (Dom confirmed) | Dom | Choosing them stays gate 10 |
+| D-023 | 2026-10-19 | Gate 7: upload private dataset casmi26-bundle; gate 6: Submission #1 (library baseline) | Dom | Public LB 0.150 |
