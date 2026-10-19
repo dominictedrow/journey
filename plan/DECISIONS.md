@@ -19,3 +19,4 @@
 | D-015 | 2026-10-18 | Transformer encoder core; InChIKey14-grouped val; 25-candidate output | Dom | From brainstorm |
 | D-016 | 2026-10-18 | "Big change" = any deviation from PLAN.md (plan bugs, inefficiencies, wrong assumptions, better routes); agent must ask before rerouting | Dom | CLAUDE.md rule zero; specific gates kept as always-ask cases |
 | D-017 | 2026-10-18 | Install WSL Ubuntu-24.04, move repo to ~/casmi (ext4); Windows copy kept until P0 exit | Dom | P0.1 gate |
+| D-018 | 2026-10-18 | P1.4 option B: keep formula decomposition + subformula scoring, add M+1/M isotope-ratio score from in-MS2 isotope peaks (P2.2, P2.4, P7.2) | Dom | MS2 has M+1 peak in 21% train / 50% test |

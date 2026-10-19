@@ -14,7 +14,8 @@
 - Proposals (in report): P=128, noise floor 0.001, |ppm| ≤20 train / ≤10 for windows, 7 test adducts first, drop [2M…] (~13.5% of train) pending ablation.
 
 ## Decisions & approvals
-- Dom: OK to commit + push P0 and continue the plan (push done for P0 only).
+- Dom: OK to commit + push P0 and continue the plan.
+- D-018: P1.4 → option B (isotope-ratio score added; PLAN P1.4/P2.2/P2.4/P7.2 edited). Dom also OK'd pushing P1.
 
 ## Traps discovered
 - `kaggle competitions list` metadata calls the metric "Mean Average Precision"; scorer code is MRR@25.
@@ -25,9 +26,7 @@
 - none
 
 ## Next session starts with
-- If Dom answered the P1.4 gate: apply the answer (PLAN.md edit + DECISIONS row if rerouted), tag `p1-audit`, then P2.1.
+- P1 closed (tag `p1-audit`). Start P2.1: structure table `data/processed/v1/structures.parquet` (use `casmi.metric.ik14` for the tautomer-canonical key).
 
 ## Open questions for Dom
-- 🛑 P1.4 isotope gate (see pending_gates in START-HERE).
-- Push P1 commits to origin?
 - Confirm final-pick count (assumed 2).

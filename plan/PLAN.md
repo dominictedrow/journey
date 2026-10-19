@@ -25,7 +25,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
   - spectra per structure, structures per library
   - whether any MS1/isotope-envelope information exists
 - **P1.3** Verify every claim in `plan/COMPETITION.md` and correct the wrong ones.
-- **P1.4** If no isotope data exists, 🛑 confirm the replacement plan for Dom's isotope idea: formula from precursor mass decomposition, scored by fragment-subformula consistency.
+- **P1.4** ~~If no isotope data exists, 🛑 confirm the replacement plan~~ Resolved (rerouted D-018): no MS1, but MS2 carries the M+1 isotope peak (train 21%, test 50%). Keep formula-from-precursor-mass + fragment-subformula scoring, **plus** an M+1/M isotope-ratio score where both peaks exist (P2.2, P2.4, P7.2).
 - **P1.5** Write `reports/data_audit.md` (≤150 lines; plots saved as PNG, not displayed). Include proposals for: max peaks per spectrum `P`, precursor-error cutoff, noise-peak floor, and adducts to support.
 - **Exit:** audit written, COMPETITION.md verified, tag `p1-audit`. No submission.
 
@@ -33,7 +33,8 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 - **P2.1** Build the structure table `data/processed/v1/structures.parquet`, one row per unique SMILES: tautomer-canonical InChIKey14, formula, exact mass, Murcko scaffold. Use multiprocessing and cache it.
 - **P2.2** Spectrum cleaning per the audit:
   - drop rows over the ppm cutoff
-  - drop peaks above precursor + 0.5 Da and below the noise floor
+  - first extract in-MS2 isotope features: intensities at precursor M, M+1 (+1.00336) and M+2, with presence flags (rerouted D-018)
+  - then drop peaks above precursor + 0.5 Da and below the noise floor
   - keep the top-`P` peaks by intensity
   - sqrt intensity, normalized to base peak
 - **P2.3** 🛑 Validation design (proposal). All grouping is by InChIKey14, so no structure leaks. Query spectra in every val set are **timsTOF (enveda-\*) only**, matching test. The three val sets mirror the three test kinds:
@@ -47,6 +48,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
   - Formula candidates: decomposition within ppm over CHNOPS+F/Cl/Br/I, filtered by Seven-Golden-Rules/SENIOR/RDBE, ranked.
   - Per-peak features: neutral loss to precursor, mass defect, Kendrick mass defect (CH₂), best subformula of the top precursor formula with its ppm error, and a flag for matches to a common neutral-loss table (H₂O, CO, CO₂, NH₃, hexose 162.0528, deoxyhexose 146.0579, pentose 132.0423, glucuronide 176.0321, etc.).
   - Pairwise peak differences for the top-K peaks, matched against the loss table.
+  - Isotope-ratio score per formula candidate: observed M+1/M (and M+2/M) vs the theoretical isotope pattern; missing when the peaks are absent (rerouted D-018).
 - **P2.5** Shard writer `data/processed/v1/{split}/`: memmaps sorted by molecule.
   - Per spectrum: `mz float32[N,P]`, `inten float16[N,P]`, `peakfeat float16[N,P,F]`, `npeaks uint16[N]`, `meta` (adduct, CE, instrument, polarity ids; precursor m/z float64), `mol_idx int32[N]`.
   - Per molecule: spectrum offsets, packed Morgan fingerprint target `uint8[M,256]`, formula vector `int16[M,E]`.
@@ -111,7 +113,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 
 ## P7 — Fragmentation-aware reranker → Submission #5
 - **P7.1** 🛑 Choose the fragmenter. Options: MetFrag (Java, offline jar), or an in-house RDKit bond-breaking fragmenter (1–2 bond cleavages with H-shift tolerance; fragment masses matched to peaks). Pick based on a runtime benchmark: top-50 candidates × 400 molecules must fit about 3 h on Kaggle CPU.
-- **P7.2** Fragmentation-tree features: fraction of intensity explained, number of explained peaks, which bonds broke and their weakest-bond plausibility (Dom's weak-bond idea), and loss-table hits.
+- **P7.2** Fragmentation-tree features: fraction of intensity explained, number of explained peaks, which bonds broke and their weakest-bond plausibility (Dom's weak-bond idea), and loss-table hits. Also the candidate formula's isotope-ratio score from P2.4 (rerouted D-018).
 - **P7.3** LightGBM LambdaRank reranker over model scores, fragment features, formula rank, mass error and prior. Train it on a **separate** held-out fold, never on V-sets.
 - **P7.4** Val, then 🛑 submit.
 - **Exit:** tag `p7-rerank`.
