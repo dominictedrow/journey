@@ -33,6 +33,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 - **P2.1** Build the structure table `data/processed/v1/structures.parquet`, one row per unique SMILES: tautomer-canonical InChIKey14, formula, exact mass, Murcko scaffold. Use multiprocessing and cache it.
 - **P2.2** Spectrum cleaning per the audit:
   - drop rows over the ppm cutoff
+  - drop `[2M…]` adduct rows from training; ablate in P5 (rerouted D-020)
   - first extract in-MS2 isotope features: intensities at precursor M, M+1 (+1.00336) and M+2, with presence flags (rerouted D-018)
   - then drop peaks above precursor + 0.5 Da and below the noise floor
   - keep the top-`P` peaks by intensity
