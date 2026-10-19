@@ -45,6 +45,6 @@ best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: 5/day)
 pending_gates: none
-blockers: none (final-pick count assumed 2; Dom to confirm)
+blockers: none
 next_action: Confirm shard build finished (log ends with "seconds" JSON, no _tmp), run scripts/check_shards.py data/processed/v1 50, then start P2.6 loader + benchmark.
 <!-- STATE:END -->

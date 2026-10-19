@@ -31,4 +31,4 @@
 - Confirm the job finished, then `scripts/check_shards.py data/processed/v1 50` (via bg.sh if slow), record per-split spectra/molecule counts + disk size, then P2.6 loader + benchmark.
 
 ## Open questions for Dom
-- Final-pick count (assumed 2)? Delete stale Windows copy?
+- none (final picks = 2, D-022; Windows copy deleted, D-021)

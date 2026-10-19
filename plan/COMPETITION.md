@@ -16,7 +16,7 @@
 - ⚠️ A ±5 ppm mass window holds the true structure about 99% of the time, with a median of about 12 train candidates. (Not checkable in P1: needs structure masses + adduct math; verify in P2/P4.)
 - ✅ (Kaggle CLI, 2026-10-18) Leaderboard: rank 1 0.495, rank 3 0.493, rank 5 (prize line) 0.474. Public notebooks around 0.42–0.45 by title.
 - ✅ Daily submission limit: 5 (Kaggle API `maxDailySubmissions`, 2026-10-18). Kernels-only submissions; max team size 5.
-- ⚠️ Number of final submissions selectable: 2 assumed (Kaggle default; not exposed by the API) — Dom to confirm on the Rules page.
+- ✅ Number of final submissions selectable: 2 (confirmed by Dom 2026-10-19, D-022).
 - ⚠️ Kaggle API names the metric "CASMI: Mean Average Precision", but the official scorer code (`metric/casmi-mean-reciprocal-rank`) computes MRR@25 (first hit only). The code is what scores; `casmi/metric.py` mirrors it.
 - ✅ Dates: opened Sep 14, 2026; entry/merge deadline Dec 7; final Dec 14, 2026.
 - ✅ (P1) No MS1 data, but the M+1 isotope peak appears inside MS2 in 21% of train and 50% of local-test spectra; peaks above precursor in 33% / 58%.

@@ -23,3 +23,4 @@
 | D-019 | 2026-10-18 | P2.3 validation design approved as written (timsTOF queries; V-lib/V-pool/V-novel + scaffold slice; ik14-grouped; equal weights). Sizes 1000/2000/1000/1000, seed 2026 | Dom | Sizes agent-chosen; only 2,509 enveda mols have other-lib spectra |
 | D-020 | 2026-10-18 | Drop [2M…] adducts from training (13.4% of kept rows); ablate in P5 | Dom | No test spectra use them |
 | D-021 | 2026-10-19 | Delete stale Windows repo copy (only commit baf9d88, already on main; data/ identical in WSL) | Dom | Empty folder left until the Claude Code session that lived there closes |
+| D-022 | 2026-10-19 | Final submissions selectable = 2 (Dom confirmed) | Dom | Choosing them stays gate 10 |
