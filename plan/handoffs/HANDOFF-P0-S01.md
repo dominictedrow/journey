@@ -7,7 +7,7 @@
 - P0.3: layout `casmi/{data,features,models,retrieval,rerank,denovo,kaggle}/`, `scripts/ tests/ reports/ runs/ logs/`; `runs/runs.csv` header.
 - P0.4: `casmi/metric.py` (`ik14`, `reciprocal_rank`, `score`) mirrors official `metric/casmi-mean-reciprocal-rank`; `tests/test_metric.py` 10 tests green.
 - P0.6: W&B login done by Dom; smoke run `P0-smoke` (id p6drzl88) logged `smoke/metric=1.0` to project `enveda-casmi26` (hosted at forge.coreweave.com/wandb/dominictedrow-dev). Log: `logs/wandb_smoke.log`.
-- P0.5 (partial): Kaggle CLI auth works in WSL (`~/.kaggle/credentials.json` copied from Windows). Slug: `enveda-CASMI26-molecule-id-mass-spectra`.
+- P0.5: daily limit 5 (from Kaggle API) and final picks assumed 2, written to `plan/COMPETITION.md`. Kaggle CLI auth works in WSL (`~/.kaggle/credentials.json` copied from Windows). Slug: `enveda-CASMI26-molecule-id-mass-spectra`.
 
 ## Results / numbers
 - Metric parity vs official scorer: 300 real train SMILES × 25 shuffled guesses → 0.13142303421602453 both (exact).
@@ -18,6 +18,8 @@
 - D-017: WSL move approved (Dom installed Ubuntu-24.04).
 
 ## Traps discovered
+- GitHub push from WSL uses the Windows GCM: `credential.helper=/mnt/c/Program Files/Git/ucrt64/bin/git-credential-manager.exe` (global git config in WSL).
+- Commit messages: use `git commit -F <file>`; an apostrophe inside `wsl -e bash -lc '...'` breaks the quoting.
 - Official scorer strips stereo BEFORE tautomer canonicalization; solution `smiles` can hold several accepted structures joined by `,`; unparseable guesses = miss. Train `inchikey14` column is NOT tautomer-canonical — local val truth must go through `casmi.metric.ik14`.
 - `!`-prefixed commands are non-interactive (no prompts); Dom runs interactive logins in a real terminal via `wsl -e bash -lc "..."`.
 - WSL VM shuts down when idle → `/tmp` is wiped between calls. Use `~/ext/` for scratch (official scorer pulled to `~/ext/metric/m.py`).
@@ -31,8 +33,7 @@
 
 ## Next session starts with
 - Work in `~/casmi` (WSL). Activate: `source ~/miniforge3/etc/profile.d/conda.sh && conda activate casmi`.
-- Finish P0.5 (write Dom's answers into `plan/COMPETITION.md`), then tag `p0-env` (P0.6 already done).
+- P0 closed, tag `p0-env`. Start P1.1.
 
 ## Open questions for Dom
-- Daily submission limit and number of final picks (Kaggle → competition Overview/Rules).
-- OK to push `main` to origin?
+- Confirm the number of final picks (assumed 2).

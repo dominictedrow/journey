@@ -15,6 +15,7 @@
 - ⚠️ Three kinds of test molecule: 1) in public spectral libraries, 2) known structure (PubChem/COCONUT) with no public spectra, 3) novel, needing generation.
 - ⚠️ A ±5 ppm mass window holds the true structure about 99% of the time, with a median of about 12 train candidates.
 - ⚠️ Leaderboard context (mid-Oct): public notebooks cap around 0.417; rank 1 is about 0.47.
-- ❓ Daily submission limit: TBD (P0.5)
-- ❓ Number of final submissions selectable: TBD (P0.5)
+- ✅ Daily submission limit: 5 (Kaggle API `maxDailySubmissions`, 2026-10-18). Kernels-only submissions; max team size 5.
+- ⚠️ Number of final submissions selectable: 2 assumed (Kaggle default; not exposed by the API) — Dom to confirm on the Rules page.
+- ⚠️ Kaggle API names the metric "CASMI: Mean Average Precision", but the official scorer code (`metric/casmi-mean-reciprocal-rank`) computes MRR@25 (first hit only). The code is what scores; `casmi/metric.py` mirrors it.
 - ✅ Dates: opened Sep 14, 2026; entry/merge deadline Dec 7; final Dec 14, 2026.

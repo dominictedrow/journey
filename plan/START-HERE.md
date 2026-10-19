@@ -35,16 +35,16 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 ## STATE
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
-current_phase: P0 — Environment, repo, metric
-current_step: P0.5
+current_phase: P1 — Data audit
+current_step: P1.1
 session_count: 1
 last_handoff: plan/handoffs/HANDOFF-P0-S01.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
-submissions_used_today: 0 (limit: unknown — confirm in P0.5)
-pending_gates: none (P0.5 questions open: daily submission limit, number of final picks)
-blockers: none
-next_action: P0.5 — record Dom's answers in plan/COMPETITION.md; then tag p0-env (P0.6 done)
+submissions_used_today: 0 (limit: 5/day)
+pending_gates: none
+blockers: none (final-pick count assumed 2; Dom to confirm)
+next_action: Start P1.1
 <!-- STATE:END -->
