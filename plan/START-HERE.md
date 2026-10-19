@@ -45,6 +45,6 @@ best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: unknown — confirm in P0.5)
 pending_gates: none (P0.5 questions open: daily submission limit, number of final picks)
-blockers: W&B API key needed for P0.6 (Dom runs wandb login)
-next_action: P0.5 — record Dom's answers in plan/COMPETITION.md; then P0.6; then tag p0-env
+blockers: none
+next_action: P0.5 — record Dom's answers in plan/COMPETITION.md; then tag p0-env (P0.6 done)
 <!-- STATE:END -->
