@@ -36,9 +36,9 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P2 — Structures, splits, physics features, shards
-current_step: P2.1
-session_count: 2
-last_handoff: plan/handoffs/HANDOFF-P1-S02.md
+current_step: P2.2
+session_count: 3
+last_handoff: plan/handoffs/HANDOFF-P2-S03.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
@@ -46,5 +46,5 @@ best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: 5/day)
 pending_gates: none
 blockers: none (final-pick count assumed 2; Dom to confirm)
-next_action: Start P2.1 (structure table). P1.4 resolved as D-018 (isotope-ratio score added to P2.2/P2.4/P7.2).
+next_action: Start P2.2 (spectrum cleaning). P2.1 done: data/processed/v1/structures.parquet (277,566 SMILES).
 <!-- STATE:END -->
