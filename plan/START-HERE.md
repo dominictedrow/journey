@@ -36,15 +36,15 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P3 — Baseline + Kaggle pipeline -> Submission #1
-current_step: P3.1
+current_step: P3.4 (submit)
 session_count: 8
 last_handoff: plan/handoffs/HANDOFF-P2-S08.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
-best_local_val: none (V-lib / V-pool / V-novel / weighted)
+best_local_val: baseline V-lib 0.878 / V-pool 0.039 / V-novel 0.000 / weighted 0.306 (V-scaf 0.035)
 submissions_used_today: 0 (limit: 5/day)
-pending_gates: none
+pending_gates: gate 7 upload dataset dominictedrow/casmi26-bundle (1.3 GB, built from ecc658b); gate 6 Submission #1 (library baseline)
 blockers: none
-next_action: Start P3.1. P2 closed (tag p2-data): v1 shards 9.8 GB, loader 9.8x model, parity test passes.
+next_action: Re-ask gates 7+6. On yes: kaggle datasets create -p data/kaggle/bundle --dir-mode zip; kaggle kernels push -p data/kaggle/kernel; submit; log LEADERBOARD row. P3.1-P3.3 done (dry run 400/400, known-answer MRR 1.0).
 <!-- STATE:END -->
