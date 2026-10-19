@@ -36,15 +36,15 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P1 — Data audit
-current_step: P1.1
-session_count: 1
-last_handoff: plan/handoffs/HANDOFF-P0-S01.md
+current_step: P1.4
+session_count: 2
+last_handoff: plan/handoffs/HANDOFF-P1-S02.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (ignore the Windows path in Repo facts; that copy is stale). Run commands via `wsl -e bash -lc`.
 background_jobs: none
 best_public_lb: none
 best_local_val: none (V-lib / V-pool / V-novel / weighted)
 submissions_used_today: 0 (limit: 5/day)
-pending_gates: none
+pending_gates: P1.4 — MS2 holds M+1 isotope peaks (train 21%, test 50%), so the "no isotope data" premise is only partly true. Options: (A) keep plan (formula from precursor mass decomposition + fragment-subformula scoring), (B) A plus an isotope-ratio score from in-MS2 M+1/M peaks where present (recommended), (C) isotope tokens only inside the encoder.
 blockers: none (final-pick count assumed 2; Dom to confirm)
-next_action: Start P1.1
+next_action: Re-ask P1.4; then tag p1-audit and start P2.1
 <!-- STATE:END -->

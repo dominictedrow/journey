@@ -5,17 +5,19 @@
 - ✅ Match rule: RDKit tautomer canonicalization (pinned 2026.03.3), then InChIKey first block (InChIKey14). Stereo and tautomer form don't matter.
 - ✅ Submission: per `molecule_id`, up to 25 SMILES, best first, `;`-joined in one field. Every id appears exactly once, with a header.
 - ⚠️ Code competition: Kaggle notebook, CPU or GPU, ≤9 h, **no internet**, outputs `submission.csv`. Public external data and pretrained models allowed (upload as Kaggle datasets).
-- ✅ Train: `data/train.parquet`, 2,539,608 spectra, 3.03 GB, 21 row groups (ZSTD), about 275.8k structures (⚠️). **11** `ingest_lib` values: enveda-180 1,153,785 · pluskal_ms2 527,581 · riken 347,171 · gnps 220,849 · massbank 101,727 · mona 92,416 · spectraverse 50,933 · msdial 40,765 · drug_plus 2,545 · enveda-np-examples 1,184 · masaryk 652. No molecule_id, but an `inchikey14` column exists, so group by it (recompute after tautomer canonicalization for the metric).
+- ✅ Train: `data/train.parquet`, 2,539,608 spectra, 3.03 GB, 21 row groups (ZSTD), 275,810 inchikey14 structures (✅ P1). **11** `ingest_lib` values: enveda-180 1,153,785 · pluskal_ms2 527,581 · riken 347,171 · gnps 220,849 · massbank 101,727 · mona 92,416 · spectraverse 50,933 · msdial 40,765 · drug_plus 2,545 · enveda-np-examples 1,184 · masaryk 652. No molecule_id, but an `inchikey14` column exists, so group by it (recompute after tautomer canonicalization for the metric).
 - ✅ Train columns: ingest_lib, normalized_smiles, inchikey, inchikey14, molecular_formula, ionization_mode, instrument_type, adduct, adduct_orig, precursor_mz, precursor_error_ppm, ms2_mzs, ms2_normalized_intensities, num_peaks, base_peak_intensity, collision_energy_ev (list), collision_energy_orig, collision_energy_orig_units. `instrument_type` is messy (null, "nan", ~30 free-text values).
-- ✅ Instrument match: only `enveda-180` + `enveda-np-examples` are timsTOF like test (1,154,969 spectra, equal to the train `instrument_type == timsTOF` count; ~183k structures ⚠️). The rest is Orbitrap/QTOF.
-- ⚠️ Test (hidden): about 400 molecules, about 1,500 spectra (1–16 each, median 3), all Bruker timsTOF, 157–1,159 Da. Test uses 7 adducts; train has 26+.
+- ✅ Instrument match: only `enveda-180` + `enveda-np-examples` are timsTOF like test (1,154,969 spectra, equal to the train `instrument_type == timsTOF` count; 182,941 structures in enveda-180, 180,653 unique to it; np-examples' 250 are all shared ✅ P1). The rest is Orbitrap/QTOF/ion trap etc. (83 raw instrument strings).
+- ⚠️ Test (hidden): about 400 molecules, about 1,500 spectra (1–16 each, median 3), all Bruker timsTOF, 157–1,159 Da. Test uses 7 adducts; train has 121 normalized adduct values (✅ P1).
 - ✅ Local `data/test.parquet`: 1,213 spectra, 400 `molecule_id`s (matches the 400 rows of `data/sample_submission.csv`, placeholder `CCO`×25), all timsTOF, adducts [M+H]+ 959 · [M-H]- 193 · [M+CH2O2-H]- 31 · [M+Na]+ 22 · [M+NH4]+ 4 · [M+K]+ 2 · [M+Cl]- 2. Columns: molecule_id, spectrum_id, ms2_mzs, ms2_normalized_intensities, base_peak_intensity, adduct, ionization_mode, instrument_type, precursor_mz, collision_energy_orig, collision_energy_ev, collision_energy_orig_units (no SMILES, no precursor_error_ppm).
-- ⚠️ The local `test.parquet` is a sample of train, so it is useless for validation.
-- ⚠️ Precursor error is dirty: median about 1.5 ppm, p99 about 2,900 ppm. Filter it.
+- ✅ (P1) The local `test.parquet` is a copy of train: all 1,213 spectra match enveda-180 train spectra exactly; 400/400 molecules map to train inchikey14 (399 uniquely). Useless for validation; usable as a known-answer pipeline check (`logs/test_in_train.csv`, regenerate with `scripts/test_in_train.py`).
+- ✅ (P1) Precursor error is dirty: median 1.51 ppm, p95 17.2, p99 2,884 ppm. |err| ≤5 ppm 89.8%, ≤20 ppm 95.1%. Filter it.
 - ⚠️ Three kinds of test molecule: 1) in public spectral libraries, 2) known structure (PubChem/COCONUT) with no public spectra, 3) novel, needing generation.
-- ⚠️ A ±5 ppm mass window holds the true structure about 99% of the time, with a median of about 12 train candidates.
-- ⚠️ Leaderboard context (mid-Oct): public notebooks cap around 0.417; rank 1 is about 0.47.
+- ⚠️ A ±5 ppm mass window holds the true structure about 99% of the time, with a median of about 12 train candidates. (Not checkable in P1: needs structure masses + adduct math; verify in P2/P4.)
+- ✅ (Kaggle CLI, 2026-10-18) Leaderboard: rank 1 0.495, rank 3 0.493, rank 5 (prize line) 0.474. Public notebooks around 0.42–0.45 by title.
 - ✅ Daily submission limit: 5 (Kaggle API `maxDailySubmissions`, 2026-10-18). Kernels-only submissions; max team size 5.
 - ⚠️ Number of final submissions selectable: 2 assumed (Kaggle default; not exposed by the API) — Dom to confirm on the Rules page.
 - ⚠️ Kaggle API names the metric "CASMI: Mean Average Precision", but the official scorer code (`metric/casmi-mean-reciprocal-rank`) computes MRR@25 (first hit only). The code is what scores; `casmi/metric.py` mirrors it.
 - ✅ Dates: opened Sep 14, 2026; entry/merge deadline Dec 7; final Dec 14, 2026.
+- ✅ (P1) No MS1 data, but the M+1 isotope peak appears inside MS2 in 21% of train and 50% of local-test spectra; peaks above precursor in 33% / 58%.
+- ✅ (P1) Local test is far noisier than train: peaks/spectrum p50 230 vs 42.
