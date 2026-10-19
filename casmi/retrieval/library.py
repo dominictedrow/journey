@@ -33,12 +33,9 @@ class Library:
     def __init__(self, root, ref_splits=('train',), exclude_ik14=(), cache_dir=None):
         cache_dir = cache_dir or f'{root}/cache'
         key = hashlib.sha256(json.dumps([BIN, list(ref_splits), sorted(exclude_ik14)]).encode()).hexdigest()[:12]
-        path = f'{cache_dir}/library_{key}.npz'
+        self.path = path = f'{cache_dir}/library_{key}.npz'
         if os.path.exists(path):
-            z = np.load(path, allow_pickle=False)
-            self.mass, self.ik14, self.smiles = z['mass'], z['ik14'], z['smiles']
-            self.ref_off = z['ref_off']
-            self.refs = sp.csr_matrix((z['data'], z['indices'], z['indptr']), shape=(int(z['nref']), NBINS))
+            self.__dict__.update(Library.load(path).__dict__)
             return
         s = pq.read_table(f'{root}/structures.parquet', columns=['smiles', 'ik14', 'exact_mass']).to_pydict()
         ex, seen, cand = set(exclude_ik14), set(), []
@@ -71,13 +68,22 @@ class Library:
         np.savez(path, mass=self.mass, ik14=self.ik14, smiles=self.smiles, ref_off=self.ref_off,
                  data=self.refs.data, indices=self.refs.indices, indptr=self.refs.indptr, nref=self.refs.shape[0])
 
+    @classmethod
+    def load(cls, path):
+        """Load a cached library .npz (Kaggle inference: no shards needed)."""
+        self = cls.__new__(cls)
+        z = np.load(path, allow_pickle=False)
+        self.path, self.mass, self.ik14, self.smiles, self.ref_off = path, z['mass'], z['ik14'], z['smiles'], z['ref_off']
+        self.refs = sp.csr_matrix((z['data'], z['indices'], z['indptr']), shape=(int(z['nref']), NBINS))
+        return self
+
     def candidates(self, mass, ppm=PPM):
         tol = mass * ppm * 1e-6
         return np.arange(np.searchsorted(self.mass, mass - tol), np.searchsorted(self.mass, mass + tol, side='right'))
 
-    def rank(self, q, mass, top=25):
+    def rank(self, q, mass, ppm=PPM, top=25):
         """q: CSR [n_query_spectra, NBINS] of one molecule; mass: neutral mass -> (ik14[], smiles[], score[])."""
-        c = self.candidates(mass) if np.isfinite(mass) else np.array([], int)
+        c = self.candidates(mass, ppm) if np.isfinite(mass) else np.array([], int)
         if len(c) == 0:
             return [], [], []
         lo, hi = self.ref_off[c], self.ref_off[c + 1]
