@@ -48,23 +48,32 @@ def process(job):
     source, cid_chunk, rows = job
     out = {k: [] for k in ('ik14', 'smiles', 'mass', 'formula', 'cid', 'level', 'np_likeness', 'taut')}
     pc = source == 'pubchem'  # D-024 filters apply to PubChem only; curated sources just need to parse
-    for smi, cid, level, npl, *pre in rows:
+
+    def one(smi, pre):
         m = Chem.MolFromSmiles(smi) if smi else None
         if m is None:
-            continue
+            return None
         if pc and ('.' in smi or Chem.GetFormalCharge(m) != 0 or any(a.GetIsotope() for a in m.GetAtoms())):
-            continue
+            return None
         f = rdMolDescriptors.CalcMolFormula(m)
         d = parse_formula(f)
         if pc and (d is None or not set(d) <= ELS):
-            continue
+            return None
         mass = rdMolDescriptors.CalcExactMolWt(m)
         if pc and not PUBCHEM_MASS[0] <= mass <= PUBCHEM_MASS[1]:
-            continue
+            return None
         # D-025: PubChem gets the plain InChIKey14 (~0.2 ms vs ~12 ms); inference re-keys top candidates by tautomer
         k = pre[0] if pre else (Chem.MolToInchiKey(m)[:14] if pc else taut(smi))
-        if not k:
+        return (k, mass, f) if k else None
+
+    for smi, cid, level, npl, *pre in rows:
+        try:
+            r = one(smi, pre)
+        except Exception:  # RDKit raises on a few malformed PubChem records (e.g. KekulizeException in InChI)
+            r = None
+        if r is None:
             continue
+        k, mass, f = r
         for col, v in zip(out, (k, smi, mass, f, cid, level, npl, not pc)):
             out[col].append(v)
     t = pa.table({
