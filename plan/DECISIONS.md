@@ -25,3 +25,4 @@
 | D-021 | 2026-10-19 | Delete stale Windows repo copy (only commit baf9d88, already on main; data/ identical in WSL) | Dom | Empty folder left until the Claude Code session that lived there closes |
 | D-022 | 2026-10-19 | Final submissions selectable = 2 (Dom confirmed) | Dom | Choosing them stays gate 10 |
 | D-023 | 2026-10-19 | Gate 7: upload private dataset casmi26-bundle; gate 6: Submission #1 (library baseline) | Dom | Public LB 0.150 |
+| D-024 | 2026-10-19 | P4.1 pool sources: train + COCONUT 2.0 + LOTUS + PubChem filtered (150–1,200 Da, CHNOPS+F/Cl/Br/I, neutral, single component, no isotopes). P4.2 reroute: packed Morgan fp stored only for train/COCONUT/LOTUS; PubChem stores SMILES/mass/ik14/formula/prior, fps computed per ppm window at inference | Dom | Full PubChem fps ~25–35 GB is too big for Kaggle RAM |

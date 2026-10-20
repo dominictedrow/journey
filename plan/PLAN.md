@@ -75,7 +75,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
   - a PubChem subset: 150–1,200 Da, allowed elements, neutral single component, no isotopes
   - optional LOTUS/HMDB
   - Report estimated size first.
-- **P4.2** Standardize each structure, then tautomer-canonical InChIKey14 dedup. Store formula, exact mass and packed Morgan fingerprint, all **sorted by mass** with a binary-search index. Keep source flags and any popularity prior available offline (e.g., number of sources containing it, an NP flag). Build this on the 5060 or CPU while P5 prep happens.
+- **P4.2** Standardize each structure, then tautomer-canonical InChIKey14 dedup. Store formula, exact mass and packed Morgan fingerprint (fingerprint only for train/COCONUT/LOTUS; PubChem fps computed per ppm window at inference — rerouted D-024), all **sorted by mass** with a binary-search index. Keep source flags and any popularity prior available offline (e.g., number of sources containing it, an NP flag). Build this on the 5060 or CPU while P5 prep happens.
 - **P4.3** Recall report: share of V-pool molecules whose answer sits inside a ±5/10 ppm window, plus the candidate-count distribution per window. If formula filtering is applied, report recall after the filter too.
 - **P4.4** 🛑 Upload the pool as a Kaggle dataset.
 - **P4.5** Baseline + pool: library score when available, otherwise prior plus formula rank. 🛑 Submit.
