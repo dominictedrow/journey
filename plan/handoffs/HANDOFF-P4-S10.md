@@ -16,10 +16,11 @@
 
 ## Traps discovered
 - First draft applied PubChem filters to all sources and dropped ~570 charged/multi-component train structures ([M]+ answers). Fixed: PubChem-only.
+- WSL kills a setsid/nohup child if the wsl -e call returns instantly; bg.sh now sleeps 5 s (first pool launch died this way).
 - `timeout` on a foreground smoke run killed LOTUS before any 50k chunk finished; NP tautomer tail is heavy, so use small chunks.
 
 ## Background jobs
-- PID 965 `scripts/run_pool.sh` -> `logs/pool_v1.log`, started ~17:45 2026-10-19, expect ~6 h. Done when the log ends with `ALL DONE`. Progress lines: `<src>: N in, M kept (Ts)`.
+- PID 1018 `scripts/run_pool.sh` -> `logs/pool_v1.log`, started ~17:45 2026-10-19, expect ~6 h. Done when the log ends with `ALL DONE`. Progress lines: `<src>: N in, M kept (Ts)`.
 - Check: `wsl -e bash -lc "tail -n 5 ~/casmi/logs/pool_v1.log; pgrep -f build_pool | wc -l"`
 - If it died: just relaunch `scripts/bg.sh pool_v1 scripts/run_pool.sh` (resumes from finished chunks).
 

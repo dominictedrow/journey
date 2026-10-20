@@ -40,7 +40,7 @@ current_step: P4.2 (pool build running)
 session_count: 10
 last_handoff: plan/handoffs/HANDOFF-P4-S10.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
-background_jobs: PID 965 scripts/run_pool.sh -> logs/pool_v1.log (started 2026-10-19 ~17:45, ~6 h; resumable)
+background_jobs: PID 1018 scripts/run_pool.sh -> logs/pool_v1.log (started 2026-10-19 ~17:45, ~6 h; resumable)
 best_public_lb: 0.150 (#1 library baseline, ecc658b)
 best_local_val: baseline V-lib 0.878 / V-pool 0.039 / V-novel 0.000 / weighted 0.306 (V-scaf 0.035)
 submissions_used_today: 1 on 2026-10-19 (limit: 5/day)
