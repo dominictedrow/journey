@@ -46,7 +46,7 @@ def process(job):
     from casmi.metric import ik14
     taut = ik14.__wrapped__  # skip the lru_cache: every structure is seen once
     source, cid_chunk, rows = job
-    out = {k: [] for k in ('ik14', 'smiles', 'mass', 'formula', 'cid', 'level', 'np_likeness')}
+    out = {k: [] for k in ('ik14', 'smiles', 'mass', 'formula', 'cid', 'level', 'np_likeness', 'taut')}
     pc = source == 'pubchem'  # D-024 filters apply to PubChem only; curated sources just need to parse
     for smi, cid, level, npl, *pre in rows:
         m = Chem.MolFromSmiles(smi) if smi else None
@@ -61,15 +61,16 @@ def process(job):
         mass = rdMolDescriptors.CalcExactMolWt(m)
         if pc and not PUBCHEM_MASS[0] <= mass <= PUBCHEM_MASS[1]:
             continue
-        k = pre[0] if pre else taut(smi)
+        # D-025: PubChem gets the plain InChIKey14 (~0.2 ms vs ~12 ms); inference re-keys top candidates by tautomer
+        k = pre[0] if pre else (Chem.MolToInchiKey(m)[:14] if pc else taut(smi))
         if not k:
             continue
-        for col, v in zip(out, (k, smi, mass, f, cid, level, npl)):
+        for col, v in zip(out, (k, smi, mass, f, cid, level, npl, not pc)):
             out[col].append(v)
     t = pa.table({
         'ik14': out['ik14'], 'smiles': out['smiles'], 'mass': pa.array(out['mass'], pa.float64()),
         'formula': out['formula'], 'cid': pa.array(out['cid'], pa.int64()), 'level': pa.array(out['level'], pa.int8()),
-        'np_likeness': pa.array(out['np_likeness'], pa.float32()),
+        'np_likeness': pa.array(out['np_likeness'], pa.float32()), 'taut': pa.array(out['taut'], pa.bool_()),
         'src': pa.array([SRC[source]] * len(out['ik14']), pa.uint8()),
         'prio': pa.array([PRIORITY[source]] * len(out['ik14']), pa.uint8()),
     }).sort_by('mass')
@@ -139,6 +140,10 @@ def ingest(source):
 def merge():
     files = sorted(glob.glob(f'{OUT}/raw/*.parquet'))
     os.makedirs(f'{OUT}/pool', exist_ok=True)
+    for p in files:  # chunks written before D-025 lack 'taut'; they all carry tautomer keys
+        if 'taut' not in pq.read_schema(p).names:
+            t = pq.read_table(p)
+            pq.write_table(t.append_column('taut', pa.array([True] * t.num_rows, pa.bool_())), p, row_group_size=8192)
     lazy = pl.scan_parquet(files)
     lo_hi = lazy.select(pl.col('mass').min().alias('lo'), pl.col('mass').max().alias('hi')).collect().row(0)
     stats, sha = {}, {}
@@ -147,7 +152,7 @@ def merge():
              .sort(['ik14', 'prio', 'cid'], nulls_last=True)
              .group_by('ik14', maintain_order=True)
              .agg(pl.col('smiles', 'mass', 'formula').first(), pl.col('src').bitwise_or(), pl.col('cid').min(),
-                  pl.col('level').max(), pl.col('np_likeness').max())
+                  pl.col('level').max(), pl.col('np_likeness').max(), pl.col('taut').max())
              .sort('mass').collect())
         if b.height == 0:
             continue

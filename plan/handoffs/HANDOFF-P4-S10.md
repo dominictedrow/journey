@@ -20,7 +20,7 @@
 - `timeout` on a foreground smoke run killed LOTUS before any 50k chunk finished; NP tautomer tail is heavy, so use small chunks.
 
 ## Background jobs
-- PID 1018 `scripts/run_pool.sh` -> `logs/pool_v1.log`, started ~17:45 2026-10-19, expect ~6 h. Done when the log ends with `ALL DONE`. Progress lines: `<src>: N in, M kept (Ts)`.
+- PID 2472 `scripts/run_pool.sh` -> `logs/pool_v1.log`, started ~17:45 2026-10-19, expect ~6 h. Done when the log ends with `ALL DONE`. Progress lines: `<src>: N in, M kept (Ts)`.
 - Check: `wsl -e bash -lc "tail -n 5 ~/casmi/logs/pool_v1.log; pgrep -f build_pool | wc -l"`
 - If it died: just relaunch `scripts/bg.sh pool_v1 scripts/run_pool.sh` (resumes from finished chunks).
 
