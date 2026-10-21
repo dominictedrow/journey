@@ -51,3 +51,17 @@ def test_no_cap_keeps_all_spectra_in_order(tmp_path):
     counts = fake_shard(tmp_path)
     ds = ShardDataset(str(tmp_path), 'train', spec_per_batch=64, max_spec_per_mol=None, shuffle=False)
     assert sum(len(b['npeaks']) for b in ds) == counts.sum()
+
+
+def test_lib_filter_keeps_mol_alignment(tmp_path):
+    fake_shard(tmp_path)
+    d = tmp_path / "train"
+    n = len(np.load(d / "prec.npy"))
+    np.save(d / "lib.npy", (np.arange(n) % 3).astype(np.uint8))
+    seen = 0
+    for b in ShardDataset(str(tmp_path), "train", spec_per_batch=64, block_mols=16, libs={2}):
+        assert (b["lib"] == 2).all()
+        mol = b["prec"].long()  # owning molecule of each spectrum
+        assert (b["mol_idx"][b["seg"]] == mol).all() and (b["mol_fp"][b["seg"], 0].long() == mol).all()
+        seen += len(b["lib"])
+    assert seen == int((np.arange(n) % 3 == 2).sum())

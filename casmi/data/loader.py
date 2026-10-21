@@ -14,9 +14,12 @@ PAD_TO = 8
 class ShardDataset(IterableDataset):
     """Yields dicts of tensors: per spectrum (B rows, peaks trimmed to L), 'seg' int64[B] = molecule row in the batch,
     per molecule 'mol_fp' uint8[M,256], 'mol_formula' int16[M,10], 'mol_idx' int64[M] (row in the split's mols.parquet).
-    max_spec_per_mol=None keeps every spectrum (use for val); shuffle=False gives a fixed order."""
+    max_spec_per_mol=None keeps every spectrum (use for val); shuffle=False gives a fixed order.
+    libs: keep only spectra whose lib id (vocab.json ingest_lib) is in this set; molecules left empty are skipped."""
 
-    def __init__(self, root, split, spec_per_batch=256, max_spec_per_mol=16, block_mols=2048, shuffle=True, seed=0):
+    def __init__(self, root, split, spec_per_batch=256, max_spec_per_mol=16, block_mols=2048, shuffle=True, seed=0,
+                 libs=None):
+        self.libs = None if libs is None else np.array(sorted(libs))
         self.dir = f'{root}/{split}'
         self.spb, self.cap, self.block, self.shuffle, self.seed = spec_per_batch, max_spec_per_mol, block_mols, shuffle, seed
         self.off = np.load(f'{self.dir}/mol_offsets.npy')
@@ -45,12 +48,18 @@ class ShardDataset(IterableDataset):
         loc = self.off[m0:m1 + 1] - s0
         blk = {k: np.asarray(arrs[k][s0:s1]) for k in SPEC_KEYS}  # one contiguous read per array
         fp, mf = np.asarray(arrs['mol_fp'][m0:m1]), np.asarray(arrs['mol_formula'][m0:m1])
-        mols = []
+        mols, keep = [], []
         for j in range(m1 - m0):
             idx = np.arange(loc[j], loc[j + 1])
+            if self.libs is not None:
+                idx = idx[np.isin(blk['lib'][idx], self.libs)]
+                if len(idx) == 0:
+                    continue
             if self.cap and len(idx) > self.cap:
                 idx = rng.choice(idx, self.cap, replace=False)
             mols.append(idx)
+            keep.append(j)
+        keep = np.array(keep, np.int64)
         order = rng.permutation(len(mols)) if self.shuffle else np.arange(len(mols))
         maxnp = np.array([blk['npeaks'][idx].max() for idx in mols])
         order = order[np.argsort(maxnp[order], kind='stable')]  # bucket by length, random within equal length
@@ -76,9 +85,10 @@ class ShardDataset(IterableDataset):
                     a = a[:, :L]
                 out[k] = torch.from_numpy(a.astype(np.int64) if k in LONG else np.ascontiguousarray(a))
             out['seg'] = torch.from_numpy(seg)
-            out['mol_fp'] = torch.from_numpy(fp[bm])
-            out['mol_formula'] = torch.from_numpy(mf[bm])
-            out['mol_idx'] = torch.from_numpy(np.asarray(bm, np.int64) + m0)
+            mj = keep[bm]  # block-local molecule rows
+            out['mol_fp'] = torch.from_numpy(fp[mj])
+            out['mol_formula'] = torch.from_numpy(mf[mj])
+            out['mol_idx'] = torch.from_numpy(mj + m0)
             yield out
 
 

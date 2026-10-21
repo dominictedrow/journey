@@ -52,11 +52,16 @@ def main():
     ap.add_argument('--spb', type=int, default=256)
     ap.add_argument('--eval_every', type=int, default=5000)
     ap.add_argument('--profile', action='store_true')
+    ap.add_argument('--libs', default=None, help='comma-separated ingest_lib ids to train on (P5.3: 2,3 = enveda)')
+    ap.add_argument('--init', default=None, help='checkpoint whose model weights start this run (P5.3 fine-tune)')
     a = ap.parse_args()
     torch.manual_seed(0)
     vocab = json.load(open(f'{ROOT}/vocab.json'))
     model = Encoder({k: len(v) for k, v in vocab.items()}).to(dev)
     model.set_stats(*(x.to(dev) for x in feature_stats(ROOT)))
+    if a.init:
+        sd = torch.load(a.init, map_location=dev)['model']
+        model.load_state_dict({k.replace('_orig_mod.', ''): v for k, v in sd.items()})
     print(f'params {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M', flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=0.01, fused=True)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1, (s + 1) / a.warmup) * 0.5 * (
@@ -76,7 +81,8 @@ def main():
         opt.zero_grad(set_to_none=True)
         return loss, parts
 
-    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb)
+    libs = {int(x) for x in a.libs.split(',')} if a.libs else None
+    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb, libs=libs)
     it = (b for _ in iter(int, 1) for b in dl)  # endless: each pass over dl is a new block-shuffled epoch
     os.makedirs(f'runs/{a.name}', exist_ok=True)
     if a.profile:
