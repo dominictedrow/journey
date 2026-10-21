@@ -23,6 +23,36 @@ class Pool:
         return np.searchsorted(self.mass, mass - tol), np.searchsorted(self.mass, mass + tol, side='right')
 
 
+def gather(root, rows, workers=None):
+    """Sorted unique pool rows -> (smiles list, packed fp uint8[n, 256]): stored fp for curated rows, RDKit
+    (casmi.features.fp, same generator) for PubChem rows. Reads each 25 Da bin parquet once."""
+    import json
+    from multiprocessing import Pool as Workers
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    from casmi.features.fp import fingerprints
+    idx = json.load(open(f'{root}/manifest.json'))['index']
+    boff = np.array(idx['bin_offsets'])
+    which = np.searchsorted(boff, rows, side='right') - 1
+    smiles, fp = [None] * len(rows), np.zeros((len(rows), 256), np.uint8)
+    with Workers(workers) as wk:
+        for bi in np.unique(which):
+            sel = np.flatnonzero(which == bi)
+            t = pq.read_table(f'{root}/pool/{idx["bins"][bi]}', columns=['smiles', 'fp']).take(pa.array(rows[sel] - boff[bi]))
+            smi, stored = t['smiles'].to_pylist(), t['fp'].to_pylist()
+            todo = [i for i, x in enumerate(stored) if x is None]
+            for i, x in enumerate(stored):
+                smiles[sel[i]] = smi[i]
+                if x is not None:
+                    fp[sel[i]] = np.frombuffer(x, np.uint8)
+            chunks = [[smi[i] for i in todo[k:k + 5000]] for k in range(0, len(todo), 5000)]
+            if chunks:
+                fp[sel[todo]] = np.concatenate(wk.map(fingerprints, chunks))
+    return smiles, fp
+
+
 def formula_score(formulas, nformulas):
     """Query spectra of one molecule (formulas int16[N,K,10], nformulas[N]) -> {formula_key: mean_s 1/(1+rank_s)}."""
     keys = formula_key(formulas)

@@ -61,6 +61,100 @@ def predict(test_path, lib_path, out_path):
     return {k: round(v, 2) for k, v in tm.items()}, out
 
 
+TEST_COLS = ['molecule_id', 'ms2_mzs', 'ms2_normalized_intensities', 'precursor_mz', 'adduct', 'collision_energy_ev',
+             'instrument_type', 'ionization_mode']
+
+
+def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_path, ppm=5.0, spb=256, workers=None):
+    """P5.4: library tier (any structure with reference spectra, by cosine) then pool_v1 window candidates by soft
+    Tanimoto to the Encoder's predicted fingerprint (scripts/eval_encoder.py with a = b = 0)."""
+    import json
+
+    import torch
+
+    from casmi.data.batch import featurize_rows, to_batch
+    from casmi.models.encoder import Encoder, unpack_fp
+    from casmi.retrieval.pool import Pool, gather
+    tm, t0 = {}, time.time()
+    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+    vocab = json.load(open(vocab_path))
+    model = Encoder({k: len(v) for k, v in vocab.items()}).to(dev).eval()
+    sd = torch.load(ckpt_path, map_location=dev)['model']
+    model.load_state_dict({k.replace('_orig_mod.', ''): v for k, v in sd.items()})
+    lib, pool = Library.load(lib_path), Pool(pool_dir)
+    tm['load'] = time.time() - t0
+    t0 = time.time()
+    t = pq.read_table(test_path, columns=TEST_COLS).to_pylist()
+    arrs = featurize_rows(t, vocab)
+    mols = {}
+    for i, r in enumerate(t):
+        mols.setdefault(r['molecule_id'], []).append(i)
+    ids = list(mols)
+    q = bin_rows(arrs['mz'], arrs['inten'].astype(np.float32), arrs['npeaks'])
+    tm['features'] = time.time() - t0
+    t0 = time.time()
+    prob, batch, n = {}, [], 0
+    with torch.no_grad():
+        for j, mid in enumerate(ids + [None]):
+            if mid is None or (batch and n + len(mols[mid]) > spb):
+                idx = np.concatenate([mols[ids[k]] for k in batch])
+                seg = np.repeat(np.arange(len(batch)), [len(mols[ids[k]]) for k in batch])
+                b = {k: v.to(dev) for k, v in to_batch(arrs, idx, seg).items()}
+                with torch.autocast(dev, torch.bfloat16, enabled=dev == 'cuda' and torch.cuda.is_bf16_supported()):
+                    fp, _ = model(b)
+                for k, p in zip(batch, torch.sigmoid(fp.float()).cpu()):
+                    prob[ids[k]] = p
+                batch, n = [], 0
+            if mid is not None:
+                batch.append(j)
+                n += len(mols[mid])
+    tm['model'] = time.time() - t0
+    t0 = time.time()
+    mass, win = {}, {}
+    for mid, r in mols.items():
+        m = arrs['neutral_mass'][r]
+        m = m[np.isfinite(m)]
+        mass[mid] = np.median(m) if len(m) else np.nan
+        win[mid] = pool.window(mass[mid], ppm) if len(m) else (0, 0)
+    rows = np.unique(np.concatenate([np.arange(lo, hi) for lo, hi in win.values()] + [np.zeros(0, np.int64)]))
+    smiles, cfp = gather(pool_dir, rows, workers)
+    tm['candidates'] = time.time() - t0
+    t0 = time.time()
+    out = {}
+    for mid, r in mols.items():
+        c, s, has = lib.scores(q[r], mass[mid], ppm) if np.isfinite(mass[mid]) else ([], [], [])
+        cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h]
+        lo, hi = win[mid]
+        if hi > lo:
+            a = np.searchsorted(rows, lo)
+            bits = unpack_fp(torch.from_numpy(cfp[a:a + hi - lo]))
+            p = prob[mid]
+            inter = bits @ p
+            tani = (inter / (bits.sum(1) + p.sum() - inter).clamp(min=1e-6)).numpy()
+            top = np.argsort(-tani)[:4 * MAX_RANK]
+            cand += [(float(tani[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
+        seen, smi = set(), []
+        for _, k, s_ in sorted(cand, key=lambda x: -x[0]):
+            if k not in seen:  # ponytail: plain vs tautomer InChIKey14 duplicates survive (D-025); re-key if it matters
+                seen.add(k)
+                smi.append(s_)
+            if len(smi) == MAX_RANK:
+                break
+        if not smi:
+            for wide in FALLBACK_PPM[1:]:
+                _, smi, _ = lib.rank(q[r], mass[mid], ppm=wide, top=MAX_RANK)
+                if smi:
+                    break
+        out[mid] = smi or [FALLBACK_SMILES]
+    tm['rank'] = time.time() - t0
+    with open(out_path, 'w', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(['molecule_id', 'smiles'])
+        for mid, smi in out.items():
+            w.writerow([mid, ';'.join(smi)])
+    return {k: round(v, 2) for k, v in tm.items()}, out
+
+
 def validate(sub_path, test_path):
     """Format check: header, every test molecule_id exactly once, 1..25 ';'-joined non-empty SMILES."""
     want = set(pq.read_table(test_path, columns=['molecule_id'])['molecule_id'].to_pylist())
