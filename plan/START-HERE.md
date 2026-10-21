@@ -36,15 +36,15 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P5 — Transformer encoder v1 -> Submission #3
-current_step: P5.2 pretrain running (P5.1 done)
+current_step: P5.4 submission (P5.1-P5.3 done; bundle + pool staged locally, dry run OK)
 session_count: 13
 last_handoff: plan/handoffs/HANDOFF-P5-S13.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
-background_jobs: p5_pre (scripts/train_retry.sh, log logs/p5_pre.log, ckpts runs/p5_pre/)
+background_jobs: none
 best_public_lb: 0.150 (#1 library baseline, ecc658b)
-best_local_val: baseline V-lib 0.878 / V-pool 0.039 / V-novel 0.000 / weighted 0.306 (V-scaf 0.035); honest pool val (P4.5) weighted 0.292 (V-lib 0.877, V-pool 0.0003)
-submissions_used_today: 0 on 2026-10-20 (limit: 5/day)
-pending_gates: none
+best_local_val: p5_ft honest pool val: V-lib 0.877 / V-pool 0.0286 / V-scaf 0.0264 / V-novel 0.0279 / weighted 0.311 (P3 baseline 0.306 used a leaky V-pool pool)
+submissions_used_today: 0 on 2026-10-21 (limit: 5/day)
+pending_gates: gates 7+6 for Submission #3 — create dataset casmi26-pool (6.1 GB), version casmi26-bundle with p5_ft model.pt, push kernel and submit. Expected LB ~0.17.
 blockers: none
-next_action: eval p5_pre when done (scripts/eval_encoder.py), then P5.3 enveda fine-tune (see handoff)
+next_action: ask gates 7+6; on yes upload, push kernel, submit, log LEADERBOARD, tag p5-encoder; then P6
 <!-- STATE:END -->
