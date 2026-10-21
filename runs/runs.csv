@@ -1,2 +1,4 @@
 date,run_name,phase,git_sha,config,val_lib,val_pool,val_novel,val_wtd,notes
 2026-10-18,P0-smoke-5d2255b,P0,5d2255b,wandb smoke,,,,,p6drzl88 logged smoke/metric=1.0
+p5_pre,0d323e8,50000,0.0003,2.08,"{""v_lib"": {""loss"": 2.6093457810878755, ""tanimoto"": 0.4714307661056519}, ""v_pool"": {""loss"": 2.6298044029474257, ""tanimoto"": 0.4772780022621155}, ""v_novel"": {""loss"": 2.673725303173065, ""tanimoto"": 0.4703240928649902}}"
+p5_ft,0d323e8,20000,0.0001,0.76,"{""v_lib"": {""loss"": 2.6583951902389527, ""tanimoto"": 0.4927294931411743}, ""v_pool"": {""loss"": 2.600051438331604, ""tanimoto"": 0.5053523101806641}, ""v_novel"": {""loss"": 2.647197527170181, ""tanimoto"": 0.49944378089904784}}"

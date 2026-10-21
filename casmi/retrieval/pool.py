@@ -13,9 +13,9 @@ ARRAYS = ('mass', 'ik14', 'src', 'fkey', 'cid', 'level', 'npl')
 
 
 class Pool:
-    def __init__(self, root):
+    def __init__(self, root, arrays=ARRAYS):
         self.root = root
-        for k in ARRAYS:
+        for k in arrays:
             setattr(self, k, np.load(f'{root}/{k}.npy', mmap_mode='r'))
 
     def window(self, mass, ppm=PPM):

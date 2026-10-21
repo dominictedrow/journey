@@ -81,7 +81,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     model = Encoder({k: len(v) for k, v in vocab.items()}).to(dev).eval()
     sd = torch.load(ckpt_path, map_location=dev)['model']
     model.load_state_dict({k.replace('_orig_mod.', ''): v for k, v in sd.items()})
-    lib, pool = Library.load(lib_path), Pool(pool_dir)
+    lib, pool = Library.load(lib_path), Pool(pool_dir, ('mass', 'ik14'))  # what casmi26-pool ships
     tm['load'] = time.time() - t0
     t0 = time.time()
     t = pq.read_table(test_path, columns=TEST_COLS).to_pylist()
