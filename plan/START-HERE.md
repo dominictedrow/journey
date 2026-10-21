@@ -35,8 +35,8 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 ## STATE
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
-current_phase: P4 — Offline candidate pool -> Submission #2
-current_step: P4.5 ranking done on val (reports/eval_pool.json); awaiting gate P4-skip
+current_phase: P5 — Transformer encoder v1 -> Submission #3
+current_step: P5.1 (P4 closed, D-027)
 session_count: 12
 last_handoff: plan/handoffs/HANDOFF-P4-S12.md
 repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
@@ -44,7 +44,7 @@ background_jobs: none
 best_public_lb: 0.150 (#1 library baseline, ecc658b)
 best_local_val: baseline V-lib 0.878 / V-pool 0.039 / V-novel 0.000 / weighted 0.306 (V-scaf 0.035); honest pool val (P4.5) weighted 0.292 (V-lib 0.877, V-pool 0.0003)
 submissions_used_today: 0 on 2026-10-20 (limit: 5/day)
-pending_gates: P4-skip — Plan says P4.4 upload + P4.5 submit. Problem: pool ranking without fingerprints scores ~0 on kind 2 (3.8k same-formula isomers per window), so Submission #2 would repeat ~0.150. Proposed: skip the P4 upload/submission, tag p4-pool, start P5; the pool ships with the first P5 submission. Cost: none (saves a ~4.5 GB upload). Alternative: upload + submit anyway as a pipeline check.
+pending_gates: none
 blockers: none
-next_action: re-ask gate P4-skip; then P5.1 (or P4.4 upload if rejected)
+next_action: P5.1 encoder implementation + 200-step profile gate (D-027: P4 upload/submit skipped)
 <!-- STATE:END -->
