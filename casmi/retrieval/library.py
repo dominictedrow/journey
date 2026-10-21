@@ -81,18 +81,23 @@ class Library:
         tol = mass * ppm * 1e-6
         return np.arange(np.searchsorted(self.mass, mass - tol), np.searchsorted(self.mass, mass + tol, side='right'))
 
-    def rank(self, q, mass, ppm=PPM, top=25):
-        """q: CSR [n_query_spectra, NBINS] of one molecule; mass: neutral mass -> (ik14[], smiles[], score[])."""
+    def scores(self, q, mass, ppm=PPM):
+        """q: CSR [n_query_spectra, NBINS] of one molecule -> (candidate idx[], cosine score[], has_refs[])."""
         c = self.candidates(mass, ppm) if np.isfinite(mass) else np.array([], int)
-        if len(c) == 0:
-            return [], [], []
         lo, hi = self.ref_off[c], self.ref_off[c + 1]
         score = np.zeros(len(c), np.float32)
-        r0, r1 = lo.min(), hi.max()  # candidates are mass-contiguous, so their refs are one contiguous block
-        if r1 > r0:
+        if len(c) and hi.max() > lo.min():
+            r0, r1 = lo.min(), hi.max()  # candidates are mass-contiguous, so their refs are one contiguous block
             sims = (q @ self.refs[r0:r1].T).toarray()  # [nq, nref]
             for j in range(len(c)):
                 if hi[j] > lo[j]:
                     score[j] = sims[:, lo[j] - r0:hi[j] - r0].max(1).mean()
+        return c, score, hi > lo
+
+    def rank(self, q, mass, ppm=PPM, top=25):
+        """q: CSR [n_query_spectra, NBINS] of one molecule; mass: neutral mass -> (ik14[], smiles[], score[])."""
+        c, score, _ = self.scores(q, mass, ppm)
+        if len(c) == 0:
+            return [], [], []
         o = np.lexsort((np.abs(self.mass[c] - mass), -score))[:top]
         return self.ik14[c[o]].tolist(), self.smiles[c[o]].tolist(), score[o].tolist()

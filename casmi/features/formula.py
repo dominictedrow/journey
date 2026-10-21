@@ -199,3 +199,11 @@ def formula_vector(f):
     if d is None or any(e not in EL for e in d):
         return None
     return np.array([d.get(e, 0) for e in EL], np.int16)
+
+
+_KEY = np.array([1 << (6 * i) for i in range(len(EL))], np.uint64)  # 6 bits/element, wraps; keys only compared for equality
+
+
+def formula_key(v):
+    """int16[..., 10] count vectors -> uint64 equality keys (0 for all-zero / missing rows)."""
+    return (np.asarray(v).astype(np.uint64) * _KEY).sum(-1, dtype=np.uint64)
