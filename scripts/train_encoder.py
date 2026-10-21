@@ -76,7 +76,8 @@ def main():
         opt.zero_grad(set_to_none=True)
         return loss, parts
 
-    it = iter(make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb))
+    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb)
+    it = (b for _ in iter(int, 1) for b in dl)  # endless: each pass over dl is a new block-shuffled epoch
     os.makedirs(f'runs/{a.name}', exist_ok=True)
     if a.profile:
         for _ in range(60):  # warm-up: compile the common length buckets
