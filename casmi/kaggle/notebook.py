@@ -29,11 +29,15 @@ if os.path.isdir(wheels):
 shutil.copytree(f'{bundle}/code', f'{WORK}/code', dirs_exist_ok=True)
 sys.path.insert(0, f'{WORK}/code')
 
-from casmi.kaggle.predict import predict, validate  # noqa: E402
+from casmi.kaggle.predict import predict, predict_encoder, validate  # noqa: E402
 
 test = find('test.parquet')
 sub = f'{WORK}/submission.csv'
-timings, _ = predict(test, f'{bundle}/library.npz', sub)
+if os.path.exists(f'{bundle}/model.pt'):  # P5.4: encoder + pool_v1 (casmi26-pool dataset)
+    pool = os.path.dirname(find('mass.npy'))
+    timings, _ = predict_encoder(test, f'{bundle}/library.npz', pool, f'{bundle}/model.pt', f'{bundle}/vocab.json', sub)
+else:
+    timings, _ = predict(test, f'{bundle}/library.npz', sub)
 n = validate(sub, test)
 timings['total'] = round(time.time() - T0, 2)
 print(f'submission.csv: {n} molecules; timings {timings}', flush=True)
