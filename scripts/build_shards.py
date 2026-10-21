@@ -22,6 +22,7 @@ from casmi.features import TOP_FORMULAS, featurize
 from casmi.features.clean import P, PREC_RANGE, keep_row
 from casmi.features.formula import EL, formula_vector
 from casmi.features.peaks import F
+from casmi.features.fp import FP_BITS, fingerprints
 
 SRC = 'data/train.parquet'
 V1 = 'data/processed/v1'
@@ -30,7 +31,6 @@ MULTIMER = re.compile(r'^\[\d+M')  # [2M..], [3M..], [4M..] (D-020)
 VOCAB_COLS = ('adduct', 'instrument_type', 'ionization_mode', 'ingest_lib')
 COLS = ['normalized_smiles', 'precursor_mz', 'precursor_error_ppm', 'ms2_mzs', 'ms2_normalized_intensities',
         'collision_energy_ev'] + list(VOCAB_COLS)
-FP_BITS = 2048
 K = TOP_FORMULAS
 SPEC = {  # per-spectrum arrays: name -> (dtype, trailing shape)
     'mz': (np.float32, (P,)), 'inten': (np.float16, (P,)), 'peakfeat': (np.float16, (P, F)), 'npeaks': (np.uint16, ()),
@@ -122,19 +122,6 @@ def sha(path):
         for chunk in iter(lambda: fh.read(1 << 24), b''):
             h.update(chunk)
     return h.hexdigest()
-
-
-def fingerprints(smiles):
-    from rdkit import Chem, RDLogger
-    from rdkit.Chem import rdFingerprintGenerator
-    RDLogger.DisableLog('rdApp.*')
-    gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=FP_BITS)
-    out = np.zeros((len(smiles), FP_BITS // 8), np.uint8)
-    for j, s in enumerate(smiles):
-        mol = Chem.MolFromSmiles(s)
-        if mol is not None:
-            out[j] = np.packbits(gen.GetFingerprintAsNumPy(mol))
-    return out
 
 
 def merge(out_root, tmp, counts, pool):
