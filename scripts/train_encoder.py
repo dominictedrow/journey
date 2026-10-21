@@ -99,11 +99,23 @@ def main():
         print(json.dumps(rep), flush=True)
         json.dump(rep, open(f'runs/{a.name}/profile.json', 'w'))
         return
-    t, seen = time.time(), 0
-    for s in range(1, a.steps + 1):
+    t, seen, start = time.time(), 0, 1
+    state = f'runs/{a.name}/state.pt'
+    if os.path.exists(state):  # resume after a crash (WSL CUDA 'unknown error'); data order restarts, fine for SGD
+        st = torch.load(state, map_location=dev)
+        model.load_state_dict(st['model'])
+        opt.load_state_dict(st['opt'])
+        sched.load_state_dict(st['sched'])
+        start = st['step'] + 1
+        print(f'resumed at step {start}', flush=True)
+    for s in range(start, a.steps + 1):
         b = to_dev(next(it))
         loss, parts = step(b)
         seen += len(b['npeaks'])
+        if s % 1000 == 0:
+            torch.save({'model': model.state_dict(), 'opt': opt.state_dict(), 'sched': sched.state_dict(), 'step': s},
+                       state + '.tmp')
+            os.replace(state + '.tmp', state)
         if s % 200 == 0:
             print(f'step {s} loss {loss.item():.4f} focal {parts["focal"].item():.4f} formula {parts["formula"].item():.4f} '
                   f'lr {sched.get_last_lr()[0]:.2e} {seen / (time.time() - t):.0f} spec/s', flush=True)
