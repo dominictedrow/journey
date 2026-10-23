@@ -1,6 +1,7 @@
 """P5 training: Encoder on data/processed/v1 shards, bf16 autocast + torch.compile + fused AdamW, cosine lr.
 --profile: 200 timed steps -> spectra/s, data-wait share, peak memory (plan/CLAUDE.md profile gate), no checkpoint.
-Usage: python scripts/train_encoder.py --name p5_v1 [--steps N] [--lr X] [--profile]"""
+--hardneg DIR: P6 Contrastive model (casmi/models/contrastive.py, D-029) with InfoNCE over mined hard negatives.
+Usage: python scripts/train_encoder.py --name p5_v1 [--steps N] [--lr X] [--profile] [--hardneg DIR]"""
 import argparse
 import csv
 import json
@@ -11,6 +12,7 @@ import time
 import torch
 
 from casmi.data.loader import make_loader
+from casmi.models.contrastive import Contrastive, total_loss
 from casmi.models.encoder import Encoder, feature_stats, loss_fn, tanimoto, unpack_fp
 
 ROOT = 'data/processed/v1'
@@ -33,7 +35,7 @@ def evaluate(model, split, max_batches=None):
             break
         b = to_dev(b)
         with torch.autocast('cuda', torch.bfloat16):
-            fp, form = model(b)
+            fp, form = model(b)[:2]
         loss, _ = loss_fn(fp, form, b)
         m = len(b['mol_idx'])
         tot += loss.item() * m
@@ -54,26 +56,33 @@ def main():
     ap.add_argument('--profile', action='store_true')
     ap.add_argument('--libs', default=None, help='comma-separated ingest_lib ids to train on (P5.3: 2,3 = enveda)')
     ap.add_argument('--init', default=None, help='checkpoint whose model weights start this run (P5.3 fine-tune)')
+    ap.add_argument('--hardneg', default=None, help='P6: hard-negative dir -> Contrastive model + InfoNCE')
+    ap.add_argument('--nce_w', type=float, default=1.0)
     a = ap.parse_args()
     torch.manual_seed(0)
     vocab = json.load(open(f'{ROOT}/vocab.json'))
-    model = Encoder({k: len(v) for k, v in vocab.items()}).to(dev)
-    model.set_stats(*(x.to(dev) for x in feature_stats(ROOT)))
+    vs = {k: len(v) for k, v in vocab.items()}
+    model = (Contrastive(vs) if a.hardneg else Encoder(vs)).to(dev)
+    core = model.enc if a.hardneg else model  # the P5 Encoder
+    core.set_stats(*(x.to(dev) for x in feature_stats(ROOT)))
     if a.init:
-        sd = torch.load(a.init, map_location=dev)['model']
-        model.load_state_dict({k.replace('_orig_mod.', ''): v for k, v in sd.items()})
+        sd = {k.replace('_orig_mod.', ''): v for k, v in torch.load(a.init, map_location=dev)['model'].items()}
+        if a.hardneg and not any(k.startswith('proj.') for k in sd):
+            core.load_state_dict(sd)  # P5 Encoder checkpoint -> encoder part; proj/mol/temperature start fresh
+        else:
+            model.load_state_dict(sd)
     print(f'params {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M', flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=0.01, fused=True)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1, (s + 1) / a.warmup) * 0.5 * (
         1 + torch.cos(torch.tensor(min(s, a.steps) / a.steps * torch.pi)).item()))
     # compile only the transformer stack: whole-model dynamic recompiles hit an Inductor tiling assert (torch 2.11)
-    model.enc = torch.compile(model.enc, dynamic=True)
+    core.enc = torch.compile(core.enc, dynamic=True)
     fwd = model
 
     def step(b):
         with torch.autocast('cuda', torch.bfloat16):
-            fp, form = fwd(b)
-        loss, parts = loss_fn(fp, form, b)
+            out = fwd(b)
+            loss, parts = total_loss(model, out, b, a.nce_w) if a.hardneg else loss_fn(*out, b)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
@@ -82,7 +91,7 @@ def main():
         return loss, parts
 
     libs = {int(x) for x in a.libs.split(',')} if a.libs else None
-    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb, libs=libs)
+    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb, libs=libs, hardneg=a.hardneg)
     it = (b for _ in iter(int, 1) for b in dl)  # endless: each pass over dl is a new block-shuffled epoch
     os.makedirs(f'runs/{a.name}', exist_ok=True)
     if a.profile:
@@ -123,7 +132,8 @@ def main():
                        state + '.tmp')
             os.replace(state + '.tmp', state)
         if s % 200 == 0:
-            print(f'step {s} loss {loss.item():.4f} focal {parts["focal"].item():.4f} formula {parts["formula"].item():.4f} '
+            nce = f'nce {parts["nce"].item():.4f} T {1 / model.logit_scale.exp().item():.4f} ' if a.hardneg else ''
+            print(f'step {s} loss {loss.item():.4f} focal {parts["focal"].item():.4f} formula {parts["formula"].item():.4f} {nce}'
                   f'lr {sched.get_last_lr()[0]:.2e} {seen / (time.time() - t):.0f} spec/s', flush=True)
         if s % a.eval_every == 0 or s == a.steps:
             ev = {sp: evaluate(model, sp) for sp in ('v_lib', 'v_pool', 'v_novel')}

@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 
+from casmi.features.formula import fkey_counts, formula_key
+
 SPEC_KEYS = ('mz', 'inten', 'peakfeat', 'npeaks', 'prec', 'neutral_mass', 'ce', 'iso', 'adduct', 'instrument',
              'polarity', 'lib', 'formulas', 'nformulas', 'formula_score', 'formula_ppm', 'formula_iso_score', 'formula_rdbe')
 LONG = ('adduct', 'instrument', 'polarity', 'lib', 'npeaks', 'nformulas')  # embedding ids + counts (torch lacks uint16)
@@ -18,8 +20,9 @@ class ShardDataset(IterableDataset):
     libs: keep only spectra whose lib id (vocab.json ingest_lib) is in this set; molecules left empty are skipped."""
 
     def __init__(self, root, split, spec_per_batch=256, max_spec_per_mol=16, block_mols=2048, shuffle=True, seed=0,
-                 libs=None):
+                 libs=None, hardneg=None):
         self.libs = None if libs is None else np.array(sorted(libs))
+        self.hardneg = hardneg  # P6: scripts/hard_negatives.py dir (rows match this split's molecules) -> neg_* keys
         self.dir = f'{root}/{split}'
         self.spb, self.cap, self.block, self.shuffle, self.seed = spec_per_batch, max_spec_per_mol, block_mols, shuffle, seed
         self.off = np.load(f'{self.dir}/mol_offsets.npy')
@@ -40,6 +43,8 @@ class ShardDataset(IterableDataset):
             rng.shuffle(blocks)
         rng = np.random.default_rng((self.seed, self.epoch, wid))
         arrs = {k: self._arr(k) for k in SPEC_KEYS + ('mol_fp', 'mol_formula')}
+        if self.hardneg:
+            arrs.update({f'neg_{k}': np.load(f'{self.hardneg}/{k}.npy', mmap_mode='r') for k in ('fp', 'fkey', 'n')})
         for b0 in blocks[wid::nw]:
             yield from self._block(arrs, b0, min(b0 + self.block, n_mol), rng)
 
@@ -48,6 +53,8 @@ class ShardDataset(IterableDataset):
         loc = self.off[m0:m1 + 1] - s0
         blk = {k: np.asarray(arrs[k][s0:s1]) for k in SPEC_KEYS}  # one contiguous read per array
         fp, mf = np.asarray(arrs['mol_fp'][m0:m1]), np.asarray(arrs['mol_formula'][m0:m1])
+        if self.hardneg:
+            neg = {k: np.asarray(arrs[f'neg_{k}'][m0:m1]) for k in ('fp', 'fkey', 'n')}
         mols, keep = [], []
         for j in range(m1 - m0):
             idx = np.arange(loc[j], loc[j + 1])
@@ -89,6 +96,11 @@ class ShardDataset(IterableDataset):
             out['mol_fp'] = torch.from_numpy(fp[mj])
             out['mol_formula'] = torch.from_numpy(mf[mj])
             out['mol_idx'] = torch.from_numpy(mj + m0)
+            if self.hardneg:
+                out['neg_fp'] = torch.from_numpy(neg['fp'][mj])
+                out['neg_formula'] = torch.from_numpy(fkey_counts(neg['fkey'][mj]))
+                out['n_neg'] = torch.from_numpy(neg['n'][mj].astype(np.int64))
+                out['pos_formula'] = torch.from_numpy(fkey_counts(formula_key(np.maximum(mf[mj], 0))))
             yield out
 
 

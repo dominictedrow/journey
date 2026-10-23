@@ -207,3 +207,10 @@ _KEY = np.array([1 << (6 * i) for i in range(len(EL))], np.uint64)  # 6 bits/ele
 def formula_key(v):
     """int16[..., 10] count vectors -> uint64 equality keys (0 for all-zero / missing rows)."""
     return (np.asarray(v).astype(np.uint64) * _KEY).sum(-1, dtype=np.uint64)
+
+
+def fkey_counts(k):
+    """uint64 formula keys -> int16[..., 10] counts. Inverse of formula_key while every count < 64 (wraps above; P6
+    applies formula_key -> fkey_counts to positives too, so pool decoys and positives see the same encoding)."""
+    k = np.asarray(k, np.uint64)[..., None]
+    return ((k >> (np.arange(len(EL), dtype=np.uint64) * np.uint64(6))) & np.uint64(63)).astype(np.int16)

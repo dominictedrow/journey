@@ -23,10 +23,12 @@ class Pool:
         return np.searchsorted(self.mass, mass - tol), np.searchsorted(self.mass, mass + tol, side='right')
 
 
-def gather(root, rows, workers=None):
+def gather(root, rows, workers=None, timings=None):
     """Sorted unique pool rows -> (smiles list, packed fp uint8[n, 256]): stored fp for curated rows, RDKit
-    (casmi.features.fp, same generator) for PubChem rows. Reads each 25 Da bin parquet once."""
+    (casmi.features.fp, same generator) for PubChem rows. Reads only the parquet row groups holding the rows (a 5 ppm
+    window spans 1-2 of ~65k rows; whole-bin reads took ~1 h on Kaggle's /kaggle/input). timings: dict += read/fp s."""
     import json
+    import time
     from multiprocessing import Pool as Workers
 
     import pyarrow as pa
@@ -37,10 +39,21 @@ def gather(root, rows, workers=None):
     boff = np.array(idx['bin_offsets'])
     which = np.searchsorted(boff, rows, side='right') - 1
     smiles, fp = [None] * len(rows), np.zeros((len(rows), 256), np.uint8)
+    tm = {'read': 0.0, 'fp': 0.0}
     with Workers(workers) as wk:
         for bi in np.unique(which):
+            t0 = time.time()
             sel = np.flatnonzero(which == bi)
-            t = pq.read_table(f'{root}/pool/{idx["bins"][bi]}', columns=['smiles', 'fp']).take(pa.array(rows[sel] - boff[bi]))
+            pf = pq.ParquetFile(f'{root}/pool/{idx["bins"][bi]}')
+            rg_off = np.cumsum([0] + [pf.metadata.row_group(g).num_rows for g in range(pf.num_row_groups)])
+            local = rows[sel] - boff[bi]
+            rg = np.searchsorted(rg_off, local, side='right') - 1
+            need = np.unique(rg)
+            cat_off = np.cumsum(np.r_[0, rg_off[need + 1] - rg_off[need]])  # need[k] starts at cat_off[k] once read
+            pos = local - rg_off[rg] + cat_off[np.searchsorted(need, rg)]
+            t = pf.read_row_groups(need.tolist(), columns=['smiles', 'fp']).take(pa.array(pos))
+            tm['read'] += time.time() - t0
+            t0 = time.time()
             smi, stored = t['smiles'].to_pylist(), t['fp'].to_pylist()
             todo = [i for i, x in enumerate(stored) if x is None]
             for i, x in enumerate(stored):
@@ -50,6 +63,10 @@ def gather(root, rows, workers=None):
             chunks = [[smi[i] for i in todo[k:k + 5000]] for k in range(0, len(todo), 5000)]
             if chunks:
                 fp[sel[todo]] = np.concatenate(wk.map(fingerprints, chunks))
+            tm['fp'] += time.time() - t0
+    if timings is not None:
+        for k, v in tm.items():
+            timings[k] = timings.get(k, 0.0) + round(v, 2)
     return smiles, fp
 
 

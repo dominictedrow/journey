@@ -117,7 +117,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
         mass[mid] = np.median(m) if len(m) else np.nan
         win[mid] = pool.window(mass[mid], ppm) if len(m) else (0, 0)
     rows = np.unique(np.concatenate([np.arange(lo, hi) for lo, hi in win.values()] + [np.zeros(0, np.int64)]))
-    smiles, cfp = gather(pool_dir, rows, workers)
+    smiles, cfp = gather(pool_dir, rows, workers, tm)  # adds tm['read'], tm['fp']
     tm['candidates'] = time.time() - t0
     t0 = time.time()
     out = {}

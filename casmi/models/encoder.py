@@ -74,14 +74,18 @@ class Encoder(nn.Module):
 
     def forward(self, b):
         """-> (fp logits [M, 2048], formula counts [M, 10]) for the M molecules in the batch."""
+        mol = self.molecules(b)
+        return self.fp_head(mol), self.formula_head(mol)
+
+    def molecules(self, b):
+        """Attention-pooled molecule embeddings [M, d]."""
         h = self.spectra(b)
         seg, M = b['seg'], b['mol_fp'].shape[0]
         a = self.pool(h).squeeze(-1).float()
         amax = torch.full((M,), -1e4, device=h.device).scatter_reduce(0, seg, a, 'amax')
         e = (a - amax[seg]).exp()
         w = e / torch.zeros(M, device=h.device).index_add(0, seg, e)[seg]
-        mol = torch.zeros(M, h.shape[1], device=h.device, dtype=h.dtype).index_add(0, seg, h * w[:, None].to(h.dtype))
-        return self.fp_head(mol), self.formula_head(mol)
+        return torch.zeros(M, h.shape[1], device=h.device, dtype=h.dtype).index_add(0, seg, h * w[:, None].to(h.dtype))
 
 
 def unpack_fp(fp):

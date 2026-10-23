@@ -3,7 +3,7 @@
 > Dom pastes this whole file into a fresh Claude Code session. You (Claude Code) do not summarize it back. You boot and start working.
 
 ## Repo facts
-- Repo root: `C:\Users\blazi\kaggle\Envenda` (native Windows/NTFS; `/mnt/c/Users/blazi/kaggle/Envenda` from WSL, but WSL is **not installed** yet). Remote: `origin` → https://github.com/dominictedrow/envenda (private), branch `main`.
+- Repo root: `~/envenda` in WSL Ubuntu-24.04 (`\\wsl.localhost\Ubuntu-24.04\home\dom\envenda` from Windows). Remote: `origin` → https://github.com/dominictedrow/envenda (private), branch `main`.
 - Plan docs live in `plan/`: `plan/CLAUDE.md`, `plan/PLAN.md`, `plan/COMPETITION.md`, `plan/LEADERBOARD.md`, `plan/DECISIONS.md`, `plan/handoffs/`. All paths below are relative to the repo root.
 - Competition data is already downloaded to `data/` (`train.parquet`, `test.parquet`, `sample_submission.csv`) and is gitignored.
 
@@ -35,16 +35,16 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 ## STATE
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
-current_phase: P5 — Transformer encoder v1 -> Submission #3
-current_step: P5.4 submission (P5.1-P5.3 done; bundle + pool staged locally, dry run OK)
-session_count: 13
-last_handoff: plan/handoffs/HANDOFF-P5-S13.md
-repo_root: ~/casmi in WSL Ubuntu-24.04 (Windows copy in Repo facts deleted, D-021). Run commands via `wsl -e bash -lc`.
+current_phase: P6 — Contrastive retrieval + hard negatives -> Submission #4
+current_step: P6.5 (P6.1-P6.4 done incl. D-030 round 2; val weighted 0.3129 vs P5 0.311)
+session_count: 15
+last_handoff: plan/handoffs/HANDOFF-P6-S15.md
+repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
-best_public_lb: 0.150 (#1 library baseline, ecc658b)
-best_local_val: p5_ft honest pool val: V-lib 0.877 / V-pool 0.0286 / V-scaf 0.0264 / V-novel 0.0279 / weighted 0.311 (P3 baseline 0.306 used a leaky V-pool pool)
-submissions_used_today: 0 on 2026-10-21 (limit: 5/day)
-pending_gates: gates 7+6 for Submission #3 — create dataset casmi26-pool (6.1 GB), version casmi26-bundle with p5_ft model.pt, push kernel and submit. Expected LB ~0.17.
+best_public_lb: 0.184 (#2 / plan Submission #3, P5 encoder p5_ft, 0c8e6df)
+best_local_val: p6_ft blend 1,4,0,0.05: V-lib 0.877 / V-pool 0.0316 / V-scaf 0.0287 / V-novel 0.0301 / weighted 0.3129
+submissions_used_today: 0 on 2026-10-22 (limit: 5/day)
+pending_gates: rule zero on P6.5 — recommend skipping Submission #4 (+0.002 val is below LB noise), tag p6-contrastive, start P7; alternatives in handoff
 blockers: none
-next_action: ask gates 7+6; on yes upload, push kernel, submit, log LEADERBOARD, tag p5-encoder; then P6
+next_action: ask the P6.5 gate; on answer log DECISIONS, tag p6-contrastive, then P7.1 (or the chosen alternative)
 <!-- STATE:END -->
