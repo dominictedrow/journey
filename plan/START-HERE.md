@@ -44,7 +44,7 @@ background_jobs: none
 best_public_lb: 0.184 (#2 / plan Submission #3, P5 encoder p5_ft, 0c8e6df)
 best_local_val: p6_ft blend 1,4,0,0.05: V-lib 0.877 / V-pool 0.0316 / V-scaf 0.0287 / V-novel 0.0301 / weighted 0.3129
 submissions_used_today: 0 on 2026-10-22 (limit: 5/day)
-pending_gates: none (P7.1 fragmenter choice is a 🛑 gate once the runtime benchmark is in)
+pending_gates: none
 blockers: none
 next_action: P7.2 — fragment + isotope features on P6 top-100 per val molecule; check truth vs top-100 separation before P7.3 LambdaRank
 <!-- STATE:END -->

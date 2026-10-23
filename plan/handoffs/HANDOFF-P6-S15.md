@@ -34,14 +34,23 @@
   while the model memorises train molecules. Next levers: regularisation/augmentation, or a reranker that uses spectrum physics.
 - Old logs print `/home/dom/casmi/...` paths; ignore them.
 
+## Later in S15
+- D-032: P6.5 Submission #4 skipped, tag `p6-contrastive`; main + all tags p2..p6 pushed (remote had only been at P1).
+- D-033 (P7.1 gate): in-house fragmenter `casmi/rerank/fragment.py` (`fragments(smiles)` -> unique 1-2-bond-cut
+  piece masses; `explain(mz, inten, masses, charge)` -> (explained intensity frac, n peaks), ±2 H, [frag±H]±).
+  `scripts/bench_fragment.py` on 60 V-pool mols x 50 random window decoys: 2.5 ms/cand mean (p99 7.4, max 14),
+  133 frags/cand, so top-50 x 400 takes ~15 s on 4 cores. Truth explains more than a decoy 92.6%, mean gap +0.357.
+- Traps: vocab key is `ionization_mode` (negative 1, positive 2), not `polarity`. Val spectra are stored as
+  mz/inten [n_spec, 128] padded + npeaks. Fragment ions assume [frag+H]+ / [frag-H]- regardless of the precursor adduct.
+
 ## Background jobs
 - none
 
 ## Next session starts with
-- 🛑 Rule-zero gate on P6.5 (see open questions), then tag `p6-contrastive` and continue.
+- P7.2: per val molecule, take the P6 (p6_ft, blend 1,4,0,0.05) top-100 from eval_encoder's scoring, compute
+  fragment features (explained frac, n explained, min cuts, loss-table hits) + P2.4 isotope score, and measure
+  truth-vs-top-100 separation. Random decoys are easy; the top-100 is the real test. Consider 3 cuts / top-200 (cheap).
+- P7.3 needs a **separate** held-out fold (not V-sets); designing it may hit gate 2.
 
 ## Open questions for Dom
-- P6.5 says val, then submit #4. The val gain is +0.002 weighted (0.311 -> 0.313), which is below LB noise.
-  Recommend: skip Submission #4, tag p6-contrastive, ship the P6 ckpt with the P7 submission, and start P7 (reranker
-  on top-100, where R@100 = 0.67 vs R@1 = 0.005). Alternatives: submit p6_ft anyway (uses 1 slot), or spend more
-  P6 effort on the generalisation gap (augmentation, freeze encoder, or a GNN MolEncoder, which needs gate 1).
+- none
