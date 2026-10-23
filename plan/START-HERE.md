@@ -36,7 +36,7 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P7 — Fragmentation-aware reranker -> Submission #5
-current_step: P7.1 fragmenter choice (P6 closed, tag p6-contrastive, Submission #4 skipped D-032)
+current_step: P7.2 fragment features (P7.1 done: in-house fragmenter, D-033)
 session_count: 15
 last_handoff: plan/handoffs/HANDOFF-P6-S15.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
@@ -46,5 +46,5 @@ best_local_val: p6_ft blend 1,4,0,0.05: V-lib 0.877 / V-pool 0.0316 / V-scaf 0.0
 submissions_used_today: 0 on 2026-10-22 (limit: 5/day)
 pending_gates: none (P7.1 fragmenter choice is a 🛑 gate once the runtime benchmark is in)
 blockers: none
-next_action: P7.1 — benchmark MetFrag jar vs in-house RDKit fragmenter on top-50 x 400 (budget ~3 h Kaggle CPU), then ask the gate
+next_action: P7.2 — fragment + isotope features on P6 top-100 per val molecule; check truth vs top-100 separation before P7.3 LambdaRank
 <!-- STATE:END -->
