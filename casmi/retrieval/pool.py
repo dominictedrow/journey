@@ -23,10 +23,11 @@ class Pool:
         return np.searchsorted(self.mass, mass - tol), np.searchsorted(self.mass, mass + tol, side='right')
 
 
-def gather(root, rows, workers=None, timings=None):
+def gather(root, rows, workers=None, timings=None, fps=True):
     """Sorted unique pool rows -> (smiles list, packed fp uint8[n, 256]): stored fp for curated rows, RDKit
     (casmi.features.fp, same generator) for PubChem rows. Reads only the parquet row groups holding the rows (a 5 ppm
-    window spans 1-2 of ~65k rows; whole-bin reads took ~1 h on Kaggle's /kaggle/input). timings: dict += read/fp s."""
+    window spans 1-2 of ~65k rows; whole-bin reads took ~1 h on Kaggle's /kaggle/input). timings: dict += read/fp s.
+    fps=False: SMILES only (fp stays zero, no RDKit work)."""
     import json
     import time
     from multiprocessing import Pool as Workers
@@ -61,7 +62,7 @@ def gather(root, rows, workers=None, timings=None):
                 if x is not None:
                     fp[sel[i]] = np.frombuffer(x, np.uint8)
             chunks = [[smi[i] for i in todo[k:k + 5000]] for k in range(0, len(todo), 5000)]
-            if chunks:
+            if chunks and fps:
                 fp[sel[todo]] = np.concatenate(wk.map(fingerprints, chunks))
             tm['fp'] += time.time() - t0
     if timings is not None:

@@ -42,9 +42,9 @@ last_handoff: plan/handoffs/HANDOFF-P6-S15.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
 best_public_lb: 0.184 (#2 / plan Submission #3, P5 encoder p5_ft, 0c8e6df)
-best_local_val: p6_ft blend 1,4,0,0.05: V-lib 0.877 / V-pool 0.0316 / V-scaf 0.0287 / V-novel 0.0301 / weighted 0.3129
+best_local_val: p6_ft no library tier (lib_blend T=2, beta 0): V-lib 0.829 / V-pool 0.700 / V-scaf 0.663 / V-novel 0.701 / weighted 0.743 (tiered: 0.3129)
 submissions_used_today: 0 on 2026-10-22 (limit: 5/day)
-pending_gates: none
+pending_gates: tier fix -> rule zero + gate 7 (version casmi26-bundle code) + gate 6 (submit). See handoff Later in S15
 blockers: none
-next_action: P7.2 — fragment + isotope features on P6 top-100 per val molecule; check truth vs top-100 separation before P7.3 LambdaRank
+next_action: ask the tier-fix gate; then P6 inference path on Kaggle, then P7.2/P7.3 reranker on the no-tier ranking
 <!-- STATE:END -->

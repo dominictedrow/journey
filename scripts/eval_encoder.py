@@ -3,7 +3,9 @@ Score = library tier (cosine >= COS_T, as P4.5) first, then soft Tanimoto(predic
 + a * formula agreement + b * curated NP source, swept over (a, b). Honesty rules as scripts/eval_pool.py (D-026).
 P6.3: a Contrastive checkpoint (has proj.*) scores c * cosine(spectrum emb, candidate emb) + t * Tanimoto + a * fs + b * cur,
 swept over (c, t, a, b). Keys in eval_pool.json are 'c,t,a,b' for both kinds (P5: c = 0, t = 1).
-Usage: python scripts/eval_encoder.py runs/<name>/last.pt -> runs/<name>/eval_pool.json"""
+Usage: python scripts/eval_encoder.py runs/<name>/last.pt -> runs/<name>/eval_pool.json
+P7.2: ... last.pt --top K c,t,a,b scores that one blend only and saves each val molecule's top-K pool rows, scores and
+truth hits to runs/<name>/top<K>.npz (eval_pool.json / eval_detail.npz untouched)."""
 import itertools
 import json
 import sys
@@ -25,6 +27,7 @@ from scripts.pool_recall import plain_key
 ROOT, POOL = 'data/processed/v1', 'data/processed/pool_v1'
 VC = f'{POOL}/valcand'
 A, B = (0.0, 0.1, 0.3), (0.0, 0.05, 0.1)
+LIB_K = 50  # --top also keeps the LIB_K best library-cosine rows, so library/model blends can be swept offline
 CT = ((1.0, 0.0), (1.0, 0.5), (1.0, 1.0), (1.0, 2.0), (1.0, 4.0), (1.0, 8.0), (0.0, 1.0))  # P6.3 (cosine, Tanimoto)
 RDLogger.DisableLog('rdApp.*')
 
@@ -52,6 +55,10 @@ def main():
     model = (Contrastive if contrastive else Encoder)({k: len(v) for k, v in vocab.items()}).cuda().eval()
     model.load_state_dict(sd)
     grid = list(itertools.product(CT if contrastive else ((0.0, 1.0),), A, B))
+    topk = int(sys.argv[sys.argv.index('--top') + 1]) if '--top' in sys.argv else 0
+    if topk:
+        wc, wt, wa, wb = (float(x) for x in sys.argv[sys.argv.index('--top') + 2].split(','))
+        grid, top = [((wc, wt), wa, wb)], {}
     sp = pq.read_table(f'{ROOT}/splits.parquet', columns=['ik14', 'split']).to_pydict()
     novel = [k for k, s in zip(sp['ik14'], sp['split']) if s == 'v_novel']
     strip = np.array(sorted(k.encode() for k, s in zip(sp['ik14'], sp['split']) if s in VAL), 'S14')
@@ -70,6 +77,11 @@ def main():
         wins = np.load(f'{VC}/{split}_windows.npy')
         rr = {g: [] for g in grid}
         ranks = np.full((len(mols['ik14']), len(grid)), -1, np.int32)  # uncapped 0-based rank; -1 = truth not in window
+        if topk:
+            n = len(mols['ik14'])
+            w = topk + LIB_K
+            t_rows, t_hit = np.full((n, w), -1, np.int64), np.zeros((n, w), bool)
+            t_score, t_blend, t_cos = (np.full((n, w), v, np.float32) for v in (0.0, 0.0, -1.0))
         nwin = np.zeros(len(mols['ik14']), np.int32)
         for j, (k, smi) in enumerate(zip(mols['ik14'], mols['smiles'])):
             lo, hi = wins[j]
@@ -114,6 +126,19 @@ def main():
                     v.append(1 / (rank + 1) if rank < 25 else 0.0)
                 else:
                     v.append(0.0)
+            if topk:
+                blend = wc * cosv + wt * tani + wa * fs + wb * cur  # grid holds the one --top blend
+                blend = np.broadcast_to(blend, score.shape)
+                c = cos[keep]
+                o = np.argsort(-blend, kind='stable')[:topk]
+                ol = np.argsort(-c, kind='stable')[:LIB_K]
+                o = np.concatenate([o, np.setdiff1d(ol[c[ol] >= 0], o)])
+                m = len(o)
+                t_rows[j, :m], t_score[j, :m], t_hit[j, :m] = lo + keep[o], score[o], hit[o]
+                t_blend[j, :m], t_cos[j, :m] = blend[o], c[o]
+        if topk:
+            top.update({f'{split}_rows': t_rows, f'{split}_score': t_score, f'{split}_hit': t_hit,
+                        f'{split}_blend': t_blend, f'{split}_libcos': t_cos})
         res[split] = {f'{wc},{wt},{wa},{wb}': round(float(np.mean(v)), 4) for ((wc, wt), wa, wb), v in rr.items()}
         detail[f'{split}_ranks'], detail[f'{split}_nwin'] = ranks, nwin
         if contrastive:  # P6.4: true molecules in candidate-embedding space
@@ -125,6 +150,9 @@ def main():
     res['weighted'] = {ab: round(float(np.mean([res[s][ab] for s in ('v_lib', 'v_pool', 'v_novel')])), 4)
                        for ab in res['v_lib']}
     print('weighted', json.dumps(res['weighted']), flush=True)
+    if topk:
+        np.savez(ck.rsplit('/', 1)[0] + f'/top{topk}.npz', **top)
+        return
     json.dump(res, open(ck.rsplit('/', 1)[0] + '/eval_pool.json', 'w'), indent=1)
     np.savez(ck.rsplit('/', 1)[0] + '/eval_detail.npz', **detail)
 

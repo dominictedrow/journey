@@ -29,6 +29,9 @@
 - D-029 (gate 1, P6 architecture) and D-030 (rule zero, model-mined negatives) are both in DECISIONS.md.
 
 ## Traps discovered
+- **CORRECTED later in S15: the gap below was the P4.5 library tier, not memorisation.** COS_T = 0 forces every
+  library structure in the window (~50/mol) above all pool candidates, so a kind-2 truth can never rank top-25.
+  Without the tier, p6_ft is V-pool 0.70 / weighted 0.743 (see "Later in S15"). Original (wrong) note kept for the record:
 - **Generalisation gap is the whole problem.** With p6_ft scoring its own train molecules, truth is top-1 in 84%
   (top-25 99.4%), but val kind-2 top-1 is 0.5%. Training NCE goes to ~0.005–0.08, so harder negatives can't help
   while the model memorises train molecules. Next levers: regularisation/augmentation, or a reranker that uses spectrum physics.
@@ -43,10 +46,24 @@
 - Traps: vocab key is `ionization_mode` (negative 1, positive 2), not `polarity`. Val spectra are stored as
   mz/inten [n_spec, 128] padded + npeaks. Fragment ions assume [frag+H]+ / [frag-H]- regardless of the precursor adduct.
 
+- P7.2 (S15 cont.): `eval_encoder.py --top 200 c,t,a,b` -> runs/<run>/top200.npz (top-200 by blend + 50 best
+  library-cosine rows; tiered score, raw blend, libcos, hit). `scripts/frag_features.py` -> frag200.npz: fragment
+  features help a little (V-pool 0.0316 -> 0.0343 with + 1 x expl1, under the tier). `scripts/lib_blend.py` sweeps
+  forced-tier threshold T and beta * libcos:
+  | model | rule | V-lib | V-pool | V-scaf | V-novel | weighted | lb_mix (18% lib) |
+  |---|---|---|---|---|---|---|---|
+  | p5_ft | tier T=0 (Kaggle now) | 0.877 | 0.0286 | 0.0264 | 0.0279 | 0.311 | 0.181 (LB 0.184) |
+  | p5_ft | T=0.7, beta 0 | 0.841 | 0.595 | 0.565 | 0.580 | 0.672 | 0.633 |
+  | p6_ft | T=2 (no tier), beta 0 | 0.829 | 0.700 | 0.663 | 0.701 | 0.743 | 0.724 |
+  Leak checks done: stored vs recomputed-from-SMILES fp identical for truths and decoys; with the tier, val predicts
+  the LB (0.181 vs 0.184). Any beta > 0 hurts pool badly (wrong library structures often have cosine ~0.4-0.8).
+- Trap: `pgrep -f <pattern>` inside a waiting `bash -lc` loop matches the waiter itself; wait on the PID from bg.sh.
+
 ## Background jobs
 - none
 
 ## Next session starts with
+- If the tier-fix gate is not answered yet: re-ask it (see STATE pending_gates).
 - P7.2: per val molecule, take the P6 (p6_ft, blend 1,4,0,0.05) top-100 from eval_encoder's scoring, compute
   fragment features (explained frac, n explained, min cuts, loss-table hits) + P2.4 isotope score, and measure
   truth-vs-top-100 separation. Random decoys are easy; the top-100 is the real test. Consider 3 cuts / top-200 (cheap).
