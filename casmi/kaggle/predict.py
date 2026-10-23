@@ -11,6 +11,7 @@ from casmi.features.formula import neutral_mass
 from casmi.retrieval.library import Library, bin_rows
 
 MAX_RANK = 25  # == casmi.metric.MAX_RANK; not imported because metric needs RDKit at import time
+LIB_T = 0.7  # D-034: only library hits this close are forced above the model ranking (scripts/lib_blend.py)
 FALLBACK_PPM = (5.0, 20.0, 100.0)  # widen the window before giving up
 FALLBACK_SMILES = 'C'
 
@@ -123,7 +124,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     out = {}
     for mid, r in mols.items():
         c, s, has = lib.scores(q[r], mass[mid], ppm) if np.isfinite(mass[mid]) else ([], [], [])
-        cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h]
+        cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h and x >= LIB_T]
         lo, hi = win[mid]
         if hi > lo:
             a = np.searchsorted(rows, lo)
