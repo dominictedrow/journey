@@ -1,7 +1,7 @@
 """P3.2: build the Kaggle dataset bundle + kernel dir under data/kaggle/ (gitignored).
 bundle/: code/casmi (source + npz), library.npz (all reference spectra: train + val queries), wheels/ (pinned RDKit),
 casmi_bundle.json (git sha), dataset-metadata.json, and with a checkpoint: model.pt + vocab.json (P5.4).
-pool/: hard links to pool_v1 inference files (mass/ik14/src .npy, manifest.json, pool/bin_*.parquet) for the separate
+pool/: hard links to pool_v1 inference files (mass/ik14/src/fkey .npy, manifest.json, pool/bin_*.parquet) for the separate
 casmi26-pool dataset.  kernel/: notebook.py + kernel-metadata.json.
 Usage: python -m casmi.kaggle.build_bundle [ckpt]   (then 🛑 gate 7 before `kaggle datasets create/version`)"""
 import json
@@ -39,7 +39,7 @@ def main():
         shutil.copy('data/processed/v1/vocab.json', f'{b}/vocab.json')
         p = f'{OUT}/pool'
         os.makedirs(f'{p}/pool', exist_ok=True)
-        for f in ['mass.npy', 'ik14.npy', 'src.npy', 'manifest.json'] + [f'pool/{x}' for x in os.listdir(f'{POOL}/pool')]:
+        for f in ['mass.npy', 'ik14.npy', 'src.npy', 'fkey.npy', 'manifest.json'] + [f'pool/{x}' for x in os.listdir(f'{POOL}/pool')]:
             if not os.path.exists(f'{p}/{f}'):
                 os.link(f'{POOL}/{f}', f'{p}/{f}')
         json.dump({'title': 'casmi26-pool', 'id': POOL_DATASET, 'licenses': [{'name': 'CC0-1.0'}]},

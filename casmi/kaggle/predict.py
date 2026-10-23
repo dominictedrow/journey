@@ -12,6 +12,7 @@ from casmi.retrieval.library import Library, bin_rows
 
 MAX_RANK = 25  # == casmi.metric.MAX_RANK; not imported because metric needs RDKit at import time
 LIB_T = 0.7  # D-034: only library hits this close are forced above the model ranking (scripts/lib_blend.py)
+P6_LIB_T, P6_BLEND = 2.0, (1.0, 4.0, 0.05)  # D-034 #4b: no forced tier; c * cosine + t * Tanimoto + b * curated/library
 FALLBACK_PPM = (5.0, 20.0, 100.0)  # widen the window before giving up
 FALLBACK_SMILES = 'C'
 
@@ -67,22 +68,28 @@ TEST_COLS = ['molecule_id', 'ms2_mzs', 'ms2_normalized_intensities', 'precursor_
 
 
 def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_path, ppm=5.0, spb=256, workers=None):
-    """P5.4: library tier (any structure with reference spectra, by cosine) then pool_v1 window candidates by soft
-    Tanimoto to the Encoder's predicted fingerprint (scripts/eval_encoder.py with a = b = 0)."""
+    """P5.4: library hits with cosine >= LIB_T (D-034) first, then pool_v1 window candidates by soft Tanimoto to the
+    Encoder's predicted fingerprint (scripts/eval_encoder.py with a = b = 0). A P6 Contrastive checkpoint instead scores
+    every window candidate with P6_BLEND and forces no library hits (needs src.npy + fkey.npy in the pool dataset)."""
     import json
 
     import torch
 
     from casmi.data.batch import featurize_rows, to_batch
+    from casmi.features.formula import fkey_counts
+    from casmi.models.contrastive import Contrastive
     from casmi.models.encoder import Encoder, unpack_fp
-    from casmi.retrieval.pool import Pool, gather
+    from casmi.retrieval.pool import CURATED_EXT, Pool, gather
     tm, t0 = {}, time.time()
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
     vocab = json.load(open(vocab_path))
-    model = Encoder({k: len(v) for k, v in vocab.items()}).to(dev).eval()
-    sd = torch.load(ckpt_path, map_location=dev)['model']
-    model.load_state_dict({k.replace('_orig_mod.', ''): v for k, v in sd.items()})
-    lib, pool = Library.load(lib_path), Pool(pool_dir, ('mass', 'ik14'))  # what casmi26-pool ships
+    sd = {k.replace('_orig_mod.', ''): v for k, v in torch.load(ckpt_path, map_location=dev)['model'].items()}
+    contrastive = any(k.startswith('proj.') for k in sd)  # P6 checkpoint (D-034 #4b)
+    model = (Contrastive if contrastive else Encoder)({k: len(v) for k, v in vocab.items()}).to(dev).eval()
+    model.load_state_dict(sd)
+    lib_t = P6_LIB_T if contrastive else LIB_T
+    lib = Library.load(lib_path)
+    pool = Pool(pool_dir, ('mass', 'ik14', 'src', 'fkey') if contrastive else ('mass', 'ik14'))  # what casmi26-pool ships
     tm['load'] = time.time() - t0
     t0 = time.time()
     t = pq.read_table(test_path, columns=TEST_COLS).to_pylist()
@@ -94,7 +101,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     q = bin_rows(arrs['mz'], arrs['inten'].astype(np.float32), arrs['npeaks'])
     tm['features'] = time.time() - t0
     t0 = time.time()
-    prob, batch, n = {}, [], 0
+    prob, emb, batch, n = {}, {}, [], 0
     with torch.no_grad():
         for j, mid in enumerate(ids + [None]):
             if mid is None or (batch and n + len(mols[mid]) > spb):
@@ -102,9 +109,11 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
                 seg = np.repeat(np.arange(len(batch)), [len(mols[ids[k]]) for k in batch])
                 b = {k: v.to(dev) for k, v in to_batch(arrs, idx, seg).items()}
                 with torch.autocast(dev, torch.bfloat16, enabled=dev == 'cuda' and torch.cuda.is_bf16_supported()):
-                    fp, _ = model(b)
-                for k, p in zip(batch, torch.sigmoid(fp.float()).cpu()):
+                    o = model(b)
+                for i, (k, p) in enumerate(zip(batch, torch.sigmoid(o[0].float()).cpu())):
                     prob[ids[k]] = p
+                    if contrastive:
+                        emb[ids[k]] = o[2][i].float().cpu()
                 batch, n = [], 0
             if mid is not None:
                 batch.append(j)
@@ -124,16 +133,25 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     out = {}
     for mid, r in mols.items():
         c, s, has = lib.scores(q[r], mass[mid], ppm) if np.isfinite(mass[mid]) else ([], [], [])
-        cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h and x >= LIB_T]
+        cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h and x >= lib_t]
         lo, hi = win[mid]
         if hi > lo:
             a = np.searchsorted(rows, lo)
             bits = unpack_fp(torch.from_numpy(cfp[a:a + hi - lo]))
             p = prob[mid]
             inter = bits @ p
-            tani = (inter / (bits.sum(1) + p.sum() - inter).clamp(min=1e-6)).numpy()
-            top = np.argsort(-tani)[:4 * MAX_RANK]
-            cand += [(float(tani[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
+            score = (inter / (bits.sum(1) + p.sum() - inter).clamp(min=1e-6)).numpy()
+            if contrastive:  # scripts/eval_encoder.py P6.3 blend, a = 0
+                wc, wt, wb = P6_BLEND
+                with torch.no_grad():
+                    counts = torch.from_numpy(fkey_counts(pool.fkey[lo:hi]))
+                    cosv = (model.mol(bits.to(dev), counts.to(dev)) @ emb[mid].to(dev)).cpu().numpy()
+                in_lib = {lib.ik14[i] for i, h in zip(c, has) if h}
+                cur = np.array([(int(pool.src[lo + i]) & CURATED_EXT) > 0 or pool.ik14[lo + i].decode() in in_lib
+                                for i in range(hi - lo)], np.float32)
+                score = wc * cosv + wt * score + wb * cur
+            top = np.argsort(-score)[:4 * MAX_RANK]
+            cand += [(float(score[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
         seen, smi = set(), []
         for _, k, s_ in sorted(cand, key=lambda x: -x[0]):
             if k not in seen:  # ponytail: plain vs tautomer InChIKey14 duplicates survive (D-025); re-key if it matters
