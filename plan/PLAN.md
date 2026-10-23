@@ -109,7 +109,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 - **P6.2** InfoNCE loss between spectrum and molecule embeddings. Hard negatives: 32 precomputed same-formula / ±5 ppm decoys per training molecule, built on the 5060.
 - **P6.3** Final score is a learned or tuned blend of the contrastive cosine, fingerprint Tanimoto and prior.
 - **P6.4** Clustering analysis (Dom's K-means idea): K-means on molecule embeddings, then MRR per cluster. Find weak chemical regions and use the result for hard-negative mining and cluster-balanced sampling. Report in `reports/`.
-- **P6.5** Val, then 🛑 submit.
+- **P6.5** Val, then 🛑 submit. (rerouted D-032: submission skipped; the P6 ckpt ships with the P7 submission)
 - **Exit:** tag `p6-contrastive`.
 
 ## P7 — Fragmentation-aware reranker → Submission #5
