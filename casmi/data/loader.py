@@ -17,10 +17,12 @@ class ShardDataset(IterableDataset):
     """Yields dicts of tensors: per spectrum (B rows, peaks trimmed to L), 'seg' int64[B] = molecule row in the batch,
     per molecule 'mol_fp' uint8[M,256], 'mol_formula' int16[M,10], 'mol_idx' int64[M] (row in the split's mols.parquet).
     max_spec_per_mol=None keeps every spectrum (use for val); shuffle=False gives a fixed order.
-    libs: keep only spectra whose lib id (vocab.json ingest_lib) is in this set; molecules left empty are skipped."""
+    libs: keep only spectra whose lib id (vocab.json ingest_lib) is in this set; molecules left empty are skipped.
+    skip: bool[n_mol] molecules never yielded (D-035: the V-np fold inside the train shard)."""
 
     def __init__(self, root, split, spec_per_batch=256, max_spec_per_mol=16, block_mols=2048, shuffle=True, seed=0,
-                 libs=None, hardneg=None):
+                 libs=None, hardneg=None, skip=None):
+        self.skip = skip
         self.libs = None if libs is None else np.array(sorted(libs))
         self.hardneg = hardneg  # P6: scripts/hard_negatives.py dir (rows match this split's molecules) -> neg_* keys
         self.dir = f'{root}/{split}'
@@ -57,6 +59,8 @@ class ShardDataset(IterableDataset):
             neg = {k: np.asarray(arrs[f'neg_{k}'][m0:m1]) for k in ('fp', 'fkey', 'n')}
         mols, keep = [], []
         for j in range(m1 - m0):
+            if self.skip is not None and self.skip[m0 + j]:
+                continue
             idx = np.arange(loc[j], loc[j + 1])
             if self.libs is not None:
                 idx = idx[np.isin(blk['lib'][idx], self.libs)]

@@ -9,9 +9,12 @@ import os
 import subprocess
 import time
 
+import numpy as np
+import pyarrow.parquet as pq
 import torch
 
 from casmi.data.loader import make_loader
+from casmi.data.splits import np_keys
 from casmi.models.contrastive import Contrastive, total_loss
 from casmi.models.encoder import Encoder, feature_stats, loss_fn, tanimoto, unpack_fp
 
@@ -58,6 +61,7 @@ def main():
     ap.add_argument('--init', default=None, help='checkpoint whose model weights start this run (P5.3 fine-tune)')
     ap.add_argument('--hardneg', default=None, help='P6: hard-negative dir -> Contrastive model + InfoNCE')
     ap.add_argument('--nce_w', type=float, default=1.0)
+    ap.add_argument('--skip_np', action='store_true', help='D-035: never train on the V-np fold molecules')
     a = ap.parse_args()
     torch.manual_seed(0)
     vocab = json.load(open(f'{ROOT}/vocab.json'))
@@ -91,7 +95,12 @@ def main():
         return loss, parts
 
     libs = {int(x) for x in a.libs.split(',')} if a.libs else None
-    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb, libs=libs, hardneg=a.hardneg)
+    skip = None
+    if a.skip_np:
+        ik = pq.read_table(f'{ROOT}/train/mols.parquet', columns=['ik14'])['ik14'].to_pylist()
+        skip = np.isin(ik, np_keys(ROOT))
+        print(f'skipping {skip.sum()} V-np molecules', flush=True)
+    dl = make_loader(ROOT, 'train', workers=8, spec_per_batch=a.spb, libs=libs, hardneg=a.hardneg, skip=skip)
     it = (b for _ in iter(int, 1) for b in dl)  # endless: each pass over dl is a new block-shuffled epoch
     os.makedirs(f'runs/{a.name}', exist_ok=True)
     if a.profile:

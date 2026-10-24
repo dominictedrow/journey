@@ -4,6 +4,8 @@ Score = library tier (cosine >= COS_T, as P4.5) first, then soft Tanimoto(predic
 P6.3: a Contrastive checkpoint (has proj.*) scores c * cosine(spectrum emb, candidate emb) + t * Tanimoto + a * fs + b * cur,
 swept over (c, t, a, b). Keys in eval_pool.json are 'c,t,a,b' for both kinds (P5: c = 0, t = 1).
 Usage: python scripts/eval_encoder.py runs/<name>/last.pt -> runs/<name>/eval_pool.json
+D-035: ... --splits v_np ranks only those splits against valcand_<splits>/ (scripts/val_candidates.py v_np) and writes
+eval_pool_<splits>.json / top<K>_<splits>.npz. V-np molecules are always out of the library (np_keys).
 P7.2: ... last.pt --top K c,t,a,b scores that one blend only and saves each val molecule's top-K pool rows, scores and
 truth hits to runs/<name>/top<K>.npz (eval_pool.json / eval_detail.npz untouched)."""
 import itertools
@@ -16,7 +18,7 @@ import torch
 from rdkit import RDLogger
 
 from casmi.data.loader import make_loader
-from casmi.data.splits import VAL
+from casmi.data.splits import VAL, np_keys
 from casmi.features.formula import fkey_counts, formula_key
 from casmi.models.contrastive import Contrastive
 from casmi.models.encoder import Encoder, unpack_fp
@@ -59,13 +61,17 @@ def main():
     if topk:
         wc, wt, wa, wb = (float(x) for x in sys.argv[sys.argv.index('--top') + 2].split(','))
         grid, top = [((wc, wt), wa, wb)], {}
+    splits = tuple(sys.argv[sys.argv.index('--splits') + 1].split(',')) if '--splits' in sys.argv else VAL
+    tag = '' if splits == VAL else '_' + '_'.join(splits)
+    vc = VC + tag
     sp = pq.read_table(f'{ROOT}/splits.parquet', columns=['ik14', 'split']).to_pydict()
     novel = [k for k, s in zip(sp['ik14'], sp['split']) if s == 'v_novel']
-    strip = np.array(sorted(k.encode() for k, s in zip(sp['ik14'], sp['split']) if s in VAL), 'S14')
-    lib, pool = Library(ROOT, ('train',), exclude_ik14=novel), Pool(POOL)
-    rows, cfp = np.load(f'{VC}/rows.npy'), np.load(f'{VC}/fp.npy', mmap_mode='r')
+    npk = np_keys(ROOT)
+    strip = np.array(sorted({k.encode() for k, s in zip(sp['ik14'], sp['split']) if s in VAL} | {k.encode() for k in npk}), 'S14')
+    lib, pool = Library(ROOT, ('train',), exclude_ik14=novel + npk), Pool(POOL)
+    rows, cfp = np.load(f'{vc}/rows.npy'), np.load(f'{vc}/fp.npy', mmap_mode='r')
     res, detail = {}, {'grid': np.array([f'{wc},{wt},{wa},{wb}' for (wc, wt), wa, wb in grid])}
-    for split in VAL:
+    for split in splits:
         d = f'{ROOT}/{split}'
         prob, emb = predict(model, split)
         prob = torch.from_numpy(prob).cuda()
@@ -74,7 +80,7 @@ def main():
         q = bin_rows(*(np.load(f'{d}/{k}.npy', mmap_mode='r') for k in ('mz', 'inten', 'npeaks')))
         nm = np.load(f'{d}/neutral_mass.npy')
         forms, nform = np.load(f'{d}/formulas.npy', mmap_mode='r'), np.load(f'{d}/nformulas.npy')
-        wins = np.load(f'{VC}/{split}_windows.npy')
+        wins = np.load(f'{vc}/{split}_windows.npy')
         rr = {g: [] for g in grid}
         ranks = np.full((len(mols['ik14']), len(grid)), -1, np.int32)  # uncapped 0-based rank; -1 = truth not in window
         if topk:
@@ -147,14 +153,15 @@ def main():
                 detail[f'{split}_molemb'] = model.mol(unpack_fp(torch.from_numpy(mfp).cuda()), torch.from_numpy(
                     fkey_counts(formula_key(np.maximum(mf, 0)))).cuda()).cpu().numpy()
         print(split, json.dumps(res[split]), flush=True)
-    res['weighted'] = {ab: round(float(np.mean([res[s][ab] for s in ('v_lib', 'v_pool', 'v_novel')])), 4)
-                       for ab in res['v_lib']}
-    print('weighted', json.dumps(res['weighted']), flush=True)
+    if splits == VAL:
+        res['weighted'] = {ab: round(float(np.mean([res[s][ab] for s in ('v_lib', 'v_pool', 'v_novel')])), 4)
+                           for ab in res['v_lib']}
+        print('weighted', json.dumps(res['weighted']), flush=True)
     if topk:
-        np.savez(ck.rsplit('/', 1)[0] + f'/top{topk}.npz', **top)
+        np.savez(ck.rsplit('/', 1)[0] + f'/top{topk}{tag}.npz', **top)
         return
-    json.dump(res, open(ck.rsplit('/', 1)[0] + '/eval_pool.json', 'w'), indent=1)
-    np.savez(ck.rsplit('/', 1)[0] + '/eval_detail.npz', **detail)
+    json.dump(res, open(ck.rsplit('/', 1)[0] + f'/eval_pool{tag}.json', 'w'), indent=1)
+    np.savez(ck.rsplit('/', 1)[0] + f'/eval_detail{tag}.npz', **detail)
 
 
 if __name__ == '__main__':

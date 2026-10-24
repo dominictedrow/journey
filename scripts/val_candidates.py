@@ -2,10 +2,11 @@
 Per val split: windows.npy int64[M, 2] = pool_v1 row range [lo, hi) at +-5 ppm around the molecule's median neutral
 mass. Union of all window rows -> rows.npy (sorted pool rows) + fp.npy uint8[n, 256] (stored fp for curated rows,
 RDKit for PubChem rows, same generator). Output: data/processed/pool_v1/valcand/ + manifest.json.
-Usage: python scripts/val_candidates.py"""
+Usage: python scripts/val_candidates.py [split ...]   (D-035: e.g. v_np -> valcand_v_np/, valcand/ untouched)"""
 import hashlib
 import json
 import os
+import sys
 from multiprocessing import Pool as Workers
 
 import numpy as np
@@ -21,10 +22,12 @@ OUT = f'{POOL}/valcand'
 
 
 def main():
-    os.makedirs(OUT, exist_ok=True)
+    splits = tuple(sys.argv[1:]) or VAL
+    out = OUT if splits == VAL else OUT + '_' + '_'.join(splits)
+    os.makedirs(out, exist_ok=True)
     pool = Pool(POOL)
     wins = {}
-    for split in VAL:
+    for split in splits:
         off, nm = np.load(f'{V1}/{split}/mol_offsets.npy'), np.load(f'{V1}/{split}/neutral_mass.npy')
         w = np.zeros((len(off) - 1, 2), np.int64)
         for j in range(len(off) - 1):
@@ -32,12 +35,12 @@ def main():
             if np.isfinite(m).any():
                 w[j] = pool.window(np.median(m[np.isfinite(m)]), PPM)
         wins[split] = w
-        np.save(f'{OUT}/{split}_windows.npy', w)
+        np.save(f'{out}/{split}_windows.npy', w)
     rows = np.unique(np.concatenate([np.arange(lo, hi) for w in wins.values() for lo, hi in w]))
     print('union rows', len(rows), flush=True)
     idx = json.load(open(f'{POOL}/manifest.json'))['index']
     boff = np.array(idx['bin_offsets'])
-    fp = np.lib.format.open_memmap(f'{OUT}/fp.npy', 'w+', np.uint8, (len(rows), 256))
+    fp = np.lib.format.open_memmap(f'{out}/fp.npy', 'w+', np.uint8, (len(rows), 256))
     which = np.searchsorted(boff, rows, side='right') - 1
     with Workers(6) as wk:
         for bi in np.unique(which):
@@ -54,9 +57,9 @@ def main():
                 fp[sel[todo]] = np.concatenate(wk.map(fingerprints, chunks))
             print(idx['bins'][bi], len(sel), len(todo), flush=True)
     fp.flush()
-    np.save(f'{OUT}/rows.npy', rows)
-    sha = {f: hashlib.sha256(open(f'{OUT}/{f}', 'rb').read()).hexdigest() for f in sorted(os.listdir(OUT)) if f.endswith('.npy')}
-    json.dump({'step': 'P5.4 prep', 'ppm': PPM, 'rows': int(len(rows)), 'sha256': sha}, open(f'{OUT}/manifest.json', 'w'), indent=1)
+    np.save(f'{out}/rows.npy', rows)
+    sha = {f: hashlib.sha256(open(f'{out}/{f}', 'rb').read()).hexdigest() for f in sorted(os.listdir(out)) if f.endswith('.npy')}
+    json.dump({'step': 'P5.4 prep', 'ppm': PPM, 'rows': int(len(rows)), 'sha256': sha}, open(f'{out}/manifest.json', 'w'), indent=1)
 
 
 if __name__ == '__main__':
