@@ -84,8 +84,16 @@
   decoys. Next: Dom's call on (a) a gate-6 probe: #4b with candidates restricted to train ∪ curated, and
   (b) a gate-2 NP val fold built from curated enveda structures.
 
+- **D-035 results (S15 cont.).** (a) Submission #5 (kernel v6, P6_SRC = 7) LB **0.248** (+0.041 over #4b):
+  restricting P6 to train/COCONUT/LOTUS helps, as the gap diagnosis predicted. (b) v_np built (196 mols, 891 enveda
+  spectra, commit 5af4cc2); np retrain chain running. First run died at step 12.4k of np_p5_pre with WSL CUDA
+  "unknown error"; restarted, resumed from state.pt at 12,001. If it dies again: `bash scripts/bg.sh np_chain
+  logs/np_chain.sh` (bg.sh takes a bare log name; finished stages resume at their last step).
+
 ## Background jobs
-- none
+- np_chain (logs/np_chain.sh -> logs/np_chain.log; check `tail -2`, `nvidia-smi`). When np_p6_ft is done:
+  `python scripts/eval_encoder.py runs/np_p6_ft/last.pt --top 200 1,4,0,0.05 --splits v_np` then
+  `PYTHONPATH=. python scripts/np_probe.py runs/np_p6_ft/top200_v_np.npz` (no-tier `blend`, not tiered `score`).
 
 ## Next session starts with
 - If the tier-fix gate is not answered yet: re-ask it (see STATE pending_gates).
