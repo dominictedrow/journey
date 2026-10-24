@@ -69,6 +69,21 @@
   Any change to how val is built is gate 2.
 - Trap: `nohup ... &` inside `wsl.exe bash -lc` dies when the call returns; use scripts/bg.sh (setsid).
 
+- **Gap diagnosis (S15 cont., 2026-10-24, Dom: "diagnose the gap").**
+  1. Not a Kaggle-path bug: `scripts/val_as_test.py` runs predict_encoder on 400 V-pool molecules shaped like
+     test.parquet with a train-only library: MRR 0.714 (val 0.70). (The local dry run only exercises library hits.)
+  2. V-sets contain no natural products (`scripts/truth_src.py`): truth in COCONUT/LOTUS = V-lib 9.6%, V-pool 0%,
+     V-scaf 0.3%, V-novel 0%; ~97% are PubChem-only screening compounds. In V-lib, NP truths get no-tier MRR
+     0.52 vs 0.87 for PubChem truths. Local test.parquet molecules are also 0% curated (99% PubChem-only).
+     The curated bit is fine: 249/250 enveda-np-examples structures are curated.
+  3. Public 0.45-0.46 pipelines (dmitriigluzdov "Data Behind Spectra to Structures"; read only, in ~/ext_nb): main
+     search over train + COCONUT (~690k) ranked by fp/ranking models + a PubChem popularity prior (ln(1+substances)
+     + ln(1+PubMed)); raw PubChem only injected at fixed ranks; they benchmark on enveda-np-examples (250 NPs).
+  4. Sizes: 26,155 of 274,203 train structures are curated; the train ∪ curated pool is 724,237 structures.
+  Reading: the hidden test is NP-heavy, our val is not, so val rewards ranking screening compounds among PubChem
+  decoys. Next: Dom's call on (a) a gate-6 probe: #4b with candidates restricted to train ∪ curated, and
+  (b) a gate-2 NP val fold built from curated enveda structures.
+
 ## Background jobs
 - none
 
