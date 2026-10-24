@@ -36,15 +36,15 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P7 — Fragmentation-aware reranker -> Submission #5
-current_step: P7.2 fragment features (P7.1 done: in-house fragmenter, D-033)
+current_step: P7.2 paused: val/LB disagreement after Submissions #4a/#4b (see handoff, end of Later in S15)
 session_count: 15
 last_handoff: plan/handoffs/HANDOFF-P6-S15.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
-best_public_lb: 0.184 (#2 / plan Submission #3, P5 encoder p5_ft, 0c8e6df)
-best_local_val: p6_ft no library tier (lib_blend T=2, beta 0): V-lib 0.829 / V-pool 0.700 / V-scaf 0.663 / V-novel 0.701 / weighted 0.743 (tiered: 0.3129)
-submissions_used_today: 0 on 2026-10-22 (limit: 5/day)
-pending_gates: tier fix -> rule zero + gate 7 (version casmi26-bundle code) + gate 6 (submit). See handoff Later in S15
-blockers: none
-next_action: ask the tier-fix gate; then P6 inference path on Kaggle, then P7.2/P7.3 reranker on the no-tier ranking
+best_public_lb: 0.207 (#4 / D-034 #4b, P6 p6_ft no library tier, a886d1e, kernel v5)
+best_local_val: p6_ft no library tier: V-lib 0.829 / V-pool 0.700 / V-scaf 0.663 / V-novel 0.701 / weighted 0.743 (LB only 0.207)
+submissions_used_today: 2 on 2026-10-24 (limit: 5/day)
+pending_gates: ask Dom: diagnose why val (0.74) no longer predicts LB (0.21) before P7.2/P7.3; changing val construction is gate 2
+blockers: val/LB disagreement: reranker gains on val may not transfer to the LB
+next_action: ask the gate; if yes, measure how much of the hidden test is reachable (pool_v1 truth coverage proxy, library-hit share) vs the V-sets
 <!-- STATE:END -->

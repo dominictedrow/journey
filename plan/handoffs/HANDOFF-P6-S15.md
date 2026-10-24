@@ -59,6 +59,16 @@
   the LB (0.181 vs 0.184). Any beta > 0 hurts pool badly (wrong library structures often have cosine ~0.4-0.8).
 - Trap: `pgrep -f <pattern>` inside a waiting `bash -lc` loop matches the waiter itself; wait on the PID from bg.sh.
 
+- Submissions (S15 end, 2026-10-24): #4a (p5_ft, LIB_T 0.7, kernel v4) public LB **0.184** = unchanged from #3;
+  #4b (p6_ft no tier, kernel v5, datasets re-versioned with fkey.npy) LB **0.207** (new best). Local dry run of #4b:
+  400 rows, known-answer 0.933. Commits 45f6a16 + a886d1e pushed.
+- **Val no longer predicts the LB.** Val wtd 0.672 / 0.743 vs LB 0.184 / 0.207; lb_mix predicted 0.63 / 0.72.
+  #4a moved val +0.36 with LB +0.000, so the library tier was NOT what capped the hidden test, and V-pool/V-novel
+  (truth always in pool_v1, ~0.97 in window) do not look like the hidden test molecules. Check first: hidden-test
+  truth coverage in pool_v1 (truth not in pool => MRR 0 however we rank) and how much of the LB is library-tier hits.
+  Any change to how val is built is gate 2.
+- Trap: `nohup ... &` inside `wsl.exe bash -lc` dies when the call returns; use scripts/bg.sh (setsid).
+
 ## Background jobs
 - none
 
