@@ -13,6 +13,7 @@ from casmi.retrieval.library import Library, bin_rows
 MAX_RANK = 25  # == casmi.metric.MAX_RANK; not imported because metric needs RDKit at import time
 LIB_T = 0.7  # D-034: only library hits this close are forced above the model ranking (scripts/lib_blend.py)
 P6_LIB_T, P6_BLEND = 2.0, (1.0, 4.0, 0.05)  # D-034 #4b: no forced tier; c * cosine + t * Tanimoto + b * curated/library
+P6_SRC = 7  # D-035 probe: P6 ranks only train | COCONUT | LOTUS pool rows (src bits 1|2|4); 0 = every row incl. PubChem-only
 FALLBACK_PPM = (5.0, 20.0, 100.0)  # widen the window before giving up
 FALLBACK_SMILES = 'C'
 
@@ -150,7 +151,10 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
                 cur = np.array([(int(pool.src[lo + i]) & CURATED_EXT) > 0 or pool.ik14[lo + i].decode() in in_lib
                                 for i in range(hi - lo)], np.float32)
                 score = wc * cosv + wt * score + wb * cur
+                if P6_SRC:
+                    score = np.where(pool.src[lo:hi] & P6_SRC, score, -np.inf)
             top = np.argsort(-score)[:4 * MAX_RANK]
+            top = top[np.isfinite(score[top])]
             cand += [(float(score[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
         seen, smi = set(), []
         for _, k, s_ in sorted(cand, key=lambda x: -x[0]):
