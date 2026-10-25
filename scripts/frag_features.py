@@ -14,33 +14,13 @@ from rdkit import RDLogger
 
 from casmi.data.splits import VAL
 from casmi.features.formula import fkey_counts, iso_score
-from casmi.rerank.fragment import explain, fragments
+from casmi.rerank.fragment import MAX_SPEC, mol_feats, spectra
 from casmi.retrieval.pool import Pool, gather
 
 ROOT, POOL = 'data/processed/v1', 'data/processed/pool_v1'
-FEATS = ('expl', 'expl1', 'peak_frac', 'log_nfrag', 'iso')
-MAX_SPEC = 8
+FEATS = ('expl', 'expl1', 'peak_frac', 'log_nfrag', 'iso')  # mol_feats columns + iso
 W = (0.0, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0)
 RDLogger.DisableLog('rdApp.*')
-
-
-def mol_feats(args):
-    """(candidate smiles, [(mz, inten, charge)]) -> float32 [n_cand, 4] (all FEATS but iso)."""
-    smis, spectra = args
-    out = np.zeros((len(smis), 4), np.float32)
-    w = np.array([y.sum() for _, y, _ in spectra])
-    w = w / max(w.sum(), 1e-12)
-    for i, smi in enumerate(smis):
-        if smi is None:
-            continue
-        m, c = fragments(smi)
-        for (x, y, ch), wi in zip(spectra, w):
-            e, n = explain(x, y, m, ch)
-            out[i, 0] += wi * e
-            out[i, 1] += wi * explain(x, y, m[c == 1], ch)[0]
-            out[i, 2] += wi * n / max(len(x), 1)
-        out[i, 3] = np.log1p(len(m))
-    return out
 
 
 def mrr(score, hit):
@@ -71,12 +51,8 @@ def main():
         smi_of = dict(zip(uniq.tolist(), smiles))
         jobs = []
         for j in range(len(rows)):
-            spec = []
-            for s in range(off[j], min(off[j + 1], off[j] + MAX_SPEC)):
-                k = int(npk[s])
-                spec.append((np.asarray(mz[s, :k], np.float64), np.asarray(inten[s, :k], np.float64),
-                             -1 if pol[s] == neg_id else 1))
-            jobs.append(([smi_of.get(r) for r in rows[j].tolist()], spec))
+            jobs.append(([smi_of.get(r) for r in rows[j].tolist()],
+                         spectra(mz, inten, npk, pol, range(off[j], off[j + 1]), neg_id)))
         with Workers(workers) as wk:
             f = np.stack(wk.map(mol_feats, jobs, chunksize=4))
         cnt = fkey_counts(pool.fkey[np.maximum(rows, 0)])

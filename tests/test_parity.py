@@ -63,3 +63,20 @@ def test_cached_equals_on_the_fly():
             assert np.allclose(L(name)[:k], f[name], equal_nan=True), (ctx, name)
         for col, name in META.items():
             assert L(name) == vocab[col].get(row[col], 0), (ctx, name)
+
+
+def test_fragment_feats_cached_equals_on_the_fly():
+    """D-041: mol_feats on shard spectra (scripts/frag_features.py) == on featurize_rows output (Kaggle path)."""
+    from casmi.data.batch import featurize_rows
+    from casmi.rerank.fragment import mol_feats, spectra
+    s = samples()[::10]
+    raw = raw_rows([r for _, _, r in s])
+    vocab = json.load(open(f'{ROOT}/vocab.json'))
+    neg = vocab['ionization_mode']['negative']
+    smis = ['OC(=O)c1ccccc1O', 'CC(=O)Nc1ccc(O)cc1', 'O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12']
+    arrs = featurize_rows([raw[r] for _, _, r in s], vocab)
+    for j, (split, i, r) in enumerate(s):
+        sh = {k: np.load(f'{ROOT}/{split}/{k}.npy', mmap_mode='r') for k in ('mz', 'inten', 'npeaks', 'polarity')}
+        a = mol_feats((smis, spectra(sh['mz'], sh['inten'], sh['npeaks'], sh['polarity'], [i], neg)))
+        b = mol_feats((smis, spectra(arrs['mz'], arrs['inten'], arrs['npeaks'], arrs['polarity'], [j], neg)))
+        assert np.allclose(a, b, atol=1e-5), f'{split} shard row {i} src row {r}'

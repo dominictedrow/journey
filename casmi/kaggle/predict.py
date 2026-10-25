@@ -13,7 +13,8 @@ from casmi.retrieval.library import Library, bin_rows
 MAX_RANK = 25  # == casmi.metric.MAX_RANK; not imported because metric needs RDKit at import time
 LIB_T = 0.7  # D-034: only library hits this close are forced above the model ranking (scripts/lib_blend.py)
 P6_LIB_T, P6_BLEND = 2.0, (1.0, 4.0, 0.05)  # D-034 #4b: no forced tier; c * cosine + t * Tanimoto + b * curated/library
-P6_POP = 0.05  # D-036: + P6_POP * pool popularity.npy (ln1p substances + ln1p PubMed); 0 = off, needs the file
+P6_POP = 0.02  # D-036/D-041: + P6_POP * pool popularity.npy (ln1p substances + ln1p PubMed); 0 = off, needs the file
+P7_EXPL = 0.5  # D-041: + P7_EXPL * fragment explained intensity (casmi.rerank.fragment.mol_feats col 0) on the top 4 * MAX_RANK
 P6_SRC = 7  # D-035 probe: P6 ranks only train | COCONUT | LOTUS pool rows (src bits 1|2|4); 0 = every row incl. PubChem-only
 FALLBACK_PPM = (5.0, 20.0, 100.0)  # widen the window before giving up
 FALLBACK_SMILES = 'C'
@@ -132,7 +133,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     smiles, cfp = gather(pool_dir, rows, workers, tm)  # adds tm['read'], tm['fp']
     tm['candidates'] = time.time() - t0
     t0 = time.time()
-    out = {}
+    cands = {}
     for mid, r in mols.items():
         c, s, has = lib.scores(q[r], mass[mid], ppm) if np.isfinite(mass[mid]) else ([], [], [])
         cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h and x >= lib_t]
@@ -159,8 +160,30 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
             top = np.argsort(-score)[:4 * MAX_RANK]
             top = top[np.isfinite(score[top])]
             cand += [(float(score[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
+        cands[mid] = cand
+    tm['rank'] = time.time() - t0
+    if contrastive and P7_EXPL:  # cand is pool-only here: no cosine reaches P6_LIB_T
+        import os
+        from multiprocessing import Pool as Workers
+
+        from rdkit import RDLogger
+
+        from casmi.rerank.fragment import mol_feats, spectra
+        RDLogger.DisableLog('rdApp.*')
+        t0 = time.time()
+        neg = vocab['ionization_mode'].get('negative', -1)
+        jobs = [([x[2] for x in cands[mid]], spectra(arrs['mz'], arrs['inten'], arrs['npeaks'], arrs['polarity'], r, neg))
+                for mid, r in mols.items()]
+        with Workers(workers or os.cpu_count()) as wk:
+            feats = wk.map(mol_feats, jobs, chunksize=4)
+        for mid, f in zip(mols, feats):
+            cands[mid] = [(x + P7_EXPL * float(e), k, s_) for (x, k, s_), e in zip(cands[mid], f[:, 0])]
+        tm['fragments'] = time.time() - t0
+    t0 = time.time()
+    out = {}
+    for mid, r in mols.items():
         seen, smi = set(), []
-        for _, k, s_ in sorted(cand, key=lambda x: -x[0]):
+        for _, k, s_ in sorted(cands[mid], key=lambda x: -x[0]):
             if k not in seen:  # ponytail: plain vs tautomer InChIKey14 duplicates survive (D-025); re-key if it matters
                 seen.add(k)
                 smi.append(s_)
@@ -172,7 +195,7 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
                 if smi:
                     break
         out[mid] = smi or [FALLBACK_SMILES]
-    tm['rank'] = time.time() - t0
+    tm['rank'] += time.time() - t0
     with open(out_path, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['molecule_id', 'smiles'])
