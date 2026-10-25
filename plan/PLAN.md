@@ -115,7 +115,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 ## P7 — Fragmentation-aware reranker → Submission #5
 - **P7.1** 🛑 Choose the fragmenter. Options: MetFrag (Java, offline jar), or an in-house RDKit bond-breaking fragmenter (1–2 bond cleavages with H-shift tolerance; fragment masses matched to peaks). Pick based on a runtime benchmark: top-50 candidates × 400 molecules must fit about 3 h on Kaggle CPU.
 - **P7.2** Fragmentation-tree features: fraction of intensity explained, number of explained peaks, which bonds broke and their weakest-bond plausibility (Dom's weak-bond idea), and loss-table hits. Also the candidate formula's isotope-ratio score from P2.4 (rerouted D-018).
-- **P7.3** LightGBM LambdaRank reranker over model scores, fragment features, formula rank, mass error and prior. Train it on a **separate** held-out fold, never on V-sets.
+- **P7.3** LightGBM LambdaRank reranker over model scores, fragment features, formula rank, mass error and prior. Train it on a **separate** held-out fold, never on V-sets. (rerouted D-040, D-041: 5-fold CV on V-np; LambdaRank lost to the hand blend P6 blend + 0.02 x popularity + 0.5 x expl, which ships instead)
 - **P7.4** Val, then 🛑 submit.
 - **P7.4a** NP validation (rerouted D-035, D-038): V-np (196 curated enveda molecules held out of training; np_p6_ft is the matching model) plus the de-biased V-np subset (truth curated popularity pct < 0.9, 42 molecules; scripts/pop_bias.py). Popularity-prior and NP-pipeline changes are judged on low-pop V-np first; full V-np overstates them (D-038).
 - **Exit:** tag `p7-rerank`.

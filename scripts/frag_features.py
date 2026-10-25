@@ -1,7 +1,8 @@
 """P7.2 fragment + isotope features for each val molecule's top-K candidates (scripts/eval_encoder.py --top), and a
 diagnostic: MRR@25 when the model score gets + w * feature for non-library-tier candidates. Diagnostic only; P7.3
 fits on a separate fold.
-Usage: python scripts/frag_features.py runs/<name>/top<K>.npz [workers=14] -> runs/<name>/frag<K>.npz + stdout JSON"""
+D-039: the diagnostic ranks the no-tier blend (as Kaggle since D-034); v_np also reports the low-pop subset (D-038).
+Usage: python scripts/frag_features.py runs/<name>/top<K>.npz [workers=14] [--splits v_np] -> runs/<name>/frag<K>.npz"""
 import json
 import sys
 import time
@@ -54,10 +55,11 @@ def mrr(score, hit):
 
 def main():
     top = np.load(sys.argv[1])
-    workers = int(sys.argv[2]) if len(sys.argv) > 2 else 14
+    workers = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 14
+    splits = sys.argv[sys.argv.index('--splits') + 1].split(',') if '--splits' in sys.argv else VAL
     neg_id = json.load(open(f'{ROOT}/vocab.json'))['ionization_mode']['negative']
     pool, out, res = Pool(POOL), {}, {}
-    for split in VAL:
+    for split in splits:
         t0 = time.time()
         d = f'{ROOT}/{split}'
         rows = top[f'{split}_rows']
@@ -85,12 +87,16 @@ def main():
         feats = np.concatenate([f, isof[..., None]], -1)
         feats[rows < 0] = 0
         out[f'{split}_feats'] = feats
-        score, hit = top[f'{split}_score'], top[f'{split}_hit']
-        tier = score >= 10
+        score, hit = np.where(rows >= 0, top[f'{split}_blend'], -1e9), top[f'{split}_hit']
+        low = np.load(f'{POOL}/valcand_v_np/v_np_pop_pct.npy') < 0.9 if split == 'v_np' else None
         r = {'base': round(mrr(score, hit), 4), 'truth_in_topK': round(float(hit.any(1).mean()), 3)}
+        if low is not None:
+            r['base_lowpop'] = round(mrr(score[low], hit[low]), 4)
         for fi, name in enumerate(FEATS):
             x = feats[..., fi]
-            r[name] = {str(w): round(mrr(np.where(tier, score, score + w * x), hit), 4) for w in W[1:]}
+            r[name] = {str(w): round(mrr(score + w * x, hit), 4) for w in W[1:]}
+            if low is not None:
+                r[name]['lowpop'] = {str(w): round(mrr((score + w * x)[low], hit[low]), 4) for w in W[1:]}
             h = hit.any(1)  # truth vs mean of the other top-K candidates, molecules with truth in top-K
             r[name]['truth_minus_mean'] = round(float(np.mean([x[j][hit[j]].max() - x[j][~hit[j] & (rows[j] >= 0)].mean()
                                                                for j in np.flatnonzero(h)])), 4) if h.any() else None
