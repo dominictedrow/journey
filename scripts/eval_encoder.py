@@ -7,7 +7,9 @@ Usage: python scripts/eval_encoder.py runs/<name>/last.pt -> runs/<name>/eval_po
 D-035: ... --splits v_np ranks only those splits against valcand_<splits>/ (scripts/val_candidates.py v_np) and writes
 eval_pool_<splits>.json / top<K>_<splits>.npz. V-np molecules are always out of the library (np_keys).
 P7.2: ... last.pt --top K c,t,a,b scores that one blend only and saves each val molecule's top-K pool rows, scores and
-truth hits to runs/<name>/top<K>.npz (eval_pool.json / eval_detail.npz untouched)."""
+truth hits to runs/<name>/top<K>.npz (eval_pool.json / eval_detail.npz untouched).
+D-037 follow-up: ... --pop LAM adds LAM * pool popularity.npy and --src MASK keeps only pool rows with src & MASK, both
+before the top-K cut, as casmi.kaggle.predict does (P6_POP, P6_SRC); the output tag gets _pop<LAM>_src<MASK>."""
 import itertools
 import json
 import sys
@@ -64,6 +66,11 @@ def main():
     splits = tuple(sys.argv[sys.argv.index('--splits') + 1].split(',')) if '--splits' in sys.argv else VAL
     tag = '' if splits == VAL else '_' + '_'.join(splits)
     vc = VC + tag
+    lam = float(sys.argv[sys.argv.index('--pop') + 1]) if '--pop' in sys.argv else 0.0
+    smask = int(sys.argv[sys.argv.index('--src') + 1]) if '--src' in sys.argv else 0
+    if lam or smask:
+        tag += f'_pop{lam:g}_src{smask}'
+        popularity = np.load(f'{POOL}/popularity.npy', mmap_mode='r')
     sp = pq.read_table(f'{ROOT}/splits.parquet', columns=['ik14', 'split']).to_pydict()
     novel = [k for k, s in zip(sp['ik14'], sp['split']) if s == 'v_novel']
     npk = np_keys(ROOT)
@@ -104,6 +111,8 @@ def main():
             cos = np.array([lib_cos.get(x, -1.0) for x in keys], np.float32)
             src[np.isin(keys, strip)] &= ~np.uint8(TRAIN)
             keep = np.flatnonzero((src > 0) | (cos >= 0))
+            if smask:
+                keep = keep[(src[keep] & smask) > 0]
             r0 = np.searchsorted(rows, lo)
             bits = unpack_fp(torch.from_numpy(np.asarray(cfp[r0 + keep])).cuda())
             p = prob[j]
@@ -120,11 +129,12 @@ def main():
             fs = np.array([fsd.get(int(x), 0.0) for x in u], np.float32)[inv]
             cur = (((src[keep] & CURATED_EXT) > 0) | (cos[keep] >= 0)).astype(np.float32)
             tier = cos[keep] >= COS_T
+            pop = lam * np.asarray(popularity[lo + keep], np.float32) if lam else 0.0
             truth = {k.encode(), plain_key(smi)}
             hit = np.array([x in truth for x in keys[keep]])
             nwin[j] = len(keep)
             for g, (((wc, wt), wa, wb), v) in enumerate(rr.items()):
-                score = np.where(tier, 10 + cos[keep], wc * cosv + wt * tani + wa * fs + wb * cur)
+                score = np.where(tier, 10 + cos[keep], wc * cosv + wt * tani + wa * fs + wb * cur + pop)
                 if hit.any():
                     best = score[hit].max()
                     rank = int((score > best).sum())
@@ -133,7 +143,7 @@ def main():
                 else:
                     v.append(0.0)
             if topk:
-                blend = wc * cosv + wt * tani + wa * fs + wb * cur  # grid holds the one --top blend
+                blend = wc * cosv + wt * tani + wa * fs + wb * cur + pop  # grid holds the one --top blend
                 blend = np.broadcast_to(blend, score.shape)
                 c = cos[keep]
                 o = np.argsort(-blend, kind='stable')[:topk]

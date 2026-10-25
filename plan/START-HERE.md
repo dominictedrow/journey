@@ -36,9 +36,9 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
 current_phase: P7 — Fragmentation-aware reranker -> Submission #5
-current_step: P7.2: #6 (popularity prior) LB 0.264; V-np overstated the gain (+0.13 vs +0.016), diagnose next
-session_count: 17
-last_handoff: plan/handoffs/HANDOFF-P7-S17.md
+current_step: P7.2: D-038 de-biased V-np (low-pop) metric; lam 0.05 hurts low-pop, 0.02 ~free
+session_count: 18
+last_handoff: plan/handoffs/HANDOFF-P7-S18.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
 best_public_lb: 0.264 (#6 / D-037, #5 + 0.05 x PubChem popularity, 3ee59a4, kernel v7)
@@ -46,5 +46,5 @@ best_local_val: p6_ft no library tier: V-lib 0.829 / V-pool 0.700 / V-scaf 0.663
 submissions_used_today: 1 on 2026-10-25 (limit: 5/day)
 pending_gates: none
 blockers: none (V-np overstates LB gains; see handoff)
-next_action: diagnose V-np vs LB (+0.13 vs +0.016), then P7.2/P7.3 reranker (handoff)
+next_action: ask Dom: #7 with P6_POP 0.02 or go to P7.2/P7.3 reranker (handoff)
 <!-- STATE:END -->
