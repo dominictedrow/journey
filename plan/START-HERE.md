@@ -35,16 +35,16 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 ## STATE
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
-current_phase: P7 — Fragmentation-aware reranker -> Submission #5
-current_step: P7.4: wire hand blend (blend + 0.02 pop + 0.5 expl, D-041) into Kaggle path
-session_count: 19
-last_handoff: plan/handoffs/HANDOFF-P7-S19.md
+current_phase: P8 — De novo generation for novel molecules -> Submission #6 (plan numbering)
+current_step: P8.1: 🛑 gate 1 (adds a decoder) before any code
+session_count: 20
+last_handoff: plan/handoffs/HANDOFF-P7-S20.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
-best_public_lb: 0.264 (#6 / D-037, #5 + 0.05 x PubChem popularity, 3ee59a4, kernel v7)
-best_local_val: V-np hand blend (np_p6_ft, src 7, +0.02 pop +0.5 expl): full 0.795 / low-pop 0.752 (D-038/D-041)
-submissions_used_today: 1 on 2026-10-25 (limit: 5/day)
-pending_gates: none
-blockers: none (V-np overstates LB gains; see handoff)
-next_action: implement D-041 in casmi/kaggle/predict.py, parity + dry run, then gates 7+6 for Submission #7 (handoff)
+best_public_lb: 0.288 (#7 / D-042, D-041 hand blend: pop 0.02 + 0.5 x fragment expl, 6ba032e, kernel v9)
+best_local_val: V-np hand blend (np_p6_ft, src 7, +0.02 pop +0.5 expl): full 0.795 / low-pop 0.752 (D-038/D-041); Kaggle path reproduces 0.795
+submissions_used_today: 2 on 2026-10-25 (limit: 5/day)
+pending_gates: P8.1 gate 1 (decoder architecture) not yet asked
+blockers: none
+next_action: write the P8.1 gate 1 proposal (decoder size, pretrain data, GPU-hours, alternatives) and ask Dom (handoff)
 <!-- STATE:END -->
