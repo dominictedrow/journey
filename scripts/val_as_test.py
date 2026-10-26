@@ -39,6 +39,8 @@ pq.write_table(pa.concat_tables(parts), test)
 
 sp = pq.read_table(f'{ROOT}/splits.parquet', columns=['ik14', 'split']).to_pydict()
 novel = [k for k, s in zip(sp['ik14'], sp['split']) if s == 'v_novel']
+if split == 'v_np':  # D-044: v_np was copied out of the train shard, which still holds it; keep its spectra out of the library
+    novel += pq.read_table(f'{d}/mols.parquet', columns=['ik14'])['ik14'].to_pylist()
 lib = Library(ROOT, ('train',), exclude_ik14=novel)  # what scripts/eval_encoder.py ranks against
 out = f'logs/valtest_{split}.csv'
 tm, _ = predict_encoder(test, lib.path, POOL, ck, f'{ROOT}/vocab.json', out)

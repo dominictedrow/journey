@@ -15,9 +15,42 @@ LIB_T = 0.7  # D-034: only library hits this close are forced above the model ra
 P6_LIB_T, P6_BLEND = 2.0, (1.0, 4.0, 0.05)  # D-034 #4b: no forced tier; c * cosine + t * Tanimoto + b * curated/library
 P6_POP = 0.02  # D-036/D-041: + P6_POP * pool popularity.npy (ln1p substances + ln1p PubMed); 0 = off, needs the file
 P7_EXPL = 0.5  # D-041: + P7_EXPL * fragment explained intensity (casmi.rerank.fragment.mol_feats col 0) on the top 4 * MAX_RANK
+P8_PC_SLOTS = (4, 8, 12, 16, 20)  # D-044: PubChem-only rows (src & P6_SRC == 0) interleaved at these ranks; () = off
+P8_PC_POP = 0.05  # D-044: popularity weight of the PubChem-only list (S17 all-candidate V-np best)
+P8_LIB_TAU = 0.9  # D-044: no PubChem interleaving when the best library cosine reaches this
 P6_SRC = 7  # D-035 probe: P6 ranks only train | COCONUT | LOTUS pool rows (src bits 1|2|4); 0 = every row incl. PubChem-only
 FALLBACK_PPM = (5.0, 20.0, 100.0)  # widen the window before giving up
 FALLBACK_SMILES = 'C'
+
+
+def top_unique(cand, n=MAX_RANK):
+    """[(score, ik14, smiles)] -> best-first smiles, ik14 of the first n distinct ik14."""
+    seen, smi = {}, []
+    for _, k, s in sorted(cand, key=lambda x: -x[0]):
+        if k not in seen:  # ponytail: plain vs tautomer InChIKey14 duplicates survive (D-025); re-key if it matters
+            seen[k] = None
+            smi.append(s)
+        if len(smi) == n:
+            break
+    return smi, list(seen)
+
+
+def interleave(base, base_keys, pc, pc_keys, slots, n=MAX_RANK):
+    """Put pc entries (not already in base) at 1-based ranks `slots`, base keeps its order (public v3.6 gated merge)."""
+    bk = set(base_keys)
+    pc = [s for s, k in zip(pc, pc_keys) if k not in bk]
+    out, bi, pj = [], 0, 0
+    for pos in range(1, n + 1):
+        if pos in slots and pj < len(pc):
+            out.append(pc[pj])
+            pj += 1
+        elif bi < len(base):
+            out.append(base[bi])
+            bi += 1
+        elif pj < len(pc):
+            out.append(pc[pj])
+            pj += 1
+    return out
 
 
 def load_test(path):
@@ -133,10 +166,11 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
     smiles, cfp = gather(pool_dir, rows, workers, tm)  # adds tm['read'], tm['fp']
     tm['candidates'] = time.time() - t0
     t0 = time.time()
-    cands = {}
+    cands, pcs, lib_max = {}, {}, {}
     for mid, r in mols.items():
         c, s, has = lib.scores(q[r], mass[mid], ppm) if np.isfinite(mass[mid]) else ([], [], [])
         cand = [(10 + float(x), lib.ik14[i], lib.smiles[i]) for i, x, h in zip(c, s, has) if h and x >= lib_t]
+        lib_max[mid], pcs[mid] = max([float(x) for x, h in zip(s, has) if h], default=0.0), []
         lo, hi = win[mid]
         if hi > lo:
             a = np.searchsorted(rows, lo)
@@ -153,10 +187,15 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
                 cur = np.array([(int(pool.src[lo + i]) & CURATED_EXT) > 0 or pool.ik14[lo + i].decode() in in_lib
                                 for i in range(hi - lo)], np.float32)
                 score = wc * cosv + wt * score + wb * cur
-                if P6_POP:
-                    score = score + P6_POP * pool.popularity[lo:hi].astype(np.float32)
+                pop = pool.popularity[lo:hi].astype(np.float32) if P6_POP else 0
+                score = score + P6_POP * pop
                 if P6_SRC:
-                    score = np.where(pool.src[lo:hi] & P6_SRC, score, -np.inf)
+                    main = (pool.src[lo:hi] & P6_SRC) > 0
+                    if P8_PC_SLOTS:  # D-044: PubChem-only side list, its own popularity weight
+                        pc = np.where(main, -np.inf, score + (P8_PC_POP - P6_POP) * pop)
+                        pt = np.argsort(-pc)[:MAX_RANK]
+                        pcs[mid] = [(float(pc[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in pt[np.isfinite(pc[pt])]]
+                    score = np.where(main, score, -np.inf)
             top = np.argsort(-score)[:4 * MAX_RANK]
             top = top[np.isfinite(score[top])]
             cand += [(float(score[i]), pool.ik14[lo + i].decode(), smiles[a + i]) for i in top]
@@ -172,23 +211,24 @@ def predict_encoder(test_path, lib_path, pool_dir, ckpt_path, vocab_path, out_pa
         RDLogger.DisableLog('rdApp.*')
         t0 = time.time()
         neg = vocab['ionization_mode'].get('negative', -1)
-        jobs = [([x[2] for x in cands[mid]], spectra(arrs['mz'], arrs['inten'], arrs['npeaks'], arrs['polarity'], r, neg))
+        jobs = [([x[2] for x in cands[mid] + pcs[mid]], spectra(arrs['mz'], arrs['inten'], arrs['npeaks'], arrs['polarity'], r, neg))
                 for mid, r in mols.items()]
         with Workers(workers or os.cpu_count()) as wk:
             feats = wk.map(mol_feats, jobs, chunksize=4)
         for mid, f in zip(mols, feats):
-            cands[mid] = [(x + P7_EXPL * float(e), k, s_) for (x, k, s_), e in zip(cands[mid], f[:, 0])]
+            e, n = f[:, 0], len(cands[mid])
+            cands[mid] = [(x + P7_EXPL * float(v), k, s_) for (x, k, s_), v in zip(cands[mid], e[:n])]
+            pcs[mid] = [(x + P7_EXPL * float(v), k, s_) for (x, k, s_), v in zip(pcs[mid], e[n:])]
         tm['fragments'] = time.time() - t0
     t0 = time.time()
     out = {}
     for mid, r in mols.items():
-        seen, smi = set(), []
-        for _, k, s_ in sorted(cands[mid], key=lambda x: -x[0]):
-            if k not in seen:  # ponytail: plain vs tautomer InChIKey14 duplicates survive (D-025); re-key if it matters
-                seen.add(k)
-                smi.append(s_)
-            if len(smi) == MAX_RANK:
-                break
+        smi, keys = top_unique(cands[mid])
+        if pcs[mid] and lib_max[mid] < P8_LIB_TAU:
+            smi = interleave(smi, keys, *top_unique(pcs[mid]), P8_PC_SLOTS)
+            tm['pc_mols'] = tm.get('pc_mols', 0) + 1  # health check: molecules that got PubChem slots
+        elif pcs[mid]:
+            tm['pc_lib_blocked'] = tm.get('pc_lib_blocked', 0) + 1
         if not smi:
             for wide in FALLBACK_PPM[1:]:
                 _, smi, _ = lib.rank(q[r], mass[mid], ppm=wide, top=MAX_RANK)

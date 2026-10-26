@@ -119,6 +119,7 @@ Every phase lists steps, exit criteria and gates. Phases that produce a new mode
 - **P7.4** Val, then 🛑 submit.
 - **P7.4a** NP validation (rerouted D-035, D-038): V-np (196 curated enveda molecules held out of training; np_p6_ft is the matching model) plus the de-biased V-np subset (truth curated popularity pct < 0.9, 42 molecules; scripts/pop_bias.py). Popularity-prior and NP-pipeline changes are judged on low-pop V-np first; full V-np overstates them (D-038).
 - **Exit:** tag `p7-rerank`.
+- **P7.5** (rerouted D-043) Gap analysis before P8: #7 LB 0.288 vs public retrieval-only notebooks 0.42-0.45 and prize line 0.474. Research what the top public pipelines do (library tier on enveda-180 spectra, candidate sources, mass window, adducts, priors); report the 1-2 biggest levers, each run as its own gated step. P8 follows only if retrieval tops out.
 
 ## P8 — De novo generation for novel molecules → Submission #6 (🛑 architecture gate: adds a decoder)
 - **P8.1** Fingerprint→SELFIES decoder pretrained on millions of pool structures. No spectra are needed, so data is abundant and generalization is strong.
