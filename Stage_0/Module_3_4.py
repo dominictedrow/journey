@@ -1,11 +1,12 @@
 import numpy as np
+from Module_1 import cross_entropy, softmax_ce_grad
 import math
 
 def init_params(sizes, seed = 0):
     rng = np.random.default_rng(seed)
     params= []
-    for i in sizes:
-        params.append((rng.random(i), rng.random()))
+    for i in range(len(sizes)-1):
+        params.append((rng.normal(0, np.sqrt(2 / sizes[i]), (sizes[i], sizes[i+1])), np.zeros(sizes[i+1])))
     return params
 
 def forward(params, X):
@@ -17,15 +18,9 @@ def forward(params, X):
     logits = X @ np.array(params[-1][0]) + np.array(params[-1][1])
     return logits, cache
 
-def cross_grad(logits, targets):
-    z = logits - np.max(logits, axis=1, keepdims=True)
-    p = np.exp(z)
-    p /= np.sum(p, axis=1, keepdims=True)
-    p[np.arange(len(targets)), targets] -= 1
-    return p / len(targets)
 
 
-def backward(params, dlogits, cache):
+def backward(params, cache, dlogits,):
     grads = []
     dZ = dlogits
     for i in reversed(range(len(params))):
@@ -42,26 +37,33 @@ def predict(params,X):
     out = np.argmax(logits, axis=1)
     return out
 
-def train(X, y, params, lr=0.1, epochs =50, batch_size=64, seed = 0,):
+def train(X, y, sizes, lr=0.1, epochs =50, batch_size=64, seed = 0,):
+    params = init_params(sizes,seed)
     rng = np.random.default_rng(seed)
     history = []
     for i in range(epochs):
-        X = rng.shuffle(X)
-        batched = [X[i] for i in range(0, len(X)-batch_size, batch_size)]
+        random = rng.permutation(len(X))
+        X = X[random]
+        y = y[random]
+        inputs= [X[i:i+batch_size] for i in range(0, len(X), batch_size)]
+        targets = [y[i:i+batch_size] for i in range(0, len(y), batch_size)]
         loss = []
-        for x in batched:
-            logits, cache = forward(params,x)
-            dlogits = cross_grad(logits, cache)
-            loss.append(-np.sum(y*np.log(logits)))
-            dw, db = backward(params, dlogits, cache)
-            for i in params:
-                i[0] = -dw * i[0] * lr
-                i[1] = -db * i[1] * lr
+        for x in range(len(inputs)):
+            logits, cache = forward(params,inputs[x])
+            dlogits = softmax_ce_grad(logits, targets[x])
+            loss.append(cross_entropy(logits, targets[x]))
+            grads= backward(params, cache, dlogits)
+            param1 = []
+            for n in range(len(params)):
+                W, b = params[n]
+                dW, db = grads[n]
+                param1.append(((W - lr * dW), (b - lr * db)))
+            params = param1
         history.append(np.mean(loss))
     return params, history
 
 
-            
+
 
 
 
