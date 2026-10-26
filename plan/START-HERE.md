@@ -35,16 +35,16 @@ If `pending_gates` in STATE is not `none`, your first action is to re-ask that g
 ## STATE
 <!-- Claude Code rewrites everything between these markers at the end of every session. Nothing else in this file changes. -->
 <!-- STATE:BEGIN -->
-current_phase: P8 — De novo generation for novel molecules -> Submission #6 (plan numbering)
-current_step: P8.1: 🛑 gate 1 (adds a decoder) before any code
+current_phase: P7 — P7.5 gap analysis (rerouted D-043); P8 deferred
+current_step: P7.5: strategic gate (port levers vs rebase on public 0.467 lineage)
 session_count: 20
 last_handoff: plan/handoffs/HANDOFF-P7-S20.md
 repo_root: ~/envenda in WSL Ubuntu-24.04 (moved from ~/casmi, D-031). Run commands via `wsl -d Ubuntu-24.04 -e bash -lc "cd ~/envenda; ..."`.
 background_jobs: none
-best_public_lb: 0.288 (#7 / D-042, D-041 hand blend: pop 0.02 + 0.5 x fragment expl, 6ba032e, kernel v9)
-best_local_val: V-np hand blend (np_p6_ft, src 7, +0.02 pop +0.5 expl): full 0.795 / low-pop 0.752 (D-038/D-041); Kaggle path reproduces 0.795
-submissions_used_today: 2 on 2026-10-25 (limit: 5/day)
-pending_gates: P8.1 gate 1 (decoder architecture) not yet asked
+best_public_lb: 0.292 (#8 / D-044, #7 + gated PubChem slots, 015da35, kernel v10); #7 0.288 within noise
+best_local_val: V-np hand blend (np_p6_ft, src 7, +0.02 pop +0.5 expl): full 0.795 / low-pop 0.752 (D-041); Kaggle path 0.7928 with PubChem slots
+submissions_used_today: 1 on 2026-10-26 UTC (limit: 5/day)
+pending_gates: P7.5 strategic choice (a) port levers into our pipeline vs (b) rebase on the public 0.467 notebook (see handoff)
 blockers: none
-next_action: write the P8.1 gate 1 proposal (decoder size, pretrain data, GPU-hours, alternatives) and ask Dom (handoff)
+next_action: re-ask the strategic gate (handoff "Next session"); public top 0.467, gold ~0.471
 <!-- STATE:END -->

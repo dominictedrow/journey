@@ -15,8 +15,19 @@
 - Kaggle v9: total 848 s (fragments 85 s, candidates 391 s, rank 253 s).
 - Submission #7 public LB: **0.288** (+0.024 over #6 0.264). V-np +0.027 vs LB +0.024: the fragment term transfers.
 
+## Later in S20 (after #7): P7.5 gap analysis + Submission #8
+- D-043: P8 deferred, P7.5 gap analysis added. Findings in reports/P7.5-gap-analysis.md (public code pulled to
+  data/kaggle/public/, gitignored; read only, never executed).
+- D-044 / #8 (015da35, kernel v10): PubChem-only side list interleaved at slots 4/8/12/16/20 unless library cosine
+  >= 0.9. tests/test_interleave.py. Health keys pc_mols / pc_lib_blocked in timings. **LB 0.292 (+0.004 = noise).**
+- scripts/val_as_test.py v_np now excludes v_np structures from the library (the train shard still holds them; lib
+  cosine was 1.0 for 98%). With that: V-np lib_max median 0.40 (1% >= 0.9) vs in-library test 1.0. Old V-np numbers
+  were not inflated (truths are curated, so the lib flag added nothing).
+- Read: the public lineage's PubChem gain comes with a far stronger PubChem ranker (FPNet A+B + fold-safe ensemble,
+  z-scored, 0.15 x pop, top-200-documented shortlist, promotion rule). Our blend can't put answers into 5 slots.
+
 ## Decisions & approvals
-- D-042 (gates 7+6) logged.
+- D-042 (gates 7+6), D-043 (rule zero: P8 deferred, P7.5), D-044 (gates 7+6, #8) logged.
 
 ## Traps discovered
 - Kernel pushed right after `datasets version` binds the OLD dataset version. v8 ran old code (no `fragments` timing,
@@ -24,14 +35,17 @@
   compare `datasets files <slug>` creationDate (or the lastUpdated column) before `kernels push`.
 - Always confirm new code ran on Kaggle via a new timing key / log line before submitting.
 - Kaggle `read` time varies 72 s .. 440 s run to run (cold /kaggle/input); total 848 .. 1843 s.
+- A pushed kernel runs on the VISIBLE test (copy of train), so every molecule is a library hit (pc_lib_blocked 400).
+  Health checks must accept that; the hidden test only runs on submission.
 - PowerShell mangles nested quotes in `wsl -e bash -lc "..."`; put multi-step commands in logs/*.sh and run `bash -l`.
 
 ## Background jobs
 - none
 
 ## Next session starts with
-- Tag `p7-rerank` (P7 exit) if not done, then P8.1: 🛑 gate 1 (architecture: adds a decoder) before any code.
-  Write the gate per plan/CLAUDE.md: decoder size, pretrain data (pool structures), GPU-hours, alternatives.
+- 🛑 Strategic gate (pending_gates): (a) keep our pipeline and port levers (next: a strong fingerprint ranker for the
+  PubChem list / ICEBERG-GLACIER same-formula rerank), or (b) rebase on the public 0.467 notebook (licence check of
+  its ~12-16 datasets first) and add our validated pieces as extra signals. Re-ask; nothing else until answered.
 
 ## Open questions for Dom
 - none
