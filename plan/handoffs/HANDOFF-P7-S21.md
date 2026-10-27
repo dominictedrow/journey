@@ -23,6 +23,7 @@
 - Local copy: data/kaggle/public/casmi26-lb-0-467-one-knob-rrf-offset-3-to-1/ (read only, never execute locally).
 
 ## Next session starts with
+0. DONE in S21: step 1 below, see reports/P7.5-rebase-map.md. Re-ask the pending gate (fork + reproduce).
 1. Map the 0.467 pipeline: extract the embedded modules + the pinned baseline notebook into
    data/kaggle/public/.../extracted/ (read only), write reports/P7.5-rebase-map.md: stages, candidate lists, scores,
    fusion, where a per-candidate extra signal can be added (our contrastive cos + fragment expl).
