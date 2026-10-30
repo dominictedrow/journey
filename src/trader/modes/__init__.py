@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from trader.modes.base import Mode
 from trader.modes.baselines import AlwaysLong, NoTrade, RandomEntry
+from trader.modes.imom import IntradayMomentum
 
-REGISTRY: dict[str, type[Mode]] = {m.name: m for m in (NoTrade, AlwaysLong, RandomEntry)}
+REGISTRY: dict[str, type[Mode]] = {
+    m.name: m for m in (NoTrade, AlwaysLong, RandomEntry, IntradayMomentum)
+}
 
 
 def build_mode(name: str, **params) -> Mode:

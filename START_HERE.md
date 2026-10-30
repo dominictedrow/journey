@@ -1,4 +1,15 @@
-# CURRENT CHECKPOINT — v11 / 2026-10-30 (read before historical sections)
+# CURRENT CHECKPOINT — v12 / 2026-10-30 (read before historical sections)
+
+- **Git:** `main` = docs root (6dc1218). `feat/b1-framework` = B1 framework (997de4f). **Active branch `feat/imom01`.** Nothing pushed (push needs owner OK).
+- **Phase B3 started.** IMOM01 implemented, tested and run: **fails after costs** on dev data (D-022, `research/IMOM01_RESULTS.md`). Holdout (from 2025-10-01) still sealed.
+- **Open owner decisions:** D-020 (data deviates from spec), D-021 (MES min size vs $25k/0.25%), D-022 (shelve IMOM01?).
+- **Next exact task:** TREND02 (multi-speed EMA trend, MES + EURUSD) as the next mode, then REV01 and the Joovier `INTERPRETATION` modes.
+- Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
+- Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.
+
+---
+
+# PRIOR CHECKPOINT — v11 / 2026-10-30
 
 - **Phase B1 Framework: built**, awaiting owner review of the demo report. Package in `src/trader/`, tests in `tests/` (36 passing), run instructions in `README.md`.
 - **Phase B2 Data: started.** Owner data imported to `../data/cache/*.parquet` (outside the repo). Quality report `reports/data_quality.md`. Holdout **sealed from 2025-10-01** for both instruments; do not pass `--unseal-holdout` until final evaluation.

@@ -63,3 +63,8 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Observed:** at the proposed $25k paper equity and 0.25% risk/trade ($62.50), one MES contract is too large for typical stops: a 1.5× hourly-ATR stop is ~$79 per contract (needs ≈$34k equity), a 2× daily-ATR stop ~$642 (needs ≈$259k). The risk layer correctly vetoes these as `below_min_size`; the S&P always-long baseline therefore takes **zero** trades.
 - **Options:** (a) raise paper equity; (b) raise risk/trade (e.g. 0.5%); (c) restrict MES to modes with tight intraday stops; (d) keep as-is and let MES only trade when stops are small. Not changed by the agent — risk thresholds require owner approval (AGENTS.md).
 - **Status:** PENDING owner.
+
+## D-022 — 2026-10-30 — IMOM01 fails after costs on development data
+- **Observed:** gross edge +0.7 bp/day (paper sample +1.0, post-2020 +0.3) against ≈2.8 bp assumed round-trip cost. All three pre-registered variants lose at 1×/2×/3× costs at both $25k and $300k equity. Engine reconciles with an independent calculation. Details: `research/IMOM01_RESULTS.md`.
+- **Recommendation:** shelve IMOM01 as a stand-alone mode; keep it registered and logged as a failed hypothesis; do not spend the holdout on it. Revisit only with real ES data, real MES costs, or gamma data (IMOM01-G, paid).
+- **Status:** PENDING owner.

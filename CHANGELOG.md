@@ -1,3 +1,9 @@
+## v12 — 2026-10-30 — B3: IMOM01 mode
+- Branch `feat/imom01` (from `feat/b1-framework`). Tests: 48 passed; ruff clean.
+- Added `imom01` mode (paper #19 adaptation) with 10 rule tests (signal timing, DST, early close, missing bars, forced 16:00 flat, lag, ONFH filter). Engine: optional `Mode.decision_mask` so clock-time modes skip irrelevant bars.
+- Competition: labelled variants, per-period breakdown (paper sample vs post-paper), `configs/sensitivity_300k.toml` sizing sensitivity.
+- Result: IMOM01 fails after costs (D-022, `research/IMOM01_RESULTS.md`). Holdout untouched.
+
 ## v11 — 2026-10-30 — Phase B1 framework built
 - Branch/HEAD: `main`, no commits (commit awaits owner OK). Tests: `uv run pytest` → 36 passed; `ruff check` clean.
 - Added Python package `src/trader/`: vendor CSV loader + validation + frozen Parquet snapshots with sha256 provenance; causal resampling (daily bars roll at 17:00 ET, DST-safe); NYSE sessions/early closes (`exchange_calendars`); mode interface (`SOURCE/ADAPTATION/INTERPRETATION/BASELINE`); risk layer (mandatory stop, policy sizing formula, min-size veto, daily loss breaker); event-driven backtester (next-bar fills, 1-minute stop/target checks, gap-through fills, stop-first on ambiguous bars, stale-data NO TRADE); metrics; competition runner with sealed holdout and experiment log; CLI.
