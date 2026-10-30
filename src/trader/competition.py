@@ -38,6 +38,7 @@ class CompetitionConfig:
     cost_multipliers: list[float] = field(default_factory=lambda: [1.0, 2.0, 3.0])
     initial_equity: float = 25_000.0
     holdout_months: int = 12
+    periods: list[dict] = field(default_factory=list)
     risk: RiskConfig = field(default_factory=RiskConfig)
 
     @classmethod
@@ -54,6 +55,7 @@ class CompetitionConfig:
             cost_multipliers=run.get("cost_multipliers", [1.0, 2.0, 3.0]),
             initial_equity=run.get("initial_equity", 25_000.0),
             holdout_months=run.get("holdout_months", 12),
+            periods=raw.get("periods", []),
             risk=RiskConfig(**raw.get("risk", {})),
         )
 
@@ -127,6 +129,7 @@ def run_competition(
     repo = Path(__file__).resolve().parents[2]
     sha = git_sha(repo)
     rows: list[dict] = []
+    period_rows: list[dict] = []
     benchmarks: dict[str, dict] = {}
     cfg.artifact_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -150,33 +153,68 @@ def run_competition(
                 mode = build_mode(mspec["name"], **mspec.get("params", {}))
                 if not mode.supports(symbol):
                     continue
+                label = mspec.get("label", mode.name)
                 bt = Backtester(inst, cfg.risk, cfg.initial_equity, cost_multiplier=mult)
                 res = bt.run(mode, bars)
                 m = compute_metrics(res.trades, res.daily_equity, cfg.initial_equity)
                 pos_years, n_years = yearly_stability(res)
                 row = {
-                    "symbol": symbol, "mode": mode.name, "provenance": mode.provenance.value,
+                    "symbol": symbol, "mode": label, "provenance": mode.provenance.value,
                     "cost_x": mult, **m, "positive_years": pos_years, "active_years": n_years,
                     "rejections": res.rejections,
                 }  # fmt: skip
                 rows.append(row)
-                res.trades.to_csv(trades_dir / f"{symbol}_{mode.name}_{mult:g}x.csv", index=False)
+                if mult == 1.0:
+                    period_rows += period_metrics(res, cfg.periods, symbol, label)
+                res.trades.to_csv(trades_dir / f"{symbol}_{label}_{mult:g}x.csv", index=False)
                 record = {
                     "time": _now(), "code": f"{__version__}@{sha}", "symbol": symbol,
                     "data_sha256": meta.get("source_sha256"), "start": str(bars.index[0]),
                     "end": str(bars.index[-1]), "holdout_unsealed": unseal_holdout,
-                    "mode": mode.describe(), "cost_x": mult, "risk": vars(cfg.risk),
+                    "label": label, "mode": mode.describe(), "cost_x": mult, "risk": vars(cfg.risk),
                     "metrics": m,
                 }  # fmt: skip
                 with (cfg.artifact_dir / "experiments.jsonl").open("a") as f:
                     f.write(json.dumps(record, default=str) + "\n")
-                log(f"  {mode.name:<12} {mult:g}x  trades={m['trades']:>6.0f} "
+                log(f"  {label:<18} {mult:g}x  trades={m['trades']:>6.0f} "
                     f"net={m['net_pnl']:>11,.0f}  sharpe={m['sharpe']:>5.2f} "
                     f"maxDD={m['max_drawdown']:.1%}")  # fmt: skip
 
     table = pd.DataFrame(rows)
-    report = write_report(cfg, table, benchmarks, sha, stamp, unseal_holdout, trades_dir)
+    report = write_report(
+        cfg, table, pd.DataFrame(period_rows), benchmarks, sha, stamp, unseal_holdout, trades_dir
+    )
     return table, report
+
+
+def period_metrics(res: BacktestResult, periods: list[dict], symbol: str, label: str) -> list[dict]:
+    """Metrics restricted to each configured [start, end) window, from the same run."""
+    out = []
+    eq, trades = res.daily_equity, res.trades
+    for p in periods:
+        start = pd.Timestamp(p["start"]) if p.get("start") else eq.index.min()
+        end = pd.Timestamp(p["end"]) if p.get("end") else eq.index.max() + pd.Timedelta("1D")
+        window = eq[(eq.index >= start) & (eq.index < end)]
+        if window.empty:
+            continue
+        before = eq[eq.index < start]
+        base = float(before.iloc[-1]) if len(before) else res.initial_equity
+        entry = trades["entry_time"].dt.tz_convert(None) if len(trades) else trades["entry_time"]
+        t = trades[(entry >= start) & (entry < end)] if len(trades) else trades
+        m = compute_metrics(t, pd.concat([pd.Series([base]), window]), base)
+        out.append({"symbol": symbol, "mode": label, "period": p["name"], **m})
+    return out
+
+
+def _fmt_periods(df: pd.DataFrame) -> str:
+    cols = ["period", "mode", "trades", "net_pnl", "expectancy_r", "sharpe", "max_drawdown"]
+    lines = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
+    for r in df.itertuples():
+        lines.append(
+            f"| {r.period} | {r.mode} | {r.trades:.0f} | {r.net_pnl:,.0f} | {r.expectancy_r:.3f} "
+            f"| {r.sharpe:.2f} | {r.max_drawdown:.1%} |"
+        )
+    return "\n".join(lines) + "\n"
 
 
 def _fmt_table(df: pd.DataFrame) -> str:
@@ -204,6 +242,7 @@ def _fmt_table(df: pd.DataFrame) -> str:
 def write_report(
     cfg: CompetitionConfig,
     table: pd.DataFrame,
+    periods: pd.DataFrame,
     benchmarks: dict[str, dict],
     sha: str,
     stamp: str,
@@ -238,6 +277,11 @@ def write_report(
         parts.append(_fmt_table(base))
         rej = {r["mode"]: r["rejections"] for _, r in grp[grp.cost_x == 1.0].iterrows()}
         parts.append("\nRisk-layer rejections at 1x: " + json.dumps(rej) + "\n")
+        if not periods.empty:
+            per = periods[(periods.symbol == symbol) & (periods.trades > 0)]
+            if not per.empty:
+                parts.append("### By period (1x costs)\n")
+                parts.append(_fmt_periods(per))
     out.write_text("\n".join(parts))
     table.drop(columns=["rejections"]).to_csv(out.with_suffix(".csv"), index=False)
     return out
