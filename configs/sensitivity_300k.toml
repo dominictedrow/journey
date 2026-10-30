@@ -32,20 +32,20 @@ name = "always_long"
 name = "random"
 params = { seed = 7 }
 
-# IMOM01 (paper #19). S&P only; the mode ignores EURUSD. Variants are pre-registered here and all
-# are reported, so the winner is not cherry-picked from unlogged tries.
-[[modes]]
-name = "imom01"
+# IMOM01 SHELVED (D-022, 2026-10-30): fails after costs, see research/IMOM01_RESULTS.md.
+# Mode stays registered and tested; uncomment to rerun.
+# [[modes]]
+# name = "imom01"
 
-[[modes]]
-name = "imom01"
-label = "imom01_lag5"
-params = { entry_lag_min = 5 }
+# [[modes]]
+# name = "imom01"
+# label = "imom01_lag5"
+# params = { entry_lag_min = 5 }
 
-[[modes]]
-name = "imom01"
-label = "imom01_onfh"
-params = { require_onfh_agree = true }
+# [[modes]]
+# name = "imom01"
+# label = "imom01_onfh"
+# params = { require_onfh_agree = true }
 
 # Reporting windows (1x costs). The paper's sample ends May 2020; after that is out-of-sample for it.
 [[periods]]
