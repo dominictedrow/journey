@@ -1,0 +1,22 @@
+# secrets and local overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+# runtime, market data, model artifacts, logs
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.pyc
+/data/
+/models/
+/logs/
+/artifacts/
+*.parquet
+*.sqlite
+*.db
+.DS_Store
+._*

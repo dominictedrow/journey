@@ -1,0 +1,19 @@
+# Video analysis record — duplicate per video
+- Creator/channel:
+- Official source URL and title:
+- Publication/capture dates, duration:
+- Authorized source format: watched video / official captions / user-provided transcript / screenshots
+- Verification: [ ] Full video observed [ ] Key charts observed [ ] Transcript reviewed [ ] NOT YET VERIFIED
+- Source timecodes and claims (quote briefly, paraphrase otherwise):
+- Asset, timeframe, market session:
+- Context/regime filter:
+- Setup preconditions:
+- Exact entry trigger:
+- Confirmation and invalidation:
+- Exit, stop, target, time-based close:
+- Chart examples with timecodes:
+- Negative examples and ambiguity:
+- Candidate computable feature definitions, causal data requirements:
+- Confidence and open questions:
+- Independent replication outcome: NOT TESTED
+- Approval status: PENDING

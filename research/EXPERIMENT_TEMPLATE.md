@@ -1,0 +1,14 @@
+# Experiment record — duplicate each run
+- Experiment ID, date, hypothesis:
+- Branch and SHA:
+- Dataset versions, provider rights, symbols, UTC times, adjustments:
+- Feature commit/version and exact computation cutoff:
+- Label horizon, model/hyperparameters/seed:
+- Train/validation/calibration/test splits, gap/embargo and holdout policy:
+- Backtest execution rules, broker fee/spread/slippage assumptions:
+- Baselines and ablation comparisons:
+- Out-of-sample metrics and confidence intervals:
+- Latency and compute budget:
+- Limitations, adverse regimes, negative results:
+- Reproduction commands and artifacts:
+- Verdict: RETAIN / REJECT / NEED MORE EVIDENCE (not automatically deployable)
