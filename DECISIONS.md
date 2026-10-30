@@ -68,3 +68,8 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Observed:** gross edge +0.7 bp/day (paper sample +1.0, post-2020 +0.3) against ≈2.8 bp assumed round-trip cost. All three pre-registered variants lose at 1×/2×/3× costs at both $25k and $300k equity. Engine reconciles with an independent calculation. Details: `research/IMOM01_RESULTS.md`.
 - **Recommendation:** shelve IMOM01 as a stand-alone mode; keep it registered and logged as a failed hypothesis; do not spend the holdout on it. Revisit only with real ES data, real MES costs, or gamma data (IMOM01-G, paid).
 - **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-30 chat. Removed from default competition configs; mode, tests and results kept.
+
+## D-023 — 2026-10-30 — TREND02 (intraday trend) fails, even gross of costs
+- **Observed:** all four pre-registered variants (unanimous ensemble; 15m, 60m and 4h alone) lose on EURUSD and the S&P CFD at 1×/2×/3× costs, at both $25k and $300k. At zero cost they are flat to slightly negative, consistently across 2004–11, 2012–19 and 2020+. Details: `research/TREND02_RESULTS.md`.
+- **Recommendation:** shelve TREND02 and keep the holdout sealed. The negative gross edge supports testing REV01 (mean reversion) next. Slower trend (TSM01, daily/monthly) is the faithful test of the sources and would be a separate, newly registered hypothesis.
+- **Status:** PENDING owner.

@@ -5,9 +5,10 @@ from __future__ import annotations
 from trader.modes.base import Mode
 from trader.modes.baselines import AlwaysLong, NoTrade, RandomEntry
 from trader.modes.imom import IntradayMomentum
+from trader.modes.trend import TrendEnsemble
 
 REGISTRY: dict[str, type[Mode]] = {
-    m.name: m for m in (NoTrade, AlwaysLong, RandomEntry, IntradayMomentum)
+    m.name: m for m in (NoTrade, AlwaysLong, RandomEntry, IntradayMomentum, TrendEnsemble)
 }
 
 

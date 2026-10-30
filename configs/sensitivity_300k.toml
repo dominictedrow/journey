@@ -47,11 +47,36 @@ params = { seed = 7 }
 # label = "imom01_onfh"
 # params = { require_onfh_agree = true }
 
-# Reporting windows (1x costs). The paper's sample ends May 2020; after that is out-of-sample for it.
+# TREND02 (candidates #6/#1/#2/#10, ADAPTATION). Pre-registered before any run: the unanimous
+# ensemble plus each speed alone, so the report shows which speed (if any) carries the result.
+[[modes]]
+name = "trend02"
+
+[[modes]]
+name = "trend02"
+label = "trend02_15m"
+params = { speeds = [1] }
+
+[[modes]]
+name = "trend02"
+label = "trend02_60m"
+params = { speeds = [4] }
+
+[[modes]]
+name = "trend02"
+label = "trend02_4h"
+params = { speeds = [16] }
+
+# Reporting windows (1x costs), fixed eras for stability checks.
 [[periods]]
-name = "to_2020-05 (paper sample)"
-end = "2020-06-01"
+name = "2004-2011"
+end = "2012-01-01"
 
 [[periods]]
-name = "2020-06 on (post-paper)"
-start = "2020-06-01"
+name = "2012-2019"
+start = "2012-01-01"
+end = "2020-01-01"
+
+[[periods]]
+name = "2020 on"
+start = "2020-01-01"

@@ -1,4 +1,15 @@
-# CURRENT CHECKPOINT — v12 / 2026-10-30 (read before historical sections)
+# CURRENT CHECKPOINT — v13 / 2026-10-30 (read before historical sections)
+
+- **Git:** `main`, `feat/b1-framework`, `feat/imom01` pushed to `origin`. **Active branch `feat/trend02`** (local; push needs owner OK).
+- **B3 progress:** IMOM01 shelved (D-022). TREND02 built and run: **fails, even gross of costs** (D-023 pending, `research/TREND02_RESULTS.md`). Holdout (from 2025-10-01) still sealed.
+- **Open owner decisions:** D-020 (data deviates from spec), D-021 (MES min size vs $25k/0.25%), D-023 (shelve TREND02?).
+- **Next exact task:** REV01 (short-horizon mean reversion vs rolling mean/VWAP proxy, MES + EURUSD). TREND02's negative gross edge hints at intraday mean reversion.
+- Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
+- Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.
+
+---
+
+# PRIOR CHECKPOINT — v12 / 2026-10-30
 
 - **Git:** `main` = docs root (6dc1218). `feat/b1-framework` = B1 framework (997de4f). **Active branch `feat/imom01`.** Nothing pushed (push needs owner OK).
 - **Phase B3 started.** IMOM01 implemented, tested and run: **fails after costs** on dev data (D-022, `research/IMOM01_RESULTS.md`). Holdout (from 2025-10-01) still sealed.

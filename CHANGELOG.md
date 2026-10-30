@@ -1,3 +1,9 @@
+## v13 — 2026-10-30 — B3: TREND02 mode
+- IMOM01 shelved per D-022 (removed from default configs). Branches `main`, `feat/b1-framework` and `feat/imom01` pushed to `origin`.
+- Branch `feat/trend02`. Added `trend02` multi-speed EMA ensemble with 10 rule tests; generic look-ahead tests cover it. 60 tests pass; ruff clean.
+- Competition reporting eras changed to 2004–11 / 2012–19 / 2020+.
+- Result: TREND02 fails even gross of costs (D-023, `research/TREND02_RESULTS.md`). Holdout untouched.
+
 ## v12 — 2026-10-30 — B3: IMOM01 mode
 - Branch `feat/imom01` (from `feat/b1-framework`). Tests: 48 passed; ruff clean.
 - Added `imom01` mode (paper #19 adaptation) with 10 rule tests (signal timing, DST, early close, missing bars, forced 16:00 flat, lag, ONFH filter). Engine: optional `Mode.decision_mask` so clock-time modes skip irrelevant bars.
