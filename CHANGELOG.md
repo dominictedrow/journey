@@ -1,3 +1,9 @@
+## v14 — 2026-10-30 — B3: REV01 mode
+- TREND02 shelved per D-023; `feat/trend02` pushed.
+- Branch `feat/rev01`. Added `rev01` short-term reversion (SMA/VWAP-proxy z-score, ER trend filter, ET session windows) with 15 rule tests; competition config gains a per-variant `symbols` filter. 74 tests pass; ruff clean.
+- Six variants pre-registered and committed before the first real-data run (07db1ec).
+- Result: fails after costs; small gross EURUSD reversion edge (D-024, `research/REV01_RESULTS.md`). Holdout untouched.
+
 ## v13 — 2026-10-30 — B3: TREND02 mode
 - IMOM01 shelved per D-022 (removed from default configs). Branches `main`, `feat/b1-framework` and `feat/imom01` pushed to `origin`.
 - Branch `feat/trend02`. Added `trend02` multi-speed EMA ensemble with 10 rule tests; generic look-ahead tests cover it. 60 tests pass; ruff clean.

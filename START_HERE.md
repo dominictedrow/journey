@@ -1,4 +1,16 @@
-# CURRENT CHECKPOINT — v13 / 2026-10-30 (read before historical sections)
+# CURRENT CHECKPOINT — v14 / 2026-10-30 (read before historical sections)
+
+- **Git:** `main`, `feat/b1-framework`, `feat/imom01`, `feat/trend02` pushed. **Active branch `feat/rev01`** (local; push needs owner OK).
+- **B3 progress:** IMOM01 shelved (D-022), TREND02 shelved (D-023). REV01 built and run: **fails after costs**, small gross EURUSD reversion edge (D-024 pending, `research/REV01_RESULTS.md`). Holdout (from 2025-10-01) still sealed.
+- **Pattern so far:** three institutional candidates, none survives costs at intraday horizons on this data. Assumed costs (1 MES pt, 1.4 EURUSD pips per round trip) are decisive, and real broker numbers + bid/ask data (D-020) are now the highest-value inputs.
+- **Open owner decisions:** D-020 (data), D-021 (MES min size), D-024 (shelve REV01?).
+- **Next exact task:** Joovier creator modes J-T01/J-T02/J-T03 as `INTERPRETATION` (see `research/JOOVIER_TRANSCRIPT_FINDINGS.md`), unless the owner redirects to data/costs first.
+- Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
+- Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.
+
+---
+
+# PRIOR CHECKPOINT — v13 / 2026-10-30
 
 - **Git:** `main`, `feat/b1-framework`, `feat/imom01` pushed to `origin`. **Active branch `feat/trend02`** (local; push needs owner OK).
 - **B3 progress:** IMOM01 shelved (D-022). TREND02 built and run: **fails, even gross of costs** (D-023 pending, `research/TREND02_RESULTS.md`). Holdout (from 2025-10-01) still sealed.

@@ -73,3 +73,9 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Observed:** all four pre-registered variants (unanimous ensemble; 15m, 60m and 4h alone) lose on EURUSD and the S&P CFD at 1×/2×/3× costs, at both $25k and $300k. At zero cost they are flat to slightly negative, consistently across 2004–11, 2012–19 and 2020+. Details: `research/TREND02_RESULTS.md`.
 - **Recommendation:** shelve TREND02 and keep the holdout sealed. The negative gross edge supports testing REV01 (mean reversion) next. Slower trend (TSM01, daily/monthly) is the faithful test of the sources and would be a separate, newly registered hypothesis.
 - **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-30 chat. Removed from default competition configs; mode, tests and results kept.
+
+## D-024 — 2026-10-30 — REV01 fails after costs; small gross FX reversion edge
+- **Observed:** all six pre-registered variants (07db1ec) lose 65–100% at 1× costs on $25k and $300k. Gross per trade is near zero (EURUSD 5m +0.03R; costs ≈0.17R). The EURUSD gross edge grew from −0.30 bp (2004–11) to +0.37 bp (2020+). The S&P shows no consistent gross edge. Details: `research/REV01_RESULTS.md`.
+- **Multiple testing:** REV01 was queued after TREND02's negative gross result, so treat it as an informed test.
+- **Recommendation:** shelve REV01 (market-order execution) and keep the holdout sealed. Revisit EURUSD short-horizon reversion only with bid/ask data (D-020) plus a passive-execution model (EXEC01).
+- **Status:** PENDING owner.
