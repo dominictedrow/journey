@@ -2,7 +2,7 @@
 
 - **Git:** `main`, `feat/b1-framework`, `feat/imom01` pushed to `origin`. **Active branch `feat/trend02`** (local; push needs owner OK).
 - **B3 progress:** IMOM01 shelved (D-022). TREND02 built and run: **fails, even gross of costs** (D-023 pending, `research/TREND02_RESULTS.md`). Holdout (from 2025-10-01) still sealed.
-- **Open owner decisions:** D-020 (data deviates from spec), D-021 (MES min size vs $25k/0.25%), D-023 (shelve TREND02?).
+- **Open owner decisions:** D-020 (data deviates from spec), D-021 (MES min size vs $25k/0.25%), D-023 resolved: TREND02 **shelved**.
 - **Next exact task:** REV01 (short-horizon mean reversion vs rolling mean/VWAP proxy, MES + EURUSD). TREND02's negative gross edge hints at intraday mean reversion.
 - Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
 - Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.

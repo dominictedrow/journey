@@ -72,4 +72,4 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 ## D-023 — 2026-10-30 — TREND02 (intraday trend) fails, even gross of costs
 - **Observed:** all four pre-registered variants (unanimous ensemble; 15m, 60m and 4h alone) lose on EURUSD and the S&P CFD at 1×/2×/3× costs, at both $25k and $300k. At zero cost they are flat to slightly negative, consistently across 2004–11, 2012–19 and 2020+. Details: `research/TREND02_RESULTS.md`.
 - **Recommendation:** shelve TREND02 and keep the holdout sealed. The negative gross edge supports testing REV01 (mean reversion) next. Slower trend (TSM01, daily/monthly) is the faithful test of the sources and would be a separate, newly registered hypothesis.
-- **Status:** PENDING owner.
+- **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-30 chat. Removed from default competition configs; mode, tests and results kept.
