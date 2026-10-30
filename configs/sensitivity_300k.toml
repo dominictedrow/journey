@@ -67,6 +67,45 @@ params = { seed = 7 }
 # label = "trend02_4h"
 # params = { speeds = [16] }
 
+# REV01 (candidate #18, ADAPTATION). Pre-registered 2026-10-30 BEFORE the first run on real data.
+# Informed by TREND02's negative gross edge: count in the multiple-testing log (D-024).
+# Sessions: S&P regular hours; EURUSD London/NY morning. All other params are mode defaults.
+[[modes]]
+name = "rev01"
+label = "rev01_spx_5m"
+symbols = ["USA500IDXUSD"]
+params = { timeframe = "5min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+
+[[modes]]
+name = "rev01"
+label = "rev01_spx_15m"
+symbols = ["USA500IDXUSD"]
+params = { timeframe = "15min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+
+[[modes]]
+name = "rev01"
+label = "rev01_spx_15m_vwap"
+symbols = ["USA500IDXUSD"]
+params = { timeframe = "15min", anchor = "vwap", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+
+[[modes]]
+name = "rev01"
+label = "rev01_fx_5m"
+symbols = ["EURUSD"]
+params = { timeframe = "5min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
+[[modes]]
+name = "rev01"
+label = "rev01_fx_15m"
+symbols = ["EURUSD"]
+params = { timeframe = "15min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
+[[modes]]
+name = "rev01"
+label = "rev01_fx_15m_vwap"
+symbols = ["EURUSD"]
+params = { timeframe = "15min", anchor = "vwap", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
 # Reporting windows (1x costs), fixed eras for stability checks.
 [[periods]]
 name = "2004-2011"

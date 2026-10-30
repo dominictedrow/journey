@@ -151,7 +151,7 @@ def run_competition(
         for mspec in cfg.modes:
             for mult in cfg.cost_multipliers:
                 mode = build_mode(mspec["name"], **mspec.get("params", {}))
-                if not mode.supports(symbol):
+                if not mode.supports(symbol) or symbol not in mspec.get("symbols", [symbol]):
                     continue
                 label = mspec.get("label", mode.name)
                 bt = Backtester(inst, cfg.risk, cfg.initial_equity, cost_multiplier=mult)
