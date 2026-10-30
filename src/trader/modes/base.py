@@ -113,6 +113,14 @@ class Mode(ABC):
     def prepare(self, bars: pd.DataFrame) -> None:  # noqa: B027 - optional hook
         """Optional causal precompute over this mode's timeframe bars."""
 
+    def decision_mask(self) -> np.ndarray | None:
+        """Bars (after ``prepare``) on which ``on_bar`` must be called; None = every bar.
+
+        Only for skipping bars the mode would ignore anyway, e.g. a mode that acts at fixed
+        clock times. It must depend on timestamps/calendar only, never on prices.
+        """
+        return None
+
     @abstractmethod
     def on_bar(self, ctx: BarContext) -> list[Intent]: ...
 

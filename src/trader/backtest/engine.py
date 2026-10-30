@@ -170,8 +170,11 @@ class Backtester:
             mtm = (mc[idx] - pos.entry_price) * pos.side.value * pos.units * inst.point_value
             return cash + mtm - pos.entry_commission
 
+        mask = mode.decision_mask()
+        ks = np.flatnonzero(mask) if mask is not None else range(len(h_end))
         decisions = 0
-        for k in range(len(h_end)):
+        for k in ks:
+            k = int(k)
             f = int(fill_idx[k])
             if f >= n:
                 break
