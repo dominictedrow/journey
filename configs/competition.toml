@@ -1,0 +1,33 @@
+# After-cost competition config. Paths are relative to the repo root.
+[run]
+data_dir = "../data/cache"        # outside the repo: datasets are never committed
+report_dir = "reports"
+artifact_dir = "artifacts"        # gitignored: trade ledgers, experiments.jsonl
+initial_equity = 25000            # hypothetical paper equity (RISK_POLICY_PROPOSAL)
+cost_multipliers = [1.0, 2.0, 3.0]
+holdout_months = 12
+
+# PROPOSED risk numbers, not yet owner-approved (RISK_POLICY_PROPOSAL.md).
+[risk]
+risk_per_trade = 0.0025
+daily_loss_limit = 0.01
+min_stop_ticks = 4
+allow_short = true
+
+[[instruments]]
+symbol = "EURUSD"
+start = "2004-01-01"
+
+[[instruments]]
+symbol = "USA500IDXUSD"
+start = "2012-01-16"              # file has a 114-day hole before this date
+
+[[modes]]
+name = "no_trade"
+
+[[modes]]
+name = "always_long"
+
+[[modes]]
+name = "random"
+params = { seed = 7 }
