@@ -85,3 +85,9 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Caveat:** these test our formalisation of a partial transcript, not the creator's method.
 - **Recommendation:** shelve all three and keep the holdout sealed. The B3 queue is now done with no survivor, so prioritise real costs and better data (D-020) before B4.
 - **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-31 chat. Removed from default competition configs; modes, tests and results kept. Owner chose real costs/data (D-020) as the next direction.
+
+## D-020 update — 2026-10-31 — cost check done; data route proposed
+- Public broker numbers (`research/BROKER_COSTS.md`) put realistic costs at MES ≈ $0.66–0.96/side all-in plus spread, and EUR/USD ≈ 1.0–1.7 pips per round trip. The assumed costs (≈1 MES pt, 1.4 pips) are realistic. **No realistic cost rescues any shelved mode**: gross edges are 4–15× smaller than best-case costs. `instruments.py` is unchanged.
+- The open question is whether the gross signals are real. That needs (1) the **ask side** of the same EUR/USD and S&P CFD files (free, if the source is Dukascopy as the format suggests), and optionally (2) **per-contract ES 1-minute data** (Databento; paid, needs an account).
+- **Question:** confirm the files' source and whether you'll export the ask side; approve or decline a Databento ES purchase.
+- **Status:** PENDING owner.

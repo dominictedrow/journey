@@ -1,6 +1,7 @@
 ## v16 — 2026-10-31 — B3 closed; direction set to real costs/data
 - Owner approved D-024 (REV01) and D-025 (J-T01..03): shelved, removed from default configs; modes, tests and results kept.
-- `feat/rev01` and `feat/joovier` pushed. Next: D-020 broker costs and data.
+- `feat/rev01` and `feat/joovier` pushed.
+- D-020 part 1: `research/BROKER_COSTS.md`. Public broker costs match the assumptions, so `instruments.py` is unchanged. Data route proposed (ask-side export; optional Databento ES), pending owner.
 
 ## v15 — 2026-10-30 — B3: Joovier modes J-T01..J-T03
 - Branch `feat/joovier` (from `feat/rev01`). Added `jt01` (HTF S/R retest + swing break), `jt02` (squeeze breakout), `jt03` (VWAP + Heikin-Ashi scalp), all INTERPRETATION, plus causal swing-pivot, HA, anchored-VWAP and HTF-alignment indicators. 23 new tests, 103 pass; ruff clean.

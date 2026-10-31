@@ -3,7 +3,7 @@
 - **Git:** `main`, `feat/b1-framework`, `feat/imom01`, `feat/trend02`, `feat/rev01`, `feat/joovier` pushed. **Active branch `feat/joovier`.**
 - **B3 done, no survivor.** All of IMOM01, TREND02, REV01 and J-T01..03 are shelved (D-022..D-025; owner approved). Only baselines stay in the default configs. Holdout (from 2025-10-01) still sealed.
 - **Owner direction (2026-10-31):** real costs and data next (D-020) before any new hypothesis or B4 ranking.
-- **Next exact task:** D-020 work. (1) Collect public broker cost numbers (MES all-in commission + fees; EUR/USD spreads) into `research/BROKER_COSTS.md` with dated sources. (2) Recommend the data to obtain (FX bid+ask, per-contract ES/MES) and the cheapest legitimate route. (3) Once owner supplies data, add bid/ask support to the loader/engine and rerun the shelved modes.
+- **Next exact task:** cost check done (`research/BROKER_COSTS.md`: assumed costs are realistic, none of the shelved modes is rescued). Waiting on owner for data (D-020 update): ask-side export of the same files, and optionally ES per-contract data. When it arrives, add bid/ask fills to the loader/engine and rerun the shelved modes unchanged.
 - **Open owner decisions:** D-020 (data), D-021 (MES min size).
 - Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
 - Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.
