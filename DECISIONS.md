@@ -79,3 +79,9 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Multiple testing:** REV01 was queued after TREND02's negative gross result, so treat it as an informed test.
 - **Recommendation:** shelve REV01 (market-order execution) and keep the holdout sealed. Revisit EURUSD short-horizon reversion only with bid/ask data (D-020) plus a passive-execution model (EXEC01).
 - **Status:** PENDING owner.
+
+## D-025 — 2026-10-30 — Joovier modes J-T01..J-T03 fail after costs
+- **Observed:** all six pre-registered INTERPRETATION variants (4f198e6) lose at 1×/2×/3× costs on $25k and $300k. The 1-minute modes (J-T01, J-T03) have ≈0 gross edge against 0.2–0.5R costs per trade. J-T02 (squeeze breakout, 10–26 trades a year) loses least (−5% to −10% at $25k), but its gross R is ≈0 or negative. Details: `research/JOOVIER_RESULTS.md`.
+- **Caveat:** these test our formalisation of a partial transcript, not the creator's method.
+- **Recommendation:** shelve all three and keep the holdout sealed. The B3 queue is now done with no survivor, so prioritise real costs and better data (D-020) before B4.
+- **Status:** PENDING owner.

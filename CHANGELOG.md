@@ -1,3 +1,8 @@
+## v15 — 2026-10-30 — B3: Joovier modes J-T01..J-T03
+- Branch `feat/joovier` (from `feat/rev01`). Added `jt01` (HTF S/R retest + swing break), `jt02` (squeeze breakout), `jt03` (VWAP + Heikin-Ashi scalp), all INTERPRETATION, plus causal swing-pivot, HA, anchored-VWAP and HTF-alignment indicators. 23 new tests, 103 pass; ruff clean.
+- Six variants pre-registered and committed before the first P&L run (4f198e6). Rules: `research/JOOVIER_MODE_RULES.md`.
+- Result: all fail after costs; no reliable gross edge (D-025, `research/JOOVIER_RESULTS.md`). Holdout untouched. D-024 (REV01) still pending.
+
 ## v14 — 2026-10-30 — B3: REV01 mode
 - TREND02 shelved per D-023; `feat/trend02` pushed.
 - Branch `feat/rev01`. Added `rev01` short-term reversion (SMA/VWAP-proxy z-score, ER trend filter, ET session windows) with 15 rule tests; competition config gains a per-variant `symbols` filter. 74 tests pass; ruff clean.
