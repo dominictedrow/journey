@@ -106,6 +106,43 @@ label = "rev01_fx_15m_vwap"
 symbols = ["EURUSD"]
 params = { timeframe = "15min", anchor = "vwap", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
+# Joovier creator modes (J-T01..J-T03, INTERPRETATION per D-018; rules in
+# research/JOOVIER_MODE_RULES.md). Pre-registered 2026-10-30 BEFORE the first P&L run on real data.
+# Source timeframes only, one variant per mode per instrument. Sessions as REV01.
+[[modes]]
+name = "jt01"
+label = "jt01_spx"
+symbols = ["USA500IDXUSD"]
+
+[[modes]]
+name = "jt01"
+label = "jt01_fx"
+symbols = ["EURUSD"]
+params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
+[[modes]]
+name = "jt02"
+label = "jt02_spx"
+symbols = ["USA500IDXUSD"]
+
+[[modes]]
+name = "jt02"
+label = "jt02_fx"
+symbols = ["EURUSD"]
+params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
+[[modes]]
+name = "jt03"
+label = "jt03_spx"
+symbols = ["USA500IDXUSD"]
+params = { vwap_anchor = "09:30" }
+
+[[modes]]
+name = "jt03"
+label = "jt03_fx"
+symbols = ["EURUSD"]
+params = { vwap_anchor = "17:00", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+
 # Reporting windows (1x costs), fixed eras for stability checks.
 [[periods]]
 name = "2004-2011"
