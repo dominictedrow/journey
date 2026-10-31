@@ -78,10 +78,10 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Observed:** all six pre-registered variants (07db1ec) lose 65–100% at 1× costs on $25k and $300k. Gross per trade is near zero (EURUSD 5m +0.03R; costs ≈0.17R). The EURUSD gross edge grew from −0.30 bp (2004–11) to +0.37 bp (2020+). The S&P shows no consistent gross edge. Details: `research/REV01_RESULTS.md`.
 - **Multiple testing:** REV01 was queued after TREND02's negative gross result, so treat it as an informed test.
 - **Recommendation:** shelve REV01 (market-order execution) and keep the holdout sealed. Revisit EURUSD short-horizon reversion only with bid/ask data (D-020) plus a passive-execution model (EXEC01).
-- **Status:** PENDING owner.
+- **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-31 chat. Removed from default competition configs; mode, tests and results kept.
 
 ## D-025 — 2026-10-30 — Joovier modes J-T01..J-T03 fail after costs
 - **Observed:** all six pre-registered INTERPRETATION variants (4f198e6) lose at 1×/2×/3× costs on $25k and $300k. The 1-minute modes (J-T01, J-T03) have ≈0 gross edge against 0.2–0.5R costs per trade. J-T02 (squeeze breakout, 10–26 trades a year) loses least (−5% to −10% at $25k), but its gross R is ≈0 or negative. Details: `research/JOOVIER_RESULTS.md`.
 - **Caveat:** these test our formalisation of a partial transcript, not the creator's method.
 - **Recommendation:** shelve all three and keep the holdout sealed. The B3 queue is now done with no survivor, so prioritise real costs and better data (D-020) before B4.
-- **Status:** PENDING owner.
+- **Status:** APPROVED — shelved. **Approver:** Owner (Dom), 2026-10-31 chat. Removed from default competition configs; modes, tests and results kept. Owner chose real costs/data (D-020) as the next direction.

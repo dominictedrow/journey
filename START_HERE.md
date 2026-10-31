@@ -1,5 +1,16 @@
-# CURRENT CHECKPOINT — v15 / 2026-10-30 (read before historical sections)
+# CURRENT CHECKPOINT — v16 / 2026-10-31 (read before historical sections)
 
+- **Git:** `main`, `feat/b1-framework`, `feat/imom01`, `feat/trend02`, `feat/rev01`, `feat/joovier` pushed. **Active branch `feat/joovier`.**
+- **B3 done, no survivor.** All of IMOM01, TREND02, REV01 and J-T01..03 are shelved (D-022..D-025; owner approved). Only baselines stay in the default configs. Holdout (from 2025-10-01) still sealed.
+- **Owner direction (2026-10-31):** real costs and data next (D-020) before any new hypothesis or B4 ranking.
+- **Next exact task:** D-020 work. (1) Collect public broker cost numbers (MES all-in commission + fees; EUR/USD spreads) into `research/BROKER_COSTS.md` with dated sources. (2) Recommend the data to obtain (FX bid+ask, per-contract ES/MES) and the cheapest legitimate route. (3) Once owner supplies data, add bid/ask support to the loader/engine and rerun the shelved modes.
+- **Open owner decisions:** D-020 (data), D-021 (MES min size).
+- Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
+- Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, paper/live orders.
+
+---
+
+# PRIOR CHECKPOINT — v15 / 2026-10-30
 - **Git:** `main`, `feat/b1-framework`, `feat/imom01`, `feat/trend02` pushed. `feat/rev01` local. **Active branch `feat/joovier`** (local, branched from `feat/rev01`; push needs owner OK).
 - **B3 queue complete, with no survivor.** IMOM01 (D-022) and TREND02 (D-023) are shelved. REV01 fails after costs (D-024 pending). J-T01/J-T02/J-T03 fail after costs (D-025 pending, `research/JOOVIER_RESULTS.md`). Holdout (from 2025-10-01) still sealed.
 - **Pattern:** 19 pre-registered variants, none survives the assumed costs. Gross edges are ≈0 at intraday horizons. Real broker costs and better data (D-020) are the highest-value inputs now.

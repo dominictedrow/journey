@@ -67,81 +67,85 @@ params = { seed = 7 }
 # label = "trend02_4h"
 # params = { speeds = [16] }
 
+# REV01 SHELVED (D-024, 2026-10-31): fails after costs, see research/REV01_RESULTS.md.
+# Mode stays registered and tested; uncomment to rerun.
 # REV01 (candidate #18, ADAPTATION). Pre-registered 2026-10-30 BEFORE the first run on real data.
 # Informed by TREND02's negative gross edge: count in the multiple-testing log (D-024).
 # Sessions: S&P regular hours; EURUSD London/NY morning. All other params are mode defaults.
-[[modes]]
-name = "rev01"
-label = "rev01_spx_5m"
-symbols = ["USA500IDXUSD"]
-params = { timeframe = "5min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_spx_5m"
+# symbols = ["USA500IDXUSD"]
+# params = { timeframe = "5min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
 
-[[modes]]
-name = "rev01"
-label = "rev01_spx_15m"
-symbols = ["USA500IDXUSD"]
-params = { timeframe = "15min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_spx_15m"
+# symbols = ["USA500IDXUSD"]
+# params = { timeframe = "15min", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
 
-[[modes]]
-name = "rev01"
-label = "rev01_spx_15m_vwap"
-symbols = ["USA500IDXUSD"]
-params = { timeframe = "15min", anchor = "vwap", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_spx_15m_vwap"
+# symbols = ["USA500IDXUSD"]
+# params = { timeframe = "15min", anchor = "vwap", entry_start = "09:45", entry_end = "15:30", flat_time = "15:55" }
 
-[[modes]]
-name = "rev01"
-label = "rev01_fx_5m"
-symbols = ["EURUSD"]
-params = { timeframe = "5min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_fx_5m"
+# symbols = ["EURUSD"]
+# params = { timeframe = "5min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
-[[modes]]
-name = "rev01"
-label = "rev01_fx_15m"
-symbols = ["EURUSD"]
-params = { timeframe = "15min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_fx_15m"
+# symbols = ["EURUSD"]
+# params = { timeframe = "15min", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
-[[modes]]
-name = "rev01"
-label = "rev01_fx_15m_vwap"
-symbols = ["EURUSD"]
-params = { timeframe = "15min", anchor = "vwap", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "rev01"
+# label = "rev01_fx_15m_vwap"
+# symbols = ["EURUSD"]
+# params = { timeframe = "15min", anchor = "vwap", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
+# J-T01..J-T03 SHELVED (D-025, 2026-10-31): fail after costs, see research/JOOVIER_RESULTS.md.
+# Modes stay registered and tested; uncomment to rerun.
 # Joovier creator modes (J-T01..J-T03, INTERPRETATION per D-018; rules in
 # research/JOOVIER_MODE_RULES.md). Pre-registered 2026-10-30 BEFORE the first P&L run on real data.
 # Source timeframes only, one variant per mode per instrument. Sessions as REV01.
-[[modes]]
-name = "jt01"
-label = "jt01_spx"
-symbols = ["USA500IDXUSD"]
+# [[modes]]
+# name = "jt01"
+# label = "jt01_spx"
+# symbols = ["USA500IDXUSD"]
 
-[[modes]]
-name = "jt01"
-label = "jt01_fx"
-symbols = ["EURUSD"]
-params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "jt01"
+# label = "jt01_fx"
+# symbols = ["EURUSD"]
+# params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
-[[modes]]
-name = "jt02"
-label = "jt02_spx"
-symbols = ["USA500IDXUSD"]
+# [[modes]]
+# name = "jt02"
+# label = "jt02_spx"
+# symbols = ["USA500IDXUSD"]
 
-[[modes]]
-name = "jt02"
-label = "jt02_fx"
-symbols = ["EURUSD"]
-params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "jt02"
+# label = "jt02_fx"
+# symbols = ["EURUSD"]
+# params = { entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
-[[modes]]
-name = "jt03"
-label = "jt03_spx"
-symbols = ["USA500IDXUSD"]
-params = { vwap_anchor = "09:30" }
+# [[modes]]
+# name = "jt03"
+# label = "jt03_spx"
+# symbols = ["USA500IDXUSD"]
+# params = { vwap_anchor = "09:30" }
 
-[[modes]]
-name = "jt03"
-label = "jt03_fx"
-symbols = ["EURUSD"]
-params = { vwap_anchor = "17:00", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
+# [[modes]]
+# name = "jt03"
+# label = "jt03_fx"
+# symbols = ["EURUSD"]
+# params = { vwap_anchor = "17:00", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
 # Reporting windows (1x costs), fixed eras for stability checks.
 [[periods]]
