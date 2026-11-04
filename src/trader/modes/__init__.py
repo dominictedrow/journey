@@ -8,6 +8,7 @@ from trader.modes.imom import IntradayMomentum
 from trader.modes.joovier import SqueezeBreakout, SupportResistanceRetest, VwapHeikinAshi
 from trader.modes.reversion import ShortTermReversion
 from trader.modes.trend import TrendEnsemble
+from trader.modes.tsm import TimeSeriesMomentum
 
 REGISTRY: dict[str, type[Mode]] = {
     m.name: m
@@ -21,6 +22,7 @@ REGISTRY: dict[str, type[Mode]] = {
         SupportResistanceRetest,
         SqueezeBreakout,
         VwapHeikinAshi,
+        TimeSeriesMomentum,
     )
 }
 

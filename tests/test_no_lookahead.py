@@ -8,13 +8,19 @@ from trader.backtest.engine import Backtester
 from trader.instruments import MES
 from trader.modes import REGISTRY, build_mode
 
-CHEAP_PARAMS = {"random": {"entry_prob": 0.5}}
+CHEAP_PARAMS = {
+    "random": {"entry_prob": 0.5},
+    "tsm01": {"lookback_months": 1, "vol_com": 5, "stop_sigma": 0.5},
+}
+# Monthly modes need more than 40 days to make (and close) trades before the cut.
+DAYS = {"tsm01": 240}
 
 
 @pytest.mark.parametrize("name", sorted(REGISTRY))
 def test_truncation_invariance(name):
-    bars = random_walk(60 * 24 * 40, seed=11, step=2.0)  # 40 days of minutes
-    cut = bars.index[0] + pd.Timedelta(days=25)
+    days = DAYS.get(name, 40)
+    bars = random_walk(60 * 24 * days, seed=11, step=2.0)  # minutes
+    cut = bars.index[0] + pd.Timedelta(days=days * 25 // 40)
     full = Backtester(MES, initial_equity=1e6).run(
         build_mode(name, **CHEAP_PARAMS.get(name, {})), bars
     )
@@ -34,8 +40,8 @@ def test_truncation_invariance(name):
 def test_prepared_features_are_causal(name):
     from trader.data.resample import resample_bars
 
-    bars = random_walk(60 * 24 * 40, seed=5)
-    mode = build_mode(name)
+    bars = random_walk(60 * 24 * DAYS.get(name, 40), seed=5)
+    mode = build_mode(name, **CHEAP_PARAMS.get(name, {}) if name == "tsm01" else {})
     htf = resample_bars(bars, mode.timeframe).drop(columns="end")
     mode.prepare(htf)
     full = {k: v.copy() for k, v in mode.feat.items()}
