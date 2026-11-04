@@ -105,4 +105,5 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Proposed:** implement limit-entry / limit-take-profit orders in the backtester (backtest-only; ≈1 day, tests first), then run variants E1 (passive entry) and E2 (passive entry + exit) once on the dev window.
 - **Affects:** order types (AGENTS.md pause item), engine, multiple-testing log (+2 variants). Holdout stays sealed.
 - **Question:** approve implementing and running EXEC01 as designed?
-- **Status:** PENDING owner.
+- **Status:** APPROVED and run. **Approver:** Owner (Dom), 2026-11-03 chat.
+- **Result:** FAIL on every pre-registered criterion except fill rate, for E1 and E2, in every scenario. Adverse selection: filled signals −0.15R over the next hour vs +0.60R for unfilled ones. Even the optimistic fill rule loses in every era. Details: `research/EXEC01_RESULTS.md`. EXEC01-on-REV01 shelved for good, and the EUR/USD reversion line is closed. Holdout untouched.
