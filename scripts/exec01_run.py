@@ -1,4 +1,5 @@
-"""EXEC01 run, exactly as pre-registered in research/EXEC01_DESIGN.md (b1dcdfe). One shot.
+"""EXEC01 run, exactly as pre-registered in research/experiments/EXEC01_DESIGN.md
+(b1dcdfe). One shot.
 
 Usage: uv run python scripts/exec01_run.py
 """

@@ -3,7 +3,7 @@
 **Verdict on development data: all six variants fail after costs.** None has a reliable gross edge either. Holdout not touched.
 
 ## Setup
-- Modes `jt01`, `jt02`, `jt03` v0.1.0. Rules: `research/JOOVIER_MODE_RULES.md`. Variants pre-registered and committed before the first P&L run (4f198e6).
+- Modes `jt01`, `jt02`, `jt03` v0.1.0. Rules: `research/experiments/JOOVIER_MODE_RULES.md`. Variants pre-registered and committed before the first P&L run (4f198e6).
 - Reports: `reports/competition_20261031T000419Z.md` ($25k), `reports/sensitivity_300k/competition_20261031T000805Z.md` ($300k).
 - Dev period: EURUSD 2004-01 → 2025-09; S&P CFD 2012-01 → 2025-09. Assumed costs: 1.4 EURUSD pips and ≈1 MES point per round trip.
 - **This tests our reading of a partial transcript, not the creator's method.**

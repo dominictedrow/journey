@@ -1,7 +1,7 @@
 """Instrument contract specs and cost assumptions.
 
 Cost numbers are ASSUMPTIONS until the owner supplies real broker figures
-(see research/DATA_REQUIREMENTS.md, "Actual broker cost numbers").
+(see research/background/DATA_REQUIREMENTS.md, "Actual broker cost numbers").
 """
 
 from __future__ import annotations

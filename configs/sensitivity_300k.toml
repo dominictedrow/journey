@@ -7,7 +7,7 @@ initial_equity = 300000           # SENSITIVITY ONLY: shows behaviour when MES m
 cost_multipliers = [1.0, 2.0, 3.0]
 holdout_months = 12
 
-# PROPOSED risk numbers, not yet owner-approved (RISK_POLICY_PROPOSAL.md).
+# PROPOSED risk numbers, not yet owner-approved (docs/planning/RISK_POLICY_PROPOSAL.md).
 [risk]
 risk_per_trade = 0.0025
 daily_loss_limit = 0.01
@@ -32,7 +32,7 @@ name = "always_long"
 name = "random"
 params = { seed = 7 }
 
-# IMOM01 SHELVED (D-022, 2026-10-30): fails after costs, see research/IMOM01_RESULTS.md.
+# IMOM01 SHELVED (D-022, 2026-10-30): fails after costs, see research/experiments/IMOM01_RESULTS.md.
 # Mode stays registered and tested; uncomment to rerun.
 # [[modes]]
 # name = "imom01"
@@ -47,7 +47,7 @@ params = { seed = 7 }
 # label = "imom01_onfh"
 # params = { require_onfh_agree = true }
 
-# TREND02 SHELVED (D-023, 2026-10-30): fails even gross of costs, see research/TREND02_RESULTS.md.
+# TREND02 SHELVED (D-023, 2026-10-30): fails even gross of costs, see research/experiments/TREND02_RESULTS.md.
 # Mode stays registered and tested; uncomment to rerun.
 # [[modes]]
 # name = "trend02"
@@ -67,7 +67,7 @@ params = { seed = 7 }
 # label = "trend02_4h"
 # params = { speeds = [16] }
 
-# REV01 SHELVED (D-024, 2026-10-31): fails after costs, see research/REV01_RESULTS.md.
+# REV01 SHELVED (D-024, 2026-10-31): fails after costs, see research/experiments/REV01_RESULTS.md.
 # Mode stays registered and tested; uncomment to rerun.
 # REV01 (candidate #18, ADAPTATION). Pre-registered 2026-10-30 BEFORE the first run on real data.
 # Informed by TREND02's negative gross edge: count in the multiple-testing log (D-024).
@@ -108,10 +108,10 @@ params = { seed = 7 }
 # symbols = ["EURUSD"]
 # params = { timeframe = "15min", anchor = "vwap", entry_start = "03:00", entry_end = "12:00", flat_time = "16:00" }
 
-# J-T01..J-T03 SHELVED (D-025, 2026-10-31): fail after costs, see research/JOOVIER_RESULTS.md.
+# J-T01..J-T03 SHELVED (D-025, 2026-10-31): fail after costs, see research/experiments/JOOVIER_RESULTS.md.
 # Modes stay registered and tested; uncomment to rerun.
 # Joovier creator modes (J-T01..J-T03, INTERPRETATION per D-018; rules in
-# research/JOOVIER_MODE_RULES.md). Pre-registered 2026-10-30 BEFORE the first P&L run on real data.
+# research/experiments/JOOVIER_MODE_RULES.md). Pre-registered 2026-10-30 BEFORE the first P&L run on real data.
 # Source timeframes only, one variant per mode per instrument. Sessions as REV01.
 # [[modes]]
 # name = "jt01"

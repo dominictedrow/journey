@@ -1,4 +1,4 @@
-"""TREND02: multi-speed EMA trend ensemble (research/INSTITUTIONAL_STRATEGY_CANDIDATES.md).
+"""TREND02: multi-speed EMA trend ensemble (research/sources/INSTITUTIONAL_STRATEGY_CANDIDATES.md).
 
 Sources #6 (Man AHL, fast vs slow EMA crossovers), #1/#2 (AQR) and #10 (CFM) document trend
 following at daily-to-monthly horizons. Their full methods are NOT yet reviewed, and none of them

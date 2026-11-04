@@ -1,6 +1,6 @@
 """Independent risk veto and position sizing.
 
-Defaults are the PROPOSED (not yet owner-approved) numbers in RISK_POLICY_PROPOSAL.md:
+Defaults are the PROPOSED (not yet owner-approved) numbers in docs/planning/RISK_POLICY_PROPOSAL.md:
 0.25% equity at stop per position, 1% daily loss breaker. Sizing formula follows that file:
 units = floor(risk_budget / (stop_distance * point_value + round_trip_cost_per_unit)).
 """

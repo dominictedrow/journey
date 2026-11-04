@@ -42,4 +42,4 @@ Source discipline: maintain publication date, accessible URL, author, captured d
 - Swaggy 2025 beginner video listing: https://www.youtube.com/watch?v=24_jcWCvptg (not watched). Legacy academy: https://www.theswagacademy.com/ (closed new enrollments).
 
 ## v8 institutional literature references
-See `research/INSTITUTIONAL_PAPER_INVENTORY.md` for exact 23 user-supplied URLs, verification status, and corrected Evans/Lyons DOI. Not all full-text research papers were accessible or fully read.
+See `research/sources/INSTITUTIONAL_PAPER_INVENTORY.md` for exact 23 user-supplied URLs, verification status, and corrected Evans/Lyons DOI. Not all full-text research papers were accessible or fully read.

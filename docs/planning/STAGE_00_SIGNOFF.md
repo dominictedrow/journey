@@ -12,7 +12,7 @@
 ## Not yet authorized / outstanding independent gates
 - **GATE A: APPROVED 2026-10-18 PDT.** Owner authorized Stage 01 research only. No broker login or orders permitted.
 - **GATE B (broker access):** Confirm provider/regulatory eligibility, data license, account age/identity rules, and approve any account creation, deposits, paid plan, API subscription or credentials access. No automatic authorization by Stage 00 approval.
-- **GATE C (quantitative risk):** Owner approves numbers in `RISK_POLICY_PROPOSAL.md` after paper-equity and instrument-specific min-size/cost checks; may revise limits.
+- **GATE C (quantitative risk):** Owner approves numbers in `docs/planning/RISK_POLICY_PROPOSAL.md` after paper-equity and instrument-specific min-size/cost checks; may revise limits.
 - **GATE D (GitHub):** Owner explicitly authorizes creation of `trading` as a **private** repo and first branch push. Verify visibility before pushing; never expose credentials or recorded course material.
 - **GATE E (Stage 06):** Separate consent before activating automated *demo* orders and verify independent protective stops and kill switch.
 - **GATE F (Stage 07):** Separate written live trading authorization after robust out-of-sample evidence, risk review, account/permissions checks and live-specific failure testing.

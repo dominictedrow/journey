@@ -1,4 +1,5 @@
-"""EXEC01 passive-execution simulator (research/EXEC01_DESIGN.md, pre-registered in b1dcdfe).
+"""EXEC01 passive-execution simulator (research/experiments/EXEC01_DESIGN.md,
+pre-registered in b1dcdfe).
 
 Runs an unchanged signal mode (REV01) but enters with a resting limit order instead of a market
 order, and optionally takes profit with a resting limit (variant E2). Backtest-only.

@@ -1,4 +1,5 @@
-"""TSM01: monthly time-series momentum (research/TSM01_DESIGN.md, pre-registered in 3b3bf52).
+"""TSM01: monthly time-series momentum (research/experiments/TSM01_DESIGN.md,
+pre-registered in 3b3bf52).
 
 ADAPTATION of Moskowitz, Ooi & Pedersen (2012) to one instrument at a time:
 - Daily bars (17:00 ET roll). Decide on the last session of each calendar month.

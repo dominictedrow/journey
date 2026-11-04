@@ -1,4 +1,5 @@
-"""PORT01 run, exactly as pre-registered in research/PORT01_DESIGN.md (cde5247). One shot.
+"""PORT01 run, exactly as pre-registered in research/experiments/PORT01_DESIGN.md
+(cde5247). One shot.
 
 Sleeve signals and vols come from scripts/tsm02_run.py unchanged (TSM02 primary).
 

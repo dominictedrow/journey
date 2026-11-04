@@ -1,4 +1,4 @@
-"""TSM01 run, exactly as pre-registered in research/TSM01_DESIGN.md (3b3bf52). One shot.
+"""TSM01 run, exactly as pre-registered in research/experiments/TSM01_DESIGN.md (3b3bf52). One shot.
 
 A. Scale-free monthly benchmark (both instruments, carry + costs).
 B. Bot run on EUR/USD through Backtester under the PROPOSED risk rules, carry added per trade.

@@ -30,15 +30,15 @@ Market data adapters (futures/forex first; optional crypto) → UTC-normalized i
 ## Stages and sequential gates
 | Stage | Detailed instructions | Deliverable | Gate |
 |---|---|---|---|
-| 00 | `stages/00_requirements.md` | Signed-off scope, risk, constraints | Human approval |
-| 01 | `stages/01_research.md` | Evidence-linked video strategy rulebooks | Human sign-off on interpretations |
-| 02 | `stages/02_design.md` | Schemas, architecture, provider POC, threat model | Human architecture approval |
-| 03 | `stages/03_data.md` | Validated reproducible history and streaming | Quality gate |
-| 04 | `stages/04_features.md` | Creator and control indicators with unit tests | Interpretations approved |
-| 05 | `stages/05_models_backtests.md` | Baselines, SVM, walk-forward net-cost report; conditional RNN | Statistical evaluation gate |
-| 06 | `stages/06_paper.md` | Long-running paper execution and reliability results | Human paper/live decision |
-| 07 | `stages/07_live.md` | Optional explicitly approved limited capital launch | Written live permission |
-| 08 | `stages/08_operations.md` | Monitoring, incident response, retraining/release process | Operating review |
+| 00 | `docs/stages/00_requirements.md` | Signed-off scope, risk, constraints | Human approval |
+| 01 | `docs/stages/01_research.md` | Evidence-linked video strategy rulebooks | Human sign-off on interpretations |
+| 02 | `docs/stages/02_design.md` | Schemas, architecture, provider POC, threat model | Human architecture approval |
+| 03 | `docs/stages/03_data.md` | Validated reproducible history and streaming | Quality gate |
+| 04 | `docs/stages/04_features.md` | Creator and control indicators with unit tests | Interpretations approved |
+| 05 | `docs/stages/05_models_backtests.md` | Baselines, SVM, walk-forward net-cost report; conditional RNN | Statistical evaluation gate |
+| 06 | `docs/stages/06_paper.md` | Long-running paper execution and reliability results | Human paper/live decision |
+| 07 | `docs/stages/07_live.md` | Optional explicitly approved limited capital launch | Written live permission |
+| 08 | `docs/stages/08_operations.md` | Monitoring, incident response, retraining/release process | Operating review |
 
 ## Cross-stage acceptance criteria
 - Every important strategy rule is traced to a timestamped source or explicitly tagged an unverified interpretation.
@@ -53,7 +53,7 @@ Market data adapters (futures/forex first; optional crypto) → UTC-normalized i
 
 ## Approved scope versus pending design
 Approved: intraday, both long/short, futures/forex priority, crypto candidate, dedicated mini PC, paper-first, later on-screen dashboard, stage-gated agent autonomy.
-Pending: exact contracts/pairs, broker/data entitlements, capital/risk limits, market sessions, dashboard controls, acceptance metrics. See `REQUIREMENTS_DRAFT.md` and `ARCHITECTURE_OPTIONS.md`.
+Pending: exact contracts/pairs, broker/data entitlements, capital/risk limits, market sessions, dashboard controls, acceptance metrics. See `docs/planning/REQUIREMENTS_DRAFT.md` and `docs/planning/ARCHITECTURE_OPTIONS.md`.
 
 ## Suggested initial defaults — NOT approved
 Python 3.12; containerized Linux service; PostgreSQL or parquet storage depending on scale; scikit-learn LinearSVC + calibrated validation score; 1/5/15-minute bars for discovery; CPU first; limited symbol universe; long/short paper accounts subject to supported broker instruments; 0 live exposure. These are options, not locked specifications.
@@ -78,4 +78,4 @@ Stage 03+: require staged demonstrations: recorded replay, deterministic backtes
 Stage 06: paper execution only after explicit risk-envelope approval and broker-account verification. Stage 07: a *new* live-money approval independent of all previous approvals.
 
 ## v8 research addition (authorized within existing Stage 01; no implementation approval)
-Stage 01 now includes primary-source institutional research in parallel with creator video analysis. Stage 02 must accommodate multiple independent, plug-in signal engines and a regime/risk overlay; Stage 05 must run apples-to-apples chronological after-cost competitions and treat long-horizon findings as distinct from intraday evidence. See `research/INSTITUTIONAL_STRATEGY_CANDIDATES.md`. The existing stages and risk/authorization gates stay in force.
+Stage 01 now includes primary-source institutional research in parallel with creator video analysis. Stage 02 must accommodate multiple independent, plug-in signal engines and a regime/risk overlay; Stage 05 must run apples-to-apples chronological after-cost competitions and treat long-horizon findings as distinct from intraday evidence. See `research/sources/INSTITUTIONAL_STRATEGY_CANDIDATES.md`. The existing stages and risk/authorization gates stay in force.

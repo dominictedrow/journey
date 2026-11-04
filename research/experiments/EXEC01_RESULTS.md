@@ -2,7 +2,7 @@
 
 **Verdict: FAIL on the pre-registered criteria, in both variants, in every scenario.** Shelved for good per the design. Holdout untouched.
 
-Design and pass criteria: `research/EXEC01_DESIGN.md` (b1dcdfe). Code committed before the run: `src/trader/backtest/passive.py`, `scripts/exec01_run.py` (d28280f). Data: Dukascopy EUR/USD 1-minute bid/ask, dev window 2004-01 → 2025-09. Ledgers: `artifacts/exec01/`.
+Design and pass criteria: `research/experiments/EXEC01_DESIGN.md` (b1dcdfe). Code committed before the run: `src/trader/backtest/passive.py`, `scripts/exec01_run.py` (d28280f). Data: Dukascopy EUR/USD 1-minute bid/ask, dev window 2004-01 → 2025-09. Ledgers: `artifacts/exec01/`.
 
 ## Results (rev01_fx_5m signals, $25k unless noted)
 | Variant | Scenario | Fill rate | Trades | E[R]/trade | Return | Fwd R filled / unfilled |

@@ -1,4 +1,4 @@
-"""REV01: short-horizon mean reversion (research/INSTITUTIONAL_STRATEGY_CANDIDATES.md).
+"""REV01: short-horizon mean reversion (research/sources/INSTITUTIONAL_STRATEGY_CANDIDATES.md).
 
 Source #18 (Robeco, "Reversing the trend of short-term reversal") concerns monthly
 cross-sectional stock reversal. It motivates the idea only. Every rule here is our

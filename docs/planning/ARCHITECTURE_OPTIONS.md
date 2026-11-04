@@ -21,4 +21,4 @@ Linux x86-64 mini PC (provisionally 16–32 GB RAM, NVMe, wired network and UPS)
 - Rehearse network outage, broker loss, partial fill and delayed market events; confirm safe recovery.
 
 ## Sources
-See `SOURCES.md`; verify current terms and region-specific eligibility before payment or account setup.
+See `docs/evaluations/SOURCES.md`; verify current terms and region-specific eligibility before payment or account setup.

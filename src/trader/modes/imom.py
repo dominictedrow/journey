@@ -1,6 +1,6 @@
 """IMOM01: market intraday momentum (Baltussen, Da, Lammers, Martens 2021, JFE 142:377-403).
 
-Rules and page references: research/PAPER_19_IMOM_METHODS_REVIEW.md.
+Rules and page references: research/sources/PAPER_19_IMOM_METHODS_REVIEW.md.
 
 Source rule (Eq. 12, p. 385): long the last 30 minutes of the cash session if the return from the
 previous 16:00 ET close to 15:30 ET (r_ROD) is positive, short otherwise, flat at the close.

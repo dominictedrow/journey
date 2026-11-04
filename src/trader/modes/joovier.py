@@ -1,8 +1,9 @@
-"""Joovier creator modes J-T01..J-T03 (research/JOOVIER_TRANSCRIPT_FINDINGS.md).
+"""Joovier creator modes J-T01..J-T03 (research/sources/JOOVIER_TRANSCRIPT_FINDINGS.md).
 
 Provenance INTERPRETATION (D-018). The source is a partial third-party transcript of one course,
 with no chart playback. Every threshold here is ours, fixed before the first real-data run, and
-documented in research/JOOVIER_MODE_RULES.md. These modes must never be called creator-faithful.
+documented in research/experiments/JOOVIER_MODE_RULES.md. These modes must never be called
+creator-faithful.
 The creator's volume cues are dropped: the CFD/FX files carry tick volume only (D-020).
 
 Shared conventions:

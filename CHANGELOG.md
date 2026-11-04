@@ -1,30 +1,37 @@
+## v17 — 2026-11-04 — strategy search closed; plan-only rebalancer; docs reorganized
+- Branch `feat/bidask-data`: Dukascopy bid/ask fetcher and per-bar observed spreads in the backtester (a215881). REV01 EUR/USD rerun on bid/ask stays shelved (D-026). EXEC01 passive limit-order simulator; fails on adverse selection (D-027). TSM01 monthly momentum mode; fails (D-028). TSM02 24-ETF diversified trend (Yahoo data); modest edge, fails the bar (D-029). PORT01 core SPY + trend sleeve; halves drawdown but trails 60/40 (D-030). Every design was pre-registered and committed before its run. Holdout untouched.
+- Branch `feat/rebalancer`: plan-only rebalancing bot, `trader rebalance` and `trader rebalance-backtest`, Yahoo fetcher moved into the package, `configs/holdings.toml` gitignored (D-031).
+- Docs reorganized: root planning/evaluation/setup docs and `stages/` moved under `docs/`; `research/` split into `background/`, `experiments/`, `sources/` and `templates/`. All references in docs, configs, scripts and code comments updated. Pure moves plus link edits.
+- Tests: `uv run pytest` → 142 passed; `uv run ruff check .` clean.
+- No accounts, purchases, broker connections or orders.
+
 ## v16 — 2026-10-31 — B3 closed; direction set to real costs/data
 - Owner approved D-024 (REV01) and D-025 (J-T01..03): shelved, removed from default configs; modes, tests and results kept.
 - `feat/rev01` and `feat/joovier` pushed.
-- D-020 part 1: `research/BROKER_COSTS.md`. Public broker costs match the assumptions, so `instruments.py` is unchanged. Data route proposed (ask-side export; optional Databento ES), pending owner.
+- D-020 part 1: `research/background/BROKER_COSTS.md`. Public broker costs match the assumptions, so `instruments.py` is unchanged. Data route proposed (ask-side export; optional Databento ES), pending owner.
 
 ## v15 — 2026-10-30 — B3: Joovier modes J-T01..J-T03
 - Branch `feat/joovier` (from `feat/rev01`). Added `jt01` (HTF S/R retest + swing break), `jt02` (squeeze breakout), `jt03` (VWAP + Heikin-Ashi scalp), all INTERPRETATION, plus causal swing-pivot, HA, anchored-VWAP and HTF-alignment indicators. 23 new tests, 103 pass; ruff clean.
-- Six variants pre-registered and committed before the first P&L run (4f198e6). Rules: `research/JOOVIER_MODE_RULES.md`.
-- Result: all fail after costs; no reliable gross edge (D-025, `research/JOOVIER_RESULTS.md`). Holdout untouched. D-024 (REV01) still pending.
+- Six variants pre-registered and committed before the first P&L run (4f198e6). Rules: `research/experiments/JOOVIER_MODE_RULES.md`.
+- Result: all fail after costs; no reliable gross edge (D-025, `research/experiments/JOOVIER_RESULTS.md`). Holdout untouched. D-024 (REV01) still pending.
 
 ## v14 — 2026-10-30 — B3: REV01 mode
 - TREND02 shelved per D-023; `feat/trend02` pushed.
 - Branch `feat/rev01`. Added `rev01` short-term reversion (SMA/VWAP-proxy z-score, ER trend filter, ET session windows) with 15 rule tests; competition config gains a per-variant `symbols` filter. 74 tests pass; ruff clean.
 - Six variants pre-registered and committed before the first real-data run (07db1ec).
-- Result: fails after costs; small gross EURUSD reversion edge (D-024, `research/REV01_RESULTS.md`). Holdout untouched.
+- Result: fails after costs; small gross EURUSD reversion edge (D-024, `research/experiments/REV01_RESULTS.md`). Holdout untouched.
 
 ## v13 — 2026-10-30 — B3: TREND02 mode
 - IMOM01 shelved per D-022 (removed from default configs). Branches `main`, `feat/b1-framework` and `feat/imom01` pushed to `origin`.
 - Branch `feat/trend02`. Added `trend02` multi-speed EMA ensemble with 10 rule tests; generic look-ahead tests cover it. 60 tests pass; ruff clean.
 - Competition reporting eras changed to 2004–11 / 2012–19 / 2020+.
-- Result: TREND02 fails even gross of costs (D-023, `research/TREND02_RESULTS.md`). Holdout untouched.
+- Result: TREND02 fails even gross of costs (D-023, `research/experiments/TREND02_RESULTS.md`). Holdout untouched.
 
 ## v12 — 2026-10-30 — B3: IMOM01 mode
 - Branch `feat/imom01` (from `feat/b1-framework`). Tests: 48 passed; ruff clean.
 - Added `imom01` mode (paper #19 adaptation) with 10 rule tests (signal timing, DST, early close, missing bars, forced 16:00 flat, lag, ONFH filter). Engine: optional `Mode.decision_mask` so clock-time modes skip irrelevant bars.
 - Competition: labelled variants, per-period breakdown (paper sample vs post-paper), `configs/sensitivity_300k.toml` sizing sensitivity.
-- Result: IMOM01 fails after costs (D-022, `research/IMOM01_RESULTS.md`). Holdout untouched.
+- Result: IMOM01 fails after costs (D-022, `research/experiments/IMOM01_RESULTS.md`). Holdout untouched.
 
 ## v11 — 2026-10-30 — Phase B1 framework built
 - Branch/HEAD: `main`, no commits (commit awaits owner OK). Tests: `uv run pytest` → 36 passed; `ruff check` clean.
@@ -40,7 +47,7 @@
 
 ## v9 — 2026-10-19
 - Branch/HEAD: none (directory is not a Git repo; no Git operations authorized). Tests: none (docs-only).
-- 01-02b-3 (partial): full-text methods review of paper #19 Baltussen, Da, Lammers, Martens (2021, JFE 142:377–403) → `research/PAPER_19_IMOM_METHODS_REVIEW.md`.
+- 01-02b-3 (partial): full-text methods review of paper #19 Baltussen, Da, Lammers, Martens (2021, JFE 142:377–403) → `research/sources/PAPER_19_IMOM_METHODS_REVIEW.md`.
 - Updated inventory #19 access status, IMOM01 register row (EURUSD unsupported; 16:00 ET exit), Stage 01 checklist, START_HERE checkpoint.
 - No accounts, purchases, orders, external connections or Git actions.
 

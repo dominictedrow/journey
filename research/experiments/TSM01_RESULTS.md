@@ -2,7 +2,7 @@
 
 **Verdict: FAIL on the pre-registered criteria for both instruments (L = 12).** Shelved. Holdout untouched.
 
-Design: `research/TSM01_DESIGN.md` (3b3bf52). Code committed before the run (b8573dd): `src/trader/modes/tsm.py`, `scripts/tsm01_run.py`. Carry comes from FRED `DFF`/`ECBDFR`, with a 1%/yr retail FX markup and a 1.7% S&P dividend yield (both ASSUMPTIONS). Outputs: `artifacts/tsm01/`.
+Design: `research/experiments/TSM01_DESIGN.md` (3b3bf52). Code committed before the run (b8573dd): `src/trader/modes/tsm.py`, `scripts/tsm01_run.py`. Carry comes from FRED `DFF`/`ECBDFR`, with a 1%/yr retail FX markup and a 1.7% S&P dividend yield (both ASSUMPTIONS). Outputs: `artifacts/tsm01/`.
 
 ## A. Scale-free benchmark (10% vol target, carry + costs)
 | Instrument | L | Costs | Sharpe | Ann. return | Eras |

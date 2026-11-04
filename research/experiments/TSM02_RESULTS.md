@@ -2,7 +2,7 @@
 
 **Verdict: FAIL on the pre-registered criteria (2 of 4 missed), but the weakest failure so far.** The diversified trend edge exists in free data at about Sharpe 0.3, with a negative correlation to the S&P. It's below our bar and fragile to costs. Holdout untouched.
 
-Design: `research/TSM02_DESIGN.md` (dc7f575). Script: `scripts/tsm02_run.py` (3b9d3be). **Disclosure:** the script was run once just before it was committed, because a lint failure stopped the commit step. It's committed byte-for-byte as run. Data: Yahoo daily adjusted closes, 24 ETFs, dev window 2005-11 → 2025-09 (12–24 assets live, median 24). Monthly returns: `artifacts/tsm02/monthly_returns.csv`.
+Design: `research/experiments/TSM02_DESIGN.md` (dc7f575). Script: `scripts/tsm02_run.py` (3b9d3be). **Disclosure:** the script was run once just before it was committed, because a lint failure stopped the commit step. It's committed byte-for-byte as run. Data: Yahoo daily adjusted closes, 24 ETFs, dev window 2005-11 → 2025-09 (12–24 assets live, median 24). Monthly returns: `artifacts/tsm02/monthly_returns.csv`.
 
 ## Results (after 5 bp costs and 0.5% borrow)
 | Variant | Sharpe | Return at 10% vol | Corr. with SPY | start–2012 | 2013–19 | 2020–25 |

@@ -2,7 +2,7 @@
 
 **Status:** pre-registered 2026-10-30, before any P&L run on real data. Code: `src/trader/modes/joovier.py`, tests: `tests/test_joovier.py`.
 
-**Provenance: `INTERPRETATION` (D-018).** The source is a partial third-party transcript of one Joovier course (`research/JOOVIER_TRANSCRIPT_FINDINGS.md`). Nobody has watched the video or checked the charts. Every number below is ours. A loss here tests **our reading** of the rules, not the creator's method. Do not describe these modes as creator-faithful.
+**Provenance: `INTERPRETATION` (D-018).** The source is a partial third-party transcript of one Joovier course (`research/sources/JOOVIER_TRANSCRIPT_FINDINGS.md`). Nobody has watched the video or checked the charts. Every number below is ours. A loss here tests **our reading** of the rules, not the creator's method. Do not describe these modes as creator-faithful.
 
 ## Shared conventions
 | Item | Rule | Why |

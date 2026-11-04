@@ -1,4 +1,4 @@
-"""TSM02 run, exactly as pre-registered in research/TSM02_DESIGN.md (dc7f575). One shot.
+"""TSM02 run, exactly as pre-registered in research/experiments/TSM02_DESIGN.md (dc7f575). One shot.
 
 Usage: uv run python scripts/tsm02_run.py
 """

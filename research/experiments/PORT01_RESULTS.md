@@ -2,7 +2,7 @@
 
 **Verdict: FAIL (4 of 5 criteria missed).** It halves SPY's drawdown, but its Sharpe is below both SPY and a plain 60/40. Holdout untouched.
 
-Design: `research/PORT01_DESIGN.md` (cde5247). Script committed before the run: `scripts/port01_run.py` (1d80ddf). Dev window 2005-11 → 2025-09. Outputs: `artifacts/port01/`.
+Design: `research/experiments/PORT01_DESIGN.md` (cde5247). Script committed before the run: `scripts/port01_run.py` (1d80ddf). Dev window 2005-11 → 2025-09. Outputs: `artifacts/port01/`.
 
 ## Results
 | Portfolio | Sharpe | CAGR | Vol | Max DD | start–2012 | 2013–19 | 2020–25 |
