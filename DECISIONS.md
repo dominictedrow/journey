@@ -122,3 +122,11 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Scope:** research-only. It adds no instruments to the bot, and trading it would need a separate owner decision.
 - **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat.
 - **Result:** FAIL (2 of 4 criteria). Sharpe +0.29 (needs 0.40) and +0.11 at 3× costs (needs 0.20). It's positive in every era and has −0.17 correlation with SPY, so the diversified edge exists but is modest and cost-sensitive. Commodities carry it. The script was run once just before being committed, which is disclosed in 3b9d3be. Details: `research/TSM02_RESULTS.md`. Trend line closed, holdout untouched.
+
+## D-030 — 2026-11-03 — Goal change: core SPY + trend sleeve portfolio (PORT01)
+- **Context:** eight hypothesis families found no standalone edge after costs. The robust findings are the S&P risk premium and a modest diversified trend sleeve (TSM02: Sharpe 0.29, −0.17 correlation with SPY).
+- **Approved change (owner, 2026-11-03 chat):** option (b). The bot's goal becomes a risk-controlled core-long portfolio with a diversifying trend sleeve, judged against buy-and-hold SPY. Owner choices: **margin account, ≤ 2× gross**; **SPY ETF** as the core (replacing MES for the equity exposure); **backtest only** for now.
+- **Affects:** markets/instruments (ETFs instead of MES/EURUSD, for this portfolio), leverage (≤ 2×), shorting (sleeve), success metric. Still binding: D-000 (no live money), D-015 (stops, see note), and no accounts, orders or paper trading without separate approval.
+- **D-015 note:** a monthly-rebalanced ETF portfolio has no per-trade protective stop. If PORT01 passes, the risk controls (drawdown breaker, gross cap) must be agreed as D-015's equivalent before Stage 06.
+- **Design:** `research/PORT01_DESIGN.md`.
+- **Status:** APPROVED (direction and choices). Results to follow.
