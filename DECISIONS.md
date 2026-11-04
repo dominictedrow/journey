@@ -107,3 +107,9 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Question:** approve implementing and running EXEC01 as designed?
 - **Status:** APPROVED and run. **Approver:** Owner (Dom), 2026-11-03 chat.
 - **Result:** FAIL on every pre-registered criterion except fill rate, for E1 and E2, in every scenario. Adverse selection: filled signals −0.15R over the next hour vs +0.60R for unfilled ones. Even the optimistic fill rule loses in every era. Details: `research/EXEC01_RESULTS.md`. EXEC01-on-REV01 shelved for good, and the EUR/USD reversion line is closed. Holdout untouched.
+
+## D-028 — 2026-11-03 — TSM01 monthly time-series momentum (pre-registered)
+- **Context:** after EXEC01 closed the intraday EUR/USD line, owner chose slower trend (TSM01) and approved building it (chat, 2026-11-03).
+- **Design:** `research/TSM01_DESIGN.md`. 12-month sign (primary) and 3-month (secondary), monthly rebalance, 3σ_monthly protective stop, carry from free FRED rates (DFF, ECBDFR) plus an assumed 1%/yr retail FX markup.
+- **Structural finding:** at a 3σ monthly stop, one MES contract risks ≈ $3,400, so the PROPOSED 0.25% rule needs ≈ $1.4M of equity. The S&P is tested only as a scale-free benchmark (extends D-021).
+- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat. Results to follow.
