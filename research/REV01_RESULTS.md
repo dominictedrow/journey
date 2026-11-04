@@ -30,3 +30,27 @@ EURUSD is a single-sided price series (D-020). Quote noise in single-sided 1-min
 - **Real broker costs:** 1.4 pips is a guess. Even 0.3 pips round trip would still exceed the +0.06-pip gross edge.
 
 **Recommendation:** shelve REV01 as a market-order strategy. Keep the holdout sealed. Note EURUSD short-horizon reversion as the one gross signal found so far; it's worth revisiting only with bid/ask data and a passive-execution model.
+
+---
+
+# Addendum 2026-11-03: EUR/USD rerun on Dukascopy bid/ask data
+
+Script `scripts/rev01_bidask.py`. Same three pre-registered FX variants (07db1ec), same dev window (2004-01 → 2025-09-30), holdout still sealed, same risk config, $25k. Data: `data/dukascopy/EURUSD_1m_bidask.parquet` (fetched by `scripts/fetch_dukascopy.py`). The supplied `EURUSD.csv` matches its bid side on 99.9995% of bars, so it was **bid** (D-020 resolved for EUR/USD). New engine option: observed per-bar half-spread `(ask_open − bid_open)/2` at each fill (median 0.25 pip); stops still trigger on mid.
+
+| Variant | Gross on bid (bp/trade) | Gross on mid | Observed spread, no slip | + 0.2 pip slip | Assumed 1.4 pip RT |
+|---|---|---|---|---|---|
+| rev01_fx_5m | +0.083 | +0.086 | −0.29 (−96%) | −1.02 (−99%) | −1.17 (−99%) |
+| rev01_fx_15m | −0.062 | −0.085 | −0.57 (−78%) | −0.89 (−94%) | −1.26 (−98%) |
+| rev01_fx_15m_vwap | −0.055 | −0.092 | −0.58 (−76%) | −0.91 (−93%) | −1.25 (−98%) |
+
+Bracketed: total return at $25k. Average modeled round-trip cost with observed spread ≈0.6 pip.
+
+**fx_5m by era (bp/trade):** gross on mid −0.29 / +0.26 / +0.37 (2004–11 / 2012–19 / 2020+); at observed spread −1.01 / **+0.10 / +0.13** (+0.014–0.016 R).
+
+## Findings
+1. **The gross edge is not a single-sided-quote artifact.** Mid bars give the same result as bid bars. The post-2012 5-minute reversion signal is real in the data.
+2. **It still fails after costs.** Even at Dukascopy's own ECN spread with zero slippage, the full period loses 96% (2004–11 is strongly negative). Retail costs (≈1.0–1.7 pips RT, `BROKER_COSTS.md`) wipe it out in every era.
+3. **Post-2012 at ECN spreads with no slippage is about break-even (+0.1 bp/trade).** This is a post-hoc era slice, not a pre-registered result, and the margin is far too thin to survive any slippage.
+4. Under costs, trade counts fall as equity collapses (minimum-size rejections), so the full-period cost rows are path-dependent; the era rows for 2012+ are close to the gross trade counts.
+
+**Verdict unchanged:** REV01 stays shelved as a market-order strategy. The only route left is one that earns rather than pays the spread (EXEC01, passive limit entries), which is a new hypothesis needing owner approval. Holdout untouched.

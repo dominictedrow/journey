@@ -91,3 +91,10 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - The open question is whether the gross signals are real. That needs (1) the **ask side** of the same EUR/USD and S&P CFD files (free, if the source is Dukascopy as the format suggests), and optionally (2) **per-contract ES 1-minute data** (Databento; paid, needs an account).
 - **Question:** confirm the files' source and whether you'll export the ask side; approve or decline a Databento ES purchase.
 - **Status:** PENDING owner.
+
+## D-026 — 2026-11-03 — REV01 EUR/USD rerun on real bid/ask data
+- **Data:** Dukascopy EUR/USD 1-minute bid **and** ask, 2003-05 → 2026-11, fetched free with `scripts/fetch_dukascopy.py` (no account). The supplied `EURUSD.csv` is the **bid** side (99.9995% exact match); timestamps UTC, bar-start confirmed. The S&P CFD ask side is 82% downloaded; Dukascopy has blocked this IP for now.
+- **Observed:** the gross reversion edge is identical on mid and bid bars, so it is not a quote-noise artifact. At Dukascopy's own spread (≈0.6 pip RT, no slippage) fx_5m loses 96% over 2004–2025 but is ≈ break-even after 2012 (+0.1 bp/trade, post-hoc slice). At retail costs it fails in every era. Details: `research/REV01_RESULTS.md` addendum.
+- **Engine change:** `Backtester.run(..., half_spread=arr)` optional observed per-bar spread; default behaviour unchanged (2 tests added, full suite 105 pass).
+- **Recommendation:** keep REV01 shelved. The one open route is EXEC01 (passive limit entries that earn the spread), modelled on this bid/ask data. That is a new pre-registered hypothesis and changes order types, so it needs owner approval.
+- **Status:** PENDING owner (approve EXEC01 design, or close the EUR/USD reversion line).
