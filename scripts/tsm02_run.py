@@ -103,7 +103,8 @@ def main() -> None:
     base, n_live = portfolio(mret, vol, 12)
     start = n_live[n_live >= MIN_ASSETS].index.min()
     print(f"universe {len(UNIVERSE)} ETFs; dev window {start} -> 2025-09 "
-          f"(first month with >= {MIN_ASSETS} assets); holdout sealed from {HOLDOUT.date()}")  # fmt: skip
+          f"(first month with >= {MIN_ASSETS} assets); "
+          f"holdout sealed from {HOLDOUT.date()}")  # fmt: skip
     print(f"assets live: min {n_live[start:].min()}, median {n_live[start:].median():.0f}")
 
     def window(r):
