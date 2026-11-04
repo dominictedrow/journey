@@ -114,3 +114,10 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Structural finding:** at a 3σ monthly stop, one MES contract risks ≈ $3,400, so the PROPOSED 0.25% rule needs ≈ $1.4M of equity. The S&P is tested only as a scale-free benchmark (extends D-021).
 - **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat.
 - **Result:** FAIL for both instruments (L=12). EUR/USD Sharpe −0.09. S&P Sharpe +0.52 but below buy-and-hold's +0.90 (long in 86% of months). EUR/USD L=3 hits 0.30 at 1× only (secondary, can't pass alone). The bot run shows the 0.25% risk rule gives ≈7% exposure at monthly stops, so P&L is negligible. Details: `research/TSM01_RESULTS.md`. Shelved, holdout untouched.
+
+## D-029 — 2026-11-03 — TSM02 diversified trend on 24 ETFs (research-only, pre-registered)
+- **Context:** TSM01 showed single-market trend is weak. Owner chose to test whether the published diversified edge exists in free data (chat, 2026-11-03).
+- **Data:** Yahoo public chart endpoint (no account, unofficial, personal research), 24 ETFs across equities, bonds, commodities and currencies. Fetched with `scripts/fetch_yahoo.py` into `../data/yahoo/`, outside the repo.
+- **Design:** `research/TSM02_DESIGN.md`. MOP-2012 rules (12-month sign, 40%/σ per asset, equal-weighted), 5 bp costs and 0.5% borrow. The criteria include low correlation with SPY.
+- **Scope:** research-only. It adds no instruments to the bot, and trading it would need a separate owner decision.
+- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat. Results to follow.
