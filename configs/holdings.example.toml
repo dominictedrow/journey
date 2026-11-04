@@ -1,0 +1,10 @@
+# Copy to configs/holdings.toml (gitignored: it's your real account data) and fill in.
+[cash]
+usd = 25000.00
+
+[positions]           # shares held, by ticker
+# SPY = 20.5
+# IEF = 100
+
+[account]
+# peak_value = 26000  # highest account value you've seen, for the drawdown alert

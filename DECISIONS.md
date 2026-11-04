@@ -131,3 +131,11 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Design:** `research/PORT01_DESIGN.md`.
 - **Status:** APPROVED (direction and choices).
 - **Result:** PORT01 FAIL (4 of 5). Sharpe 0.57 vs SPY 0.66 and 60/40 0.72. Max DD 23.6% vs SPY 50.8% (the one pass). Retail leverage costs absorb the sleeve's diversification. Details: `research/PORT01_RESULTS.md`. The strategy search ends: no active strategy beat a simple allocation after costs. Holdout untouched.
+
+## D-031 — 2026-11-03 — Plan-only rebalancing bot
+- **Context:** PORT01 ended the strategy search (D-030). Owner chose to repurpose the bot as a rebalancer for a plain allocation (chat, 2026-11-03).
+- **Built:** `trader rebalance` (holdings + latest prices → proposed trades) and `trader rebalance-backtest` (rule comparison). The default allocation is 60/40 SPY/IEF with a ±5pp drift band. Package: `src/trader/rebalance/`.
+- **Safety:** plan-only. No broker connection, credentials or orders; trades are placed manually by the owner. It defaults to NO TRADE on missing, stale (>4 days) or suspicious (>20% one-day move) prices, and never plans shorts, margin or sells above holdings. It has a drawdown alert. `configs/holdings.toml` is gitignored (personal account data).
+- **D-015 equivalent:** a long-only, unlevered allocation has no per-trade stop. Its risk controls are the allocation itself, the drift band and the drawdown alert. Owner to confirm this is acceptable before any automation beyond planning.
+- **Not authorized:** broker API connection, automated order submission, paper trading (Stage 06 gate unchanged).
+- **Status:** APPROVED (owner chose option 2). Built and tested; awaiting owner review.

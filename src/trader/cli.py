@@ -1,4 +1,7 @@
-"""Command line: ``trader import-data | data-report | compete``. Research only; no order paths."""
+"""Command line: ``trader import-data | data-report | compete | rebalance | rebalance-backtest``.
+
+Research and planning only; no order paths.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +11,7 @@ from pathlib import Path
 from trader.competition import CompetitionConfig, run_competition
 from trader.data.loaders import cache_path, import_csv, load_bars, snapshot_metadata
 from trader.data.quality import quality_report
+from trader.rebalance.cli import add_parsers as add_rebalance_parsers
 
 DEFAULT_CONFIG = Path("configs/competition.toml")
 
@@ -33,7 +37,11 @@ def main(argv: list[str] | None = None) -> None:
         help="include the sealed holdout. Use once, for the final evaluation only.",
     )  # fmt: skip
 
+    add_rebalance_parsers(sub)
+
     args = p.parse_args(argv)
+    if hasattr(args, "func"):
+        raise SystemExit(args.func(args))
     if args.cmd == "import-data":
         out = import_csv(args.csv, args.symbol, args.cache_dir)
         print(f"wrote {out}: {snapshot_metadata(out)}")

@@ -1,0 +1,14 @@
+# Plan-only rebalancer (D-031). Target allocation + rules. Weights + cash_target must sum to 1.
+# 60/40 SPY/IEF was the best risk-adjusted portfolio in the PORT01 comparison (D-030).
+[allocation]
+SPY = 0.60
+IEF = 0.40
+
+[rules]
+band_abs = 0.05            # rebalance when any weight is >5 percentage points off target
+min_trade_usd = 50         # skip trades smaller than this
+cash_target = 0.0          # fraction of the account to keep in cash
+fractional = true          # your broker supports fractional shares
+max_price_age_days = 4     # older prices -> NO TRADE (covers long weekends)
+max_daily_move = 0.20      # bigger one-day move -> treat as bad data, NO TRADE
+drawdown_alert = 0.20      # warn when the account is 20% below its recorded peak
