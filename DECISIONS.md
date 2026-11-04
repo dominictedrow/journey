@@ -98,3 +98,11 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Engine change:** `Backtester.run(..., half_spread=arr)` optional observed per-bar spread; default behaviour unchanged (2 tests added, full suite 105 pass).
 - **Recommendation:** keep REV01 shelved. The one open route is EXEC01 (passive limit entries that earn the spread), modelled on this bid/ask data. That is a new pre-registered hypothesis and changes order types, so it needs owner approval.
 - **Status:** PENDING owner (approve EXEC01 design, or close the EUR/USD reversion line).
+
+## D-027 — 2026-11-03 — EXEC01 passive-execution test of REV01 EUR/USD (design pre-registered)
+- **Context:** owner said yes to designing EXEC01 after D-026. Design and pass criteria are fixed in `research/EXEC01_DESIGN.md` before any code or P&L run.
+- **Key finding while designing:** commission-based accounts (OANDA core, ≈1.0 pip RT commission) can't beat a ≈0.3–0.4 pip gross edge however good the execution is. Only spread-only retail pricing is tested, with an ECN floor as an upper bound.
+- **Proposed:** implement limit-entry / limit-take-profit orders in the backtester (backtest-only; ≈1 day, tests first), then run variants E1 (passive entry) and E2 (passive entry + exit) once on the dev window.
+- **Affects:** order types (AGENTS.md pause item), engine, multiple-testing log (+2 variants). Holdout stays sealed.
+- **Question:** approve implementing and running EXEC01 as designed?
+- **Status:** PENDING owner.
