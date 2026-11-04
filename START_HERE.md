@@ -1,4 +1,14 @@
-# CURRENT CHECKPOINT — v17 / 2026-11-04 (read before historical sections)
+# CURRENT CHECKPOINT — v18 / 2026-11-04 (read before historical sections)
+
+- **Git:** active branch `feat/alpaca-paper` (from `feat/rebalancer`).
+- **D-032 approved:** the rebalancer can run on an Alpaca **paper** account with automatic orders, `trader paper-rebalance [--loop]`. Live trading is unreachable (see D-032 guardrails). First real paper run 2026-11-04: $100k paper account bought 60/40 SPY/IEF, both orders filled.
+- **Next exact task:** let `paper-rebalance --loop` run (owner's Mac, checks 30 min after each open); review `reports/paper/runs.jsonl` and the Alpaca paper dashboard periodically. Most runs should be NO_TRADE_NEEDED.
+- Practice holdings file (`configs/holdings.toml`, hypothetical $50k at 60/40 from 2026-11-04) still works with `trader rebalance`.
+- Still prohibited without separate approval: live trading or live keys, other brokers, accounts created by the agent, purchases, data subscriptions.
+
+---
+
+# PRIOR CHECKPOINT — v17 / 2026-11-04
 
 - **Git:** all branches pushed except `feat/joovier` (1 local commit: the D-020 cost check). `feat/bidask-data` holds D-026..D-030; **active branch `feat/rebalancer`** (D-031, branched from it).
 - **Strategy search closed (D-026..D-030).** On real bid/ask data REV01 stays shelved (D-026); EXEC01 passive fills fail on adverse selection (D-027); TSM01 monthly trend fails (D-028); TSM02 diversified 24-ETF trend is real but modest, Sharpe 0.29 (D-029); PORT01 core SPY + trend sleeve trails 60/40 (D-030). No active strategy beat a simple allocation after costs. Holdout (from 2025-10-01) still sealed.

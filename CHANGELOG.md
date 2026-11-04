@@ -1,3 +1,9 @@
+## v18 — 2026-11-04 — Alpaca paper rebalancing (D-032)
+- Branch `feat/alpaca-paper`. Added `trader paper-rebalance [--loop]`: stdlib Alpaca client (paper URL hard-coded; live keys/URLs/accounts refused) and a runner that sends the D-031 plan as paper market orders, sells before buys, buys as notional orders after sells fill. Logs to `reports/paper/` (gitignored). `.env.example` gains the Alpaca key names.
+- Rebalancer: halted plans without `--refresh` now suggest it; owner confirmed the D-031 risk controls as the D-015 equivalent.
+- Tests: `uv run pytest` → 161 passed (18 new, fake client, no network); ruff clean.
+- First real paper run 2026-11-04: SPY/IEF buys filled on the owner's paper account. No accounts created by the agent, no live endpoints, no real-money orders.
+
 ## v17 — 2026-11-04 — strategy search closed; plan-only rebalancer; docs reorganized
 - Branch `feat/bidask-data`: Dukascopy bid/ask fetcher and per-bar observed spreads in the backtester (a215881). REV01 EUR/USD rerun on bid/ask stays shelved (D-026). EXEC01 passive limit-order simulator; fails on adverse selection (D-027). TSM01 monthly momentum mode; fails (D-028). TSM02 24-ETF diversified trend (Yahoo data); modest edge, fails the bar (D-029). PORT01 core SPY + trend sleeve; halves drawdown but trails 60/40 (D-030). Every design was pre-registered and committed before its run. Holdout untouched.
 - Branch `feat/rebalancer`: plan-only rebalancing bot, `trader rebalance` and `trader rebalance-backtest`, Yahoo fetcher moved into the package, `configs/holdings.toml` gitignored (D-031).

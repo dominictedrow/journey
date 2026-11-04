@@ -1,6 +1,8 @@
-"""Command line: ``trader import-data | data-report | compete | rebalance | rebalance-backtest``.
+"""Command line: ``trader import-data | data-report | compete | rebalance | rebalance-backtest
+| paper-rebalance``.
 
-Research and planning only; no order paths.
+Research and planning, plus ``paper-rebalance``: orders to Alpaca PAPER only (D-032).
+No live order path exists.
 """
 
 from __future__ import annotations

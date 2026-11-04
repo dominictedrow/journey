@@ -24,3 +24,4 @@ __pycache__/
 # personal account data
 configs/holdings.toml
 reports/rebalance/
+reports/paper/

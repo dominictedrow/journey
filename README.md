@@ -56,3 +56,18 @@ uv run trader rebalance-backtest           # compare rebalancing rules on 2005-2
 - **Rule:** rebalance only when a weight is more than 5 percentage points off target (`configs/rebalance.toml`). Trades under $50 are skipped. Anything you hold that isn't in the allocation is flagged for sale.
 - **Safety:** the planner halts with NO TRADE on a missing price, a price more than 4 days old, or a one-day move over 20% (likely bad data). It warns when the account is 20% below the peak you've recorded. It never plans shorts, margin, or sells larger than what you hold.
 - **History (60/40, 2005–2025, 5 bp per trade):** the ±5% band rebalanced 16 times (8% turnover a year) with a 31.8% max drawdown. Never rebalancing looks similar on paper, but by 2025 it had drifted to 86% stocks.
+
+## Paper rebalancing on Alpaca (D-032)
+
+Runs the same rebalancer against an **Alpaca paper account** (fake money) and sends the trades there automatically. It cannot reach live trading: it refuses live keys, live URLs and non-paper accounts.
+
+1. Sign up at alpaca.markets, open the **Paper** account, and generate an API key (the key ID starts with `PK`).
+2. `cp .env.example .env`, then fill in `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` (`.env` is gitignored).
+3. Run it:
+
+```bash
+uv run trader paper-rebalance                       # one check now
+caffeinate -i uv run trader paper-rebalance --loop  # keep running; checks 30 min after each open
+```
+
+Each run prints the account's weights and any orders sent, and appends to `reports/paper/runs.jsonl`. With the market closed it shows the plan and sends nothing.

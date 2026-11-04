@@ -1,9 +1,11 @@
-"""``trader rebalance`` and ``trader rebalance-backtest``. Plans only; never sends orders."""
+"""``trader rebalance`` / ``rebalance-backtest`` (plan only) and ``paper-rebalance``
+(Alpaca PAPER orders only, D-032)."""
 
 from __future__ import annotations
 
 import datetime as dt
 import json
+import time
 from dataclasses import asdict
 from pathlib import Path
 
@@ -91,6 +93,36 @@ def run_backtest(args) -> int:
     return 0
 
 
+def run_paper(args) -> int:
+    from trader.broker.alpaca import AlpacaError, AlpacaPaper
+    from trader.rebalance import paper
+
+    cfg = RebalanceConfig.from_toml(args.config)
+    try:
+        client = AlpacaPaper.from_env(args.env)  # refuses anything that isn't paper
+    except AlpacaError as e:
+        print(f"Not started: {e}")
+        return 2
+    while True:
+        try:
+            rec = paper.run_once(client, cfg, args.state_dir)
+            print(paper.format_run(rec), flush=True)
+            status = rec["plan"]["status"]
+        except AlpacaError as e:  # network/API trouble: report, retry next session
+            print(f"[{dt.datetime.now(paper.ET):%Y-%m-%d %H:%M}] Alpaca error: {e}", flush=True)
+            status = "ERROR"
+        if not args.loop:
+            return 0 if status in ("OK", "NO_TRADE_NEEDED") else 2
+        try:
+            wake = paper.next_run_time(client.clock())
+        except AlpacaError:
+            wake = dt.datetime.now(paper.ET) + dt.timedelta(hours=1)
+        print(f"Next check: {wake.astimezone(paper.ET):%a %Y-%m-%d %H:%M} ET (Ctrl+C to stop)",
+              flush=True)  # fmt: skip
+        while dt.datetime.now(paper.ET) < wake:  # short sleeps survive laptop sleep/wake
+            time.sleep(min(300, max(1, (wake - dt.datetime.now(paper.ET)).total_seconds())))
+
+
 def add_parsers(sub) -> None:
     p = sub.add_parser("rebalance", help="plan trades to bring holdings back to target (no orders)")
     p.add_argument("--config", type=Path, default=Path("configs/rebalance.toml"))
@@ -101,6 +133,17 @@ def add_parsers(sub) -> None:
     p.add_argument("--no-sell", action="store_true", help="only use cash; never sell")
     p.add_argument("--today", help="override today's date (YYYY-MM-DD), for testing")
     p.set_defaults(func=run_plan)
+
+    a = sub.add_parser(
+        "paper-rebalance", help="rebalance an Alpaca PAPER account (sends paper orders, never live)"
+    )
+    a.add_argument("--config", type=Path, default=Path("configs/rebalance.toml"))
+    a.add_argument("--env", type=Path, default=Path(".env"))
+    a.add_argument("--state-dir", type=Path, default=Path("reports/paper"))
+    a.add_argument(
+        "--loop", action="store_true", help="keep running: one check 30 min after each market open"
+    )
+    a.set_defaults(func=run_paper)
 
     b = sub.add_parser("rebalance-backtest", help="compare rebalancing rules on history")
     b.add_argument("--config", type=Path, default=Path("configs/rebalance.toml"))
