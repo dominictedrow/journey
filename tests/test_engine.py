@@ -188,3 +188,20 @@ def test_mode_can_tolerate_scheduled_halt(free_mes):
 
     res = Backtester(free_mes).run(Patient({1: [Enter(Side.LONG, stop=95.0)]}), bars)
     assert res.rejections == {} and res.trades.iloc[0].entry_time == idx[2]
+
+
+def test_observed_half_spread_replaces_constant():
+    bars = make_bars([FLAT, FLAT, (100.0, 100.5, 97.0, 98.0), FLAT])
+    hs = [0.0, 0.5, 1.0, 0.0]
+    mode = Scripted({0: [Enter(Side.LONG, stop=98.0)]})
+    res = Backtester(MES, cost_multiplier=2.0).run(mode, bars, half_spread=hs)
+    t = res.trades.iloc[0]
+    # entry on bar 1 pays its own half-spread (x2), stop on bar 2 pays bar 2's (x2); slippage x2.
+    assert t.entry_price == pytest.approx(100.0 + 2 * 0.5 + 2 * MES.slippage)
+    assert t.exit_price == pytest.approx(98.0 - 2 * 1.0 - 2 * MES.slippage)
+
+
+def test_observed_half_spread_validated():
+    bars = make_bars([FLAT, FLAT])
+    with pytest.raises(ValueError):
+        Backtester(MES).run(Scripted({}), bars, half_spread=[0.1])

@@ -10,6 +10,9 @@ Timing rules (no look-ahead):
   after the decision time, e.g. across weekends and data holes. Exits always execute.
 - Costs: market/stop fills pay half-spread + slippage, limit (target) fills pay half-spread,
   plus commission per unit per side. Data prices are treated as mid.
+- Optional observed spread: ``run(..., half_spread=arr)`` replaces the instrument's constant
+  half-spread with a per-1-minute-bar value (price units, e.g. (ask_open - bid_open) / 2), scaled
+  by the cost multiplier. Stop/target triggers are still checked on the (mid) bar prices.
 """
 
 from __future__ import annotations
@@ -82,19 +85,37 @@ class Backtester:
         self.risk = RiskLayer(risk or RiskConfig(), self.inst)
         self.initial_equity = initial_equity
         self.max_entry_delay = max_entry_delay
+        self._hs: np.ndarray | None = None
 
     # ---- fill helpers -------------------------------------------------------------------
-    def _market_fill(self, price: float, buy: bool) -> float:
-        adj = self.inst.half_spread + self.inst.slippage
+    def _half_spread(self, idx: int) -> float:
+        if self._hs is None:
+            return self.inst.half_spread
+        return float(self._hs[idx]) * self.cost_multiplier
+
+    def _market_fill(self, price: float, buy: bool, idx: int) -> float:
+        adj = self._half_spread(idx) + self.inst.slippage
         return price + adj if buy else price - adj
 
-    def _limit_fill(self, price: float, buy: bool) -> float:
-        return price + self.inst.half_spread if buy else price - self.inst.half_spread
+    def _limit_fill(self, price: float, buy: bool, idx: int) -> float:
+        hs = self._half_spread(idx)
+        return price + hs if buy else price - hs
 
     # ---- main loop ----------------------------------------------------------------------
-    def run(self, mode: Mode, bars: pd.DataFrame) -> BacktestResult:
+    def run(
+        self, mode: Mode, bars: pd.DataFrame, half_spread: np.ndarray | None = None
+    ) -> BacktestResult:
         inst = self.inst
         n = len(bars)
+        if half_spread is not None:
+            half_spread = np.asarray(half_spread, dtype=float)
+            if (
+                half_spread.shape != (n,)
+                or not np.isfinite(half_spread).all()
+                or (half_spread < 0).any()
+            ):
+                raise ValueError("half_spread must be a finite, non-negative array, one per bar")
+        self._hs = half_spread
         m_ns = bars.index.asi8
         mo, mh, ml, mc = (bars[c].to_numpy() for c in ("open", "high", "low", "close"))
 
@@ -156,11 +177,11 @@ class Backtester:
                     if stop_hit[j]:
                         gapped = (o <= pos.stop) if pos.side is Side.LONG else (o >= pos.stop)
                         raw = o if gapped else pos.stop
-                        close(pos, idx, raw, self._market_fill(raw, exit_buy), "stop")
+                        close(pos, idx, raw, self._market_fill(raw, exit_buy, idx), "stop")
                     else:
                         gapped = (o >= pos.target) if pos.side is Side.LONG else (o <= pos.target)
                         raw = o if gapped else pos.target
-                        close(pos, idx, raw, self._limit_fill(raw, exit_buy), "target")
+                        close(pos, idx, raw, self._limit_fill(raw, exit_buy, idx), "target")
                     pos = None
             cur = max(cur, to)
 
@@ -214,7 +235,7 @@ class Backtester:
                 elif isinstance(intent, Exit):
                     if pos is not None:
                         raw = mo[f]
-                        close(pos, f, raw, self._market_fill(raw, pos.side is Side.SHORT),
+                        close(pos, f, raw, self._market_fill(raw, pos.side is Side.SHORT, f),
                               intent.reason or "exit")  # fmt: skip
                         pos = None
                 elif isinstance(intent, Enter):
@@ -225,7 +246,7 @@ class Backtester:
                         rejections["stale_data"] += 1
                         continue
                     raw = mo[f]
-                    fill = self._market_fill(raw, intent.side is Side.LONG)
+                    fill = self._market_fill(raw, intent.side is Side.LONG, f)
                     day_loss = max(0.0, (day_start_equity - eq) / day_start_equity)
                     decision = self.risk.approve_entry(intent, fill, eq, day_loss)
                     if not decision.approved:
@@ -246,7 +267,13 @@ class Backtester:
         scan(n)
         if pos is not None:
             raw = mc[n - 1]
-            close(pos, n - 1, raw, self._market_fill(raw, pos.side is Side.SHORT), "end_of_data")
+            close(
+                pos,
+                n - 1,
+                raw,
+                self._market_fill(raw, pos.side is Side.SHORT, n - 1),
+                "end_of_data",
+            )
             pos = None
 
         trade_df = pd.DataFrame(trades, columns=TRADE_COLUMNS)
