@@ -120,4 +120,5 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Data:** Yahoo public chart endpoint (no account, unofficial, personal research), 24 ETFs across equities, bonds, commodities and currencies. Fetched with `scripts/fetch_yahoo.py` into `../data/yahoo/`, outside the repo.
 - **Design:** `research/TSM02_DESIGN.md`. MOP-2012 rules (12-month sign, 40%/σ per asset, equal-weighted), 5 bp costs and 0.5% borrow. The criteria include low correlation with SPY.
 - **Scope:** research-only. It adds no instruments to the bot, and trading it would need a separate owner decision.
-- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat. Results to follow.
+- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat.
+- **Result:** FAIL (2 of 4 criteria). Sharpe +0.29 (needs 0.40) and +0.11 at 3× costs (needs 0.20). It's positive in every era and has −0.17 correlation with SPY, so the diversified edge exists but is modest and cost-sensitive. Commodities carry it. The script was run once just before being committed, which is disclosed in 3b9d3be. Details: `research/TSM02_RESULTS.md`. Trend line closed, holdout untouched.
