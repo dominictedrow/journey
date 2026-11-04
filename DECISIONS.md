@@ -129,4 +129,5 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Affects:** markets/instruments (ETFs instead of MES/EURUSD, for this portfolio), leverage (≤ 2×), shorting (sleeve), success metric. Still binding: D-000 (no live money), D-015 (stops, see note), and no accounts, orders or paper trading without separate approval.
 - **D-015 note:** a monthly-rebalanced ETF portfolio has no per-trade protective stop. If PORT01 passes, the risk controls (drawdown breaker, gross cap) must be agreed as D-015's equivalent before Stage 06.
 - **Design:** `research/PORT01_DESIGN.md`.
-- **Status:** APPROVED (direction and choices). Results to follow.
+- **Status:** APPROVED (direction and choices).
+- **Result:** PORT01 FAIL (4 of 5). Sharpe 0.57 vs SPY 0.66 and 60/40 0.72. Max DD 23.6% vs SPY 50.8% (the one pass). Retail leverage costs absorb the sleeve's diversification. Details: `research/PORT01_RESULTS.md`. The strategy search ends: no active strategy beat a simple allocation after costs. Holdout untouched.
