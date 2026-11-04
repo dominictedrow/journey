@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib as plt
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
+
 
 
 def preprocess(file_path, batch_size,chunk):
@@ -22,26 +22,13 @@ def preprocess(file_path, batch_size,chunk):
 
     return x, y
 
-#Config: This is really cool since you can basically define all hyperparameters for any model in one place. Could probably work
-#for something else. @dataclass creates the constructor automatically so you can just list the attributes.
-@dataclass
-class GPTConfig:
-    vocab_size: int = 50304
-    block_size: int = 256     # context length (max sequence length)
-    n_embd: int = 384
-    n_head: int = 8
-    n_layer: int = 6
-    hidden_dim: int = 1024
-
-cfg = GPTConfig()
-
 #Feed Forward Layer:
 class Feed(nn.Module):
-    def __init__(self,cfg):
+    def __init__(self, shape, hidden_dim):
         super().__init__()
-        self.layer1 = nn.Linear(cfg.embd, cfg.hidden_dim)
-        self.layer2 =  nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
-        self.layer3 =  nn.Linear(cfg.hidden_dim, cfg.embd)
+        self.layer1 = nn.Linear(shape, hidden_dim)
+        self.layer2 =  nn.Linear(hidden_dim, hidden_dim)
+        self.layer3 =  nn.Linear(hidden_dim, shape)
     
 
     def forward(self,x):
@@ -51,28 +38,28 @@ class Feed(nn.Module):
 
 #MutliHeaded Attention Layer definition:
 class AttentionBlock(nn.Module):
-    def __init__(self, cfg): 
+    def __init__(self, embed_dim1): 
         super().__init__()
-        self.embed_dim1 = cfg.embd
-        self.layern1 = nn.LayerNorm(cfg.embd) #Creates a LayerNorm layer
-        self.layern2 = nn.LayerNorm(cfg.embd) #Creates a LayerNorm layer
-        self.attention = nn.MultiheadAttention(embed_dim=cfg.embd, num_heads=8, batch_first=True)
-        self.linear = Feed(cfg.embd, 3*cfg.embd)
-        
+        self.embed_dim1 = embed_dim1
+        self.layern1 = nn.LayerNorm(embed_dim1) #Creates a LayerNorm layer
+        self.layern2 = nn.LayerNorm(embed_dim1) #Creates a LayerNorm layer
+        self.attention = nn.MultiheadAttention(embed_dim=embed_dim1, num_heads=8, batch_first=True)
+        self.linear = Feed(embed_dim1, 3*embed_dim1)
+        self.apply(self.init_weights) #initializes weights
     
 
         
-    def forward(self, x):  
-        y = self.attention(x)
-        y = self.layern1(x+y)
-        y = self.linear(y)
-        y = self.layern2(x+y)
-        return y
+    def forward(self, x,embed_dim1):  
+        x = self.attention(x)
+        x = self.linear(self.layern1(x))
+        x = self.layern2(x)
+        x = x[:,embed_dim1]
+        return x
 
 class Output(nn.Module):
-    def __init__(self,cfg):
+    def __init__(self,embed_dim1):
         super().__init__()
-        self.linear = nn.Linear(cfg.embd)
+        self.linear = nn.Linear(embed_dim1)
         self.softmax = nn.Softmax()
 
     def forward(self,x):
@@ -80,7 +67,7 @@ class Output(nn.Module):
         return x
 
 
-def init_weights(m):
+def init_weights(self,m):
         if isinstance(m, nn.Linear):
             nn.init.kaiming_normal(m.weight)
             if m.bias is not None:
@@ -93,11 +80,10 @@ def init_weights(m):
             nn.init.kaiming_normal(m.weights)
 
 class Model(nn.Module):
-    def __init__(self, cfg):
-        super().__init__()
-        self.token_emb = nn.Embedding(cfg.vocab_size, cfg.embed_dim1) #Creates a token embedding layer
-        self.pos_emb = nn.Embedding(cfg.batch_size, cfg.embed_dim1) #Creates a positional embedding layer
-        self.out = Output(cfg.embd)
+    def __init__(self,  vocab_size, batch_size, embed_dim1):
+        self.token_emb = nn.Embedding(vocab_size, embed_dim1) #Creates a token embedding layer
+        self.pos_emb = nn.Embedding(batch_size, embed_dim1) #Creates a positional embedding layer
+        self.out = Output(embed_dim1)
         self.blocks = nn.ModuleList([AttentionBlock for _ in range(32)])
 
 
@@ -142,6 +128,9 @@ TO DO LIST:
 - Debug the whole thing
 - Add regularization
 - Add dropout 
+- Add a weight init function
+- Add residual connections
+- Add a better intializer
 - Add mixed precision training?
 
 
