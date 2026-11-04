@@ -112,4 +112,5 @@ Owner asked for a new repo named `trader` with a remote. Created private `domini
 - **Context:** after EXEC01 closed the intraday EUR/USD line, owner chose slower trend (TSM01) and approved building it (chat, 2026-11-03).
 - **Design:** `research/TSM01_DESIGN.md`. 12-month sign (primary) and 3-month (secondary), monthly rebalance, 3σ_monthly protective stop, carry from free FRED rates (DFF, ECBDFR) plus an assumed 1%/yr retail FX markup.
 - **Structural finding:** at a 3σ monthly stop, one MES contract risks ≈ $3,400, so the PROPOSED 0.25% rule needs ≈ $1.4M of equity. The S&P is tested only as a scale-free benchmark (extends D-021).
-- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat. Results to follow.
+- **Status:** APPROVED to build and run. **Approver:** Owner (Dom), 2026-11-03 chat.
+- **Result:** FAIL for both instruments (L=12). EUR/USD Sharpe −0.09. S&P Sharpe +0.52 but below buy-and-hold's +0.90 (long in 86% of months). EUR/USD L=3 hits 0.30 at 1× only (secondary, can't pass alone). The bot run shows the 0.25% risk rule gives ≈7% exposure at monthly stops, so P&L is negligible. Details: `research/TSM01_RESULTS.md`. Shelved, holdout untouched.
