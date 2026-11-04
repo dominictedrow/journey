@@ -137,3 +137,20 @@ def test_band_rule_keeps_weights_near_target():
     eq, n_band, turn = simulate(px, {"SPY": 0.6, "IEF": 0.4}, "band", 0.05)
     assert n_none == 0 and n_band > 0 and turn > 0
     assert (eq > 0).all()
+
+
+def test_cli_halt_without_refresh_suggests_refresh(tmp_path, capsys):
+    import argparse
+    from pathlib import Path
+
+    from trader.rebalance.cli import run_plan
+
+    configs = Path(__file__).resolve().parents[1] / "configs"
+    args = argparse.Namespace(
+        config=configs / "rebalance.toml", holdings=configs / "holdings.example.toml",
+        data_dir=tmp_path / "empty", out=tmp_path / "out", refresh=False, no_sell=False,
+        today="2026-11-04",
+    )  # fmt: skip
+    assert run_plan(args) == 2
+    out = capsys.readouterr().out
+    assert "NO TRADE" in out and "--refresh" in out

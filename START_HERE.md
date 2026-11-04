@@ -4,7 +4,7 @@
 - **Strategy search closed (D-026..D-030).** On real bid/ask data REV01 stays shelved (D-026); EXEC01 passive fills fail on adverse selection (D-027); TSM01 monthly trend fails (D-028); TSM02 diversified 24-ETF trend is real but modest, Sharpe 0.29 (D-029); PORT01 core SPY + trend sleeve trails 60/40 (D-030). No active strategy beat a simple allocation after costs. Holdout (from 2025-10-01) still sealed.
 - **Current product (D-031):** plan-only rebalancer, `trader rebalance` / `trader rebalance-backtest`, default 60/40 SPY/IEF with a ±5pp band. No broker connection; the owner places trades by hand. See `README.md` → Rebalancer.
 - **Repo layout:** planning/evaluation/setup docs and stage files live under `docs/`; research under `research/{background,experiments,sources,templates}/`.
-- **Next exact task:** owner reviews the rebalancer and confirms its risk controls (allocation, drift band, drawdown alert) as the D-015 equivalent. Open owner decisions: D-020 (Databento ES purchase, now low value), D-021 (MES min size, moot unless MES returns).
+- **Next exact task:** rebalancer reviewed; owner confirmed its risk controls as the D-015 equivalent (2026-11-04). Owner fills in `configs/holdings.toml` (gitignored) with the real account and runs `trader rebalance --refresh`. Optional: make the missing-price HALT message suggest `--refresh`. Open owner decisions: D-020 (Databento ES purchase, now low value), D-021 (MES min size, moot unless MES returns).
 - Venv at `~/.venvs/trader` (`UV_PROJECT_ENVIRONMENT`); run instructions in `README.md`.
 - Still prohibited without separate approval: accounts, purchases, data subscriptions, broker connections, automated orders, paper/live trading.
 

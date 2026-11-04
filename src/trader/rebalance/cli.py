@@ -60,6 +60,8 @@ def run_plan(args) -> int:
     plan = plan_rebalance(cfg, holdings, latest_quotes(symbols, args.data_dir), today,
                           no_sell=args.no_sell)  # fmt: skip
     print(format_plan(plan, cfg))
+    if plan.status == "HALT" and not args.refresh:
+        print("Tip: rerun with --refresh to download current prices for every ticker you hold.")
     args.out.mkdir(parents=True, exist_ok=True)
     out = args.out / f"plan_{today.isoformat()}.json"
     out.write_text(json.dumps({"date": today.isoformat(), **asdict(plan)}, indent=2, default=str))
