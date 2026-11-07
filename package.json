@@ -1,0 +1,119 @@
+{
+  "name": "instana",
+  "version": "0.1.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/build.mjs",
+    "build:dmg": "npm run build && electron-builder --mac --arm64",
+    "build:pkg": "npm run build && node scripts/build-pkg.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "npm rebuild better-sqlite3 && drizzle-kit migrate",
+    "electron:rebuild": "HOME=~/.electron-gyp npm_config_target=41.5.1 npm_config_arch=arm64 npm_config_disturl=https://artifacts.electronjs.org/headers/dist npm_config_runtime=electron npm_config_build_from_source=true npm rebuild better-sqlite3 keytar hnswlib-node"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "esbuild": "^0.25.0",
+    "@playwright/test": "^1.60.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/node": "^25.7.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.5.1",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9",
+    "electron-updater": "^6.8.3",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.12",
+    "vite-plugin-electron": "^0.29.1",
+    "vite-plugin-electron-renderer": "^0.14.7",
+    "vitest": "^4.1.6"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
+    "apify-client": "^2.23.3",
+    "autoprefixer": "^10.5.0",
+    "axios": "^1.16.0",
+    "better-sqlite3": "^12.9.0",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "electron-store": "^11.0.2",
+    "express": "^5.2.1",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "framer-motion": "^12.38.0",
+    "hnswlib-node": "^3.0.0",
+    "keytar": "^7.9.0",
+    "lucide-react": "^1.14.0",
+    "node-cron": "^4.2.1",
+    "openai": "^6.37.0",
+    "pino": "^10.3.1",
+    "postcss": "^8.5.14",
+    "react": "^19.2.6",
+    "react-colorful": "^5.7.0",
+    "react-dom": "^19.2.6",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.15.0",
+    "recharts": "^3.8.1",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.3.0",
+    "tesseract.js": "^7.0.0",
+    "winston": "^3.19.0",
+    "zustand": "^5.0.13"
+  },
+  "keywords": [],
+  "description": "",
+  "build": {
+    "appId": "com.dominictedrow.instana",
+    "productName": "Instana",
+    "copyright": "Copyright © 2025 Dominic Tedrow",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**",
+      "node_modules/keytar/**",
+      "node_modules/hnswlib-node/**",
+      "node_modules/sharp/**",
+      "node_modules/tesseract.js/**",
+      "node_modules/ffmpeg-static/**",
+      "node_modules/ffprobe-static/**"
+    ],
+    "files": [
+      "dist/**",
+      "!dist/mac-arm64/**",
+      "dist-electron/**",
+      "drizzle/**",
+      "assets/**",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "eng.traineddata", "to": "traineddata/eng.traineddata" },
+      { "from": "eng.traineddata.gz", "to": "traineddata/eng.traineddata.gz" }
+    ],
+    "mac": {
+      "identity": null,
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "target": [{ "target": "pkg", "arch": ["arm64"] }]
+    },
+    "dmg": {
+      "title": "Instana",
+      "window": { "width": 540, "height": 380 }
+    },
+    "pkg": {
+      "scripts": "build/pkg-scripts",
+      "installLocation": "/Applications"
+    }
+  }
+}
