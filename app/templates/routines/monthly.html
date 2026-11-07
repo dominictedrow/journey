@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Monthly Deep-Dive{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:24px;">
+  <h1 class="page-title">Monthly Deep-Dive</h1>
+  <p class="text-muted text-sm">~2 hours · Full top-down re-run plus portfolio maintenance. Run first weekend of the month.</p>
+</div>
+
+{# ── Portfolio summary ── #}
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+  Portfolio Summary
+</div>
+<div class="grid-4" style="margin-bottom:28px;">
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Grand Total</div>
+    <div class="card-value">${{ '%.0f' | format(portfolio.grand_total) }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ portfolio.open_count }} open position{{ 's' if portfolio.open_count != 1 else '' }}</div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Stocks</div>
+    <div class="card-value">${{ '%.0f' | format(portfolio.stock_total) }}</div>
+    <div style="font-size:12px;margin-top:4px;color:{% if portfolio.stock_pnl >= 0 %}var(--green){% else %}var(--red){% endif %};">
+      {{ '+' if portfolio.stock_pnl >= 0 else '' }}${{ '%.0f' | format(portfolio.stock_pnl) }} unrealised
+    </div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Crypto</div>
+    <div class="card-value">${{ '%.0f' | format(portfolio.crypto_total) }}</div>
+    <div style="font-size:12px;margin-top:4px;color:{% if portfolio.crypto_pnl >= 0 %}var(--green){% else %}var(--red){% endif %};">
+      {{ '+' if portfolio.crypto_pnl >= 0 else '' }}${{ '%.0f' | format(portfolio.crypto_pnl) }} unrealised
+    </div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Cash Available</div>
+    <div class="card-value">${{ '%.0f' | format(portfolio.stock_cash + portfolio.crypto_cash) }}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+      ${{ '%.0f' | format(portfolio.stock_cash) }} stocks · ${{ '%.0f' | format(portfolio.crypto_cash) }} crypto
+    </div>
+  </div>
+</div>
+
+{# ── Tier 1 series ── #}
+{% if t1_series %}
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+  Tier 1 — Macro Regime
+</div>
+<div class="grid-3" style="margin-bottom:28px;">
+  {% for s in t1_series %}
+  <div class="card" style="padding:14px;">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+      {{ s.metric_name or s.series_id }}
+    </div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data | length > 1 %}8px{% else %}0{% endif %};">
+      <span style="font-size:18px;font-weight:700;color:{% if s.value is not none %}var(--text){% else %}var(--muted){% endif %};">
+        {{ s.value | fmt_num if s.value is not none else '—' }}
+      </span>
+      {% if s.text_value %}
+      <span style="font-size:12px;color:var(--muted);">{{ s.text_value }}</span>
+      {% endif %}
+      {% if s.week_pct is not none %}
+      <span style="font-size:11px;font-weight:600;color:{% if s.week_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+        {{ '+' if s.week_pct >= 0 else '' }}{{ '%.1f' | format(s.week_pct) }}%
+      </span>
+      {% endif %}
+    </div>
+    {% if s.chart_data | length > 1 %}
+    <div style="position:relative;height:38px;">
+      <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Tier 2 crypto/other ── #}
+{% if other_t2 %}
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+  Tier 2 — Crypto &amp; On-Chain
+</div>
+<div class="grid-4" style="margin-bottom:28px;">
+  {% for s in other_t2 %}
+  <div class="card" style="padding:14px;">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+      {{ s.metric_name or s.series_id }}
+    </div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data | length > 1 %}8px{% else %}0{% endif %};">
+      <span style="font-size:17px;font-weight:700;color:{% if s.value is not none %}var(--text){% else %}var(--muted){% endif %};">
+        {{ s.value | fmt_num if s.value is not none else '—' }}
+      </span>
+      {% if s.text_value %}
+      <span style="font-size:12px;color:var(--muted);">{{ s.text_value }}</span>
+      {% endif %}
+    </div>
+    {% if s.chart_data | length > 1 %}
+    <div style="position:relative;height:34px;">
+      <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── IMF GDP + CPI side by side ── #}
+{% if imf_gdp or imf_cpi %}
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+  IMF Forecasts
+</div>
+<div class="grid-2" style="margin-bottom:28px;">
+
+  {# GDP table #}
+  <div class="card" style="padding:16px;">
+    <div style="font-weight:600;font-size:13px;margin-bottom:12px;">GDP Growth % Forecast</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:5px 0;color:var(--muted);font-weight:500;">Country</th>
+          <th style="text-align:right;padding:5px 0;color:var(--muted);font-weight:500;">Forecast</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in imf_gdp %}
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:6px 0;color:var(--text);">
+            {{ s.metric_name | replace('IMF GDP — ', '') | replace(' (2031)', '') if s.metric_name else s.series_id }}
+          </td>
+          <td style="padding:6px 0;text-align:right;font-weight:600;
+                     color:{% if s.value is not none and s.value >= 0 %}var(--green){% elif s.value is not none %}var(--red){% else %}var(--muted){% endif %};">
+            {% if s.value is not none %}{{ '+' if s.value >= 0 else '' }}{{ '%.1f' | format(s.value|float) }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# CPI table #}
+  <div class="card" style="padding:16px;">
+    <div style="font-weight:600;font-size:13px;margin-bottom:12px;">CPI Inflation % Forecast</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:5px 0;color:var(--muted);font-weight:500;">Country</th>
+          <th style="text-align:right;padding:5px 0;color:var(--muted);font-weight:500;">Forecast</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in imf_cpi %}
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:6px 0;color:var(--text);">
+            {{ s.metric_name | replace('IMF CPI — ', '') | replace(' (2031)', '') if s.metric_name else s.series_id }}
+          </td>
+          <td style="padding:6px 0;text-align:right;font-weight:600;
+                     color:{% if s.value is not none and s.value > 3 %}var(--red){% elif s.value is not none %}var(--green){% else %}var(--muted){% endif %};">
+            {% if s.value is not none %}{{ '%.1f' | format(s.value|float) }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endif %}
+
+{# ── News ── #}
+<div class="card" style="margin-bottom:24px;">
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+    News — Last 30 Days
+  </div>
+  {% if news %}
+  {% for item in news %}
+  <a href="{{ item.url }}" target="_blank" rel="noopener"
+     style="display:flex;justify-content:space-between;align-items:flex-start;
+            padding:8px 0;border-bottom:1px solid var(--border);text-decoration:none;gap:12px;">
+    <div>
+      <span class="badge badge-{{ item.category }}">{{ item.source_name }}</span>
+      <div style="font-size:13px;color:var(--text);line-height:1.4;margin-top:4px;">{{ item.title }}</div>
+    </div>
+    <span class="text-muted" style="font-size:11px;white-space:nowrap;">
+      {{ item.published_at | time_ago if item.published_at else '' }}
+    </span>
+  </a>
+  {% endfor %}
+  {% else %}
+  <div class="text-muted text-sm">No news in the last 30 days.</div>
+  {% endif %}
+</div>
+
+{# ── Journal ── #}
+<form method="POST">
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:.05em;display:block;margin-bottom:8px;">
+      Monthly Review Notes (optional)
+    </label>
+    <textarea name="written_text"
+              placeholder="Country scores updated, sector rotation changes, 4-factor checklist outcomes, MVRV trajectory, top 3 tail risks, portfolio attribution…"
+              style="min-height:140px;font-size:13px;"></textarea>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="/" style="color:var(--muted);font-size:13px;text-decoration:none;">← Skip</a>
+    <div style="flex:1;"></div>
+    <button type="submit" class="btn btn-monthly" style="padding:9px 24px;font-size:14px;">
+      Save to Journal
+    </button>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var allSeries = [];
+  {% for s in t1_series %}{% if s.chart_data | length > 1 %}
+  allSeries.push(["{{ s.series_id }}", {{ s.chart_data | tojson }}]);
+  {% endif %}{% endfor %}
+  {% for s in other_t2 %}{% if s.chart_data | length > 1 %}
+  allSeries.push(["{{ s.series_id }}", {{ s.chart_data | tojson }}]);
+  {% endif %}{% endfor %}
+
+  allSeries.forEach(function(pair) {
+    var sid = pair[0], pts = pair[1];
+    var canvas = document.getElementById('spark-' + sid);
+    if (!canvas) return;
+    var vals = pts.map(function(p){ return p.y; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    var last = vals[vals.length-1], first = vals[0];
+    var color = last >= first ? '#3fb950' : '#f85149';
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: pts.map(function(p){ return p.x; }),
+        datasets: [{
+          data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0,
+          fill: true,
+          backgroundColor: last >= first ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)',
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: mn - (mx-mn)*0.1, max: mx + (mx-mn)*0.1 }
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

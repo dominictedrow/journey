@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Market Research{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <meta name="theme-color" content="#0e1117">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon-180.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Market Research">
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-logo">Market Research</span>
+    <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+  </div>
+  <nav class="sidebar-nav">
+
+    <a href="/" class="nav-item">
+      <span class="nav-icon">⌂</span> Home
+    </a>
+
+    <div class="nav-group" data-submenu="framework">
+      <div class="nav-item nav-parent">
+        <span class="nav-icon">◈</span> Framework <span class="chevron">›</span>
+      </div>
+      <div class="submenu" id="submenu-framework">
+        <a href="/framework/" class="submenu-item">Start Framework</a>
+        <a href="/tiers/1" class="submenu-item">Tier 1 — Macro</a>
+        <a href="/tiers/2" class="submenu-item">Tier 2 — Countries/Crypto</a>
+        <a href="/tiers/3" class="submenu-item">Tier 3 — Sectors</a>
+        <a href="/tiers/4" class="submenu-item">Tier 4 — Selection</a>
+        <a href="/tiers/5" class="submenu-item">Tier 5 — Risk</a>
+      </div>
+    </div>
+
+    <div class="nav-group" data-submenu="assets">
+      <div class="nav-item nav-parent">
+        <span class="nav-icon">◉</span> Assets <span class="chevron">›</span>
+      </div>
+      <div class="submenu" id="submenu-assets">
+        <a href="/assets/us" class="submenu-item">US Markets</a>
+        <a href="/assets/international" class="submenu-item">International</a>
+        <a href="/assets/crypto" class="submenu-item">Crypto</a>
+      </div>
+    </div>
+
+    <div class="nav-group" data-submenu="routines">
+      <div class="nav-item nav-parent">
+        <span class="nav-icon">◷</span> Routines <span class="chevron">›</span>
+      </div>
+      <div class="submenu" id="submenu-routines">
+        <a href="/routines/daily" class="submenu-item">Daily (~10 min)</a>
+        <a href="/routines/weekly" class="submenu-item">Weekly (~60 min)</a>
+        <a href="/routines/monthly" class="submenu-item">Monthly (~2 hrs)</a>
+      </div>
+    </div>
+
+    <a href="/portfolio/" class="nav-item">
+      <span class="nav-icon">◈</span> Portfolio
+    </a>
+
+    <a href="/journal/" class="nav-item">
+      <span class="nav-icon">☰</span> Journal
+    </a>
+
+  </nav>
+</aside>
+
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+    <span class="topbar-title">Market Research</span>
+  </header>
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/chartjs.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
+</body>
+</html>

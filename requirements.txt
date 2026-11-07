@@ -1,0 +1,5 @@
+flask
+psycopg2-binary
+requests
+beautifulsoup4
+pywebview  # desktop wrapper — renders in macOS system WebKit; pulls pyobjc on macOS

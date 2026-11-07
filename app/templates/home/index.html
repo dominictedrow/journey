@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}Market Research — Home{% endblock %}
+
+{% block content %}
+
+{# ── 1. Greeting ── #}
+<div class="flex items-center justify-between mb-16">
+  <div>
+    <h1 class="page-title" style="margin-bottom:4px;">{{ greeting }}, Dominic</h1>
+    <span class="text-muted text-sm">{{ now.strftime('%A, %B %-d, %Y') }}</span>
+  </div>
+  {% if active_session %}
+  <a href="/framework/" class="btn btn-orange" style="font-size:13px;padding:8px 16px;">
+    ▶ Resume Session — Tier {{ active_session.last_active_tier or 1 }}
+  </a>
+  {% endif %}
+</div>
+
+{# ── 2. Asset icon-cards ── #}
+<div class="grid-3 mb-16">
+
+  <a href="/assets/us" class="card" style="text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div class="flex items-center gap-8 mb-16">
+      <img src="{{ url_for('static', filename='icons/flag.svg') }}" width="28" height="28" alt="">
+      <span style="font-weight:600;font-size:15px;">US Markets</span>
+    </div>
+    {% set spy = latest.get('EQUITY_SPY') %}
+    {% set vix = latest.get('VIX') %}
+    <div class="flex justify-between items-center">
+      <div>
+        <div class="card-title">S&P 500 (SPY)</div>
+        <div class="card-value">
+          {% if spy and spy.value %}${{ '%.2f'|format(spy.value|float) }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="card-title">VIX</div>
+        <div class="card-value {% if vix and vix.value %}{% if vix.value|float > 25 %}negative{% elif vix.value|float < 15 %}positive{% else %}neutral{% endif %}{% endif %}">
+          {% if vix and vix.value %}{{ '%.1f'|format(vix.value|float) }}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </a>
+
+  <a href="/assets/international" class="card" style="text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div class="flex items-center gap-8 mb-16">
+      <img src="{{ url_for('static', filename='icons/globe.svg') }}" width="28" height="28" alt="">
+      <span style="font-weight:600;font-size:15px;">International</span>
+    </div>
+    {% set eem = latest.get('INTL_EEM') %}
+    {% set dxy = latest.get('DXY') %}
+    <div class="flex justify-between items-center">
+      <div>
+        <div class="card-title">EM (EEM)</div>
+        <div class="card-value">
+          {% if eem and eem.value %}${{ '%.2f'|format(eem.value|float) }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="card-title">DXY</div>
+        <div class="card-value">
+          {% if dxy and dxy.value %}{{ '%.1f'|format(dxy.value|float) }}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </a>
+
+  <a href="/assets/crypto" class="card" style="text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div class="flex items-center gap-8 mb-16">
+      <img src="{{ url_for('static', filename='icons/bitcoin.svg') }}" width="28" height="28" alt="">
+      <span style="font-weight:600;font-size:15px;">Crypto</span>
+    </div>
+    {% set btc = latest.get('BTC_USD') %}
+    {% set fg  = latest.get('FEAR_GREED') %}
+    <div class="flex justify-between items-center">
+      <div>
+        <div class="card-title">Bitcoin</div>
+        <div class="card-value">
+          {% if btc and btc.value %}${{ '{:,.0f}'.format(btc.value|float) }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="card-title">Fear &amp; Greed</div>
+        <div class="card-value
+          {%- if fg and fg.value -%}
+            {%- if fg.value|float <= 25 %} negative
+            {%- elif fg.value|float >= 75 %} positive
+            {%- else %} neutral{%- endif -%}
+          {%- endif -%}">
+          {% if fg and fg.value %}{{ fg.value|int }}{% if fg.text_value %} · {{ fg.text_value }}{% endif %}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </a>
+
+</div>
+
+{# ── 3. Routine buttons ── #}
+<div class="grid-3 mb-16">
+  <a href="/routines/daily" class="btn btn-daily w-full" style="height:52px;font-size:15px;">
+    ☀ Daily Check (~10 min)
+  </a>
+  <a href="/routines/weekly" class="btn btn-weekly w-full" style="height:52px;font-size:15px;">
+    📅 Weekly Review (~60 min)
+  </a>
+  <a href="/routines/monthly" class="btn btn-monthly w-full" style="height:52px;font-size:15px;">
+    📆 Monthly Deep-Dive (~2 hrs)
+  </a>
+</div>
+
+{# ── 4 & 5. Stories + Shifts ── #}
+<div class="grid-2 mb-16" style="align-items:start;">
+
+  {# Top Stories #}
+  <div>
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#ffffff;margin-bottom:10px;">Top Stories</h2>
+    {% if stories %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for s in stories %}
+      <a href="{{ s.url }}" target="_blank" rel="noopener" class="card" style="display:block;padding:12px;text-decoration:none;">
+        <div class="flex items-center gap-8 mb-8" style="justify-content:space-between;">
+          <span class="badge badge-{{ s.category }}">{{ s.source_name }}</span>
+          <span class="text-muted text-sm">{{ s.published_at | time_ago if s.published_at else '' }}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.4;">{{ s.title }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card text-muted text-sm" style="padding:20px;text-align:center;">No stories collected yet</div>
+    {% endif %}
+  </div>
+
+  {# Biggest Shifts #}
+  <div>
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#ffffff;margin-bottom:10px;">Biggest Shifts (12h)</h2>
+    <div class="card" style="padding:16px;">
+      {% if shifts %}
+      <canvas id="shiftsChart" style="width:100%;height:{{ [shifts|length * 36, 180]|max }}px;"></canvas>
+      {% else %}
+      <div class="text-muted text-sm" style="padding:20px;text-align:center;">Need 12h of data to compute shifts</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── 6. Tier Map ── #}
+<div class="mb-16">
+  <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#ffffff;margin-bottom:10px;">Framework Tiers</h2>
+  <div class="tier-map">
+    {% set tier_names = {1:'Macro Regime', 2:'Countries/Crypto', 3:'Sector Rotation', 4:'Selection', 5:'Risk Mgmt'} %}
+    {% for t in range(1,6) %}
+    {% set in_session = active_session and (t in (active_session.completed_tiers or []) or t == active_session.last_active_tier) %}
+    <a href="/tiers/{{ t }}" class="tier-node {% if tier_activity.get(t) %}completed{% elif in_session %}abandoned{% endif %}" style="text-decoration:none;">
+      <div style="font-size:18px;margin-bottom:4px;">T{{ t }}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">{{ tier_names[t] }}</div>
+      {% if tier_activity.get(t) %}
+      <div style="font-size:10px;color:var(--green);">{{ tier_activity[t].strftime('%-d %b') }}</div>
+      {% elif in_session %}
+      <div style="font-size:10px;color:var(--red);">In progress</div>
+      {% else %}
+      <div style="font-size:10px;color:var(--muted);">Never run</div>
+      {% endif %}
+    </a>
+    {% if t < 5 %}<div class="tier-connector"></div>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{# ── 7. Recent Journal ── #}
+<div>
+  <div class="flex items-center justify-between mb-8">
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#ffffff;">Recent Journal Entries</h2>
+    <a href="/journal/" style="font-size:12px;color:var(--accent);">View all →</a>
+  </div>
+  {% if recent_journal %}
+  <div class="grid-4">
+    {% for e in recent_journal %}
+    <a href="/journal/{{ e.id }}" class="card" style="display:block;text-decoration:none;padding:14px;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="card-title">{{ e.entry_type.replace('_',' ').title() }}</div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:4px;">{{ e.entry_date.strftime('%b %-d') if e.entry_date else '—' }}</div>
+      <div class="text-muted text-sm">{{ e.entry_date.strftime('%Y') if e.entry_date else '' }}</div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card text-muted text-sm" style="padding:20px;text-align:center;">
+    No journal entries yet — complete a routine or framework session to create one.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if shifts %}
+<script>
+(function() {
+  var data = {{ shifts | tojson }};
+  var labels = data.map(function(d){ return d.label; });
+  var values = data.map(function(d){ return d.pct_change !== null ? parseFloat(d.pct_change) : 0; });
+  var colors = values.map(function(v){ return v >= 0 ? 'rgba(63,185,80,0.75)' : 'rgba(248,81,73,0.75)'; });
+
+  var ctx = document.getElementById('shiftsChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderWidth: 0,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var v = ctx.raw;
+              return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(48,54,61,0.6)' },
+          ticks: {
+            color: '#8b949e',
+            callback: function(v){ return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#e6edf3', font: { size: 12 } }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

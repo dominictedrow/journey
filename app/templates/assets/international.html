@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}International Markets{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title" style="margin-bottom:4px;">International Markets</h1>
+    <a href="/" style="color:var(--muted);font-size:12px;text-decoration:none;">← Back to Home</a>
+  </div>
+  <div style="display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+    <button id="btn-data" onclick="showPanel('data')"
+      style="padding:7px 18px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+      Data
+    </button>
+    <button id="btn-news" onclick="showPanel('news')"
+      style="padding:7px 18px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">
+      News
+    </button>
+  </div>
+</div>
+
+{# ── DATA PANEL ── #}
+<div id="panel-data">
+
+  {# FX Pairs #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Currency Pairs &amp; Dollar Index
+  </div>
+  <div class="grid-3" style="margin-bottom:28px;">
+    {% for s in fx %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data|length > 1 %}8px{% else %}0{% endif %};">
+        <span style="font-size:20px;font-weight:700;">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.change_pct is not none %}
+        <span style="font-size:11px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:38px;">
+        <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Commodities #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Commodities &amp; Cross-Asset
+  </div>
+  <div class="grid-4" style="margin-bottom:28px;">
+    {% for s in commodities %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data|length > 1 %}8px{% else %}0{% endif %};">
+        <span style="font-size:18px;font-weight:700;">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.change_pct is not none %}
+        <span style="font-size:11px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:38px;">
+        <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# IMF Country Data #}
+  {% if imf_rows %}
+  <div class="grid-2" style="margin-bottom:28px;">
+
+    {# GDP Growth table #}
+    <div class="card">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        IMF GDP Growth Forecast (% YoY)
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="font-size:11px;color:var(--muted);text-align:left;">
+            <th style="padding:4px 0;padding-right:12px;">Country</th>
+            <th style="padding:4px 0;text-align:right;">GDP %</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in imf_rows %}
+        {% if row.gdp %}
+        <tr style="border-top:1px solid var(--border);">
+          <td style="padding:7px 0;padding-right:12px;font-size:13px;">
+            {{ row.gdp.metric_name or row.country }}
+          </td>
+          <td style="padding:7px 0;text-align:right;font-size:13px;font-weight:600;
+                     color:{% if row.gdp.value is not none and row.gdp.value | float >= 0 %}var(--green){% else %}var(--red){% endif %};">
+            {% if row.gdp.value is not none %}
+              {{ '+' if row.gdp.value | float >= 0 else '' }}{{ row.gdp.value | fmt_num }}%
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if not imf_rows or imf_rows | selectattr('gdp') | list | length == 0 %}
+      <div class="text-muted text-sm" style="padding:8px 0;">
+        No IMF GDP data yet — run the IMF collector.
+      </div>
+      {% endif %}
+    </div>
+
+    {# CPI table #}
+    <div class="card">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        IMF CPI Inflation Forecast (% YoY)
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="font-size:11px;color:var(--muted);text-align:left;">
+            <th style="padding:4px 0;padding-right:12px;">Country</th>
+            <th style="padding:4px 0;text-align:right;">CPI %</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in imf_rows %}
+        {% if row.cpi %}
+        <tr style="border-top:1px solid var(--border);">
+          <td style="padding:7px 0;padding-right:12px;font-size:13px;">
+            {{ row.cpi.metric_name or row.country }}
+          </td>
+          <td style="padding:7px 0;text-align:right;font-size:13px;font-weight:600;
+                     color:{% if row.cpi.value is not none and row.cpi.value | float <= 3 %}var(--green){% elif row.cpi.value is not none and row.cpi.value | float <= 6 %}var(--amber){% else %}var(--red){% endif %};">
+            {% if row.cpi.value is not none %}{{ row.cpi.value | fmt_num }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if not imf_rows or imf_rows | selectattr('cpi') | list | length == 0 %}
+      <div class="text-muted text-sm" style="padding:8px 0;">
+        No IMF CPI data yet — run the IMF collector.
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+  {# CFTC COT Positioning #}
+  {% if cot_rows %}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    CFTC Commitments of Traders (Non-Commercial Net)
+  </div>
+  <div class="grid-2" style="margin-bottom:28px;">
+    {% for s in cot_rows %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="font-size:18px;font-weight:700;color:{% if s.value is not none and s.value | float >= 0 %}var(--green){% elif s.value is not none %}var(--red){% else %}var(--muted){% endif %};">
+        {% if s.value is not none %}
+          {{ '+' if s.value | float >= 0 else '' }}{{ s.value | fmt_num }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="text-muted text-sm" style="margin-top:4px;">
+        Positive = net long; Negative = net short. Extremes = contrarian signal.
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── NEWS PANEL ── #}
+<div id="panel-news" style="display:none;">
+  <div class="card">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+      Macro News — Last 7 Days
+    </div>
+    {% if news %}
+    {% for item in news %}
+    <a href="{{ item.url }}" target="_blank" rel="noopener"
+       style="display:flex;justify-content:space-between;align-items:flex-start;
+              padding:9px 0;border-bottom:1px solid var(--border);text-decoration:none;gap:12px;">
+      <div>
+        <span class="badge badge-{{ item.category }}">{{ item.source_name }}</span>
+        <div style="font-size:13px;color:var(--text);line-height:1.4;margin-top:4px;">{{ item.title }}</div>
+      </div>
+      <span class="text-muted" style="font-size:11px;white-space:nowrap;">
+        {{ item.published_at | time_ago if item.published_at else '' }}
+      </span>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="text-muted text-sm">No news in the last 7 days.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showPanel(name) {
+  document.getElementById('panel-data').style.display = name === 'data' ? '' : 'none';
+  document.getElementById('panel-news').style.display = name === 'news' ? '' : 'none';
+  document.getElementById('btn-data').style.background = name === 'data' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-data').style.color = name === 'data' ? '#fff' : 'var(--muted)';
+  document.getElementById('btn-news').style.background = name === 'news' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-news').style.color = name === 'news' ? '#fff' : 'var(--muted)';
+}
+
+(function() {
+  var allData = {
+    {% for s in fx %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+    {% for s in commodities %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+  };
+
+  Object.keys(allData).forEach(function(sid) {
+    var canvas = document.getElementById('spark-' + sid);
+    if (!canvas) return;
+    var pts = allData[sid];
+    var vals = pts.map(function(p) { return p.y; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    var color = vals[vals.length - 1] >= vals[0] ? '#3fb950' : '#f85149';
+    var bg    = vals[vals.length - 1] >= vals[0] ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: pts.map(function(p) { return p.x; }),
+        datasets: [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0,
+                     fill: true, backgroundColor: bg, tension: 0.3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: mn - (mx - mn) * 0.1, max: mx + (mx - mn) * 0.1 }
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

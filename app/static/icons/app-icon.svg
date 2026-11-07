@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0e1117"/>
+  <!-- glyph kept inside ~80% safe zone (52..460) -->
+  <polyline points="80,360 180,260 260,300 380,150"
+            fill="none" stroke="#58a6ff" stroke-width="26"
+            stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="380" cy="150" r="22" fill="#58a6ff"/>
+  <polyline points="320,150 380,150 380,210"
+            fill="none" stroke="#58a6ff" stroke-width="26"
+            stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

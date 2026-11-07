@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% block title %}Crypto{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title" style="margin-bottom:4px;">Crypto</h1>
+    <a href="/" style="color:var(--muted);font-size:12px;text-decoration:none;">← Back to Home</a>
+  </div>
+  <div style="display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+    <button id="btn-data" onclick="showPanel('data')"
+      style="padding:7px 18px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+      Data
+    </button>
+    <button id="btn-news" onclick="showPanel('news')"
+      style="padding:7px 18px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">
+      News
+    </button>
+  </div>
+</div>
+
+{# ── DATA PANEL ── #}
+<div id="panel-data">
+
+  {# Price Cards #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Prices
+  </div>
+  <div class="grid-3" style="margin-bottom:28px;">
+    {% for s in prices %}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
+        <span style="font-size:22px;font-weight:700;">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.change_pct is not none %}
+        <span style="font-size:13px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:50px;">
+        <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Key Signal Cards #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    On-Chain &amp; Market Signals
+  </div>
+  <div class="grid-4" style="margin-bottom:28px;">
+    {% for s in signals %}
+    {% set sid = s.series_id %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or sid }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data|length > 1 %}8px{% else %}0{% endif %};">
+        <span style="font-size:18px;font-weight:700;
+          color:{% if sid == 'FEAR_GREED' and s.value is not none %}
+            {% if s.value | float <= 25 %}var(--green)
+            {% elif s.value | float >= 75 %}var(--red)
+            {% else %}var(--text){% endif %}
+          {% elif sid == 'MVRV_ZSCORE' and s.value is not none %}
+            {% if s.value | float >= 5 %}var(--red)
+            {% elif s.value | float <= 0 %}var(--green)
+            {% else %}var(--text){% endif %}
+          {% else %}var(--text){% endif %};">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.text_value %}
+        <span style="font-size:12px;color:var(--muted);">{{ s.text_value }}</span>
+        {% endif %}
+        {% if s.change_pct is not none %}
+        <span style="font-size:11px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:34px;">
+        <canvas id="spark-{{ sid }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+      {# Contextual labels #}
+      {% if sid == 'FEAR_GREED' and s.value is not none %}
+      <div class="text-muted text-sm" style="margin-top:4px;">
+        {% if s.value | float <= 25 %}Extreme Fear — Accumulate BTC
+        {% elif s.value | float <= 45 %}Fear
+        {% elif s.value | float <= 55 %}Neutral
+        {% elif s.value | float <= 75 %}Greed
+        {% else %}Extreme Greed — Consider Reducing{% endif %}
+      </div>
+      {% elif sid == 'MVRV_ZSCORE' and s.value is not none %}
+      <div class="text-muted text-sm" style="margin-top:4px;">
+        {% if s.value | float >= 6 %}Overheated — begin systematic reduction
+        {% elif s.value | float >= 3 %}Elevated
+        {% elif s.value | float <= 0 %}Deep value / Accumulation zone
+        {% else %}Normal range{% endif %}
+      </div>
+      {% elif sid == 'ALTCOIN_SEASON' and s.value is not none %}
+      <div class="text-muted text-sm" style="margin-top:4px;">
+        {% if s.value | float >= 75 %}Altcoin Season
+        {% elif s.value | float <= 25 %}Bitcoin Season
+        {% else %}Mixed{% endif %}
+      </div>
+      {% elif sid == 'BTC_ETF_FLOWS_NET' and s.value is not none %}
+      <div class="text-muted text-sm" style="margin-top:4px;">
+        Net daily flow; 3 consecutive negative days = reduce crypto
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Charts row — BTC Dominance + Fear & Greed #}
+  <div class="grid-2" style="margin-bottom:28px;">
+
+    {# BTC Dominance Chart #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        BTC Dominance History
+      </div>
+      {% if btc_dom_chart|length > 1 %}
+      <div style="position:relative;height:180px;">
+        <canvas id="chart-btc-dom" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% else %}
+      <div class="text-muted text-sm">No BTC dominance history yet.</div>
+      {% endif %}
+    </div>
+
+    {# Fear & Greed History #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        Fear &amp; Greed Index History
+      </div>
+      {% if fg_chart|length > 1 %}
+      <div style="position:relative;height:180px;">
+        <canvas id="chart-fear-greed" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% else %}
+      <div class="text-muted text-sm">No Fear &amp; Greed history yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ETF Flows + Stablecoin Charts #}
+  <div class="grid-2" style="margin-bottom:28px;">
+
+    {# ETF Flows Bar Chart #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        BTC ETF Daily Net Flows
+      </div>
+      {% if etf_chart|length > 1 %}
+      <div style="position:relative;height:180px;">
+        <canvas id="chart-etf-flows" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% else %}
+      <div class="text-muted text-sm">No ETF flow data yet.</div>
+      {% endif %}
+    </div>
+
+    {# Stablecoin Market Cap #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+        Stablecoin Market Cap (Dry Powder)
+      </div>
+      {% if stbl_chart|length > 1 %}
+      <div style="position:relative;height:180px;">
+        <canvas id="chart-stablecoin" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% else %}
+      <div class="text-muted text-sm">No stablecoin data yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+
+{# ── NEWS PANEL ── #}
+<div id="panel-news" style="display:none;">
+  <div class="card">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+      Crypto News — Last 7 Days
+    </div>
+    {% if news %}
+    {% for item in news %}
+    <a href="{{ item.url }}" target="_blank" rel="noopener"
+       style="display:flex;justify-content:space-between;align-items:flex-start;
+              padding:9px 0;border-bottom:1px solid var(--border);text-decoration:none;gap:12px;">
+      <div>
+        <span class="badge badge-crypto">{{ item.source_name }}</span>
+        <div style="font-size:13px;color:var(--text);line-height:1.4;margin-top:4px;">{{ item.title }}</div>
+      </div>
+      <span class="text-muted" style="font-size:11px;white-space:nowrap;">
+        {{ item.published_at | time_ago if item.published_at else '' }}
+      </span>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="text-muted text-sm">No crypto news in the last 7 days.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showPanel(name) {
+  document.getElementById('panel-data').style.display = name === 'data' ? '' : 'none';
+  document.getElementById('panel-news').style.display = name === 'news' ? '' : 'none';
+  document.getElementById('btn-data').style.background = name === 'data' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-data').style.color = name === 'data' ? '#fff' : 'var(--muted)';
+  document.getElementById('btn-news').style.background = name === 'news' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-news').style.color = name === 'news' ? '#fff' : 'var(--muted)';
+}
+
+(function() {
+  // Sparklines for price and signal cards
+  var sparkData = {
+    {% for s in prices %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+    {% for s in signals %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+  };
+  Object.keys(sparkData).forEach(function(sid) {
+    var canvas = document.getElementById('spark-' + sid);
+    if (!canvas) return;
+    var pts = sparkData[sid];
+    var vals = pts.map(function(p) { return p.y; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    var color = vals[vals.length - 1] >= vals[0] ? '#3fb950' : '#f85149';
+    var bg    = vals[vals.length - 1] >= vals[0] ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: pts.map(function(p) { return p.x; }),
+        datasets: [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0,
+                     fill: true, backgroundColor: bg, tension: 0.3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: mn - (mx - mn) * 0.1, max: mx + (mx - mn) * 0.1 }
+        }
+      }
+    });
+  });
+
+  // BTC Dominance chart
+  var btcDomData = {{ btc_dom_chart | tojson }};
+  if (btcDomData.length > 1) {
+    var domVals = btcDomData.map(function(p) { return p.y; });
+    var domMn = Math.min.apply(null, domVals), domMx = Math.max.apply(null, domVals);
+    new Chart(document.getElementById('chart-btc-dom').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: btcDomData.map(function(p) { return p.x; }),
+        datasets: [{
+          label: 'BTC Dominance %',
+          data: domVals,
+          borderColor: '#f7931a',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: 'rgba(247,147,26,0.08)',
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.y.toFixed(1) + '%'; } } } },
+        scales: {
+          x: { display: false },
+          y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b949e', font: { size: 10 }, callback: function(v) { return v.toFixed(0) + '%'; } },
+               min: domMn - (domMx - domMn) * 0.05, max: domMx + (domMx - domMn) * 0.05 }
+        }
+      }
+    });
+  }
+
+  // Fear & Greed chart
+  var fgData = {{ fg_chart | tojson }};
+  if (fgData.length > 1) {
+    var fgVals = fgData.map(function(p) { return p.y; });
+    var fgColors = fgVals.map(function(v) {
+      if (v <= 25) return 'rgba(63,185,80,0.8)';
+      if (v >= 75) return 'rgba(248,81,73,0.8)';
+      return 'rgba(88,166,255,0.6)';
+    });
+    new Chart(document.getElementById('chart-fear-greed').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: fgData.map(function(p) { return p.x; }),
+        datasets: [{
+          label: 'Fear & Greed',
+          data: fgVals,
+          backgroundColor: fgColors,
+          borderRadius: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { display: true, min: 0, max: 100,
+               grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b949e', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  // ETF Flows bar chart
+  var etfData = {{ etf_chart | tojson }};
+  if (etfData.length > 1) {
+    var etfVals = etfData.map(function(p) { return p.y; });
+    var etfColors = etfVals.map(function(v) {
+      return v >= 0 ? 'rgba(63,185,80,0.75)' : 'rgba(248,81,73,0.75)';
+    });
+    new Chart(document.getElementById('chart-etf-flows').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: etfData.map(function(p) { return p.x; }),
+        datasets: [{
+          label: 'Net Flows ($M)',
+          data: etfVals,
+          backgroundColor: etfColors,
+          borderRadius: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b949e', font: { size: 10 },
+                        callback: function(v) { return '$' + (v/1000).toFixed(1) + 'B'; } } }
+        }
+      }
+    });
+  }
+
+  // Stablecoin market cap chart
+  var stblData = {{ stbl_chart | tojson }};
+  if (stblData.length > 1) {
+    var stblVals = stblData.map(function(p) { return p.y; });
+    var stblMn = Math.min.apply(null, stblVals), stblMx = Math.max.apply(null, stblVals);
+    var stblColor = stblVals[stblVals.length - 1] >= stblVals[0] ? '#3fb950' : '#f85149';
+    var stblBg    = stblVals[stblVals.length - 1] >= stblVals[0] ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+    new Chart(document.getElementById('chart-stablecoin').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: stblData.map(function(p) { return p.x; }),
+        datasets: [{
+          label: 'Stablecoin Market Cap',
+          data: stblVals,
+          borderColor: stblColor,
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: stblBg,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b949e', font: { size: 10 },
+                        callback: function(v) { return '$' + (v/1e9).toFixed(0) + 'B'; } },
+               min: stblMn * 0.98, max: stblMx * 1.02 }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}US Markets{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title" style="margin-bottom:4px;">US Markets</h1>
+    <a href="/" style="color:var(--muted);font-size:12px;text-decoration:none;">← Back to Home</a>
+  </div>
+  <div style="display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+    <button id="btn-data" onclick="showPanel('data')"
+      style="padding:7px 18px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+      Data
+    </button>
+    <button id="btn-news" onclick="showPanel('news')"
+      style="padding:7px 18px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">
+      News
+    </button>
+  </div>
+</div>
+
+{# ── DATA PANEL ── #}
+<div id="panel-data">
+
+  {# Equity Indices #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Major Indices
+  </div>
+  <div class="grid-4" style="margin-bottom:28px;">
+    {% for s in equities %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data|length > 1 %}8px{% else %}0{% endif %};">
+        <span style="font-size:20px;font-weight:700;">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.change_pct is not none %}
+        <span style="font-size:11px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:38px;">
+        <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Macro Signals #}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Macro Signals
+  </div>
+  <div class="grid-3" style="margin-bottom:28px;">
+    {% for s in macro %}
+    <div class="card" style="padding:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if s.chart_data|length > 1 %}8px{% else %}0{% endif %};">
+        <span style="font-size:18px;font-weight:700;">
+          {{ s.value | fmt_num if s.value is not none else '—' }}
+        </span>
+        {% if s.text_value %}
+        <span style="font-size:12px;color:var(--muted);">{{ s.text_value }}</span>
+        {% endif %}
+        {% if s.change_pct is not none %}
+        <span style="font-size:11px;font-weight:600;color:{% if s.change_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+          {{ '+' if s.change_pct >= 0 else '' }}{{ '%.1f' | format(s.change_pct) }}%
+        </span>
+        {% endif %}
+      </div>
+      {% if s.chart_data|length > 1 %}
+      <div style="position:relative;height:38px;">
+        <canvas id="spark-{{ s.series_id }}" style="width:100%;height:100%;"></canvas>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Sector Heatmap #}
+  {% if sectors %}
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:10px;">
+    Sector ETF Heatmap (1M performance)
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px;">
+    {% for s in sectors %}
+    {% set bg = s.week_pct | sector_color if s.week_pct is not none else 'var(--surface)' %}
+    <div class="card" style="padding:12px;background:{{ bg }};border-color:transparent;">
+      <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">
+        {{ s.metric_name or s.series_id }}
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:4px;">
+        {{ s.value | fmt_num if s.value is not none else '—' }}
+      </div>
+      <div style="display:flex;gap:10px;font-size:11px;">
+        {% if s.pct_1w is not none %}
+        <span style="color:rgba(255,255,255,0.85);">
+          1W: <b>{{ '+' if s.pct_1w >= 0 else '' }}{{ '%.1f' | format(s.pct_1w) }}%</b>
+        </span>
+        {% endif %}
+        {% if s.pct_1m is not none %}
+        <span style="color:rgba(255,255,255,0.65);">
+          1M: {{ '+' if s.pct_1m >= 0 else '' }}{{ '%.1f' | format(s.pct_1m) }}%
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── NEWS PANEL ── #}
+<div id="panel-news" style="display:none;">
+  <div class="card">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:12px;">
+      Macro &amp; Market News — Last 72 Hours
+    </div>
+    {% if news %}
+    {% for item in news %}
+    <a href="{{ item.url }}" target="_blank" rel="noopener"
+       style="display:flex;justify-content:space-between;align-items:flex-start;
+              padding:9px 0;border-bottom:1px solid var(--border);text-decoration:none;gap:12px;">
+      <div>
+        <span class="badge badge-{{ item.category }}">{{ item.source_name }}</span>
+        <div style="font-size:13px;color:var(--text);line-height:1.4;margin-top:4px;">{{ item.title }}</div>
+      </div>
+      <span class="text-muted" style="font-size:11px;white-space:nowrap;">
+        {{ item.published_at | time_ago if item.published_at else '' }}
+      </span>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="text-muted text-sm">No news in the last 72 hours.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showPanel(name) {
+  document.getElementById('panel-data').style.display = name === 'data' ? '' : 'none';
+  document.getElementById('panel-news').style.display = name === 'news' ? '' : 'none';
+  document.getElementById('btn-data').style.background = name === 'data' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-data').style.color = name === 'data' ? '#fff' : 'var(--muted)';
+  document.getElementById('btn-news').style.background = name === 'news' ? 'var(--accent)' : 'transparent';
+  document.getElementById('btn-news').style.color = name === 'news' ? '#fff' : 'var(--muted)';
+}
+
+(function() {
+  var allData = {
+    {% for s in equities %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+    {% for s in macro %}{% if s.chart_data|length > 1 %}
+    "{{ s.series_id }}": {{ s.chart_data | tojson }},
+    {% endif %}{% endfor %}
+  };
+
+  Object.keys(allData).forEach(function(sid) {
+    var canvas = document.getElementById('spark-' + sid);
+    if (!canvas) return;
+    var pts = allData[sid];
+    var vals = pts.map(function(p) { return p.y; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    var color = vals[vals.length - 1] >= vals[0] ? '#3fb950' : '#f85149';
+    var bg    = vals[vals.length - 1] >= vals[0] ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: pts.map(function(p) { return p.x; }),
+        datasets: [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0,
+                     fill: true, backgroundColor: bg, tension: 0.3 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: mn - (mx - mn) * 0.1, max: mx + (mx - mn) * 0.1 }
+        }
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

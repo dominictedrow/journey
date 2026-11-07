@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Journal{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;">
+  <h1 class="page-title" style="margin:0;">Journal</h1>
+  <a href="/journal/upload-to-drive" class="btn btn-teal"
+     style="padding:9px 20px;font-size:13px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:7px;">
+    ⬆ Upload to Drive
+  </a>
+</div>
+
+{# ── Filters ── #}
+<form method="GET" style="margin-bottom:28px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="margin:0;color:var(--muted);font-size:12px;white-space:nowrap;">From</label>
+      <input type="date" name="start" value="{{ start }}" style="width:145px;">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="margin:0;color:var(--muted);font-size:12px;white-space:nowrap;">To</label>
+      <input type="date" name="end" value="{{ end }}" style="width:145px;">
+    </div>
+    <select name="type" style="width:175px;">
+      <option value="">All types</option>
+      {% for t in valid_types %}
+      <option value="{{ t }}" {% if type_filter == t %}selected{% endif %}>
+        {{ t | replace('_', ' ') | title }}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">Filter</button>
+    {% if start or end or type_filter %}
+    <a href="/journal/" style="font-size:13px;color:var(--muted);">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+{# ── Grouped entries ── #}
+{% if grouped %}
+{% for month, entries in grouped.items() %}
+<div style="margin-bottom:28px;">
+  <h2 style="font-size:15px;font-weight:700;margin-bottom:12px;
+             background:linear-gradient(90deg,var(--green),#58a6ff);
+             -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+             background-clip:text;">
+    {{ month }}
+  </h2>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    {% for e in entries %}
+    <a href="/journal/{{ e.id }}"
+       style="display:flex;align-items:center;gap:14px;padding:12px 16px;
+              background:var(--surface);border:1px solid var(--border);
+              border-radius:var(--radius);text-decoration:none;
+              transition:border-color .15s;"
+       onmouseover="this.style.borderColor='var(--accent)'"
+       onmouseout="this.style.borderColor='var(--border)'">
+
+      {# Date badge #}
+      <div style="flex-shrink:0;text-align:center;min-width:34px;">
+        <div style="font-size:17px;font-weight:700;color:var(--text);line-height:1.1;">
+          {{ e.entry_date.strftime('%-d') }}
+        </div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">
+          {{ e.entry_date.strftime('%b') }}
+        </div>
+      </div>
+
+      <div style="width:1px;height:34px;background:var(--border);flex-shrink:0;"></div>
+
+      {# Type + snippet #}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">
+          {% if e.entry_type == 'full_framework' %}
+            Full Framework
+          {% elif e.entry_type.startswith('tier_') %}
+            Tier {{ e.tier_number }} — {{ e.entry_type | replace('tier_', 'Tier ') | title }}
+          {% else %}
+            {{ e.entry_type | replace('_', ' ') | title }}
+          {% endif %}
+        </div>
+        {% if e.written_text %}
+        <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          {{ e.written_text[:130] }}{% if e.written_text | length > 130 %}…{% endif %}
+        </div>
+        {% else %}
+        <div style="font-size:12px;color:var(--muted);font-style:italic;">No written notes</div>
+        {% endif %}
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);flex-shrink:0;padding-left:8px;">
+        {{ e.created_at | time_ago }}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card" style="padding:40px;text-align:center;">
+  <div style="color:var(--muted);font-size:14px;">
+    No journal entries found.{% if start or end or type_filter %} Try clearing the filters.{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

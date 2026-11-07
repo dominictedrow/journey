@@ -1,0 +1,4 @@
+# Build-time only — not needed to run the app, only to produce dist/Market Research.app.
+#   pip install -r requirements-build.txt
+#   bash scripts/build_app.sh
+pyinstaller

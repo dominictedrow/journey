@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+{% block title %}Portfolio — {{ 'Stocks' if asset_type == 'stocks' else 'Crypto' }}{% endblock %}
+
+{% block content %}
+
+{# ── Header row ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title" style="margin-bottom:4px;">Portfolio</h1>
+    <a href="/" style="color:var(--muted);font-size:12px;text-decoration:none;">← Back to Home</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    {# Stocks / Crypto tabs #}
+    <div style="display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <a href="/portfolio/stocks" onclick="sessionStorage.setItem('skip-anim','1')"
+         style="padding:7px 18px;font-size:13px;font-weight:600;text-decoration:none;
+                background:{% if asset_type=='stocks' %}var(--accent){% else %}transparent{% endif %};
+                color:{% if asset_type=='stocks' %}#fff{% else %}var(--muted){% endif %};">
+        Stocks
+      </a>
+      <a href="/portfolio/crypto" onclick="sessionStorage.setItem('skip-anim','1')"
+         style="padding:7px 18px;font-size:13px;font-weight:600;text-decoration:none;
+                background:{% if asset_type=='crypto' %}var(--accent){% else %}transparent{% endif %};
+                color:{% if asset_type=='crypto' %}#fff{% else %}var(--muted){% endif %};">
+        Crypto
+      </a>
+    </div>
+    <button onclick="showModal('modal-buy')" class="btn btn-primary" style="padding:8px 18px;font-size:13px;">
+      + Buy
+    </button>
+  </div>
+</div>
+
+{# ── Summary cards ── #}
+<div class="grid-4" style="margin-bottom:24px;">
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Total Value</div>
+    <div class="card-value">${{ '%.2f' | format(total_value) }}</div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Cash Available</div>
+    <div class="card-value">${{ '%.2f' | format(cash) }}</div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Invested</div>
+    <div class="card-value">${{ '%.2f' | format(positions_value) }}</div>
+  </div>
+  <div class="card" style="padding:14px;">
+    <div class="card-title">Unrealized P&amp;L</div>
+    <div class="card-value {{ 'positive' if total_pnl >= 0 else 'negative' }}">
+      {{ '+' if total_pnl >= 0 else '' }}${{ '%.2f' | format(total_pnl) }}
+    </div>
+  </div>
+</div>
+
+{# ── Charts row ── #}
+<div class="grid-2" style="margin-bottom:24px;">
+
+  {# P&L line chart #}
+  <div class="card" style="padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">
+        Portfolio Value Over Time
+      </div>
+      <div style="display:flex;gap:4px;">
+        {% for label in ['1D','1W','1M','1Y'] %}
+        <button onclick="filterChart('{{ label }}')" id="range-{{ label }}"
+          style="padding:3px 9px;border:1px solid var(--border);border-radius:4px;
+                 background:{% if loop.first %}var(--accent){% else %}var(--surface-2){% endif %};
+                 color:{% if loop.first %}#fff{% else %}var(--muted){% endif %};
+                 font-size:11px;cursor:pointer;">
+          {{ label }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% if snap_chart %}
+    <div style="position:relative;height:160px;">
+      <canvas id="chart-pnl" style="width:100%;height:100%;"></canvas>
+    </div>
+    {% else %}
+    <div class="text-muted text-sm" style="padding:40px 0;text-align:center;">
+      No snapshot history yet — revisit tomorrow for chart data.
+    </div>
+    {% endif %}
+  </div>
+
+  {# Allocation doughnut #}
+  <div class="card" style="padding:16px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px;">
+      Allocation
+    </div>
+    {% if positions %}
+    <div style="display:flex;align-items:center;gap:20px;">
+      <canvas id="chart-donut" style="height:160px;width:160px;flex-shrink:0;"></canvas>
+      <div style="flex:1;">
+        {% for i in range(donut_labels|length) %}
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;">
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span id="dot-{{ i }}" style="display:inline-block;width:8px;height:8px;border-radius:50%;"></span>
+            {{ donut_labels[i] }}
+          </span>
+          <span style="font-weight:600;">${{ '%.0f' | format(donut_values[i]) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="text-muted text-sm" style="padding:60px 0;text-align:center;">
+      No open positions. Use the Buy button to add one.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Open Positions ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">
+    Open Positions ({{ positions|length }})
+  </div>
+</div>
+
+{% if positions %}
+<div style="margin-bottom:24px;">
+  {% for p in positions %}
+  <div class="card" style="padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="min-width:60px;">
+      <div style="font-size:16px;font-weight:700;">{{ p.ticker }}</div>
+      <div class="text-muted text-sm">{{ p.entry_date }}</div>
+    </div>
+    <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-width:300px;">
+      <div>
+        <div class="text-muted text-sm">Entry Price</div>
+        <div style="font-weight:600;">${{ '%.4f' | format(p.entry_price | float) }}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">Qty</div>
+        <div style="font-weight:600;">{{ '%g' | format(p.quantity | float) }}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">
+          Curr. Price{% if not p.has_live_price %} <span style="color:var(--amber);" title="No market data — using cost basis">~</span>{% endif %}
+        </div>
+        <div style="font-weight:600;">${{ '%.4f' | format(p.current_price) }}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">Value</div>
+        <div style="font-weight:600;">${{ '%.2f' | format(p.current_value) }}</div>
+      </div>
+    </div>
+    <div style="text-align:right;min-width:100px;">
+      <div style="font-size:15px;font-weight:700;color:{% if p.pnl >= 0 %}var(--green){% else %}var(--red){% endif %};">
+        {{ '+' if p.pnl >= 0 else '' }}${{ '%.2f' | format(p.pnl) }}
+      </div>
+      <div style="font-size:12px;color:{% if p.pnl_pct >= 0 %}var(--green){% else %}var(--red){% endif %};">
+        {{ '+' if p.pnl_pct >= 0 else '' }}{{ '%.1f' | format(p.pnl_pct) }}%
+      </div>
+    </div>
+    <button
+      onclick="openSellModal({{ p.id }}, '{{ p.ticker }}', {{ p.entry_price | float }}, {{ p.quantity | float }}, {{ p.current_price }}, {{ 'true' if p.has_live_price else 'false' }})"
+      class="btn btn-danger" style="padding:6px 14px;font-size:12px;white-space:nowrap;">
+      Sell
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card text-muted text-sm" style="padding:16px;text-align:center;margin-bottom:24px;">
+  No open {{ asset_type }} positions. Click "+ Buy" to add one.
+</div>
+{% endif %}
+
+{# ── Trade History ── #}
+<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">
+  Trade History
+</div>
+<div class="card" style="margin-bottom:24px;">
+  {% if trades %}
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="font-size:11px;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);">
+        <th style="padding:8px 8px 8px 0;">Date</th>
+        <th style="padding:8px;">Ticker</th>
+        <th style="padding:8px;">Type</th>
+        <th style="padding:8px;text-align:right;">Price</th>
+        <th style="padding:8px;text-align:right;">Qty</th>
+        <th style="padding:8px;text-align:right;">Value</th>
+        <th style="padding:8px;text-align:right;">P&amp;L</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for t in trades %}
+    <tr style="border-bottom:1px solid var(--border);font-size:13px;">
+      <td style="padding:8px 8px 8px 0;color:var(--muted);">
+        {{ t.trade_date.strftime('%Y-%m-%d') if t.trade_date else '—' }}
+      </td>
+      <td style="padding:8px;font-weight:600;">{{ t.ticker }}</td>
+      <td style="padding:8px;">
+        <span style="color:{% if t.trade_type == 'buy' %}var(--green){% else %}var(--red){% endif %};font-weight:600;text-transform:uppercase;">
+          {{ t.trade_type }}
+        </span>
+      </td>
+      <td style="padding:8px;text-align:right;">${{ '%.4f' | format(t.price | float) }}</td>
+      <td style="padding:8px;text-align:right;">{{ '%g' | format(t.quantity | float) }}</td>
+      <td style="padding:8px;text-align:right;">${{ '%.2f' | format(t.trade_value | float) }}</td>
+      <td style="padding:8px;text-align:right;">
+        {% if t.pnl is not none %}
+        <span style="color:{% if t.pnl | float >= 0 %}var(--green){% else %}var(--red){% endif %};font-weight:600;">
+          {{ '+' if t.pnl | float >= 0 else '' }}${{ '%.2f' | format(t.pnl | float) }}
+          {% if t.pnl_percent is not none %}
+          <span style="font-weight:400;font-size:11px;">
+            ({{ '+' if t.pnl_percent | float >= 0 else '' }}{{ '%.1f' | format(t.pnl_percent | float) }}%)
+          </span>
+          {% endif %}
+        </span>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="text-muted text-sm" style="padding:16px 0;text-align:center;">No trades yet.</div>
+  {% endif %}
+</div>
+
+{# ═══════════════════════ BUY MODAL ═══════════════════════ #}
+<div class="modal-overlay" id="modal-buy">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-title">Buy Position</div>
+    <form method="POST" action="/portfolio/buy">
+      <input type="hidden" name="asset_type" value="{{ asset_type }}">
+      <div class="form-group">
+        <label>Ticker</label>
+        <input type="text" name="ticker" placeholder="{{ 'SPY, AAPL, NVDA' if asset_type == 'stocks' else 'BTC, ETH, SOL' }}" required
+               style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label>Entry Price ($)</label>
+        <input type="number" name="entry_price" id="buy-price" step="any" min="0.000001" placeholder="0.00" required oninput="updateBuyCost()">
+      </div>
+      <div class="form-group">
+        <label>Amount to Invest ($)</label>
+        <input type="number" name="invest_amount" id="buy-amount" step="any" min="0.01" placeholder="0.00" required oninput="updateBuyCost()">
+      </div>
+      <input type="hidden" name="quantity" id="buy-qty">
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+                  padding:10px;font-size:12px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="color:var(--muted);">Available cash:</span>
+          <b style="color:var(--text);">${{ '%.2f' | format(cash) }}</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--muted);">Quantity:</span>
+          <b id="buy-qty-preview" style="color:var(--muted);">—</b>
+        </div>
+        <div id="buy-over-budget" style="display:none;color:var(--red);font-size:11px;margin-top:6px;">
+          Insufficient cash — amount exceeds available balance.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="hideModal('modal-buy')"
+          style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius);
+                 background:transparent;color:var(--muted);cursor:pointer;font-size:13px;">
+          Cancel
+        </button>
+        <button type="submit" id="buy-submit" class="btn btn-primary" style="padding:8px 20px;font-size:13px;">
+          Confirm Buy
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ═══════════════════════ SELL MODAL ═══════════════════════ #}
+<div class="modal-overlay" id="modal-sell">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-title">Sell <span id="sell-ticker"></span></div>
+    <form method="POST" action="/portfolio/sell">
+      <input type="hidden" name="position_id" id="sell-position-id">
+      <div class="form-group">
+        <label>Exit Price ($)</label>
+        <input type="number" name="exit_price" id="sell-exit-price"
+               step="any" min="0.000001" placeholder="0.00" required
+               oninput="updatePnlPreview()">
+      </div>
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+                  padding:10px;font-size:12px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span class="text-muted">Entry price:</span>
+          <span id="sell-entry-display">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span class="text-muted">Quantity:</span>
+          <span id="sell-qty-display">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;">
+          <span class="text-muted">Estimated P&amp;L:</span>
+          <span id="sell-pnl-preview" style="color:var(--muted);">—</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="hideModal('modal-sell')"
+          style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius);
+                 background:transparent;color:var(--muted);cursor:pointer;font-size:13px;">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-danger" style="padding:8px 20px;font-size:13px;">
+          Confirm Sell
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Buy modal ──
+var _buyCash = {{ cash }};
+
+function updateBuyCost() {
+  var price  = parseFloat(document.getElementById('buy-price').value)  || 0;
+  var amount = parseFloat(document.getElementById('buy-amount').value) || 0;
+  var qtyEl     = document.getElementById('buy-qty');
+  var qtyPrev   = document.getElementById('buy-qty-preview');
+  var warnEl    = document.getElementById('buy-over-budget');
+  var submitBtn = document.getElementById('buy-submit');
+
+  if (price > 0 && amount > 0) {
+    var qty  = amount / price;
+    var over = amount > _buyCash;
+    qtyEl.value        = qty.toFixed(8);
+    qtyPrev.textContent = qty < 1 ? qty.toFixed(6) : qty.toFixed(4);
+    qtyPrev.style.color = over ? 'var(--red)' : 'var(--text)';
+    warnEl.style.display  = over ? 'block' : 'none';
+    submitBtn.disabled    = over;
+    submitBtn.style.opacity = over ? '0.5' : '1';
+    submitBtn.style.cursor  = over ? 'not-allowed' : 'pointer';
+  } else {
+    qtyEl.value         = '';
+    qtyPrev.textContent = '—';
+    qtyPrev.style.color = 'var(--muted)';
+    warnEl.style.display  = 'none';
+    submitBtn.disabled    = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.style.cursor  = 'pointer';
+  }
+}
+
+// Reset buy modal when opened
+var _origShowModal = window.showModal;
+window.showModal = function(id) {
+  if (id === 'modal-buy') {
+    document.getElementById('buy-price').value  = '';
+    document.getElementById('buy-amount').value = '';
+    document.getElementById('buy-qty').value    = '';
+    updateBuyCost();
+  }
+  _origShowModal(id);
+};
+
+// ── Sell modal ──
+var _sellEntry = 0, _sellQty = 0;
+
+function openSellModal(posId, ticker, entryPrice, qty, currentPrice, hasLivePrice) {
+  _sellEntry = entryPrice;
+  _sellQty   = qty;
+  var priceInput = document.getElementById('sell-exit-price');
+  document.getElementById('sell-position-id').value        = posId;
+  document.getElementById('sell-ticker').textContent        = ticker;
+  document.getElementById('sell-entry-display').textContent = '$' + entryPrice.toFixed(4);
+  document.getElementById('sell-qty-display').textContent   = qty;
+
+  if (hasLivePrice) {
+    priceInput.value = currentPrice.toFixed(4);
+    updatePnlPreview();
+  } else {
+    // No scheduled price for this ticker — fetch live from TradingView
+    priceInput.value = '';
+    priceInput.placeholder = 'Fetching…';
+    document.getElementById('sell-pnl-preview').textContent = '—';
+    document.getElementById('sell-pnl-preview').style.color = 'var(--muted)';
+    fetch('/api/ticker-price/' + encodeURIComponent(ticker))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.price) {
+          priceInput.value = d.price.toFixed(4);
+          priceInput.placeholder = '0.00';
+          updatePnlPreview();
+        } else {
+          priceInput.placeholder = 'Enter price manually';
+        }
+      })
+      .catch(function() { priceInput.placeholder = 'Enter price manually'; });
+  }
+
+  showModal('modal-sell');
+}
+
+function updatePnlPreview() {
+  var exitPrice = parseFloat(document.getElementById('sell-exit-price').value) || 0;
+  var pnl = (exitPrice - _sellEntry) * _sellQty;
+  var pnlEl = document.getElementById('sell-pnl-preview');
+  var sign = pnl >= 0 ? '+' : '';
+  pnlEl.textContent = sign + '$' + pnl.toFixed(2);
+  pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+// ── P&L chart with time-range filter ──
+var _snapData = {{ snap_chart | tojson }};
+var _pnlChart = null;
+
+var RANGE_DAYS = { '1D': 1, '1W': 7, '1M': 30, '1Y': 365 };
+
+function filterChart(range) {
+  // Update button styles
+  ['1D','1W','1M','1Y'].forEach(function(r) {
+    var btn = document.getElementById('range-' + r);
+    if (!btn) return;
+    btn.style.background = r === range ? 'var(--accent)' : 'var(--surface-2)';
+    btn.style.color      = r === range ? '#fff' : 'var(--muted)';
+  });
+
+  var days  = RANGE_DAYS[range];
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  var filtered = _snapData.filter(function(p) { return new Date(p.x) >= cutoff; });
+  if (filtered.length === 0) filtered = _snapData;
+
+  var vals = filtered.map(function(p) { return p.y; });
+  var isUp = vals.length > 1 ? vals[vals.length-1] >= vals[0] : true;
+  var color = isUp ? '#3fb950' : '#f85149';
+  var bg    = isUp ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+
+  if (_pnlChart) {
+    _pnlChart.data.labels   = filtered.map(function(p) { return p.x; });
+    _pnlChart.data.datasets[0].data            = vals;
+    _pnlChart.data.datasets[0].borderColor      = color;
+    _pnlChart.data.datasets[0].backgroundColor  = bg;
+    _pnlChart.update();
+  }
+}
+
+(function() {
+  // P&L chart init
+  var canvas = document.getElementById('chart-pnl');
+  if (canvas && _snapData.length > 0) {
+    var vals  = _snapData.map(function(p) { return p.y; });
+    var isUp  = vals.length > 1 ? vals[vals.length-1] >= vals[0] : true;
+    var color = isUp ? '#3fb950' : '#f85149';
+    var bg    = isUp ? 'rgba(63,185,80,0.08)' : 'rgba(248,81,73,0.08)';
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+
+    _pnlChart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: _snapData.map(function(p) { return p.x; }),
+        datasets: [{
+          data: vals, borderColor: color, borderWidth: 2, pointRadius: 0,
+          fill: true, backgroundColor: bg, tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx) { return '$' + ctx.parsed.y.toFixed(2); } } } },
+        scales: {
+          x: { display: false },
+          y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' },
+               ticks: { color: '#8b949e', font: { size: 10 },
+                        callback: function(v) { return '$' + v.toFixed(0); } },
+               min: mn * 0.99, max: mx * 1.01 }
+        }
+      }
+    });
+  }
+
+  // Doughnut chart init
+  var donutCanvas = document.getElementById('chart-donut');
+  var donutLabels = {{ donut_labels | tojson }};
+  var donutValues = {{ donut_values | tojson }};
+
+  if (donutCanvas && donutValues.length > 0) {
+    var palette = [
+      '#58a6ff','#3fb950','#f85149','#d29922','#c792ea',
+      '#79c0ff','#56d364','#ffa657','#ff7b72','#8b949e',
+    ];
+    var colors = donutLabels.map(function(_, i) { return palette[i % palette.length]; });
+
+    // Set legend dot colors
+    donutLabels.forEach(function(_, i) {
+      var dot = document.getElementById('dot-' + i);
+      if (dot) dot.style.background = colors[i];
+    });
+
+    new Chart(donutCanvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: donutLabels,
+        datasets: [{ data: donutValues, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+      },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                var total = ctx.dataset.data.reduce(function(a,b){ return a+b; }, 0);
+                var pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                return ctx.label + ': $' + ctx.parsed.toFixed(2) + ' (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
