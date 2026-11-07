@@ -1,0 +1,278 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "what": "Upgrade panel frames for panel.read_paths (PLAN 5.3): content area at 735 px wide, JPEG q90. 'ocr' is what Apple Vision read in each path_prices box on the full 2x frame (keyed by path index; absent = not asked). 'truth' per path: [state, price, tier], checked by eye. Dart Monkey in Monkey Meadow Easy Sandbox 2026-11-05, except std_000_poor (Standard, $119: Sharp Shots unaffordable) and std_left (a left-side panel, Standard, step 2.5).",
+  "src": "bloons/data/fixtures_full/panel/ (gitignored)"
+ },
+ "frames": {
+  "dart2_400_right": {
+   "side": "right",
+   "ocr": {
+    "0": "",
+    "1": "$85",
+    "2": "$75"
+   },
+   "truth": [
+    [
+     "max",
+     null,
+     4
+    ],
+    [
+     "buy",
+     85,
+     0
+    ],
+    [
+     "buy",
+     75,
+     0
+    ]
+   ]
+  },
+  "dart_000_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$120",
+    "1": "$85",
+    "2": "$75"
+   },
+   "truth": [
+    [
+     "buy",
+     120,
+     0
+    ],
+    [
+     "buy",
+     85,
+     0
+    ],
+    [
+     "buy",
+     75,
+     0
+    ]
+   ]
+  },
+  "dart_100_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$170",
+    "1": "$85",
+    "2": "$75"
+   },
+   "truth": [
+    [
+     "buy",
+     170,
+     1
+    ],
+    [
+     "buy",
+     85,
+     0
+    ],
+    [
+     "buy",
+     75,
+     0
+    ]
+   ]
+  },
+  "dart_110_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$170",
+    "1": "$160"
+   },
+   "truth": [
+    [
+     "buy",
+     170,
+     1
+    ],
+    [
+     "buy",
+     160,
+     1
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "dart_210_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$275",
+    "1": "$160"
+   },
+   "truth": [
+    [
+     "buy",
+     275,
+     2
+    ],
+    [
+     "buy",
+     160,
+     1
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "dart_310_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$1,530",
+    "1": "$160"
+   },
+   "truth": [
+    [
+     "buy",
+     1530,
+     3
+    ],
+    [
+     "buy",
+     160,
+     1
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "dart_320_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$1,530",
+    "1": ""
+   },
+   "truth": [
+    [
+     "buy",
+     1530,
+     3
+    ],
+    [
+     "max",
+     null,
+     2
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "dart_420_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$12,750",
+    "1": ""
+   },
+   "truth": [
+    [
+     "buy",
+     12750,
+     4
+    ],
+    [
+     "max",
+     null,
+     2
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "dart_520_right": {
+   "side": "right",
+   "ocr": {
+    "0": "",
+    "1": ""
+   },
+   "truth": [
+    [
+     "max",
+     null,
+     5
+    ],
+    [
+     "max",
+     null,
+     2
+    ],
+    [
+     "closed",
+     null,
+     0
+    ]
+   ]
+  },
+  "std_000_poor_right": {
+   "side": "right",
+   "ocr": {
+    "0": "$120",
+    "1": "$85",
+    "2": "$75"
+   },
+   "truth": [
+    [
+     "poor",
+     120,
+     0
+    ],
+    [
+     "buy",
+     85,
+     0
+    ],
+    [
+     "buy",
+     75,
+     0
+    ]
+   ]
+  },
+  "std_left": {
+   "side": "left",
+   "ocr": {
+    "0": "$130",
+    "1": "$85",
+    "2": "$130"
+   },
+   "truth": [
+    [
+     "buy",
+     130,
+     0
+    ],
+    [
+     "buy",
+     85,
+     0
+    ],
+    [
+     "buy",
+     130,
+     0
+    ]
+   ]
+  }
+ }
+}

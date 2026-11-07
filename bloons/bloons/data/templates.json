@@ -1,0 +1,47 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "calibrated": "2026-11-04",
+  "work_width": 735,
+  "margin": 0.02,
+  "how": "boxes are normalized [x0, y0, x1, y1] over the content area, same as ui.json. Template PNGs in data/templates/ are cut from fixtures_full/<src> at work_width by scripts/make_templates.py. Matching is TM_CCOEFF_NORMED in BGR within the box grown by margin, or within 'search' if given. Thresholds come from the score table in RESEARCH.md (step 1.4)."
+ },
+ "templates": {
+  "btn_play":          {"src": "hud_r1_idle_play_button.png", "box": [0.915, 0.895, 0.965, 0.99], "threshold": 0.8},
+  "btn_ff":            {"src": "hud_r1_running_ff_off.png",   "box": [0.915, 0.895, 0.965, 0.99], "threshold": 0.8},
+  "victory_banner":    {"src": "victory_monkey_meadow_easy.png", "box": [0.335, 0.105, 0.665, 0.205], "threshold": 0.8},
+  "victory_next":      {"src": "victory_monkey_meadow_easy.png", "box": [0.445, 0.8, 0.555, 0.88], "threshold": 0.8},
+  "defeat_title":      {"src": "defeat_monkey_meadow_easy_r13.png", "box": [0.39, 0.265, 0.61, 0.36], "threshold": 0.8},
+  "defeat_buttons":    {"src": "defeat_monkey_meadow_easy_r13.png", "box": [0.3, 0.69, 0.71, 0.85], "threshold": 0.8},
+  "pause_title":       {"src": "pause_menu.png", "box": [0.44, 0.005, 0.56, 0.06], "threshold": 0.8},
+  "pause_buttons":     {"src": "pause_menu.png", "box": [0.35, 0.715, 0.65, 0.875], "threshold": 0.8},
+  "restart_confirm":   {"src": "popup_restart_confirm.png", "box": [0.42, 0.345, 0.58, 0.395], "threshold": 0.8},
+  "collection_event":  {"src": "popup_collection_event.png", "box": [0.385, 0.025, 0.615, 0.085], "threshold": 0.8},
+  "collect_button":    {"src": "popup_collection_event.png", "box": [0.44, 0.585, 0.56, 0.665], "threshold": 0.8},
+  "sell_button":       {"src": "upgrade_panel_right.png", "box": [0.757, 0.812, 0.835, 0.872], "search": [0.0, 0.76, 0.88, 0.92], "threshold": 0.8},
+  "menu_map_select":   {"src": "menu_map_select_beginner.png", "box": [0.015, 0.0, 0.065, 0.185], "threshold": 0.8},
+  "menu_mode_standard":{"src": "menu_mode_select_easy.png", "box": [0.285, 0.455, 0.385, 0.66], "threshold": 0.8},
+  "menu_home":         {"src": "menu_home.png", "box": [0.46, 0.8, 0.54, 0.98], "threshold": 0.8},
+  "menu_difficulty":   {"src": "menu_difficulty.png", "box": [0.29, 0.29, 0.39, 0.5], "threshold": 0.8},
+  "overwrite_save":    {"src": "popup_overwrite_save.png", "box": [0.405, 0.345, 0.6, 0.395], "threshold": 0.8}
+ },
+ "probes": {
+  "play_button": {
+   "box": [0.917, 0.91, 0.928, 0.97],
+   "classes": {"idle": [9, 224, 97], "ff_off": [76, 227, 137], "ff_on": [76, 236, 152]},
+   "max_dist": 6
+  },
+  "auto_start_toggle": {
+   "_notes": "Pause-menu Auto Start knob: blue when on, dark track when off. Read >= 0.8 s after the menu opens (it zooms in). 2026-11-05, Meadow Sandbox",
+   "box": [0.693, 0.27, 0.707, 0.296],
+   "classes": {"on": [250, 208, 1], "off": [15, 31, 54]},
+   "max_dist": 40
+  },
+  "sandbox_panel": {
+   "_notes": "Sandbox only: the bottom-left toggle button is orange while the tower shop shows, blue while the bloon-send panel shows. 2026-11-05",
+   "box": [0.853, 0.905, 0.862, 0.975],
+   "classes": {"shop": [13, 203, 255], "bloons": [240, 193, 20]},
+   "max_dist": 50
+  }
+ }
+}

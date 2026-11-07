@@ -1,0 +1,39 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "made": "2026-11-06",
+  "what": "Layout of GameState.to_vector() and GameState.grid_image() (bloons/obsvec.py, PLAN 5.6). The lists below fix the one-hot orders: a trained model depends on them, so append new entries at the end rather than re-sorting. tests/test_offline.py checks tower_kinds / heroes / bloon_types against towers.json / heroes.json / rounds.json.",
+  "scales": "money and costs: log1p(v) / log1p(money); counts: log1p(n) / log1p(count); lives / lives; rounds / round; ranges in units / range_units; positions are normalized content coords (already 0-1). Values can pass 1 when the game passes the scale.",
+  "grid": "box = [x0, y0, x1, y1] of the play area in content coords (the swept masks cover x 0.03-0.84, all of y; the shop column is to the right). nx x ny cells, each sampled at sub x sub points. Channels: path (share of the cell within path_half_width_units of the bloons' centre line; 4.5 = the Meadow round-1 bloon band's area / path length / 2, 2026-11-06. Not the map's path.half_width_units, which is the placement keep-out pad, 0.25), one per placeable_classes (share placeable, our towers and the path already removed; 0 if the map has no mask for it), towers (share under a footprint, hero included), ranges (range ellipses covering the cell / range_cap), bloons (log1p(bloons in cell) / log1p(bloon_cap); 0 when observe().bloons is None)."
+ },
+ "maps": ["monkey_meadow", "tree_stump", "town_center", "logs"],
+ "difficulties": ["easy", "medium", "hard", "impoppable"],
+ "modes": ["standard", "sandbox"],
+ "tower_kinds": ["alchemist", "banana_farm", "beast_handler", "bomb_shooter", "boomerang_monkey", "dart_monkey", "dartling_gunner", "desperado", "druid", "engineer_monkey", "glue_gunner", "heli_pilot", "ice_monkey", "mermonkey", "monkey_ace", "monkey_buccaneer", "monkey_sub", "monkey_village", "mortar_monkey", "ninja_monkey", "skywarden", "sniper_monkey", "spike_factory", "super_monkey", "tack_shooter", "wizard_monkey"],
+ "heroes": ["admiral_brickell", "adora", "benjamin", "captain_churchill", "corvus", "dan_dmonke", "etienne", "ezili", "geraldo", "gwendolin", "obyn_greenfoot", "pat_fusty", "psi", "quincy", "rosalia", "sauda", "silas", "striker_jones"],
+ "bloon_types": ["red", "blue", "green", "yellow", "pink", "black", "white", "purple", "zebra", "lead", "rainbow", "ceramic", "moab", "bfb", "zomg", "ddt", "bad"],
+ "targeting": ["default", "first", "last", "close", "strong", "other"],
+ "tower_slots": 20,
+ "ability_slots": 8,
+ "scale": {
+  "money": 100000,
+  "count": 200,
+  "lives": 200,
+  "round": 100,
+  "range_units": 100,
+  "duration_s": 60,
+  "hero_level": 20
+ },
+ "grid": {
+  "box": [0.03, 0.0, 0.84, 1.0],
+  "nx": 24,
+  "ny": 16,
+  "sub": 4,
+  "path_half_width_units": 4.5,
+  "placeable_classes": ["land_r6", "land_r7", "land_r11", "water_r8"],
+  "range_cap": 4,
+  "bloon_cap": 20,
+  "hero_footprint_units": 7,
+  "default_footprint_units": 6
+ }
+}

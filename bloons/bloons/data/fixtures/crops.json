@@ -1,0 +1,353 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "window": "windowed 1470x830 pt, captured at 2x (2940x1660 px)",
+  "boxes": "normalized [x0, y0, x1, y1] over the content area (window minus title bar), same as ui.json",
+  "how": "full frames live in bloons/data/fixtures_full/ (gitignored); regenerate crops with scripts/make_crops.py",
+  "hud": "HUD crops are the ui.json boxes padded slightly (the round crop also catches the 'ROUND' label). 'truth' was checked by eye against the frames."
+ },
+ "crops": {
+  "hud_r01_idle_lives": {
+   "src": "hud_r1_idle_play_button.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 200,
+   "ocr": "200"
+  },
+  "hud_r01_idle_money": {
+   "src": "hud_r1_idle_play_button.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 650,
+   "ocr": "$650"
+  },
+  "hud_r01_idle_round": {
+   "src": "hud_r1_idle_play_button.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    1,
+    40
+   ],
+   "ocr": "KOMID 1/40"
+  },
+  "hud_r05_lives": {
+   "src": "hud_r05.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 200,
+   "ocr": "200"
+  },
+  "hud_r05_money": {
+   "src": "hud_r05.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 191,
+   "ocr": "$191"
+  },
+  "hud_r05_round": {
+   "src": "hud_r05.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    5,
+    40
+   ],
+   "ocr": "5/40"
+  },
+  "hud_r10_lives": {
+   "src": "hud_r10.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 200,
+   "ocr": "200"
+  },
+  "hud_r10_money": {
+   "src": "hud_r10.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 133,
+   "ocr": "$133"
+  },
+  "hud_r10_round": {
+   "src": "hud_r10.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    10,
+    40
+   ],
+   "ocr": "KOMID 10/40"
+  },
+  "hud_r20_lives": {
+   "src": "hud_r20.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 200,
+   "ocr": "200"
+  },
+  "hud_r20_money": {
+   "src": "hud_r20.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 1357,
+   "ocr": "$1,357"
+  },
+  "hud_r20_round": {
+   "src": "hud_r20.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    20,
+    40
+   ],
+   "ocr": "КOМIВ 20/40"
+  },
+  "hud_r30_lives": {
+   "src": "hud_r30.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 200,
+   "ocr": "200"
+  },
+  "hud_r30_money": {
+   "src": "hud_r30.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 796,
+   "ocr": "$796"
+  },
+  "hud_r30_round": {
+   "src": "hud_r30.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    30,
+    40
+   ],
+   "ocr": "КОМПВ 30/40"
+  },
+  "hud_r39_lives": {
+   "src": "hud_r39.png",
+   "box": [
+    0.075,
+    0.0033,
+    0.1461,
+    0.072
+   ],
+   "truth": 189,
+   "ocr": "189"
+  },
+  "hud_r39_money": {
+   "src": "hud_r39.png",
+   "box": [
+    0.1805,
+    0.0033,
+    0.3127,
+    0.072
+   ],
+   "truth": 1630,
+   "ocr": "$1,630"
+  },
+  "hud_r39_round": {
+   "src": "hud_r39.png",
+   "box": [
+    0.7043,
+    0.0158,
+    0.8141,
+    0.077
+   ],
+   "truth": [
+    39,
+    40
+   ],
+   "ocr": "КOМIВ 39/40"
+  },
+  "btn_play_idle": {
+   "src": "hud_r1_idle_play_button.png",
+   "box": [
+    0.84,
+    0.88,
+    0.98,
+    1.0
+   ]
+  },
+  "btn_ff_off": {
+   "src": "hud_r1_running_ff_off.png",
+   "box": [
+    0.84,
+    0.88,
+    0.98,
+    1.0
+   ]
+  },
+  "btn_ff_on": {
+   "src": "hud_r1_running_ff_on.png",
+   "box": [
+    0.84,
+    0.88,
+    0.98,
+    1.0
+   ]
+  },
+  "pause_title": {
+   "src": "pause_menu.png",
+   "box": [
+    0.34,
+    0.0,
+    0.66,
+    0.08
+   ]
+  },
+  "pause_buttons": {
+   "src": "pause_menu.png",
+   "box": [
+    0.34,
+    0.69,
+    0.66,
+    0.85
+   ]
+  },
+  "upgrade_panel_left": {
+   "src": "upgrade_panel_left.png",
+   "box": [
+    0.02,
+    0.06,
+    0.235,
+    0.91
+   ]
+  },
+  "upgrade_panel_right": {
+   "src": "upgrade_panel_right.png",
+   "box": [
+    0.64,
+    0.06,
+    0.845,
+    0.91
+   ]
+  },
+  "defeat": {
+   "src": "defeat_monkey_meadow_easy_r13.png",
+   "box": [
+    0.29,
+    0.07,
+    0.72,
+    0.87
+   ]
+  },
+  "restart_confirm": {
+   "src": "popup_restart_confirm.png",
+   "box": [
+    0.27,
+    0.29,
+    0.74,
+    0.72
+   ]
+  },
+  "collection_event": {
+   "src": "popup_collection_event.png",
+   "box": [
+    0.3,
+    0.0,
+    0.7,
+    0.68
+   ]
+  },
+  "menu_map_tile_monkey_meadow": {
+   "src": "menu_map_select_beginner.png",
+   "box": [
+    0.19,
+    0.08,
+    0.385,
+    0.38
+   ]
+  },
+  "menu_mode_standard": {
+   "src": "menu_mode_select_easy.png",
+   "box": [
+    0.28,
+    0.45,
+    0.4,
+    0.71
+   ]
+  },
+  "victory_banner": {
+   "src": "victory_monkey_meadow_easy.png",
+   "box": [
+    0.32,
+    0.088,
+    0.68,
+    0.235
+   ]
+  },
+  "victory_next_button": {
+   "src": "victory_monkey_meadow_easy.png",
+   "box": [
+    0.44,
+    0.793,
+    0.557,
+    0.886
+   ]
+  }
+ }
+}

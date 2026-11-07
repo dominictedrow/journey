@@ -1,0 +1,30 @@
+{
+ "_meta": {
+  "what": "Test frames for vision.py: each full frame in fixtures_full/ at templates.json work_width (content area only), written to fixtures/frames/<frame>.jpg (JPEG q90) by scripts/make_templates.py so the tests run without a Mac.",
+  "labels": "screen: expected state.read_screen() kind. present: templates that must match. ignore: templates whose answer doesn't matter (e.g. the play button dimmed under an overlay). Every other template must NOT match. button: expected vision.button_state().",
+  "redact": "boxes filled grey before writing (player name on the victory stats card)."
+ },
+ "frames": {
+  "hud_r1_idle_play_button":  {"screen": "game", "present": ["btn_play"], "button": "idle"},
+  "hud_r1_running_ff_off":    {"screen": "game", "present": ["btn_ff"], "button": "ff_off"},
+  "hud_r1_running_ff_on":     {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "hud_r05":                  {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "hud_r10":                  {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "hud_r20":                  {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "hud_r30":                  {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "hud_r39":                  {"screen": "game", "present": ["btn_ff"], "button": "ff_on"},
+  "upgrade_panel_left":       {"screen": "game", "present": ["btn_ff", "sell_button"], "button": "ff_on", "sell_side": "left"},
+  "upgrade_panel_right":      {"screen": "game", "present": ["btn_ff", "sell_button"], "button": "ff_on", "sell_side": "right"},
+  "pause_menu":               {"screen": "pause", "present": ["pause_title", "pause_buttons"], "ignore": ["btn_play", "btn_ff"], "button": null},
+  "victory_monkey_meadow_easy": {"screen": "victory", "present": ["victory_banner", "victory_next"], "ignore": ["btn_play", "btn_ff"], "button": null,
+                                 "redact": [[0.405, 0.24, 0.6, 0.79]]},
+  "defeat_monkey_meadow_easy_r13": {"screen": "defeat", "present": ["defeat_title", "defeat_buttons"], "ignore": ["btn_play", "btn_ff"], "button": null},
+  "popup_restart_confirm":    {"screen": "restart_confirm", "present": ["restart_confirm"], "ignore": ["btn_play", "btn_ff", "defeat_title", "defeat_buttons"], "button": null},
+  "popup_collection_event":   {"screen": "collection_event", "present": ["collection_event", "collect_button"], "button": null},
+  "menu_map_select_beginner": {"screen": "map_select", "present": ["menu_map_select"], "button": null},
+  "menu_mode_select_easy":    {"screen": "mode_select", "present": ["menu_mode_standard"], "button": null},
+  "menu_home":                {"screen": "home", "present": ["menu_home"], "button": null, "redact": [[0.0, 0.0, 0.3, 0.13]]},
+  "menu_difficulty":          {"screen": "difficulty_select", "present": ["menu_difficulty"], "button": null, "redact": [[0.86, 0.0, 1.0, 0.66]]},
+  "popup_overwrite_save":     {"screen": "overwrite_save", "present": ["overwrite_save"], "button": null}
+ }
+}

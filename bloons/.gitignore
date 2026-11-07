@@ -1,0 +1,7 @@
+__pycache__/
+frame.png
+.env
+.venv/
+._*
+.DS_Store
+bloons/data/fixtures_full/

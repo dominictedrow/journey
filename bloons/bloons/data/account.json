@@ -1,0 +1,137 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "what": "Effects of Dom's account (Monkey Knowledge) on in-game prices, as observed in game. Prices in towers.json/heroes.json are before these. Only effects seen in game are listed; the harness should still prefer prices read off the shop/upgrade panel (PLAN 5.3).",
+  "checked": "2026-11-04: prices in the Monkey Meadow Easy sandbox (step 2.5, 3.1); the full owned Monkey Knowledge list read off the Primary / Military / Magic / Support trees (3.1)",
+  "how": "Machine-readable effects used by rules.shop_price / upgrade_price: 'towers' (shop base price) or 'upgrades' ([tower, path 0-2, tier 1-5]) get 'flat' $ added after difficulty scaling, then x 'mult'; 'first_only' = first of that tower each game. Rounded once at the end."
+ },
+ "monkey_knowledge": {
+  "cheap_rangs": {
+   "active": true,
+   "effect": "Boomerang Monkey base price -$50, after difficulty scaling (Primary tree)",
+   "evidence": "shop showed $220 = cost(315, easy) 270 - 50",
+   "towers": [
+    "boomerang_monkey"
+   ],
+   "flat": -50
+  },
+  "scholarships": {
+   "active": true,
+   "effect": "hero level-up cost x0.9",
+   "evidence": "Benjamin level 2 for $243 = 270 XP x 0.9",
+   "training_discount": 0.1
+  },
+  "hero_favors": {
+   "active": false,
+   "effect": "hero base price -10%",
+   "evidence": "Benjamin cost the full $1,020 = cost(1200, easy)"
+  },
+  "advanced_logistics": {
+   "active": false,
+   "effect": "Military base prices -5%",
+   "evidence": "Sniper $300, Sub $275, Buccaneer $340, Ace $680 all at full cost(base, easy)"
+  },
+  "flat_pack_buildings": {
+   "active": true,
+   "effect": "Banana Farm and Monkey Village cost 2% less and sell for 2% more (Support tree)",
+   "towers": [
+    "banana_farm",
+    "monkey_village"
+   ],
+   "mult": 0.98,
+   "sell_bonus": 0.02,
+   "evidence": "Village $1,000 = 1200 x 0.85 x 0.98 = 999.6"
+  },
+  "farm_subsidy": {
+   "active": true,
+   "effect": "first Banana Farm each game costs $100 less (Support tree)",
+   "towers": [
+    "banana_farm"
+   ],
+   "flat": -100,
+   "first_only": true,
+   "evidence": "Farm $945 = (1250 x 0.85 - 100) x 0.98 = 943.25 (subtract before the 2%; the other order gives 940)"
+  },
+  "first_last_line_of_defense": {
+   "active": true,
+   "effect": "first Spike Factory each game costs $150 less (Support tree)",
+   "towers": [
+    "spike_factory"
+   ],
+   "flat": -150,
+   "first_only": true,
+   "evidence": "Spike Factory $700 = 1000 x 0.85 - 150"
+  },
+  "cheaper_doubles": {
+   "active": true,
+   "effect": "Ninja Double Shot -$100 (Magic tree)",
+   "upgrades": [
+    [
+     "ninja_monkey",
+     0,
+     3
+    ]
+   ],
+   "flat": -100,
+   "evidence": "read off the MK tree; price not checked in game"
+  },
+  "warm_oak": {
+   "active": true,
+   "effect": "Heart of Oak -$100 (Magic tree)",
+   "upgrades": [
+    [
+     "druid",
+     1,
+     2
+    ]
+   ],
+   "flat": -100,
+   "evidence": "read off the MK tree; price not checked in game"
+  },
+  "magic_tricks": {
+   "active": true,
+   "effect": "Guided Magic and Intense Magic -$25 (Magic tree)",
+   "upgrades": [
+    [
+     "wizard_monkey",
+     0,
+     1
+    ],
+    [
+     "wizard_monkey",
+     2,
+     1
+    ]
+   ],
+   "flat": -25,
+   "evidence": "read off the MK tree; price not checked in game"
+  },
+  "cheaper_maiming": {
+   "active": true,
+   "effect": "Maim MOAB -$1000 (Military tree)",
+   "upgrades": [
+    [
+     "sniper_monkey",
+     0,
+     4
+    ]
+   ],
+   "flat": -1000,
+   "evidence": "read off the MK tree; price not checked in game"
+  },
+  "budget_clusters": {
+   "active": true,
+   "effect": "Cluster Bombs -$100 (Primary tree)",
+   "upgrades": [
+    [
+     "bomb_shooter",
+     2,
+     3
+    ]
+   ],
+   "flat": -100,
+   "evidence": "read off the MK tree; price not checked in game"
+  }
+ },
+ "other_owned_knowledge": "Not price-related (read 2026-11-04): Primary: Fast Tack Attacks, Poppy Blades, Hard Tacks, Fast Glue, Fraggy Frags, Increased Lifespan, Extra Dart Pops, Crossbow Reach, More Splatty Glue, Force vs Force. Military: Naval Upgrades, Big Bunch, Breaking Ballistic, Faster Takedowns, Airforce Upgrades, Accelerated Agrodarts, Targeted Pineapples, Rapid Razors, Elite Military Training, Ceramic Shock, Emergency Unlock, Gorgon Storm. Magic: Super Range, Heavy Knockback, Diversion Tactics, Strike Down the False, Lingering Magic, Hot Magic, Flame Jet, Speedy Brewing, Mo' Monkey Money, Strong Tonic. Support: One More Spike, Insider Trades, More Valuable Bananas, Bigger Banks, Vigilant Sentries, Monkey Education, Backroom Deals, Inland Revenue Streams. Heroes and Powers trees not read."
+}

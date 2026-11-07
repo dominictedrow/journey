@@ -1,0 +1,89 @@
+{
+ "_notes": "Range circles (5.5), Monkey Meadow Easy Sandbox, windowed 1470x830, 2026-11-06. Selected / deselected content-frame crops (box = [x0, y0, x1, y1] px of a 2940x1594 frame); paste both into black frames to rebuild. range = towers.json table value (19 live reads agreed within 0.07).",
+ "frame": [
+  2940,
+  1594
+ ],
+ "cases": {
+  "dart_monkey_302": {
+   "kind": "dart_monkey",
+   "tiers": [
+    3,
+    0,
+    2
+   ],
+   "xy": [
+    0.34,
+    0.3
+   ],
+   "side": "right",
+   "box": [
+    520,
+    55,
+    1478,
+    901
+   ],
+   "range": 52.8
+  },
+  "tack_shooter_000": {
+   "kind": "tack_shooter",
+   "tiers": [
+    0,
+    0,
+    0
+   ],
+   "xy": [
+    0.15,
+    0.27
+   ],
+   "side": "right",
+   "box": [
+    199,
+    212,
+    683,
+    648
+   ],
+   "range": 23
+  },
+  "glue_gunner_030": {
+   "kind": "glue_gunner",
+   "tiers": [
+    0,
+    3,
+    0
+   ],
+   "xy": [
+    0.1,
+    0.85
+   ],
+   "side": "right",
+   "box": [
+    0,
+    895,
+    815,
+    1594
+   ],
+   "range": 58
+  },
+  "ice_monkey_301": {
+   "kind": "ice_monkey",
+   "tiers": [
+    3,
+    0,
+    1
+   ],
+   "xy": [
+    0.55,
+    0.85
+   ],
+   "side": "left",
+   "box": [
+    1303,
+    1074,
+    1931,
+    1594
+   ],
+   "range": 32
+  }
+ }
+}

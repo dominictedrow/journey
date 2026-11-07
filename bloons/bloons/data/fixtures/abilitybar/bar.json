@@ -1,0 +1,63 @@
+{
+ "_notes": "Ability bar strips (5.4), Monkey Meadow Easy Sandbox, windowed 1470x830, 2026-11-06: content[1482:1582, 235:705] of a 2940x1594 frame (paste at offset to rebuild). Slots: 0 Biohack, 1 Turbo Charge, 2 Super Monkey Fan Club. frac = remaining cooldown fraction; 124-175 s from a linear fit over 267 reads (cooldowns 29.2 / 44.1 / 49.0 s), others from the read checked by eye. 0122.52: rings of the round-only slots hidden just after a round send (BarFilter case).",
+ "offset": [
+  235,
+  1482
+ ],
+ "frame": [
+  2940,
+  1594
+ ],
+ "frames": {
+  "0019.12_hero3": [
+   0.278,
+   0.0,
+   0.0
+  ],
+  "0034.02_fan": [
+   0.0,
+   0.139,
+   0.292
+  ],
+  "0045.20_w": [
+   0.0,
+   0.0,
+   0.083
+  ],
+  "0070.01_w": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "0117.72_post3": [
+   0.944,
+   1.0,
+   1.0
+  ],
+  "0122.52_w": [
+   0.792,
+   0.0,
+   0.0
+  ],
+  "0130.78_w": [
+   0.506,
+   0.73,
+   0.77
+  ],
+  "0141.00_w": [
+   0.157,
+   0.498,
+   0.562
+  ],
+  "0152.00_w": [
+   0,
+   0.249,
+   0.337
+  ],
+  "0163.65_w": [
+   0,
+   0,
+   0.1
+  ]
+ }
+}

@@ -1,0 +1,220 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "made": "2026-11-05",
+  "what": "Activated abilities each hero adds to the ability bar, in unlock order: level, name, cooldown_s (game seconds at that level; null = unknown). From the heroes.json level texts ('Name: ...'), passives dropped by hand; cooldowns from the wiki stats dumps where heroes.json has them.",
+  "checked": "Only Benjamin's Biohack (level 3) has been seen on the bar in game; its cooldown was measured from the bar ring (2026-11-06: 29.2 s, tower abilities read ~2 % under their table values too, so 30). corvus = null: his spellbook isn't modelled. geraldo = []: his shop isn't the ability bar.",
+  "default_cooldown_s": 60
+ },
+ "heroes": {
+  "admiral_brickell": [
+   {
+    "level": 3,
+    "name": "Naval Tactics",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Mega Mine",
+    "cooldown_s": null
+   }
+  ],
+  "adora": [
+   {
+    "level": 3,
+    "name": "The Long Arm of Light",
+    "cooldown_s": 45
+   },
+   {
+    "level": 7,
+    "name": "Blood Sacrifice",
+    "cooldown_s": 30
+   },
+   {
+    "level": 10,
+    "name": "Ball of Light",
+    "cooldown_s": 60
+   }
+  ],
+  "benjamin": [
+   {
+    "level": 3,
+    "name": "Biohack",
+    "cooldown_s": 30
+   },
+   {
+    "level": 10,
+    "name": "Syphon Funding",
+    "cooldown_s": null
+   }
+  ],
+  "captain_churchill": [
+   {
+    "level": 3,
+    "name": "Armor Piercing Shells",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "MOAB Barrage",
+    "cooldown_s": null
+   }
+  ],
+  "corvus": null,
+  "dan_dmonke": [
+   {
+    "level": 7,
+    "name": "Reposition",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Rabble Rouser",
+    "cooldown_s": null
+   }
+  ],
+  "etienne": [
+   {
+    "level": 3,
+    "name": "Drone Swarm",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "UCAV",
+    "cooldown_s": null
+   }
+  ],
+  "ezili": [
+   {
+    "level": 3,
+    "name": "Heartstopper",
+    "cooldown_s": null
+   },
+   {
+    "level": 7,
+    "name": "Sacrificial Totem",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "MOAB Hex",
+    "cooldown_s": null
+   }
+  ],
+  "geraldo": [],
+  "gwendolin": [
+   {
+    "level": 3,
+    "name": "Cocktail of Fire",
+    "cooldown_s": 30
+   },
+   {
+    "level": 10,
+    "name": "Firestorm",
+    "cooldown_s": 60
+   }
+  ],
+  "obyn_greenfoot": [
+   {
+    "level": 3,
+    "name": "Brambles",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Wall of Trees",
+    "cooldown_s": null
+   }
+  ],
+  "pat_fusty": [
+   {
+    "level": 3,
+    "name": "Rallying Roar",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Big Squeeze",
+    "cooldown_s": null
+   }
+  ],
+  "psi": [
+   {
+    "level": 3,
+    "name": "Psychic Blast",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Psionic Scream",
+    "cooldown_s": null
+   }
+  ],
+  "quincy": [
+   {
+    "level": 3,
+    "name": "Rapid Shot",
+    "cooldown_s": 60
+   },
+   {
+    "level": 10,
+    "name": "Storm of Arrows",
+    "cooldown_s": 70
+   }
+  ],
+  "rosalia": [
+   {
+    "level": 3,
+    "name": "Scatter Missile",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Kinetic Charge",
+    "cooldown_s": null
+   }
+  ],
+  "sauda": [
+   {
+    "level": 3,
+    "name": "Leaping Sword Attack",
+    "cooldown_s": 30
+   },
+   {
+    "level": 10,
+    "name": "Sword Charge",
+    "cooldown_s": 45
+   }
+  ],
+  "silas": [
+   {
+    "level": 3,
+    "name": "Frostbite",
+    "cooldown_s": null
+   },
+   {
+    "level": 7,
+    "name": "Frozen Cascade",
+    "cooldown_s": null
+   },
+   {
+    "level": 10,
+    "name": "Frozen Burial",
+    "cooldown_s": null
+   }
+  ],
+  "striker_jones": [
+   {
+    "level": 3,
+    "name": "Concussive Shell",
+    "cooldown_s": 16
+   },
+   {
+    "level": 10,
+    "name": "Artillery Command",
+    "cooldown_s": 80
+   }
+  ]
+ }
+}

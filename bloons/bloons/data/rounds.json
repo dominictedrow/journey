@@ -1,0 +1,8141 @@
+{
+ "_meta": {
+  "source": "bloonswiki.com JSON:Bloons TD 6/Rounds/DefaultRoundSet + DefaultIncomeSet; RBE/layers/cash as in Module:BTD6 rounds/new with Module:BTD6 rounds/stats",
+  "fetched": "2026-11-04",
+  "game_version": "57.4",
+  "in_game_check": "2026-11-04, BTD6+ 57.4, Monkey Meadow Easy sandbox: 33 shop/upgrade prices match bloons.rules.cost() (after fixing its rounding), Dart/Tack range circles match 32/23 (7.95 px/unit at 2x), hero level cost = XP x 0.9 with Scholarships. See RESEARCH.md.",
+  "mode": "Standard (Easy ends at 40, Medium 60, Hard 80, Impoppable 100; rounds past the end are freeplay)",
+  "first_freeplay_round": 81,
+  "times": "seconds at normal speed from round start; group bloons spawn evenly from start to end",
+  "rbe": "base red-bloon equivalent (no difficulty or Monkey Knowledge health changes); MOAB health grows each round past 80",
+  "pop_cash": "cash from popping everything, x income_multiplier (falls after round 50)",
+  "end_bonus": "end-of-round cash: 100 + round",
+  "income_thresholds": [
+   [
+    50,
+    1
+   ],
+   [
+    60,
+    0.5
+   ],
+   [
+    85,
+    0.2
+   ],
+   [
+    100,
+    0.1
+   ],
+   [
+    120,
+    0.05
+   ],
+   [
+    140,
+    0.04
+   ],
+   [
+    "after",
+    0.02
+   ]
+  ]
+ },
+ "rounds": [
+  {
+   "round": 1,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 17.5125
+    }
+   ],
+   "duration": 17.5125,
+   "counts": {
+    "red": 20
+   },
+   "rbe": 20,
+   "layers": 20,
+   "pop_cash": 20.0,
+   "end_bonus": 101,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 2,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 35,
+     "start": 0,
+     "end": 19
+    }
+   ],
+   "duration": 19,
+   "counts": {
+    "red": 35
+   },
+   "rbe": 35,
+   "layers": 35,
+   "pop_cash": 35.0,
+   "end_bonus": 102,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 3,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5.1
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5.7,
+     "end": 7.948
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 9.71,
+     "end": 16.71
+    }
+   ],
+   "duration": 16.71,
+   "counts": {
+    "red": 25,
+    "blue": 5
+   },
+   "rbe": 35,
+   "layers": 35,
+   "pop_cash": 35.0,
+   "end_bonus": 103,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 4,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 12
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 7.9,
+     "end": 10.4
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 14.51,
+     "end": 17.31
+    }
+   ],
+   "duration": 17.31,
+   "counts": {
+    "red": 35,
+    "blue": 18
+   },
+   "rbe": 71,
+   "layers": 71,
+   "pop_cash": 71.0,
+   "end_bonus": 104,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 5,
+   "groups": [
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 5.139
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5.7,
+     "end": 7.984
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 8.6,
+     "end": 16.5
+    }
+   ],
+   "duration": 16.5,
+   "counts": {
+    "blue": 27,
+    "red": 5
+   },
+   "rbe": 59,
+   "layers": 59,
+   "pop_cash": 59.0,
+   "end_bonus": 105,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 6,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 0,
+     "end": 1.71
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 5.33,
+     "end": 10.33
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 10.8,
+     "end": 18.7
+    }
+   ],
+   "duration": 18.7,
+   "counts": {
+    "green": 4,
+    "red": 15,
+    "blue": 15
+   },
+   "rbe": 57,
+   "layers": 57,
+   "pop_cash": 57.0,
+   "end_bonus": 106,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 7,
+   "groups": [
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5.139
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5.7,
+     "end": 10.65
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 11.812,
+     "end": 22.652
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 22.81,
+     "end": 26.801
+    }
+   ],
+   "duration": 26.801,
+   "counts": {
+    "blue": 20,
+    "green": 5,
+    "red": 20
+   },
+   "rbe": 75,
+   "layers": 75,
+   "pop_cash": 75.0,
+   "end_bonus": 107,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 8,
+   "groups": [
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 10.84
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 11.42,
+     "end": 11.99
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 14.03,
+     "end": 16.0
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 18.272,
+     "end": 28.872
+    }
+   ],
+   "duration": 28.872,
+   "counts": {
+    "blue": 20,
+    "green": 14,
+    "red": 10
+   },
+   "rbe": 92,
+   "layers": 92,
+   "pop_cash": 92.0,
+   "end_bonus": 108,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 9,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 0,
+     "end": 18.95
+    }
+   ],
+   "duration": 18.95,
+   "counts": {
+    "green": 30
+   },
+   "rbe": 90,
+   "layers": 90,
+   "pop_cash": 90.0,
+   "end_bonus": 109,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 10,
+   "groups": [
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 0,
+     "end": 35
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 35,
+     "end": 44
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 22,
+     "start": 44,
+     "end": 47.987
+    }
+   ],
+   "duration": 47.987,
+   "counts": {
+    "blue": 102
+   },
+   "rbe": 204,
+   "layers": 204,
+   "pop_cash": 204.0,
+   "end_bonus": 110,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 11,
+   "groups": [
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 4.47,
+     "end": 10.751
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 10.87,
+     "end": 14.67
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 14.59,
+     "end": 19.16
+    }
+   ],
+   "duration": 19.16,
+   "counts": {
+    "yellow": 3,
+    "green": 12,
+    "blue": 10,
+    "red": 10
+   },
+   "rbe": 78,
+   "layers": 78,
+   "pop_cash": 78.0,
+   "end_bonus": 111,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 12,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5.13
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 5.7,
+     "end": 11.77
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 14.27,
+     "end": 17.3866
+    }
+   ],
+   "duration": 17.3866,
+   "counts": {
+    "green": 10,
+    "blue": 15,
+    "yellow": 5
+   },
+   "rbe": 80,
+   "layers": 80,
+   "pop_cash": 80.0,
+   "end_bonus": 112,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 13,
+   "groups": [
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 23,
+     "start": 2.21,
+     "end": 32.21
+    }
+   ],
+   "duration": 32.21,
+   "counts": {
+    "blue": 50,
+    "green": 23
+   },
+   "rbe": 169,
+   "layers": 169,
+   "pop_cash": 169.0,
+   "end_bonus": 113,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 14,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 0,
+     "end": 9.707
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 2.854,
+     "end": 3.9707
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5.71,
+     "end": 6.826
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 8.564,
+     "end": 9.514
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 31,
+     "start": 9.5,
+     "end": 26.63
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 15.96,
+     "end": 17.34
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 19.8375,
+     "end": 21.2249
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 23.708,
+     "end": 25.262
+    }
+   ],
+   "duration": 26.63,
+   "counts": {
+    "red": 49,
+    "blue": 15,
+    "green": 10,
+    "yellow": 9
+   },
+   "rbe": 145,
+   "layers": 145,
+   "pop_cash": 145.0,
+   "end_bonus": 114,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 15,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 25
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 2.78,
+     "end": 22.78
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 5.68,
+     "end": 20.68
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 8.87,
+     "end": 20.87
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 17.55,
+     "end": 20.55
+    }
+   ],
+   "duration": 25,
+   "counts": {
+    "red": 20,
+    "blue": 15,
+    "green": 12,
+    "yellow": 10,
+    "pink": 5
+   },
+   "rbe": 151,
+   "layers": 151,
+   "pop_cash": 151.0,
+   "end_bonus": 115,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 16,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 10.849
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0.2,
+     "end": 11.049
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 14.59,
+     "end": 16.0233
+    }
+   ],
+   "duration": 16.0233,
+   "counts": {
+    "green": 40,
+    "yellow": 8
+   },
+   "rbe": 152,
+   "layers": 152,
+   "pop_cash": 152.0,
+   "end_bonus": 116,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 17,
+   "groups": [
+    {
+     "bloon": "YellowRegrow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 5
+    }
+   ],
+   "duration": 5,
+   "counts": {
+    "yellow": 12
+   },
+   "rbe": 48,
+   "layers": 48,
+   "pop_cash": 48.0,
+   "end_bonus": 117,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 18,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 0,
+     "end": 25
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 25,
+     "end": 26.8167
+    }
+   ],
+   "duration": 26.8167,
+   "counts": {
+    "green": 80
+   },
+   "rbe": 240,
+   "layers": 240,
+   "pop_cash": 240.0,
+   "end_bonus": 118,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 19,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 2.8875
+    },
+    {
+     "bloon": "YellowRegrow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 5,
+     "start": 2.855,
+     "end": 5.1883
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 5.9583,
+     "end": 13.575
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 13.4792,
+     "end": 15.7632
+    }
+   ],
+   "duration": 15.7632,
+   "counts": {
+    "green": 10,
+    "yellow": 9,
+    "pink": 15
+   },
+   "rbe": 141,
+   "layers": 141,
+   "pop_cash": 141.0,
+   "end_bonus": 119,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 20,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 0,
+     "end": 5.2458
+    }
+   ],
+   "duration": 5.2458,
+   "counts": {
+    "black": 6
+   },
+   "rbe": 66,
+   "layers": 66,
+   "pop_cash": 66.0,
+   "end_bonus": 120,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 21,
+   "groups": [
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0.09,
+     "end": 10.09
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 10.84,
+     "end": 15.979
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 16.68,
+     "end": 18.1175
+    }
+   ],
+   "duration": 18.1175,
+   "counts": {
+    "yellow": 40,
+    "pink": 14
+   },
+   "rbe": 230,
+   "layers": 230,
+   "pop_cash": 230.0,
+   "end_bonus": 121,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 22,
+   "groups": [
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 16,
+     "start": 0,
+     "end": 8
+    }
+   ],
+   "duration": 8,
+   "counts": {
+    "white": 16
+   },
+   "rbe": 176,
+   "layers": 176,
+   "pop_cash": 176.0,
+   "end_bonus": 122,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 23,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 0,
+     "end": 2.5
+    },
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 4.82,
+     "end": 6.82
+    }
+   ],
+   "duration": 6.82,
+   "counts": {
+    "black": 7,
+    "white": 7
+   },
+   "rbe": 154,
+   "layers": 154,
+   "pop_cash": 154.0,
+   "end_bonus": 123,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 24,
+   "groups": [
+    {
+     "bloon": "GreenCamo",
+     "type": "green",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 3,
+     "end": 9
+    }
+   ],
+   "duration": 9,
+   "counts": {
+    "green": 1,
+    "blue": 20
+   },
+   "rbe": 43,
+   "layers": 43,
+   "pop_cash": 43.0,
+   "end_bonus": 124,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 25,
+   "groups": [
+    {
+     "bloon": "YellowRegrow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 14
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 17.14,
+     "end": 21.14
+    }
+   ],
+   "duration": 21.14,
+   "counts": {
+    "yellow": 25,
+    "purple": 10
+   },
+   "rbe": 210,
+   "layers": 210,
+   "pop_cash": 210.0,
+   "end_bonus": 125,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 26,
+   "groups": [
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 23,
+     "start": 0,
+     "end": 8.7
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 11.0833,
+     "end": 14.5093
+    }
+   ],
+   "duration": 14.5093,
+   "counts": {
+    "pink": 23,
+    "zebra": 4
+   },
+   "rbe": 207,
+   "layers": 207,
+   "pop_cash": 207.0,
+   "end_bonus": 126,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 27,
+   "groups": [
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 0.02,
+     "end": 12.02
+    },
+    {
+     "bloon": "Blue",
+     "type": "blue",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 11.54,
+     "end": 19.54
+    },
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 45,
+     "start": 19.05,
+     "end": 26.3958
+    },
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 45,
+     "start": 26.53,
+     "end": 34.255
+    }
+   ],
+   "duration": 34.255,
+   "counts": {
+    "red": 100,
+    "blue": 60,
+    "green": 45,
+    "yellow": 45
+   },
+   "rbe": 535,
+   "layers": 535,
+   "pop_cash": 535.0,
+   "end_bonus": 127,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 28,
+   "groups": [
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 0,
+     "end": 5
+    }
+   ],
+   "duration": 5,
+   "counts": {
+    "lead": 6
+   },
+   "rbe": 138,
+   "layers": 138,
+   "pop_cash": 138.0,
+   "end_bonus": 128,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 29,
+   "groups": [
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 0,
+     "end": 11
+    },
+    {
+     "bloon": "YellowRegrow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 15,
+     "start": 12.75,
+     "end": 15.25
+    }
+   ],
+   "duration": 15.25,
+   "counts": {
+    "yellow": 65
+   },
+   "rbe": 260,
+   "layers": 260,
+   "pop_cash": 260.0,
+   "end_bonus": 129,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 30,
+   "groups": [
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 13.0701
+    }
+   ],
+   "duration": 13.0701,
+   "counts": {
+    "lead": 9
+   },
+   "rbe": 207,
+   "layers": 207,
+   "pop_cash": 207.0,
+   "end_bonus": 130,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 31,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 0,
+     "end": 5.0853
+    },
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 0.35,
+     "end": 5.4353
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 6.16,
+     "end": 11.2453
+    },
+    {
+     "bloon": "ZebraRegrow",
+     "type": "zebra",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 2,
+     "start": 14.2,
+     "end": 15.913
+    }
+   ],
+   "duration": 15.913,
+   "counts": {
+    "black": 8,
+    "white": 8,
+    "zebra": 10
+   },
+   "rbe": 406,
+   "layers": 406,
+   "pop_cash": 406.0,
+   "end_bonus": 131,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 32,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 9
+    },
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 10.34,
+     "end": 21.34
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 21.96,
+     "end": 27.96
+    }
+   ],
+   "duration": 27.96,
+   "counts": {
+    "black": 15,
+    "white": 20,
+    "purple": 10
+   },
+   "rbe": 495,
+   "layers": 495,
+   "pop_cash": 495.0,
+   "end_bonus": 132,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 33,
+   "groups": [
+    {
+     "bloon": "RedCamo",
+     "type": "red",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "YellowCamo",
+     "type": "yellow",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 13,
+     "start": 5.34,
+     "end": 25.34
+    }
+   ],
+   "duration": 25.34,
+   "counts": {
+    "red": 20,
+    "yellow": 13
+   },
+   "rbe": 72,
+   "layers": 72,
+   "pop_cash": 72.0,
+   "end_bonus": 133,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 34,
+   "groups": [
+    {
+     "bloon": "Yellow",
+     "type": "yellow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 160,
+     "start": 0,
+     "end": 36
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 8.62,
+     "end": 26.7033
+    }
+   ],
+   "duration": 36,
+   "counts": {
+    "yellow": 160,
+    "zebra": 6
+   },
+   "rbe": 778,
+   "layers": 778,
+   "pop_cash": 778.0,
+   "end_bonus": 134,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 35,
+   "groups": [
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 10.0333
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 14.3542,
+     "end": 16.6382
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 35,
+     "start": 19.2125,
+     "end": 26.2083
+    },
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 26.76,
+     "end": 33.7558
+    }
+   ],
+   "duration": 33.7558,
+   "counts": {
+    "white": 25,
+    "rainbow": 5,
+    "pink": 35,
+    "black": 30
+   },
+   "rbe": 1015,
+   "layers": 1015,
+   "pop_cash": 1015.0,
+   "end_bonus": 135,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 36,
+   "groups": [
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0,
+     "end": 1.5125
+    },
+    {
+     "bloon": "GreenRegrowCamo",
+     "type": "green",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 10,
+     "start": 4.01,
+     "end": 5.3558
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 8.49,
+     "end": 9.8358
+    },
+    {
+     "bloon": "GreenRegrowCamo",
+     "type": "green",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 10,
+     "start": 12.67,
+     "end": 14.0158
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 16.99,
+     "end": 20.99
+    }
+   ],
+   "duration": 20.99,
+   "counts": {
+    "pink": 140,
+    "green": 20
+   },
+   "rbe": 760,
+   "layers": 760,
+   "pop_cash": 760.0,
+   "end_bonus": 136,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 37,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 10.849
+    },
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 11.42,
+     "end": 22.269
+    },
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 22.84,
+     "end": 30.834
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 31.405,
+     "end": 36.544
+    },
+    {
+     "bloon": "WhiteCamo",
+     "type": "white",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 41.9167,
+     "end": 43.5083
+    }
+   ],
+   "duration": 43.5083,
+   "counts": {
+    "black": 25,
+    "white": 32,
+    "lead": 15,
+    "zebra": 10
+   },
+   "rbe": 1202,
+   "layers": 1202,
+   "pop_cash": 1202.0,
+   "end_bonus": 137,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 38,
+   "groups": [
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 17,
+     "start": 0,
+     "end": 3.5958
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 42,
+     "start": 2,
+     "end": 25.411
+    },
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 14,
+     "start": 4.8333,
+     "end": 13.3983
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 12.0875,
+     "end": 18.3685
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 27.06,
+     "end": 29.06
+    }
+   ],
+   "duration": 29.06,
+   "counts": {
+    "white": 17,
+    "pink": 42,
+    "lead": 14,
+    "zebra": 10,
+    "ceramic": 2
+   },
+   "rbe": 1157,
+   "layers": 1139,
+   "pop_cash": 1139.0,
+   "end_bonus": 138,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 39,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5.139
+    },
+    {
+     "bloon": "White",
+     "type": "white",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 5.71,
+     "end": 10.849
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 12.79,
+     "end": 23.639
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 24.79,
+     "end": 34.497
+    },
+    {
+     "bloon": "RainbowRegrow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 2,
+     "start": 35.93,
+     "end": 37.93
+    }
+   ],
+   "duration": 37.93,
+   "counts": {
+    "black": 10,
+    "white": 10,
+    "zebra": 20,
+    "rainbow": 20
+   },
+   "rbe": 1620,
+   "layers": 1620,
+   "pop_cash": 1620.0,
+   "end_bonus": 139,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 40,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    }
+   ],
+   "duration": 1,
+   "counts": {
+    "moab": 1
+   },
+   "rbe": 616,
+   "layers": 381,
+   "pop_cash": 381.0,
+   "end_bonus": 140,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 41,
+   "groups": [
+    {
+     "bloon": "Black",
+     "type": "black",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 0,
+     "end": 18.7708
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 18.8458,
+     "end": 46.2042
+    }
+   ],
+   "duration": 46.2042,
+   "counts": {
+    "black": 60,
+    "zebra": 60
+   },
+   "rbe": 2040,
+   "layers": 2040,
+   "pop_cash": 2040.0,
+   "end_bonus": 141,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 42,
+   "groups": [
+    {
+     "bloon": "RainbowRegrow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 6,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "RainbowCamo",
+     "type": "rainbow",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 6.6,
+     "end": 11.6
+    }
+   ],
+   "duration": 11.6,
+   "counts": {
+    "rainbow": 11
+   },
+   "rbe": 517,
+   "layers": 517,
+   "pop_cash": 517.0,
+   "end_bonus": 142,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 43,
+   "groups": [
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5.139
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 3.5542,
+     "end": 9.2642
+    }
+   ],
+   "duration": 9.2642,
+   "counts": {
+    "rainbow": 10,
+    "ceramic": 7
+   },
+   "rbe": 1198,
+   "layers": 1135,
+   "pop_cash": 1135.0,
+   "end_bonus": 143,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 44,
+   "groups": [
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 9.9167,
+     "end": 16.9167
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 16.8333,
+     "end": 20.8333
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 20.75,
+     "end": 22.75
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 22.6667,
+     "end": 23.6667
+    }
+   ],
+   "duration": 23.6667,
+   "counts": {
+    "zebra": 50
+   },
+   "rbe": 1150,
+   "layers": 1150,
+   "pop_cash": 1150.0,
+   "end_bonus": 144,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 45,
+   "groups": [
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 13.704
+    },
+    {
+     "bloon": "PurpleCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 14.35,
+     "end": 17.35
+    },
+    {
+     "bloon": "Pink",
+     "type": "pink",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 180,
+     "start": 18.08,
+     "end": 53.08
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 4,
+     "start": 50.6,
+     "end": 53.1
+    }
+   ],
+   "duration": 53.1,
+   "counts": {
+    "rainbow": 25,
+    "purple": 10,
+    "pink": 180,
+    "lead": 4
+   },
+   "rbe": 2289,
+   "layers": 2277,
+   "pop_cash": 2277.0,
+   "end_bonus": 145,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 46,
+   "groups": [
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 0,
+     "end": 7
+    }
+   ],
+   "duration": 7,
+   "counts": {
+    "ceramic": 6
+   },
+   "rbe": 684,
+   "layers": 570,
+   "pop_cash": 570.0,
+   "end_bonus": 146,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 47,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 6.281
+    },
+    {
+     "bloon": "PinkCamo",
+     "type": "pink",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 70,
+     "start": 6.5,
+     "end": 24.6458
+    }
+   ],
+   "duration": 24.6458,
+   "counts": {
+    "ceramic": 12,
+    "pink": 70
+   },
+   "rbe": 1598,
+   "layers": 1490,
+   "pop_cash": 1490.0,
+   "end_bonus": 147,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 48,
+   "groups": [
+    {
+     "bloon": "PinkRegrow",
+     "type": "pink",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 40,
+     "start": 0,
+     "end": 15
+    },
+    {
+     "bloon": "PurpleRegrowCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 30,
+     "start": 15.29,
+     "end": 30.29
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 30.54,
+     "end": 50.54
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 51.72,
+     "end": 55.72
+    }
+   ],
+   "duration": 55.72,
+   "counts": {
+    "pink": 40,
+    "purple": 30,
+    "rainbow": 40,
+    "ceramic": 3
+   },
+   "rbe": 2752,
+   "layers": 2695,
+   "pop_cash": 2695.0,
+   "end_bonus": 148,
+   "income_multiplier": 1,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 49,
+   "groups": [
+    {
+     "bloon": "Green",
+     "type": "green",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 343,
+     "start": 0,
+     "end": 50
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 4,
+     "end": 9.1389
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 15.5,
+     "end": 22.037
+    },
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 29.275,
+     "end": 32.7875
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 40.1,
+     "end": 45.2389
+    },
+    {
+     "bloon": "RainbowRegrow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 10,
+     "start": 41.38,
+     "end": 46.5189
+    }
+   ],
+   "duration": 50,
+   "counts": {
+    "green": 343,
+    "rainbow": 30,
+    "ceramic": 18,
+    "zebra": 20
+   },
+   "rbe": 4771,
+   "layers": 4609,
+   "pop_cash": 4609.0,
+   "end_bonus": 149,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 50,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 3.06,
+     "end": 7.057
+    },
+    {
+     "bloon": "Red",
+     "type": "red",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 9.887,
+     "end": 11.232
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 16.559,
+     "end": 27.408
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 27.9789,
+     "end": 28.9789
+    }
+   ],
+   "duration": 28.9789,
+   "counts": {
+    "moab": 2,
+    "lead": 8,
+    "red": 20,
+    "ceramic": 20
+   },
+   "rbe": 3540,
+   "layers": 2866,
+   "pop_cash": 2866.0,
+   "end_bonus": 150,
+   "income_multiplier": 1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 51,
+   "groups": [
+    {
+     "bloon": "CeramicCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "RainbowRegrow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 10,
+     "start": 19,
+     "end": 24.139
+    }
+   ],
+   "duration": 24.139,
+   "counts": {
+    "ceramic": 15,
+    "rainbow": 10
+   },
+   "rbe": 2030,
+   "layers": 1895,
+   "pop_cash": 947.5,
+   "end_bonus": 151,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 52,
+   "groups": [
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 13.704
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 14.2749,
+     "end": 15.2749
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 14.846,
+     "end": 17.1304
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 17.701,
+     "end": 18.701
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 18.272,
+     "end": 20.5559
+    }
+   ],
+   "duration": 20.5559,
+   "counts": {
+    "rainbow": 25,
+    "moab": 2,
+    "ceramic": 10
+   },
+   "rbe": 3447,
+   "layers": 2887,
+   "pop_cash": 1443.5,
+   "end_bonus": 152,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 53,
+   "groups": [
+    {
+     "bloon": "PinkCamo",
+     "type": "pink",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 80,
+     "start": 0,
+     "end": 35
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 19.61,
+     "end": 20.61
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 27.07,
+     "end": 28.07
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 31.08,
+     "end": 32.08
+    }
+   ],
+   "duration": 35,
+   "counts": {
+    "pink": 80,
+    "moab": 3
+   },
+   "rbe": 2248,
+   "layers": 1543,
+   "pop_cash": 771.5,
+   "end_bonus": 153,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 54,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 35,
+     "start": 0,
+     "end": 19.414
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 6.2292,
+     "end": 7.2292
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 11.991,
+     "end": 12.991
+    }
+   ],
+   "duration": 19.414,
+   "counts": {
+    "ceramic": 35,
+    "moab": 2
+   },
+   "rbe": 4872,
+   "layers": 4087,
+   "pop_cash": 2043.5,
+   "end_bonus": 154,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 55,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 1.1638
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 7.8333,
+     "end": 9.3041
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 14.416,
+     "end": 15.8868
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 22.1666,
+     "end": 23.0749
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 28.7833,
+     "end": 29.7833
+    }
+   ],
+   "duration": 29.7833,
+   "counts": {
+    "ceramic": 45,
+    "moab": 1
+   },
+   "rbe": 5296,
+   "layers": 4656,
+   "pop_cash": 2328.0,
+   "end_bonus": 155,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 56,
+   "groups": [
+    {
+     "bloon": "RainbowCamo",
+     "type": "rainbow",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0,
+     "end": 12
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 15.1791,
+     "end": 16.1791
+    }
+   ],
+   "duration": 16.1791,
+   "counts": {
+    "rainbow": 40,
+    "moab": 1
+   },
+   "rbe": 2496,
+   "layers": 2261,
+   "pop_cash": 1130.5,
+   "end_bonus": 156,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 57,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 0,
+     "end": 0.571
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0.97,
+     "end": 26.2283
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 12.5619,
+     "end": 13.1329
+    }
+   ],
+   "duration": 26.2283,
+   "counts": {
+    "moab": 4,
+    "rainbow": 40
+   },
+   "rbe": 4344,
+   "layers": 3404,
+   "pop_cash": 1702.0,
+   "end_bonus": 157,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 58,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 0,
+     "end": 43.9833
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 22
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 23.53,
+     "end": 43.53
+    }
+   ],
+   "duration": 43.9833,
+   "counts": {
+    "moab": 5,
+    "ceramic": 25
+   },
+   "rbe": 5780,
+   "layers": 4280,
+   "pop_cash": 2140.0,
+   "end_bonus": 158,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 59,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "LeadCamo",
+     "type": "lead",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 10.166,
+     "end": 17.617
+    },
+    {
+     "bloon": "CeramicRegrow",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 10,
+     "start": 18.16,
+     "end": 26.16
+    }
+   ],
+   "duration": 26.16,
+   "counts": {
+    "ceramic": 30,
+    "lead": 50
+   },
+   "rbe": 4270,
+   "layers": 4000,
+   "pop_cash": 2000.0,
+   "end_bonus": 159,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 60,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    }
+   ],
+   "duration": 1,
+   "counts": {
+    "bfb": 1
+   },
+   "rbe": 3164,
+   "layers": 1525,
+   "pop_cash": 762.5,
+   "end_bonus": 160,
+   "income_multiplier": 0.5,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 61,
+   "groups": [
+    {
+     "bloon": "ZebraRegrow",
+     "type": "zebra",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 150,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 1.9167,
+     "end": 15.95
+    }
+   ],
+   "duration": 20,
+   "counts": {
+    "zebra": 150,
+    "moab": 5
+   },
+   "rbe": 6530,
+   "layers": 5355,
+   "pop_cash": 1071.0,
+   "end_bonus": 161,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 62,
+   "groups": [
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 250,
+     "start": 0,
+     "end": 40
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 1.0833,
+     "end": 21.0833
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 32.14,
+     "end": 37.14
+    },
+    {
+     "bloon": "RainbowRegrowCamo",
+     "type": "rainbow",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 15,
+     "start": 40.3,
+     "end": 48.294
+    }
+   ],
+   "duration": 48.294,
+   "counts": {
+    "purple": 250,
+    "moab": 7,
+    "rainbow": 15
+   },
+   "rbe": 8247,
+   "layers": 6122,
+   "pop_cash": 1224.4,
+   "end_bonus": 162,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 63,
+   "groups": [
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 75,
+     "start": 0,
+     "end": 42.254
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 3.8792,
+     "end": 4.0792
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 20.0833,
+     "end": 20.2833
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 42,
+     "start": 36.4166,
+     "end": 36.6166
+    }
+   ],
+   "duration": 42.254,
+   "counts": {
+    "lead": 75,
+    "ceramic": 122
+   },
+   "rbe": 14413,
+   "layers": 13315,
+   "pop_cash": 2663.0,
+   "end_bonus": 163,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 64,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 0,
+     "end": 4
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 5.53,
+     "end": 9.53
+    }
+   ],
+   "duration": 9.53,
+   "counts": {
+    "moab": 9
+   },
+   "rbe": 6264,
+   "layers": 3429,
+   "pop_cash": 685.8,
+   "end_bonus": 164,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 65,
+   "groups": [
+    {
+     "bloon": "Zebra",
+     "type": "zebra",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 0,
+     "end": 32.3583
+    },
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 70,
+     "start": 32.5958,
+     "end": 46.9038
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 47.3167,
+     "end": 58.1657
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 58.5666,
+     "end": 59.1366
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 60,
+     "end": 62
+    }
+   ],
+   "duration": 62,
+   "counts": {
+    "zebra": 100,
+    "rainbow": 70,
+    "ceramic": 50,
+    "moab": 3,
+    "bfb": 2
+   },
+   "rbe": 18966,
+   "layers": 14533,
+   "pop_cash": 2906.6,
+   "end_bonus": 165,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 66,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 0,
+     "end": 0.5
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 7,
+     "end": 7.5
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 13.9167,
+     "end": 14.9167
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 20.75,
+     "end": 22.75
+    }
+   ],
+   "duration": 22.75,
+   "counts": {
+    "moab": 11
+   },
+   "rbe": 7496,
+   "layers": 4191,
+   "pop_cash": 838.2,
+   "end_bonus": 166,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 67,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 0,
+     "end": 2.284
+    },
+    {
+     "bloon": "CeramicRegrowFortifiedCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": true,
+     "fortified": true,
+     "count": 13,
+     "start": 9.0958,
+     "end": 17.0898
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 24.1542,
+     "end": 26.4381
+    }
+   ],
+   "duration": 26.4381,
+   "counts": {
+    "moab": 8,
+    "ceramic": 13
+   },
+   "rbe": 6410,
+   "layers": 4283,
+   "pop_cash": 856.6,
+   "end_bonus": 167,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 68,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 0,
+     "end": 1.713
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 7.4417,
+     "end": 8.4417
+    }
+   ],
+   "duration": 8.4417,
+   "counts": {
+    "moab": 4,
+    "bfb": 1
+   },
+   "rbe": 5628,
+   "layers": 3049,
+   "pop_cash": 609.8,
+   "end_bonus": 168,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 69,
+   "groups": [
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 40,
+     "start": 0,
+     "end": 16.559
+    },
+    {
+     "bloon": "BlackRegrow",
+     "type": "black",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 40,
+     "start": 5.46,
+     "end": 15.46
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 17.13,
+     "end": 42.13
+    }
+   ],
+   "duration": 42.13,
+   "counts": {
+    "lead": 40,
+    "black": 40,
+    "ceramic": 50
+   },
+   "rbe": 6680,
+   "layers": 6110,
+   "pop_cash": 1222.0,
+   "end_bonus": 169,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": true,
+    "lead": true,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 70,
+   "groups": [
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 200,
+     "start": 0,
+     "end": 40
+    },
+    {
+     "bloon": "WhiteRegrowCamo",
+     "type": "white",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 120,
+     "start": 0,
+     "end": 38
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 40,
+     "end": 41.142
+    }
+   ],
+   "duration": 41.142,
+   "counts": {
+    "rainbow": 200,
+    "white": 120,
+    "moab": 4
+   },
+   "rbe": 13184,
+   "layers": 12244,
+   "pop_cash": 2448.8,
+   "end_bonus": 170,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 71,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 0,
+     "end": 16.55
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 4.4167,
+     "end": 9.4167
+    }
+   ],
+   "duration": 16.55,
+   "counts": {
+    "ceramic": 30,
+    "moab": 10
+   },
+   "rbe": 9280,
+   "layers": 6660,
+   "pop_cash": 1332.0,
+   "end_bonus": 171,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 72,
+   "groups": [
+    {
+     "bloon": "CeramicRegrow",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 38,
+     "start": 0,
+     "end": 21.698
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 3.4167,
+     "end": 3.9167
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 16.1167,
+     "end": 16.6167
+    }
+   ],
+   "duration": 21.698,
+   "counts": {
+    "ceramic": 38,
+    "bfb": 2
+   },
+   "rbe": 10280,
+   "layers": 6660,
+   "pop_cash": 1332.0,
+   "end_bonus": 172,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 73,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 0,
+     "end": 2.284
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 13.4,
+     "end": 16.4
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 26.3833,
+     "end": 26.9543
+    }
+   ],
+   "duration": 26.9543,
+   "counts": {
+    "moab": 8,
+    "bfb": 2
+   },
+   "rbe": 11256,
+   "layers": 6098,
+   "pop_cash": 1219.6,
+   "end_bonus": 173,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 74,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "CeramicRegrowFortifiedCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": true,
+     "fortified": true,
+     "count": 25,
+     "start": 21.14,
+     "end": 41.14
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 43.93,
+     "end": 44.43
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 60,
+     "start": 54.86,
+     "end": 82.385
+    }
+   ],
+   "duration": 82.385,
+   "counts": {
+    "ceramic": 135,
+    "bfb": 1
+   },
+   "rbe": 18054,
+   "layers": 14350,
+   "pop_cash": 2870.0,
+   "end_bonus": 174,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 75,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 0.1
+    },
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 14,
+     "start": 0.571,
+     "end": 7.994
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 1,
+     "start": 8.72,
+     "end": 9.291
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 9.707,
+     "end": 9.807
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 14,
+     "start": 10.277,
+     "end": 17.7
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 18.272,
+     "end": 21.272
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 22.4875,
+     "end": 22.5875
+    }
+   ],
+   "duration": 22.5875,
+   "counts": {
+    "bfb": 7,
+    "lead": 28,
+    "moab": 3
+   },
+   "rbe": 25402,
+   "layers": 12462,
+   "pop_cash": 2492.4,
+   "end_bonus": 175,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 76,
+   "groups": [
+    {
+     "bloon": "CeramicRegrow",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 60,
+     "start": 0,
+     "end": 1.777
+    }
+   ],
+   "duration": 1.777,
+   "counts": {
+    "ceramic": 60
+   },
+   "rbe": 6240,
+   "layers": 5700,
+   "pop_cash": 1140.0,
+   "end_bonus": 176,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": false,
+    "lead": false,
+    "moab_class": false
+   }
+  },
+  {
+   "round": 77,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 11,
+     "start": 0,
+     "end": 58.9208
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 26.6667,
+     "end": 31.2208
+    }
+   ],
+   "duration": 58.9208,
+   "counts": {
+    "moab": 11,
+    "bfb": 5
+   },
+   "rbe": 22596,
+   "layers": 11816,
+   "pop_cash": 2363.2,
+   "end_bonus": 177,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 78,
+   "groups": [
+    {
+     "bloon": "Rainbow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 150,
+     "start": 0,
+     "end": 90
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 75,
+     "start": 10,
+     "end": 11.1666
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 44.0833,
+     "end": 45.7963
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 80,
+     "start": 64.4,
+     "end": 79.4
+    },
+    {
+     "bloon": "CeramicCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 72,
+     "start": 77.9167,
+     "end": 79.1208
+    }
+   ],
+   "duration": 90,
+   "counts": {
+    "rainbow": 150,
+    "ceramic": 147,
+    "bfb": 1,
+    "purple": 80
+   },
+   "rbe": 26382,
+   "layers": 23420,
+   "pop_cash": 4684.0,
+   "end_bonus": 178,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 79,
+   "groups": [
+    {
+     "bloon": "RainbowRegrow",
+     "type": "rainbow",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 500,
+     "start": 0,
+     "end": 60
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 3.1667,
+     "end": 38.1667
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 47.22,
+     "end": 57.22
+    }
+   ],
+   "duration": 60,
+   "counts": {
+    "rainbow": 500,
+    "bfb": 6
+   },
+   "rbe": 45804,
+   "layers": 32650,
+   "pop_cash": 6530.0,
+   "end_bonus": 179,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 80,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 2
+    }
+   ],
+   "duration": 2,
+   "counts": {
+    "zomg": 1
+   },
+   "rbe": 16656,
+   "layers": 6101,
+   "pop_cash": 1220.2,
+   "end_bonus": 180,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 81,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 21.47,
+     "end": 26.47
+    }
+   ],
+   "duration": 26.47,
+   "counts": {
+    "bfb": 17
+   },
+   "rbe": 44506,
+   "layers": 2533,
+   "pop_cash": 5185.0,
+   "end_bonus": 181,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 82,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 5,
+     "start": 21.68,
+     "end": 35.68
+    }
+   ],
+   "duration": 35.68,
+   "counts": {
+    "bfb": 15
+   },
+   "rbe": 52320,
+   "layers": 2235,
+   "pop_cash": 4575.0,
+   "end_bonus": 182,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 83,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0,
+     "end": 60
+    },
+    {
+     "bloon": "CeramicRegrow",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": true,
+     "fortified": false,
+     "count": 40,
+     "start": 0.1,
+     "end": 60.1
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 40,
+     "start": 0.2,
+     "end": 60.2
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 24.94,
+     "end": 34.94
+    }
+   ],
+   "duration": 60.2,
+   "counts": {
+    "ceramic": 120,
+    "moab": 30
+   },
+   "rbe": 25080,
+   "layers": 2190,
+   "pop_cash": 4566.0,
+   "end_bonus": 183,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": true,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 84,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 50,
+     "start": 0,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 5,
+     "end": 25
+    }
+   ],
+   "duration": 25,
+   "counts": {
+    "moab": 50,
+    "bfb": 10
+   },
+   "rbe": 51480,
+   "layers": 3340,
+   "pop_cash": 6860.0,
+   "end_bonus": 184,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 85,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 0,
+     "end": 10
+    }
+   ],
+   "duration": 10,
+   "counts": {
+    "zomg": 2
+   },
+   "rbe": 30704,
+   "layers": 1194,
+   "pop_cash": 2440.4,
+   "end_bonus": 185,
+   "income_multiplier": 0.2,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 86,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 5,
+     "start": -0.15,
+     "end": 20.85
+    }
+   ],
+   "duration": 20.85,
+   "counts": {
+    "bfb": 5
+   },
+   "rbe": 27040,
+   "layers": 745,
+   "pop_cash": 762.5,
+   "end_bonus": 186,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 87,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 0,
+     "end": 10
+    }
+   ],
+   "duration": 10,
+   "counts": {
+    "zomg": 4
+   },
+   "rbe": 63008,
+   "layers": 2388,
+   "pop_cash": 2440.4,
+   "end_bonus": 187,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 88,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 5.84,
+     "end": 10.84
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 11.55,
+     "end": 14.55
+    }
+   ],
+   "duration": 14.55,
+   "counts": {
+    "bfb": 8,
+    "moab": 18,
+    "zomg": 2
+   },
+   "rbe": 63600,
+   "layers": 3052,
+   "pop_cash": 3126.0,
+   "end_bonus": 188,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 89,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 20,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 10.74,
+     "end": 20.74
+    }
+   ],
+   "duration": 20.74,
+   "counts": {
+    "moab": 20,
+    "bfb": 8
+   },
+   "rbe": 64384,
+   "layers": 1932,
+   "pop_cash": 1982.0,
+   "end_bonus": 189,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 90,
+   "groups": [
+    {
+     "bloon": "LeadRegrowFortifiedCamo",
+     "type": "lead",
+     "camo": true,
+     "regrow": true,
+     "fortified": true,
+     "count": 50,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 10.4,
+     "end": 11.9
+    }
+   ],
+   "duration": 11.9,
+   "counts": {
+    "lead": 50,
+    "ddt": 3
+   },
+   "rbe": 2756,
+   "layers": 461,
+   "pop_cash": 149.3,
+   "end_bonus": 190,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 91,
+   "groups": [
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 100,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 20,
+     "start": 7.38,
+     "end": 17.38
+    }
+   ],
+   "duration": 30,
+   "counts": {
+    "ceramic": 100,
+    "bfb": 20
+   },
+   "rbe": 71160,
+   "layers": 3880,
+   "pop_cash": 4000.0,
+   "end_bonus": 191,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 92,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 50,
+     "start": 0,
+     "end": 35
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 12.96,
+     "end": 18.96
+    }
+   ],
+   "duration": 35,
+   "counts": {
+    "moab": 50,
+    "zomg": 4
+   },
+   "rbe": 117408,
+   "layers": 4238,
+   "pop_cash": 4345.4,
+   "end_bonus": 192,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 93,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 12.35,
+     "end": 14.35
+    }
+   ],
+   "duration": 20,
+   "counts": {
+    "bfb": 10,
+    "ddt": 6
+   },
+   "rbe": 62936,
+   "layers": 1712,
+   "pop_cash": 1753.6,
+   "end_bonus": 193,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 94,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 15
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 1.61,
+     "end": 14.61
+    }
+   ],
+   "duration": 15,
+   "counts": {
+    "bfb": 25,
+    "zomg": 6
+   },
+   "rbe": 178112,
+   "layers": 7307,
+   "pop_cash": 7473.1,
+   "end_bonus": 194,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 95,
+   "groups": [
+    {
+     "bloon": "PurpleRegrowCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": true,
+     "fortified": false,
+     "count": 500,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "LeadRegrowFortifiedCamo",
+     "type": "lead",
+     "camo": true,
+     "regrow": true,
+     "fortified": true,
+     "count": 250,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 50,
+     "start": 30.81,
+     "end": 50.81
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 30.81,
+     "end": 50.81
+    }
+   ],
+   "duration": 50.81,
+   "counts": {
+    "purple": 500,
+    "lead": 250,
+    "moab": 50,
+    "ddt": 30
+   },
+   "rbe": 80860,
+   "layers": 7710,
+   "pop_cash": 3523.0,
+   "end_bonus": 195,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 96,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 20,
+     "start": 5.5,
+     "end": 10.5
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 10.74,
+     "end": 15.74
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 20,
+     "start": 16.04,
+     "end": 21.04
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 21.62,
+     "end": 26.62
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 27.12,
+     "end": 32.12
+    }
+   ],
+   "duration": 32.12,
+   "counts": {
+    "bfb": 30,
+    "moab": 40,
+    "zomg": 6
+   },
+   "rbe": 238952,
+   "layers": 9532,
+   "pop_cash": 9759.6,
+   "end_bonus": 196,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 97,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 0,
+     "end": 5
+    }
+   ],
+   "duration": 5,
+   "counts": {
+    "zomg": 2
+   },
+   "rbe": 69984,
+   "layers": 1194,
+   "pop_cash": 1220.2,
+   "end_bonus": 197,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 98,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 30,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 0,
+     "end": 5
+    }
+   ],
+   "duration": 30,
+   "counts": {
+    "bfb": 30,
+    "zomg": 8
+   },
+   "rbe": 327456,
+   "layers": 9246,
+   "pop_cash": 9455.8,
+   "end_bonus": 198,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 99,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 60,
+     "start": 0,
+     "end": 12
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 9,
+     "start": 6.51,
+     "end": 11.51
+    }
+   ],
+   "duration": 12,
+   "counts": {
+    "moab": 60,
+    "ddt": 9
+   },
+   "rbe": 47424,
+   "layers": 2553,
+   "pop_cash": 2628.9,
+   "end_bonus": 199,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 100,
+   "groups": [
+    {
+     "bloon": "Bad",
+     "type": "bad",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 0.1
+    }
+   ],
+   "duration": 0.1,
+   "counts": {
+    "bad": 1
+   },
+   "rbe": 67200,
+   "layers": 1306,
+   "pop_cash": 1334.6,
+   "end_bonus": 200,
+   "income_multiplier": 0.1,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 101,
+   "groups": [
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 250,
+     "start": 0,
+     "end": 6
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 5,
+     "end": 7
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 50,
+     "start": 7,
+     "end": 8
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 200,
+     "start": 7.5,
+     "end": 9.5
+    }
+   ],
+   "duration": 9.5,
+   "counts": {
+    "purple": 450,
+    "moab": 10,
+    "ceramic": 50
+   },
+   "rbe": 20020,
+   "layers": 3520,
+   "pop_cash": 563.0,
+   "end_bonus": 201,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 102,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 0,
+     "end": 0.1
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 1,
+     "start": 9.5,
+     "end": 9.6
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 10,
+     "end": 41
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 12,
+     "end": 12.5
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 19,
+     "end": 19.1
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 12,
+     "start": 19.5,
+     "end": 46.5
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 21.5,
+     "end": 22.5
+    }
+   ],
+   "duration": 46.5,
+   "counts": {
+    "zomg": 4,
+    "ddt": 30,
+    "bfb": 6
+   },
+   "rbe": 199826,
+   "layers": 4392,
+   "pop_cash": 2249.2,
+   "end_bonus": 202,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 103,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 0,
+     "end": 7
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 64,
+     "start": 6,
+     "end": 7
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 50,
+     "start": 6.5,
+     "end": 15.0
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 66,
+     "start": 12,
+     "end": 13
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 68,
+     "start": 18,
+     "end": 19
+    }
+   ],
+   "duration": 19,
+   "counts": {
+    "zomg": 10,
+    "moab": 150,
+    "purple": 198
+   },
+   "rbe": 507908,
+   "layers": 12708,
+   "pop_cash": 5967.4,
+   "end_bonus": 203,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 104,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 150,
+     "start": 0,
+     "end": 22
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 0,
+     "end": 15
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 100,
+     "start": 0,
+     "end": 2.5
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 2.5,
+     "end": 14.25
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 2.5,
+     "end": 5.0
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 5,
+     "end": 7.5
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 5,
+     "start": 7.5,
+     "end": 14.25
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 100,
+     "start": 7.5,
+     "end": 10.0
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 4,
+     "start": 10,
+     "end": 15
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 10,
+     "end": 12.5
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 5,
+     "start": 12.5,
+     "end": 15.0
+    },
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 12.5,
+     "end": 15.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 18,
+     "end": 22
+    }
+   ],
+   "duration": 22,
+   "counts": {
+    "moab": 175,
+    "bfb": 39,
+    "lead": 200,
+    "purple": 200,
+    "ceramic": 200
+   },
+   "rbe": 387472,
+   "layers": 16686,
+   "pop_cash": 7387.5,
+   "end_bonus": 204,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 105,
+   "groups": [
+    {
+     "bloon": "Ceramic",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 0,
+     "end": 4
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 25,
+     "start": 0,
+     "end": 9
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 4,
+     "end": 7
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 300,
+     "start": 7,
+     "end": 9
+    }
+   ],
+   "duration": 9,
+   "counts": {
+    "ceramic": 400,
+    "lead": 25,
+    "bfb": 30
+   },
+   "rbe": 152340,
+   "layers": 8245,
+   "pop_cash": 4196.25,
+   "end_bonus": 205,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 106,
+   "groups": [
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 21,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 5,
+     "end": 30
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 10,
+     "end": 30
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 12,
+     "start": 15,
+     "end": 30
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 9,
+     "start": 20,
+     "end": 30
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 25,
+     "end": 30
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 33,
+     "end": 33.5
+    }
+   ],
+   "duration": 33.5,
+   "counts": {
+    "ddt": 93
+   },
+   "rbe": 113376,
+   "layers": 3441,
+   "pop_cash": 1771.65,
+   "end_bonus": 206,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 107,
+   "groups": [
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 100,
+     "start": 0,
+     "end": 9
+    },
+    {
+     "bloon": "PurpleCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 444,
+     "start": 1,
+     "end": 10
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 2,
+     "end": 7
+    }
+   ],
+   "duration": 10,
+   "counts": {
+    "ceramic": 100,
+    "purple": 444,
+    "zomg": 10
+   },
+   "rbe": 447384,
+   "layers": 9534,
+   "pop_cash": 3658.7,
+   "end_bonus": 207,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 108,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 15
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 10,
+     "start": 14,
+     "end": 24
+    }
+   ],
+   "duration": 24,
+   "counts": {
+    "zomg": 19
+   },
+   "rbe": 643088,
+   "layers": 11343,
+   "pop_cash": 5795.95,
+   "end_bonus": 208,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 109,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 15,
+     "start": 0,
+     "end": 18
+    }
+   ],
+   "duration": 18,
+   "counts": {
+    "zomg": 15,
+    "purple": 15,
+    "bfb": 30,
+    "moab": 30
+   },
+   "rbe": 552345,
+   "layers": 14625,
+   "pop_cash": 7439.25,
+   "end_bonus": 209,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 110,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 25,
+     "start": 0,
+     "end": 36
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 12
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 12,
+     "end": 22
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 22,
+     "end": 30
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 30,
+     "end": 36
+    }
+   ],
+   "duration": 36,
+   "counts": {
+    "bfb": 25,
+    "ddt": 30
+   },
+   "rbe": 141410,
+   "layers": 4835,
+   "pop_cash": 2477.75,
+   "end_bonus": 210,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 111,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 17,
+     "start": 0,
+     "end": 13
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 9,
+     "start": 7,
+     "end": 13
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 16.5,
+     "end": 18.5
+    }
+   ],
+   "duration": 18.5,
+   "counts": {
+    "zomg": 31
+   },
+   "rbe": 949472,
+   "layers": 18507,
+   "pop_cash": 9456.55,
+   "end_bonus": 211,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 112,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 27,
+     "start": 0,
+     "end": 20
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 21,
+     "start": 7,
+     "end": 20
+    }
+   ],
+   "duration": 20,
+   "counts": {
+    "bfb": 27,
+    "ddt": 21
+   },
+   "rbe": 261648,
+   "layers": 4800,
+   "pop_cash": 2458.8,
+   "end_bonus": 212,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 113,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 75,
+     "start": 0,
+     "end": 17.5
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 15,
+     "start": 7,
+     "end": 21
+    },
+    {
+     "bloon": "CeramicCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 42,
+     "start": 14,
+     "end": 15.5
+    },
+    {
+     "bloon": "CeramicFortified",
+     "type": "ceramic",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 42,
+     "start": 20,
+     "end": 21.5
+    }
+   ],
+   "duration": 21.5,
+   "counts": {
+    "moab": 75,
+    "bfb": 15,
+    "ceramic": 84
+   },
+   "rbe": 231102,
+   "layers": 5766,
+   "pop_cash": 2971.5,
+   "end_bonus": 213,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 114,
+   "groups": [
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 36,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 2.5,
+     "end": 30.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 24,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 10,
+     "end": 20
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 15,
+     "end": 25
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 20,
+     "end": 25
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 25,
+     "end": 30
+    }
+   ],
+   "duration": 30,
+   "counts": {
+    "ddt": 15,
+    "moab": 60,
+    "bfb": 20,
+    "zomg": 8
+   },
+   "rbe": 483416,
+   "layers": 10531,
+   "pop_cash": 5394.15,
+   "end_bonus": 214,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 115,
+   "groups": [
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 0,
+     "end": 30
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 2.5,
+     "end": 30.0
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5,
+     "end": 10
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 10,
+     "end": 20
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 24,
+     "start": 15,
+     "end": 25
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 36,
+     "start": 20,
+     "end": 30
+    }
+   ],
+   "duration": 30,
+   "counts": {
+    "ddt": 15,
+    "zomg": 8,
+    "bfb": 20,
+    "moab": 60
+   },
+   "rbe": 492396,
+   "layers": 10531,
+   "pop_cash": 5394.15,
+   "end_bonus": 215,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 116,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 0,
+     "end": 3
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 5,
+     "end": 15
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 8,
+     "end": 15
+    },
+    {
+     "bloon": "Purple",
+     "type": "purple",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 200,
+     "start": 11,
+     "end": 15
+    }
+   ],
+   "duration": 15,
+   "counts": {
+    "zomg": 8,
+    "bfb": 18,
+    "purple": 400
+   },
+   "rbe": 575600,
+   "layers": 9858,
+   "pop_cash": 3932.9,
+   "end_bonus": 216,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 117,
+   "groups": [
+    {
+     "bloon": "Lead",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 250,
+     "start": 0,
+     "end": 14
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 27,
+     "start": 3,
+     "end": 14
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 3,
+     "end": 14
+    }
+   ],
+   "duration": 14,
+   "counts": {
+    "lead": 250,
+    "ddt": 45
+   },
+   "rbe": 75010,
+   "layers": 3415,
+   "pop_cash": 944.75,
+   "end_bonus": 217,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 118,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 16
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 30,
+     "start": 7.5,
+     "end": 14.5
+    }
+   ],
+   "duration": 16,
+   "counts": {
+    "zomg": 12,
+    "ddt": 30
+   },
+   "rbe": 398784,
+   "layers": 8274,
+   "pop_cash": 4232.1,
+   "end_bonus": 218,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 119,
+   "groups": [
+    {
+     "bloon": "Bad",
+     "type": "bad",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 0,
+     "end": 10
+    },
+    {
+     "bloon": "Bad",
+     "type": "bad",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 25,
+     "end": 26
+    }
+   ],
+   "duration": 26,
+   "counts": {
+    "bad": 3
+   },
+   "rbe": 319020,
+   "layers": 3918,
+   "pop_cash": 2001.9,
+   "end_bonus": 219,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 120,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 45
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 1.5,
+     "end": 46.5
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 24,
+     "start": 6,
+     "end": 51
+    }
+   ],
+   "duration": 51,
+   "counts": {
+    "zomg": 12,
+    "bfb": 12,
+    "moab": 24
+   },
+   "rbe": 431808,
+   "layers": 9840,
+   "pop_cash": 5032.8,
+   "end_bonus": 220,
+   "income_multiplier": 0.05,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 121,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 14,
+     "start": 0,
+     "end": 5
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 28,
+     "start": 5,
+     "end": 10
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 10,
+     "end": 15
+    }
+   ],
+   "duration": 15,
+   "counts": {
+    "bfb": 14,
+    "moab": 28,
+    "zomg": 6
+   },
+   "rbe": 516500,
+   "layers": 6704,
+   "pop_cash": 2744.96,
+   "end_bonus": 221,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 122,
+   "groups": [
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 40,
+     "start": 0,
+     "end": 0.2
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 20,
+     "start": 0.1,
+     "end": 0.1
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 75,
+     "start": 5,
+     "end": 20
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 75,
+     "start": 5,
+     "end": 20
+    },
+    {
+     "bloon": "LeadFortified",
+     "type": "lead",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 75,
+     "start": 5,
+     "end": 20
+    }
+   ],
+   "duration": 20,
+   "counts": {
+    "bfb": 60,
+    "lead": 225
+   },
+   "rbe": 386730,
+   "layers": 10515,
+   "pop_cash": 3723.0,
+   "end_bonus": 222,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 123,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 8,
+     "start": 0,
+     "end": 40
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 200,
+     "start": 0,
+     "end": 40
+    }
+   ],
+   "duration": 40,
+   "counts": {
+    "zomg": 8,
+    "moab": 200
+   },
+   "rbe": 629936,
+   "layers": 12176,
+   "pop_cash": 5000.32,
+   "end_bonus": 223,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 124,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 75,
+     "start": 0,
+     "end": 30
+    }
+   ],
+   "duration": 30,
+   "counts": {
+    "bfb": 75
+   },
+   "rbe": 738600,
+   "layers": 11175,
+   "pop_cash": 4575.0,
+   "end_bonus": 224,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 125,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 0,
+     "end": 25
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 5,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 5,
+     "end": 30
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 9.55,
+     "end": 30.0
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 10,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 14.1,
+     "end": 30.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 15,
+     "end": 40
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 15,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 18.65,
+     "end": 30.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 19.42,
+     "end": 40.0
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 20,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 23.2,
+     "end": 30.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 23.83,
+     "end": 40.0
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 25,
+     "end": 26
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 2,
+     "start": 27.75,
+     "end": 30.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 28.25,
+     "end": 40.0
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 32.66,
+     "end": 39.99
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 37.08,
+     "end": 40.0
+    }
+   ],
+   "duration": 40,
+   "counts": {
+    "zomg": 21,
+    "bfb": 42,
+    "moab": 63
+   },
+   "rbe": 939624,
+   "layers": 21126,
+   "pop_cash": 8646.96,
+   "end_bonus": 225,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 126,
+   "groups": [
+    {
+     "bloon": "LeadRegrowFortifiedCamo",
+     "type": "lead",
+     "camo": true,
+     "regrow": true,
+     "fortified": true,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 99,
+     "start": 6,
+     "end": 27
+    }
+   ],
+   "duration": 27,
+   "counts": {
+    "lead": 1,
+    "ddt": 99
+   },
+   "rbe": 141778,
+   "layers": 3670,
+   "pop_cash": 1509.04,
+   "end_bonus": 226,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": true,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 127,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 48,
+     "start": 0,
+     "end": 7
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 24,
+     "start": 5,
+     "end": 14
+    }
+   ],
+   "duration": 14,
+   "counts": {
+    "moab": 48,
+    "bfb": 24
+   },
+   "rbe": 178248,
+   "layers": 5352,
+   "pop_cash": 2195.52,
+   "end_bonus": 227,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 128,
+   "groups": [
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 39,
+     "start": 0,
+     "end": 18
+    },
+    {
+     "bloon": "CeramicFortifiedCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 200,
+     "start": 9,
+     "end": 13.5
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 30,
+     "start": 10,
+     "end": 28
+    }
+   ],
+   "duration": 28,
+   "counts": {
+    "ddt": 39,
+    "ceramic": 200,
+    "bfb": 30
+   },
+   "rbe": 322048,
+   "layers": 7713,
+   "pop_cash": 3184.36,
+   "end_bonus": 228,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 129,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 17
+    },
+    {
+     "bloon": "LeadFortifiedCamo",
+     "type": "lead",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 77,
+     "start": 4,
+     "end": 5
+    },
+    {
+     "bloon": "PurpleCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 77,
+     "start": 6,
+     "end": 7
+    },
+    {
+     "bloon": "CeramicCamo",
+     "type": "ceramic",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 77,
+     "start": 8,
+     "end": 9
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 7,
+     "start": 10,
+     "end": 10
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 17,
+     "end": 17
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 21,
+     "end": 22
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 24,
+     "end": 25
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 27,
+     "end": 28
+    }
+   ],
+   "duration": 28,
+   "counts": {
+    "zomg": 14,
+    "lead": 77,
+    "purple": 77,
+    "ceramic": 77,
+    "ddt": 18
+   },
+   "rbe": 826792,
+   "layers": 10718,
+   "pop_cash": 4023.52,
+   "end_bonus": 229,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": true,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 130,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 0,
+     "end": 0
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 27,
+     "start": 4,
+     "end": 20
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 9,
+     "start": 4,
+     "end": 4
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 8,
+     "end": 8
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 9,
+     "start": 12,
+     "end": 12
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 16,
+     "end": 16
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 20,
+     "end": 20
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 48,
+     "start": 24,
+     "end": 40
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 24,
+     "end": 24
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 28,
+     "end": 28
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 32,
+     "end": 32
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 36,
+     "end": 36
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 48,
+     "start": 40,
+     "end": 40
+    }
+   ],
+   "duration": 40,
+   "counts": {
+    "moab": 150,
+    "ddt": 54
+   },
+   "rbe": 307968,
+   "layers": 7548,
+   "pop_cash": 3108.96,
+   "end_bonus": 230,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 131,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 0,
+     "end": 39
+    }
+   ],
+   "duration": 39,
+   "counts": {
+    "zomg": 18
+   },
+   "rbe": 1461456,
+   "layers": 10746,
+   "pop_cash": 4392.72,
+   "end_bonus": 231,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 132,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 5,
+     "end": 5
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 10,
+     "end": 11
+    },
+    {
+     "bloon": "PurpleCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 15,
+     "end": 16
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 5,
+     "start": 25,
+     "end": 26
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 30,
+     "end": 30
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 3,
+     "start": 35,
+     "end": 36
+    },
+    {
+     "bloon": "PurpleCamo",
+     "type": "purple",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 100,
+     "start": 40,
+     "end": 41
+    }
+   ],
+   "duration": 41,
+   "counts": {
+    "zomg": 24,
+    "purple": 200
+   },
+   "rbe": 1268688,
+   "layers": 15528,
+   "pop_cash": 5904.96,
+   "end_bonus": 232,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 133,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 12,
+     "end": 13
+    },
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 6,
+     "start": 12,
+     "end": 13
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 2,
+     "start": 12,
+     "end": 13
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 24,
+     "end": 25
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 24,
+     "end": 25
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 24,
+     "end": 25
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 36,
+     "end": 37
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 36,
+     "end": 37
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 36,
+     "end": 37
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 42,
+     "end": 43
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 9,
+     "start": 42,
+     "end": 43
+    },
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 3,
+     "start": 42,
+     "end": 43
+    }
+   ],
+   "duration": 43,
+   "counts": {
+    "moab": 39,
+    "bfb": 39,
+    "zomg": 13
+   },
+   "rbe": 1153341,
+   "layers": 15015,
+   "pop_cash": 6145.88,
+   "end_bonus": 233,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 134,
+   "groups": [
+    {
+     "bloon": "BfbFortified",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 12,
+     "start": 0,
+     "end": 24
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 10,
+     "start": 4.36,
+     "end": 24.0
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 8,
+     "start": 8.74,
+     "end": 24.0
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 6,
+     "start": 13.1,
+     "end": 24.0
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 4,
+     "start": 17.46,
+     "end": 24.01
+    }
+   ],
+   "duration": 24.01,
+   "counts": {
+    "bfb": 40
+   },
+   "rbe": 374840,
+   "layers": 5960,
+   "pop_cash": 2440.0,
+   "end_bonus": 234,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 135,
+   "groups": [
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 24
+    },
+    {
+     "bloon": "ZomgFortified",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 24
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 24
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 24
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 7,
+     "start": 0,
+     "end": 24
+    }
+   ],
+   "duration": 24,
+   "counts": {
+    "zomg": 14,
+    "ddt": 21
+   },
+   "rbe": 1386840,
+   "layers": 9135,
+   "pop_cash": 3736.6,
+   "end_bonus": 235,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 136,
+   "groups": [
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 96,
+     "start": 0,
+     "end": 45
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 24,
+     "start": 0,
+     "end": 45
+    }
+   ],
+   "duration": 45,
+   "counts": {
+    "moab": 96,
+    "bfb": 24
+   },
+   "rbe": 402624,
+   "layers": 7128,
+   "pop_cash": 2927.04,
+   "end_bonus": 236,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 137,
+   "groups": [
+    {
+     "bloon": "Zomg",
+     "type": "zomg",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 0,
+     "end": 0.1
+    },
+    {
+     "bloon": "Bfb",
+     "type": "bfb",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 24,
+     "start": 2,
+     "end": 2.1
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 48,
+     "start": 8,
+     "end": 8.1
+    }
+   ],
+   "duration": 8.1,
+   "counts": {
+    "zomg": 18,
+    "bfb": 24,
+    "moab": 48
+   },
+   "rbe": 1143984,
+   "layers": 16098,
+   "pop_cash": 6588.24,
+   "end_bonus": 237,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": false,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 138,
+   "groups": [
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 33,
+     "start": 0,
+     "end": 40
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 27,
+     "start": 7,
+     "end": 40
+    },
+    {
+     "bloon": "DdtFortifiedCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": true,
+     "count": 21,
+     "start": 14,
+     "end": 40
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 21,
+     "end": 40
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 15,
+     "start": 28,
+     "end": 40
+    },
+    {
+     "bloon": "DdtCamo",
+     "type": "ddt",
+     "camo": true,
+     "regrow": false,
+     "fortified": false,
+     "count": 12,
+     "start": 35,
+     "end": 40
+    }
+   ],
+   "duration": 40,
+   "counts": {
+    "ddt": 126
+   },
+   "rbe": 442872,
+   "layers": 4662,
+   "pop_cash": 1920.24,
+   "end_bonus": 238,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": true,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 139,
+   "groups": [
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 109,
+     "start": 0,
+     "end": 45
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 5,
+     "end": 9
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 9,
+     "end": 13
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 13,
+     "end": 21
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 21,
+     "end": 25
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 25,
+     "end": 29
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 29,
+     "end": 33
+    },
+    {
+     "bloon": "Moab",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 18,
+     "start": 33,
+     "end": 41
+    },
+    {
+     "bloon": "MoabFortified",
+     "type": "moab",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 18,
+     "start": 41,
+     "end": 45
+    }
+   ],
+   "duration": 45,
+   "counts": {
+    "moab": 253
+   },
+   "rbe": 401346,
+   "layers": 9361,
+   "pop_cash": 3855.72,
+   "end_bonus": 239,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  },
+  {
+   "round": 140,
+   "groups": [
+    {
+     "bloon": "BadFortified",
+     "type": "bad",
+     "camo": false,
+     "regrow": false,
+     "fortified": true,
+     "count": 1,
+     "start": 0,
+     "end": 1
+    },
+    {
+     "bloon": "Bad",
+     "type": "bad",
+     "camo": false,
+     "regrow": false,
+     "fortified": false,
+     "count": 1,
+     "start": 45,
+     "end": 46
+    }
+   ],
+   "duration": 46,
+   "counts": {
+    "bad": 2
+   },
+   "rbe": 645440,
+   "layers": 2612,
+   "pop_cash": 1067.68,
+   "end_bonus": 240,
+   "income_multiplier": 0.04,
+   "has": {
+    "camo": false,
+    "regrow": false,
+    "fortified": true,
+    "lead": false,
+    "moab_class": true
+   }
+  }
+ ]
+}

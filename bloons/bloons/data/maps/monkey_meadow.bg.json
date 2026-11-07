@@ -1,0 +1,10 @@
+{
+ "_meta": {
+  "map": "monkey_meadow",
+  "game_version": "57.4",
+  "made": "2026-11-05",
+  "source": "8 saved frames (bloons/data/fixtures_full/bloons/empty_a_*.png)",
+  "work_w": 735,
+  "how": "tools/bloon_bg.py: median of empty-track Sandbox frames; outside the path band blacked out"
+ }
+}
