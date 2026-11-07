@@ -1,3 +1,9 @@
+> **Part of [journey](https://github.com/dominictedrow/journey)**, Dom's ML and software portfolio.
+>
+> **How it was built: 🤖 vibe coded.** AI coding agents (mostly Claude Code) wrote the code. I picked the goal, made the design calls, and steered and tested the work.
+>
+> **When:** 2026-07 · **Branch:** `vibe/polymarket_copy` · [All vibe projects](https://github.com/dominictedrow/journey/tree/vibe-projects)
+
 # Copytrader — Polymarket Intelligence & Copy-Trading Platform
 
 Discover Polymarket wallets, score them quantitatively, backtest portfolio strategies, and execute
