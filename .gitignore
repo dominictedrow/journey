@@ -1,0 +1,12 @@
+.env
+.env.*
+*token*
+*credential*
+node_modules/
+dist/
+build/
+logs/
+*.log
+__pycache__/
+.DS_Store
+._*

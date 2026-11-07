@@ -1,0 +1,21 @@
+Sponsorship opportunity with {{organization}}
+
+Hi {{name}},
+
+I'm reaching out from the Parker Pickleball Association. We host charity
+tournaments that raise money for the community, and we're inviting a few local
+businesses like {{organization}} to get involved as sponsors this season.
+
+Would you be open to a quick chat about sponsorship options? Even a small
+package gets {{organization}} in front of everyone who attends, and every
+dollar goes toward the cause.
+
+Thanks for your time,
+[FILL IN: your name], Parker Pickleball Association
+[FILL IN: contact phone or email]
+
+---
+You're receiving this because we're reaching out to local businesses about
+sponsoring our charity tournaments. If you'd prefer not to hear from us, reply
+with UNSUBSCRIBE and we'll remove you right away.
+Parker Pickleball Association  -  [FILL IN: street address, city, state ZIP]

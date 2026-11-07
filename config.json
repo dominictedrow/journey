@@ -1,0 +1,9 @@
+{
+  "from_name": "Parker Pickleball Association",
+  "min_delay_seconds": 30,
+  "max_delay_seconds": 90,
+  "daily_cap": 400,
+  "recipients_path": "recipients.csv",
+  "template_path": "template.txt",
+  "sent_log_path": "sent_log.csv"
+}
