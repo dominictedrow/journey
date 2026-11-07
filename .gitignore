@@ -13,9 +13,3 @@ J_trade_ML/**/*.pkl
 J_trade_ML/**/*.h5
 J_trade_ML/**/*.ckpt
 J_trade_ML/**/*.weights
-
-# cnn_2 data and checkpoints
-Vibe_models/cnn_2/dataset/
-Vibe_models/cnn_2/processed/
-Vibe_models/cnn_2/processed_180x202_backup/
-Vibe_models/cnn_2/checkpoints/
