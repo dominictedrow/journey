@@ -1,3 +1,9 @@
+> **Part of [journey](https://github.com/dominictedrow/journey)**, Dom's ML and software portfolio.
+>
+> **How it was built: 🤖 vibe coded.** AI coding agents (mostly Claude Code) wrote the code. I picked the goal, made the design calls, and steered and tested the work.
+>
+> **When:** 2026-10 → 2026-11 · **Branch:** `vibe/trader` · [All vibe projects](https://github.com/dominictedrow/journey/tree/vibe-projects)
+
 # trader
 
 Research trading bot: one framework, switchable strategy **modes**, ranked by an after-cost
