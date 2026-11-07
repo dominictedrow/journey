@@ -1,7 +1,6 @@
 import torch as torch
 import torch.nn as nn
-import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from sklearn.datasets import load_iris
 
 
@@ -12,14 +11,19 @@ def preprocess():
     x = torch.tensor(iris.data)
     y = torch.tensor(iris.target)
 
+    indices = torch.randperm(x.shape[0])
+    x = x[indices]
+    y = y[indices]
+    
     x_train = x[:110]
     y_train = y[:110]
     x_test = x[110:]
     y_test = y[110:]
 
+    m, v = x_train.mean(dim=0), x_train.std(dim=0)
     #No need to batch only 150 samples
-    x_train = (x_train - x_train.mean(dim=0)) / x_train.std(dim=0)
-    x_test = (x_test - x_test.mean(dim=0)) / x_test.std(dim=0)
+    x_train = (x_train - m)/ v
+    x_test = (x_test - m) / v
     y_train = torch.nn.functional.one_hot(y_train, num_classes=3)# torch I guess just has a one hot encoding function
     y_test = torch.nn.functional.one_hot(y_test, num_classes=3)
 
@@ -50,7 +54,7 @@ class IrisClassifier(nn.Module):
 
 #Initialize everything:        
 model = IrisClassifier()
-optimzer = torch.optim.Adam(model.parameters(), lr = 0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
 func = torch.nn.MSELoss()
 x_train, y_train, x_test, y_test = preprocess()
 
@@ -65,11 +69,12 @@ def train(model, optimizer, func, x_train, y_train):
     return loss.item()
 
 def test(model, func, x_test, y_test):
-    y_pred = model(x_test)
-    loss = func(y_pred, y_test)
-    return loss
+    with torch.no_grad():
+        y_pred = model(x_test)
+        loss = func(y_pred, y_test)
+    return loss.item()
 
-loss = train(model, optimzer, func, x_train, y_train)
+loss = train(model, optimizer, func, x_train, y_train)
 test_loss = test(model, func, x_test, y_test)
 print(str(loss) + " " +str(test_loss))
 
