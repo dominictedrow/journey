@@ -1137,9 +1137,35 @@ def test_harness_upgrade_and_hero_level(tmp_path):
     h.register_hero((0.6, 0.3), 1020)
     lv = guards.hero_level_price(h.guard_state())
     up = tuple(round(v, 4) for v in panel("left")["hero_level_up"])
-    g.on_click = lambda game, x, y: (round(x, 4), round(y, 4)) == up and setattr(game, "hud", Hud(200, game.hud.money - lv, 1, 40))
+    charge = {"$": lv}
+    g.on_click = lambda game, x, y: (round(x, 4), round(y, 4)) == up and setattr(
+        game, "hud", Hud(200, game.hud.money - charge["$"], 1, 40))
+    h.read_hero_price = lambda side: ""            # button unreadable: the estimate, HUD-confirmed
     r = h.buy_hero_level()
     assert r and r.value == 2 and h.hero.level == 2 and h.hero.spent == 1020 + lv
+    # the button's price is what's booked, not the XP estimate (live 2026-11-09: ~$54 high
+    # over two levels when the one-read confirm booked the estimate)
+    est = guards.hero_level_price(h.guard_state())
+    charge["$"] = est - 30
+    h.read_hero_price = lambda side: f"${est - 30:,}"
+    spent = h.hero.spent
+    r = h.buy_hero_level()
+    assert r and r.cost == est - 30 and h.hero.level == 3 and h.hero.spent == spent + est - 30
+    # a misread bigger than a whole level is ignored (falls back to the estimate)
+    charge["$"] = guards.hero_level_price(h.guard_state())
+    h.read_hero_price = lambda side: "$999,999"
+    assert h.buy_hero_level() and h.hero.level == 4
+    # more than the money: refused before pressing, panel closed
+    g.hud = Hud(200, 100, 1, 40)
+    for _ in range(4):                             # the filter takes a big drop once it repeats
+        h.refresh_hud()
+    assert h.money == 100
+    h.hero.xp_into_level = 10 ** 6                 # the estimate says it's nearly free
+    h.read_hero_price = lambda side: "$500"
+    g.calls.clear()
+    r = h.buy_hero_level()
+    assert r.reason == "panel_no_money" and h.hero.level == 4 and ("click", *up) not in g.calls
+    assert g.calls[-1] == ("click", *[round(v, 4) for v in panel("left")["close"]])
 
 
 # --- rounds, fast-forward, auto start (PLAN 4.4) --------------------------------------------

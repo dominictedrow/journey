@@ -118,6 +118,7 @@ class BloonsHarness:
         self.read_range = rangecircle.measure  # (selected, deselected, centre, unit, exclude) -> RangeRead; 5.5
         self.bar_filter = abilitybar.BarFilter()
         self.read_targeting = self._ocr_targeting   # panel side -> label text ('' if none)
+        self.read_hero_price = self._ocr_hero_price  # panel side -> level-up button text
         self.read_paths = self._read_paths          # (side, paths, prices) -> {path: panel.PathRow}
         self.read_map_names = self._ocr_map_names   # map select page -> 6 thumbnail names
         self.pick_trace = []                        # last _pick_map reads / flips / clicks
@@ -746,15 +747,26 @@ class BloonsHarness:
     def buy_hero_level(self):
         """Buy the hero's next level with the panel's level-up button. ok -> value is the new
         level. The guard's price is $1 per XP still missing, from the XP observe() credits
-        at each round end (_hero_round_xp, an estimate); the HUD confirms what was paid."""
+        at each round end (_hero_round_xp, an estimate). The button shows the real price:
+        it's read first (refused as 'panel_no_money' if it's more than the money) and is
+        the amount confirmed and booked; unreadable, the HUD-measured move is booked."""
         g = guards.can_buy_hero_level(self.guard_state())
         if not g:
             return g
         # the XP estimate can be off either way: the game charges between ~$1 (XP missed)
-        # and the whole level (XP over-credited); the amount booked is what the HUD saw go
+        # and the whole level (XP over-credited)
         full = guards.hero_level_price(self.guard_state(), xp_into_level=0)
-        r = self._panel_buy(HERO_TID, g, lambda side: self.press(
-            "hero_level_up", xy=tuple(ui.panel(side)["hero_level_up"])), max_cost=full, min_cost=1)
+
+        def level_up(side):
+            price = panel.parse_price(self.read_hero_price(side))
+            if price is not None and not 1 <= price <= full:
+                price = None                    # misread: no level costs more than a whole one
+            if price is not None and self.money is not None and price > self.money:
+                return ActionResult(False, "panel_no_money", price)
+            r = self.press("hero_level_up", xy=tuple(ui.panel(side)["hero_level_up"]))
+            return ActionResult(r.ok, r.reason, price) if r else r
+
+        r = self._panel_buy(HERO_TID, g, level_up, max_cost=full, min_cost=1)
         if not r:
             return r
         h = self.hero
@@ -988,6 +1000,10 @@ class BloonsHarness:
     def _ocr_targeting(self, side):
         f = self.game.grab()
         return "" if f is None else self.game.ocr(f, ui.panel(side)["targeting_label"])
+
+    def _ocr_hero_price(self, side):
+        f = self.game.grab()
+        return "" if f is None else self.game.ocr(f, ui.panel(side)["hero_level_price"])
 
     def targeting_label(self, mode):
         """The panel text for a towers.json targeting mode ('lock_in_place' -> 'LOCK IN PLACE')."""
