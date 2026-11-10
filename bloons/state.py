@@ -14,8 +14,13 @@ from typing import Optional
 
 from bloons.vision import Templates, _templates, to_work
 
-# (kind, templates that must all match), highest priority first.
+# (kind, templates that must all match), highest priority first. Kinds whose templates the
+# calibration doesn't have (the Mac set has no level_up / unlock_monkey / popup_ok) are skipped.
 SCREENS = (
+    ("level_up", ("level_up",)),
+    ("unlock_monkey", ("unlock_monkey",)),
+    ("popup_ok", ("popup_ok",)),
+    ("xp_screen", ("xp_screen",)),
     ("restart_confirm", ("restart_confirm",)),
     ("overwrite_save", ("overwrite_save",)),
     ("victory", ("victory_banner",)),
@@ -45,8 +50,10 @@ def read_screen(img, templates: Optional[Templates] = None) -> Screen:
     m = t.match_all(img)
     scores = {k: round(v.score, 3) for k, v in m.items()}
     for kind, needed in SCREENS:
-        if all(m[n].found for n in needed):
+        if all(n in m and m[n].found for n in needed):
             return Screen(kind, scores=scores)
+    if "reward_bg" in t.spec["probes"] and t.probe(img, "reward_bg").label == "reward":
+        return Screen("reward", scores=scores)    # Steam rank-up rewards (any kind)
     button = t.button_state(img)
     if button is None and not (m["btn_play"].found or m["btn_ff"].found):
         return Screen("unknown", scores=scores)

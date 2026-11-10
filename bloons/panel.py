@@ -6,6 +6,8 @@ and the next tier's buy button. The button is:
   green, white price       -> 'buy'    (affordable)
   grey-blue, red price     -> 'poor'   (not enough money)
   grey-blue, MAX UPGRADES  -> 'max'    (tier 5, the crosspath cap, or the type's tier 5 taken)
+  green, white "200 XP"    -> 'xp_locked' (Steam: the upgrade isn't unlocked with XP yet;
+                              price = the XP cost; pressing it opens the unlock screen)
 and a path that can't be started any more (two others upgraded) shows a brown row with a
 padlock and PATH CLOSED instead -> 'closed'. Anything else (an overlay, a black test frame)
 reads 'unknown' and is ignored by the checks.
@@ -38,7 +40,7 @@ PIP_MIN_SAT = 220                          # empty pips are brown (hue 12-16, sa
 
 @dataclass(frozen=True)
 class PathRow:
-    state: str              # 'buy' | 'poor' | 'max' | 'closed' | 'unknown'
+    state: str              # 'buy' | 'poor' | 'max' | 'closed' | 'xp_locked' | 'unknown'
     price: Optional[int]    # the button's price ('buy' / 'poor' with a readable price), else None
     tier: int               # filled pips
 
@@ -97,7 +99,9 @@ def read_paths(img, side, ocr, paths=(0, 1, 2)):
         colour = button_colour(img, p["path_button_box"][i])
         price = None
         if colour == "green":
-            state, price = "buy", (parse_price(ocr(p["path_prices"][i])) if ocr else None)
+            text = ocr(p["path_prices"][i]) if ocr else ""
+            state = "xp_locked" if "XP" in text.upper() else "buy"
+            price = parse_price(text) if ocr else None
         elif colour == "grey":
             price = parse_price(ocr(p["path_prices"][i])) if ocr else 0
             state = "max" if price is None else "poor"
@@ -129,6 +133,8 @@ def compare(t, rows, s):
         if row.state == "unknown":
             continue
         want_state, want_price, want_tier = expected(t, path, s)
+        if row.state == "xp_locked":   # an XP price: nothing to compare with the $ table
+            continue
         got_state = "open" if row.state in ("buy", "poor") else row.state
         msgs = []
         if got_state != want_state:

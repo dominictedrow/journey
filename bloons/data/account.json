@@ -2,12 +2,12 @@
  "_meta": {
   "game_version": "57.4",
   "what": "Effects of Dom's account (Monkey Knowledge) on in-game prices, as observed in game. Prices in towers.json/heroes.json are before these. Only effects seen in game are listed; the harness should still prefer prices read off the shop/upgrade panel (PLAN 5.3).",
-  "checked": "2026-11-04: prices in the Monkey Meadow Easy sandbox (step 2.5, 3.1); the full owned Monkey Knowledge list read off the Primary / Military / Magic / Support trees (3.1)",
+  "checked": "Steam account (2026-11-09): new, no Monkey Knowledge; every effect inactive. The Mac account's list is account.mac.json.",
   "how": "Machine-readable effects used by rules.shop_price / upgrade_price: 'towers' (shop base price) or 'upgrades' ([tower, path 0-2, tier 1-5]) get 'flat' $ added after difficulty scaling, then x 'mult'; 'first_only' = first of that tower each game. Rounded once at the end."
  },
  "monkey_knowledge": {
   "cheap_rangs": {
-   "active": true,
+   "active": false,
    "effect": "Boomerang Monkey base price -$50, after difficulty scaling (Primary tree)",
    "evidence": "shop showed $220 = cost(315, easy) 270 - 50",
    "towers": [
@@ -16,7 +16,7 @@
    "flat": -50
   },
   "scholarships": {
-   "active": true,
+   "active": false,
    "effect": "hero level-up cost x0.9",
    "evidence": "Benjamin level 2 for $243 = 270 XP x 0.9",
    "training_discount": 0.1
@@ -32,7 +32,7 @@
    "evidence": "Sniper $300, Sub $275, Buccaneer $340, Ace $680 all at full cost(base, easy)"
   },
   "flat_pack_buildings": {
-   "active": true,
+   "active": false,
    "effect": "Banana Farm and Monkey Village cost 2% less and sell for 2% more (Support tree)",
    "towers": [
     "banana_farm",
@@ -43,7 +43,7 @@
    "evidence": "Village $1,000 = 1200 x 0.85 x 0.98 = 999.6"
   },
   "farm_subsidy": {
-   "active": true,
+   "active": false,
    "effect": "first Banana Farm each game costs $100 less (Support tree)",
    "towers": [
     "banana_farm"
@@ -53,7 +53,7 @@
    "evidence": "Farm $945 = (1250 x 0.85 - 100) x 0.98 = 943.25 (subtract before the 2%; the other order gives 940)"
   },
   "first_last_line_of_defense": {
-   "active": true,
+   "active": false,
    "effect": "first Spike Factory each game costs $150 less (Support tree)",
    "towers": [
     "spike_factory"
@@ -63,7 +63,7 @@
    "evidence": "Spike Factory $700 = 1000 x 0.85 - 150"
   },
   "cheaper_doubles": {
-   "active": true,
+   "active": false,
    "effect": "Ninja Double Shot -$100 (Magic tree)",
    "upgrades": [
     [
@@ -76,7 +76,7 @@
    "evidence": "read off the MK tree; price not checked in game"
   },
   "warm_oak": {
-   "active": true,
+   "active": false,
    "effect": "Heart of Oak -$100 (Magic tree)",
    "upgrades": [
     [
@@ -89,7 +89,7 @@
    "evidence": "read off the MK tree; price not checked in game"
   },
   "magic_tricks": {
-   "active": true,
+   "active": false,
    "effect": "Guided Magic and Intense Magic -$25 (Magic tree)",
    "upgrades": [
     [
@@ -107,7 +107,7 @@
    "evidence": "read off the MK tree; price not checked in game"
   },
   "cheaper_maiming": {
-   "active": true,
+   "active": false,
    "effect": "Maim MOAB -$1000 (Military tree)",
    "upgrades": [
     [
@@ -120,7 +120,7 @@
    "evidence": "read off the MK tree; price not checked in game"
   },
   "budget_clusters": {
-   "active": true,
+   "active": false,
    "effect": "Cluster Bombs -$100 (Primary tree)",
    "upgrades": [
     [

@@ -1,0 +1,24 @@
+{
+ "screens": {
+  "menu_home": "home",
+  "menu_map_select": "map_select",
+  "menu_difficulty": "difficulty_select",
+  "menu_mode_easy": "mode_select",
+  "defeat": "defeat",
+  "idle_play": "game",
+  "running_a": "game",
+  "running_b": "game",
+  "pause_menu": "pause",
+  "popup_hint": "popup_ok",
+  "popup_level_up": "level_up",
+  "popup_unlock_monkey": "unlock_monkey",
+  "popup_restart_confirm": "restart_confirm",
+  "popup_overwrite_save": "overwrite_save",
+  "xp_bomb_4": "xp_screen"
+ },
+ "buttons": {
+  "idle_play": "idle",
+  "running_a": "ff_off",
+  "running_b": "ff_on"
+ }
+}

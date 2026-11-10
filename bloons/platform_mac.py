@@ -26,10 +26,11 @@ import Quartz as Q
 import Vision
 from AppKit import NSDate, NSRunLoop, NSRunningApplication, NSWorkspace
 
+from bloons import calib
 from bloons.coords import box_to_pixels, to_norm, to_screen
 from bloons.hud import parse_hud
 
-UI = json.loads((Path(__file__).parent / "data" / "ui.json").read_text())
+UI = json.loads(calib.path("ui.json").read_text())
 
 # macOS virtual keycodes (ANSI layout).
 KEYCODES = {

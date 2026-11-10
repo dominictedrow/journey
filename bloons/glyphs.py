@@ -19,16 +19,19 @@ NAMES = {"slash": "/", "dollar": "$"}
 _templates = None
 
 
-def fill_mask(bgr, v_min=150, s_max=70):
-    """Bright, unsaturated pixels: the white fill of the HUD font."""
+def fill_mask(bgr, v_min=150, s_max=70, fill="white"):
+    """The font's fill: 'white' = bright, unsaturated (HUD, prices); 'bright' = any very bright
+    colour (the light-green "XP: 285" on the XP screen's olive pill)."""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    if fill == "bright":
+        return (hsv[..., 2] > 215).astype(np.uint8)
     return ((hsv[..., 2] > v_min) & (hsv[..., 1] < s_max)).astype(np.uint8)
 
 
-def segment(bgr):
+def segment(bgr, fill="white"):
     """White-fill blobs left to right, as cropped 0/1 masks. Drops specks, blobs touching the
     left/right edge (neighbouring UI) and short ones (commas, dots: < 60% of the tallest)."""
-    m = fill_mask(bgr)
+    m = fill_mask(bgr, fill=fill)
     n, lab, st, _ = cv2.connectedComponentsWithStats(m, connectivity=8)
     w_img = m.shape[1]
     blobs = [(x, y, w, h, i) for i, (x, y, w, h, a) in enumerate(st) if i and a >= 30
@@ -71,9 +74,9 @@ def classify(mask):
     return best if score >= MIN_SCORE else "?"
 
 
-def read(bgr):
-    """Text of an HUD crop ('' if nothing): digits, '/', '$'. Commas are dropped."""
-    return "".join(classify(g) for g in segment(bgr))
+def read(bgr, fill="white"):
+    """Text of an HUD crop ('' if nothing): digits, '/', '$', 'X', 'P'. Commas are dropped."""
+    return "".join(classify(g) for g in segment(bgr, fill))
 
 
 def learn(bgr, text):

@@ -21,7 +21,7 @@ import json
 import time
 from pathlib import Path
 
-from . import abilitybar, guards, panel, rangecircle, rules, ui
+from . import abilitybar, calib, guards, panel, rangecircle, rules, ui
 from .hud import HudFilter
 from .placement import (PathKeepout, PlaceContext, Placed, SpotMemory, can_place, load_masks, mask_classes,
                         footprint_radius, record_placement, shape_of, tint_at, unit_norm)
@@ -76,7 +76,7 @@ def _icon_diff(a, b):
 
 def load_data(name):
     """Parse bloons/data/<name> (JSON)."""
-    return json.loads((DATA / name).read_text())
+    return json.loads(calib.path(name).read_text())
 
 
 class BloonsHarness:
@@ -146,7 +146,7 @@ class BloonsHarness:
         bg = load_background(map_name) if self.detector is not None else None
         if bg is not None:
             self.detector.set_background_arrays(*bg)
-        self.memory = SpotMemory.load(spots_path or DATA / "maps" / f"{map_name}.spots.json")
+        self.memory = SpotMemory.load(spots_path or calib.path(f"maps/{map_name}.spots.json"))
         if not self.memory.meta:
             self.memory.meta = {"map": map_name, "game_version": self.map["_meta"]["game_version"]}
 
@@ -719,6 +719,8 @@ class BloonsHarness:
                     return ActionResult(False, "panel_locked", g.cost, row)
                 if row.state == "poor":
                     return ActionResult(False, "panel_no_money", g.cost, row)
+                if row.state == "xp_locked":    # not unlocked with XP yet (value: the XP cost)
+                    return ActionResult(False, "xp_locked", g.cost, row)
                 if row.price is not None and row.price != g.cost:
                     t = self.registry[tid]
                     self.price_mismatches.append((t.kind, t.tiers, path, row.price, g.cost))
@@ -747,7 +749,12 @@ class BloonsHarness:
         f = self.game.grab()
         if f is None:
             return {}
-        return panel.read_paths(f.content_bgr(), side, (lambda box: self.game.ocr(f, box)) if prices else None, paths)
+        return panel.read_paths(f.content_bgr(), side, (lambda box: self._read_number(f, box)) if prices else None, paths)
+
+    def _read_number(self, frame, box):
+        """A price / number box: the platform's number reader (glyph templates on Windows),
+        else plain OCR."""
+        return getattr(self.game, "read_number", self.game.ocr)(frame, box)
 
     def _note_check(self, tid, rows):
         """Compare panel rows of `tid` with the guards and remember per path whether they
@@ -1092,7 +1099,7 @@ class BloonsHarness:
 
     def _ocr_hero_price(self, side):
         f = self.game.grab()
-        return "" if f is None else self.game.ocr(f, ui.panel(side)["hero_level_price"])
+        return "" if f is None else self._read_number(f, ui.panel(side)["hero_level_price"])
 
     def _ocr_hero_level(self, side):
         f = self.game.grab()
@@ -1309,8 +1316,10 @@ class BloonsHarness:
                     self.sleep(t["menu"])           # home animates in; early clicks are lost
                     return ActionResult(True, "home")
                 return ActionResult(False, "not_home")
-            if kind in ("restart_confirm", "collection_event"):
+            if self.prompt_actions.get(kind):        # popups, rank-ups, the XP screen, ...
                 self.handle_prompts()
+            elif kind == "overwrite_save":
+                self._click_ui("menus.overwrite_save_cancel")
             elif kind in self.MENUS:
                 self._click_ui("menus.back")
             else:

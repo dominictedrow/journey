@@ -22,8 +22,10 @@ from typing import Optional
 import cv2
 import numpy as np
 
+from . import calib
+
 DATA = Path(__file__).parent / "data"
-SPEC = json.loads((DATA / "templates.json").read_text())
+SPEC = json.loads(calib.path("templates.json").read_text())
 WORK_W = SPEC["_meta"]["work_width"]
 
 
@@ -66,13 +68,15 @@ class Probe:
 class Templates:
     """Loads templates once and matches them. `spec` defaults to data/templates.json."""
 
-    def __init__(self, spec=SPEC, root=DATA / "templates"):
+    def __init__(self, spec=SPEC, root=calib.TEMPLATES):
         self.spec, self.root = spec, Path(root)
         self._cache = {}
 
     @property
     def names(self):
-        return list(self.spec["templates"])
+        """Templates with an image on disk (a calibration still being captured lacks some;
+        screens that need them then never match)."""
+        return [n for n in self.spec["templates"] if (self.root / f"{n}.png").exists()]
 
     def image(self, name):
         if name not in self._cache:

@@ -6,8 +6,8 @@ the only OS-specific files.
   bar), in physical pixels (the process is made per-monitor DPI-aware on import).
 - Capture: PrintWindow(PW_RENDERFULLCONTENT) works while covered; if it comes back black
   (some DX11 builds), a screen grab of the client rect (needs the window visible).
-- Input: INPUT = "post" sends window messages (PC stays usable) or "send" moves the real
-  cursor via SendInput with the game in front. Picked by scripts/feasibility_win.py.
+- Input: SendInput (real cursor, real keys) with the game in front. Window messages don't
+  work: Unity takes a posted click at the real cursor's position (RESEARCH 2026-11-09).
 - OCR: the HUD numbers go through bloons/glyphs.py (Windows OCR misreads that font);
   other text uses the built-in Windows OCR engine (winrt), crops upscaled.
 """
@@ -27,7 +27,7 @@ import win32gui
 import win32process
 import win32ui
 
-from bloons import glyphs
+from bloons import calib, glyphs
 from bloons.hud import parse_hud
 
 try:
@@ -35,13 +35,13 @@ try:
 except OSError:
     pass  # already set for this process
 
-UI = json.loads((Path(__file__).parent / "data" / "ui.json").read_text())
-INPUT = os.environ.get("BLOONS_INPUT", "send")   # "post" or "send"
+UI = json.loads(calib.path("ui.json").read_text())
 TITLE = "BloonsTD6"
 STEAM_URL = "steam://rungameid/960090"
 PW_RENDERFULLCONTENT = 2
 CLICK_HOVER_S = 0.12   # calibration knobs: raise if clicks get dropped
 CLICK_HOLD_S = 0.08
+WHEEL_PER_LINE = 80
 
 VK = {**{c: ord(c.upper()) for c in "abcdefghijklmnopqrstuvwxyz0123456789"},
       "tab": 0x09, "space": 0x20, "backspace": 0x08, "escape": 0x1B, "enter": 0x0D,
@@ -205,8 +205,6 @@ class Game:
         return win32gui.GetForegroundWindow() == self.hwnd
 
     def ensure_front(self, timeout=2.0):
-        if INPUT == "post":
-            return True
         if self.screen_locked():
             return False
         if self.is_front():
@@ -276,6 +274,10 @@ class Game:
     def ocr(self, frame, box):
         return ocr_image(frame.crop(box))
 
+    def read_number(self, frame, box):
+        """Prices and other outlined numbers ('$1,530', '200XP'): glyph templates."""
+        return glyphs.read(frame.crop(box))
+
     def read_hud_raw(self, frame=None):
         frame = frame or self.grab()
         if frame is None:
@@ -293,9 +295,6 @@ class Game:
         cx, cy = self._client(nx, ny)
         return int(self.bounds[0]) + cx, int(self.bounds[1]) + cy
 
-    def _post(self, msg, wparam, cx, cy):
-        win32gui.PostMessage(self.hwnd, msg, wparam, win32api.MAKELONG(cx & 0xFFFF, cy & 0xFFFF))
-
     def cursor(self):
         self.refresh()
         x, y = win32api.GetCursorPos()
@@ -304,25 +303,16 @@ class Game:
     def move(self, nx, ny):
         if not self.ensure_front():
             return False
-        if INPUT == "post":
-            self._post(win32con.WM_MOUSEMOVE, 0, *self._client(nx, ny))
-        else:
-            win32api.SetCursorPos(self._screen(nx, ny))
+        win32api.SetCursorPos(self._screen(nx, ny))
         return True
 
     def click(self, nx, ny):
         if not self.move(nx, ny):
             return False
         time.sleep(CLICK_HOVER_S)   # Unity drops a press that lands in the same frame as the jump
-        if INPUT == "post":
-            c = self._client(nx, ny)
-            self._post(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, *c)
-            time.sleep(CLICK_HOLD_S)
-            self._post(win32con.WM_LBUTTONUP, 0, *c)
-        else:
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-            time.sleep(CLICK_HOLD_S)
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        time.sleep(CLICK_HOLD_S)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
         time.sleep(0.05)
         return True
 
@@ -338,20 +328,23 @@ class Game:
         return True
 
     def scroll(self, nx, ny, lines):
-        """Wheel over a normalized point: lines > 0 scrolls up. In notches of 5 lines."""
+        """Wheel over a normalized point: lines > 0 scrolls up. The game only takes wheel input
+        after a relative mouse move over the target (a bare SetCursorPos isn't enough), so each
+        chunk is preceded by a 2 px jiggle. WHEEL_PER_LINE: the shop is ~30 lines end to end,
+        as on the Mac (2026-11-09)."""
         if not self.move(nx, ny):
             return False
+        time.sleep(CLICK_HOVER_S)
         left = int(lines)
         while left:
-            n = max(-5, min(5, left))
-            delta = n * win32con.WHEEL_DELTA // 3   # 3 lines per notch (Windows default)
-            if INPUT == "post":
-                x, y = self._screen(nx, ny)   # WM_MOUSEWHEEL takes screen coords
-                self._post(win32con.WM_MOUSEWHEEL, (delta & 0xFFFF) << 16, x, y)
-            else:
-                win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, delta)
-            left -= n
+            n = max(-30, min(30, left))
+            win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 2, 0)
             time.sleep(0.02)
+            win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, -2, 0)
+            time.sleep(0.02)
+            win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, n * WHEEL_PER_LINE)
+            left -= n
+            time.sleep(0.05)
         return True
 
     def key(self, name):
@@ -361,14 +354,9 @@ class Game:
         if not self.ensure_front():
             return False
         scan = win32api.MapVirtualKey(vk, 0)
-        if INPUT == "post":
-            win32gui.PostMessage(self.hwnd, win32con.WM_KEYDOWN, vk, 1 | scan << 16)
-            time.sleep(0.04)
-            win32gui.PostMessage(self.hwnd, win32con.WM_KEYUP, vk, 1 | scan << 16 | 0xC0000000)
-        else:
-            win32api.keybd_event(vk, scan, 0, 0)
-            time.sleep(0.04)
-            win32api.keybd_event(vk, scan, win32con.KEYEVENTF_KEYUP, 0)
+        win32api.keybd_event(vk, scan, 0, 0)
+        time.sleep(0.04)
+        win32api.keybd_event(vk, scan, win32con.KEYEVENTF_KEYUP, 0)
         time.sleep(0.04)
         return True
 

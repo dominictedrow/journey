@@ -9,7 +9,9 @@
 import json
 from pathlib import Path
 
-UI = json.loads((Path(__file__).parent / "data" / "ui.json").read_text())
+from . import calib
+
+UI = json.loads(calib.path("ui.json").read_text())
 
 
 def shop_cell(name):

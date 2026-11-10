@@ -7,7 +7,8 @@
   as PNG; scores and probes barely move). The offline tests run vision.py on these.
 - With --scores: a table of every template's score on every frame, for picking thresholds.
 
-    .venv/bin/python scripts/make_templates.py [--scores]
+    .venv/bin/python scripts/make_templates.py [--scores]   (BLOONS_CALIB=mac for the Mac set)
+On Steam the sources are bloons/data/fixtures_full/steam/<src>; missing ones are skipped.
 """
 import json
 import sys
@@ -17,11 +18,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import cv2  # noqa: E402
 
+from bloons import calib  # noqa: E402
 from bloons.vision import SPEC, Templates, cut, box_px, to_work  # noqa: E402
 
 DATA = ROOT / "bloons/data"
-FULL, FRAMES, TPL = DATA / "fixtures_full", DATA / "fixtures/frames", DATA / "templates"
-UI = json.loads((DATA / "ui.json").read_text())
+STEAM = calib.NAME == "steam"
+FULL = DATA / "fixtures_full" / "steam" if STEAM else DATA / "fixtures_full"
+FRAMES, TPL = DATA / "fixtures/frames", calib.TEMPLATES
+UI = json.loads(calib.path("ui.json").read_text())
 
 
 def load_work(path):
@@ -37,10 +41,15 @@ def main():
     TPL.mkdir(exist_ok=True)
     FRAMES.mkdir(exist_ok=True)
     for name, t in SPEC["templates"].items():
+        if not (FULL / t["src"]).exists():
+            print(f"template {name:20} MISSING source {t['src']}")
+            continue
         crop = cut(load_work(FULL / t["src"]), t["box"])
         cv2.imwrite(str(TPL / f"{name}.png"), crop, [cv2.IMWRITE_PNG_COMPRESSION, 9])
         print(f"template {name:20} {crop.shape[1]}x{crop.shape[0]}")
 
+    if STEAM:
+        return   # the frame fixtures (fixtures/frames) are Mac frames
     manifest = json.loads((DATA / "fixtures/frames.json").read_text())["frames"]
     total = 0
     for stem, f in manifest.items():

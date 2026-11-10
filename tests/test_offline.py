@@ -1,11 +1,14 @@
 """Offline tests (no game needed). Run: pytest tests/test_offline.py"""
 import json
+import os
 import sys
 from pathlib import Path
 
+os.environ["BLOONS_CALIB"] = "mac"   # the fixtures here are Mac frames (bloons/calib.py)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from bloons import calib  # noqa: E402
 
-from bloons.coords import box_to_pixels, to_norm, to_screen
+from bloons.coords import box_to_pixels, to_norm, to_screen  # noqa: E402
 from bloons.hud import Hud, HudFilter, parse_hud, parse_lives, parse_money, parse_round
 from bloons.rules import (cost, hero_abilities, hero_level_cost, hero_range, hero_xp_for_round, hero_xp_to_reach,
                           tower_abilities, tower_range, tower_shape, upgrade_allowed)
@@ -47,7 +50,7 @@ def test_shop_prices():
     from bloons.rules import shop_price, upgrade_price
     root = Path(__file__).resolve().parents[1] / "bloons/data"
     towers = json.loads((root / "towers.json").read_text())["towers"]
-    acc = json.loads((root / "account.json").read_text())
+    acc = json.loads(calib.path("account.json").read_text())
     assert set(EASY_SHOP_SEEN) == set(towers)
     for name, seen in EASY_SHOP_SEEN.items():
         assert shop_price(name, towers[name]["cost"], "easy", acc) == seen, (name, seen)
@@ -64,7 +67,7 @@ def test_shop_prices():
 
 def test_account_data():
     import json
-    acc = json.loads((Path(__file__).resolve().parents[1] / "bloons/data/account.json").read_text())
+    acc = json.loads(calib.path("account.json").read_text())
     assert acc["_meta"]["game_version"]
     mk = acc["monkey_knowledge"]
     assert mk["cheap_rangs"]["active"] and mk["scholarships"]["training_discount"] == 0.1
@@ -101,7 +104,7 @@ def test_coords():
 
 def test_ui_data():
     import json
-    ui = json.loads((Path(__file__).resolve().parents[1] / "bloons/data/ui.json").read_text())
+    ui = json.loads(calib.path("ui.json").read_text())
     assert ui["_meta"]["game_version"]
     for x0, y0, x1, y1 in ui["hud"].values():
         assert 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1
@@ -640,7 +643,7 @@ def test_map_masks():
         for cls, d in data.get("masks", {}).items():      # maps without a sweep have none
             m = Mask.from_json(d)
             assert 0.05 < m.ok.mean() < 0.95, (f.name, cls)
-    mm = maps / "monkey_meadow.json"
+    mm = calib.path("maps/monkey_meadow.json")
     if mm.exists():
         m = Mask.from_json(json.loads(mm.read_text())["masks"]["land_r6"])
         assert not m.placeable(0.30, 0.42) and m.placeable(0.36, 0.30)   # path / grass in the loop
@@ -654,7 +657,7 @@ def test_beginner_maps():
     maps = Path(__file__).resolve().parents[1] / "bloons/data/maps"
     box = (0.03, 0.0, 0.84, 1.0)
     for name in ("monkey_meadow", "tree_stump", "town_center", "logs"):
-        f = maps / f"{name}.json"
+        f = calib.path(f"maps/{name}.json")
         if not f.exists():
             continue
         data = json.loads(f.read_text())
@@ -721,12 +724,12 @@ def test_seeded_spots_match_masks():
     import json
     from bloons.placement import Mask, SpotMemory
     maps = Path(__file__).resolve().parents[1] / "bloons/data/maps"
-    f = maps / "monkey_meadow.spots.json"
+    f = calib.path("maps/monkey_meadow.spots.json")
     if not f.exists():
         return
     mem = SpotMemory.load(f)
     assert mem.meta["game_version"]
-    m = Mask.from_json(json.loads((maps / "monkey_meadow.json").read_text())["masks"]["land_r6"])
+    m = Mask.from_json(json.loads(calib.path("maps/monkey_meadow.json").read_text())["masks"]["land_r6"])
     for i, j in ((0, 0), (10, 20), (30, 22), (60, 40)):
         x, y = m.grid.centre(i, j)
         assert mem.lookup("land_r6", x, y) == ("ok" if m.ok[j, i] else "blocked")
@@ -800,7 +803,7 @@ def _guard_state(**kw):
     root = Path(__file__).resolve().parents[1] / "bloons/data"
     towers = json.loads((root / "towers.json").read_text())["towers"]
     heroes = json.loads((root / "heroes.json").read_text())["heroes"]
-    acc = json.loads((root / "account.json").read_text())
+    acc = json.loads(calib.path("account.json").read_text())
     return GuardState(money=kw.pop("money", 1000), difficulty="easy", towers=towers, heroes=heroes, account=acc, **kw)
 
 
@@ -1747,7 +1750,7 @@ def test_bloon_detector_fixtures():
     by it (yellow_02) and Halloween bats over the track (blue_09: at most one stray)."""
     import json
     from bloons import detect
-    det = detect.BloonDetector(json.loads((Path(__file__).resolve().parents[1] / "bloons/data/maps/monkey_meadow.json").read_text()))
+    det = detect.BloonDetector(json.loads(calib.path("maps/monkey_meadow.json").read_text()))
     assert det.detect(_bloon_frames(["red_04"])[0]) == []              # no background yet
     runs = {"a": ["red_04", "green_05", "yellow_02", "pink_04", "white_03", "black_05"],
             "b": ["purple_04", "lead_05", "zebra_04", "rainbow_05", "ceramic_06"]}
@@ -1770,7 +1773,7 @@ def test_bloon_detector_live_standard():
     is 25 red + 5 blue) and a round-1 frame where a stray dark fragment used to count."""
     import json
     from bloons import detect
-    det = detect.BloonDetector(json.loads((Path(__file__).resolve().parents[1] / "bloons/data/maps/monkey_meadow.json").read_text()))
+    det = detect.BloonDetector(json.loads(calib.path("maps/monkey_meadow.json").read_text()))
     det.set_background_arrays(*detect.load_background("monkey_meadow"))
     r3, r1 = _bloon_frames(["live_r3_198", "live_r1_072"])
     assert detect.summarize(det.detect(r3)) == {"red": 15, "blue": 4}
@@ -2061,7 +2064,7 @@ def test_range_fixtures():
     from bloons import rangecircle
     meta = json.loads((RANGE_FIX / "range.json").read_text())
     W, H = meta["frame"]
-    unit = rangecircle.ground_unit(json.loads((RANGE_FIX.parents[1] / "maps/monkey_meadow.json").read_text())["scale"]["unit_norm"])
+    unit = rangecircle.ground_unit(json.loads(calib.path("maps/monkey_meadow.json").read_text())["scale"]["unit_norm"])
     for name, c in meta["cases"].items():
         fr = {}
         for k in ("sel", "des"):

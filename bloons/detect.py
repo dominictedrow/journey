@@ -25,6 +25,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from . import calib
 from .placement import PathKeepout
 
 DATA = Path(__file__).parent / "data"
@@ -280,8 +281,8 @@ def background_from_frames(frames):
 
 
 def bg_paths(map_name):
-    d = DATA / "maps"
-    return d / f"{map_name}.bg.png", d / f"{map_name}.bgnoise.png", d / f"{map_name}.bg.json"
+    d, m = DATA / "maps", ".mac" if calib.NAME == "mac" else ""
+    return d / f"{map_name}.bg{m}.png", d / f"{map_name}.bgnoise{m}.png", d / f"{map_name}.bg{m}.json"
 
 
 def save_background(map_name, bg, dev, meta):
