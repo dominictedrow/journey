@@ -1140,6 +1140,7 @@ def test_harness_upgrade_and_hero_level(tmp_path):
     charge = {"$": lv}
     g.on_click = lambda game, x, y: (round(x, 4), round(y, 4)) == up and setattr(
         game, "hud", Hud(200, game.hud.money - charge["$"], 1, 40))
+    h.read_hero_level = lambda side: ""
     h.read_hero_price = lambda side: ""            # button unreadable: the estimate, HUD-confirmed
     r = h.buy_hero_level()
     assert r and r.value == 2 and h.hero.level == 2 and h.hero.spent == 1020 + lv
@@ -1577,6 +1578,40 @@ def test_harness_restart_and_home(tmp_path):
     assert h.go_home() and st["kind"] == "home"
     assert h.go_home().reason == "home"                      # already there
     assert h.restart().reason == "not_in_game:home"
+
+
+def test_harness_hero_xp_from_panel(tmp_path):
+    """Live 2026-11-09 (Benjamin, Meadow Easy, Scholarships): after round 5 the model had 120 XP
+    and the button showed $126 (= 140 XP left of 270, so 130 XP). The panel resets the
+    estimate, and the ratio becomes the XP rate used for later rounds."""
+    from bloons.harness import HERO_TID
+    g, h = _round_harness(tmp_path)
+    h.hero_choice = "benjamin"
+    h.register_hero((0.36, 0.3), 1020)
+    h._hero_round_xp(5)
+    assert (h.hero.level, h.hero.xp_into_level) == (1, 120)
+    assert h._sync_hero(1, 126) and (h.hero.level, h.hero.xp_into_level) == (1, 130)
+    assert abs(h.hero_xp_rate - 130 / 120) < 1e-9
+    h._hero_round_xp(6)                             # 140 raw x 1.083 = 152 -> 282 of 270: level 2
+    assert (h.hero.level, h.hero.xp_into_level) == (2, 12)
+    # misread prices change nothing
+    assert not h._sync_hero(2, 99999) and not h._sync_hero(2, None) and h.hero.xp_into_level == 12
+    # the panel says level 3: the level follows, with its ability (Biohack at 3)
+    need3 = h.heroes["benjamin"]["level_xp"][2]
+    assert h._sync_hero(3, int(need3 * 0.9 + 0.5))
+    assert h.hero.level == 3 and h.hero.xp_into_level == 0
+    assert any(k[0] == HERO_TID for a in h.ability_slots for k in a["inst"])
+    # ...and back down: the level-3 ability goes
+    h._sync_hero(2, None)
+    assert h.hero.level == 2 and not any(k[0] == HERO_TID for a in h.ability_slots for k in a["inst"])
+    # level label reads: 'Level N' in any case, within one level of the estimate
+    for text, want in (("LeVeL 3", 3), ("LEVEL 2", 2), ("L 10Л0]", None), ("Level 9", None), ("", None)):
+        h.read_hero_level, h.read_hero_price = (lambda t: lambda side: t)(text), lambda side: "$5"
+        assert h._read_hero_panel("left") == (want, 5), text
+    # the rate survives a new game; the anchor doesn't
+    rate = h.hero_xp_rate
+    h.new_episode()
+    assert h.hero_xp_rate == rate and h._xp_anchor is None
 
 
 def test_harness_open_pause_closes_panel(tmp_path):

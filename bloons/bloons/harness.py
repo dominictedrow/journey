@@ -119,6 +119,11 @@ class BloonsHarness:
         self.bar_filter = abilitybar.BarFilter()
         self.read_targeting = self._ocr_targeting   # panel side -> label text ('' if none)
         self.read_hero_price = self._ocr_hero_price  # panel side -> level-up button text
+        self.read_hero_level = self._ocr_hero_level  # panel side -> level label text ('Level 4')
+        # Hero XP rate: game XP / rules.hero_xp_for_round, learned from level-up button prices
+        # (live 2026-11-09: ~1.08 for Benjamin, XP Monkey Knowledge?). Kept across episodes.
+        self.hero_xp_rate = 1.0
+        self._xp_real = self._xp_raw = 0.0          # summed samples behind hero_xp_rate
         self.read_paths = self._read_paths          # (side, paths, prices) -> {path: panel.PathRow}
         self.read_map_names = self._ocr_map_names   # map select page -> 6 thumbnail names
         self.pick_trace = []                        # last _pick_map reads / flips / clicks
@@ -173,6 +178,7 @@ class BloonsHarness:
         self.rounds_done = 0          # rounds finished this game, counted by observe() (the HUD
                                       # number is ambiguous between rounds; RESEARCH step 2.x)
         self._xp_round = 0            # last round whose hero XP was credited (no double credit)
+        self._xp_anchor = None        # [hero's total XP when last known exactly, raw XP since]
         self._hero_prev = False       # a hero was placed at the previous observe() (6: XP only
                                       # for round ends it was there for)
         self._obs_t = None            # clock() of the last observe() (tracker button freshness)
@@ -216,6 +222,7 @@ class BloonsHarness:
         if self.hero_choice is None:
             raise ValueError("no hero chosen for this game")
         self.hero = guards.HeroRec(self.hero_choice, tuple(xy), 1, 0, int(spent))
+        self._xp_anchor = [0, 0.0]               # placed at level 1 with no XP (live: no catch-up)
         self._gain_hero_abilities(1)
         return HERO_TID
 
@@ -294,19 +301,95 @@ class BloonsHarness:
     def _hero_round_xp(self, r):
         """End of round `r` (Standard): the placed hero gains rules.hero_xp_for_round(r) XP and
         levels up from it the way the game does, gaining each new level's abilities. The four
-        maps are Beginner (XP x 1); XP Monkey Knowledge isn't modelled. An estimate: the game's
-        level isn't read back from the screen."""
+        maps are Beginner (XP x 1), times hero_xp_rate (learned from the panel: XP Monkey
+        Knowledge isn't in the data). An estimate between panel reads (_sync_hero)."""
         h = self.hero
         if h is None or self.mode != "standard":
             return
+        raw = rules.hero_xp_for_round(r)
+        if self._xp_anchor is not None:
+            self._xp_anchor[1] += raw
+        self._set_hero_total(self._hero_total() + int(raw * self.hero_xp_rate + 0.5))
+
+    def _hero_total(self):
+        """The hero's total XP since level 1, from level + xp_into_level."""
+        h = self.hero
+        return rules.hero_xp_to_reach(self.heroes[h.name], h.level) + h.xp_into_level
+
+    def _set_hero_total(self, total):
+        """Set the hero's level and XP from a total, gaining (or dropping) level abilities."""
+        h, need = self.hero, self.heroes[self.hero.name]["level_xp"]
+        level, xp = 1, max(0, int(total))
+        while level < 20 and xp >= need[level - 1]:
+            xp -= need[level - 1]
+            level += 1
+        old, h.level, h.xp_into_level = h.level, level, (0 if level >= 20 else xp)
+        if level > old:
+            for lv in range(old + 1, level + 1):
+                self._gain_hero_abilities(lv)
+        elif level < old:
+            gone = {a["name"] for a in self.hero_abilities.get(self.hero_choice) or [] if a["level"] > level}
+            self._drop_abilities(lambda k, name: k[0] == HERO_TID and name in gone)
+
+    def _sync_hero(self, level, price):
+        """Correct the hero's level and XP from its panel: the level label (`level`, None if
+        unread) and the level-up button's price (`price`: what's left of the level in $, so
+        XP = level XP - price / (1 - training discount)). Then the XP gained since the last
+        exact point, against what rules.hero_xp_for_round gave for it, updates hero_xp_rate.
+        -> True if the XP was corrected."""
+        h = self.hero
+        if h is None:
+            return False
+        lv = level if level is not None and 1 <= level <= 20 else h.level
         need = self.heroes[h.name]["level_xp"]
-        h.xp_into_level += rules.hero_xp_for_round(r)
-        while h.level < 20 and h.xp_into_level >= need[h.level - 1]:
-            h.xp_into_level -= need[h.level - 1]
-            h.level += 1
-            self._gain_hero_abilities(h.level)
-        if h.level >= 20:
-            h.xp_into_level = 0
+        if lv >= 20 or price is None:
+            if lv != h.level:
+                self._set_hero_total(rules.hero_xp_to_reach(self.heroes[h.name], lv))
+            return False
+        disc = guards._training_discount(self.account)
+        left = int(price / (1 - disc) + 0.5)
+        if not 1 <= left <= need[lv - 1]:
+            return False                        # misread: not a price for this level
+        total = rules.hero_xp_to_reach(self.heroes[h.name], lv) + need[lv - 1] - left
+        a = self._xp_anchor
+        if a is not None and a[1] >= 100:       # one round's XP or more: a usable sample
+            gained = total - a[0]
+            if 0 < gained <= 3 * a[1]:
+                self._xp_real += gained
+                self._xp_raw += a[1]
+                self.hero_xp_rate = min(2.0, max(0.5, self._xp_real / self._xp_raw))
+        self._set_hero_total(total)
+        self._xp_anchor = [total, 0.0]
+        return True
+
+    def _read_hero_panel(self, side):
+        """(level, price) off the open hero panel; None for what doesn't read. The level counts
+        only as 'Level N' (any case) within one of the estimate: the label OCR'd once as
+        'L 10Л0]' right after placing (live 2026-11-09), and the estimate is never a level out."""
+        import re
+        m = re.search(r"level\s*(\d{1,2})\b", self.read_hero_level(side) or "", re.IGNORECASE)
+        level = int(m.group(1)) if m else None
+        if level is not None and abs(level - self.hero.level) > 1:
+            level = None
+        return level, panel.parse_price(self.read_hero_price(side))
+
+    def sync_hero_xp(self):
+        """Read the hero's level and XP off its panel (select, read, close; ~1 s) and correct
+        the estimate. For callers that want the hero's level exact without buying one.
+        ok -> value (level, xp_into_level)."""
+        if self.hero is None:
+            return ActionResult(False, "no_hero")
+        r = self.select_tower(HERO_TID)
+        if not r:
+            return r
+        side = self.panel_side()
+        if side is None:
+            return ActionResult(False, "no_panel")
+        level, price = self._read_hero_panel(side)
+        self.close_panel(side)
+        self._sync_hero(level, price)
+        ok = level is not None or price is not None
+        return ActionResult(ok, "synced" if ok else "unreadable", 0, (self.hero.level, self.hero.xp_into_level))
 
     def _gain_hero_abilities(self, level):
         for a in self.hero_abilities.get(self.hero_choice) or []:
@@ -758,7 +841,12 @@ class BloonsHarness:
         full = guards.hero_level_price(self.guard_state(), xp_into_level=0)
 
         def level_up(side):
-            price = panel.parse_price(self.read_hero_price(side))
+            nonlocal full
+            level, price = self._read_hero_panel(side)
+            if self._sync_hero(level, price):   # the panel's level and XP replace the estimate
+                full = guards.hero_level_price(self.guard_state(), xp_into_level=0)
+            if self.hero.level >= 20:
+                return ActionResult(False, "hero_max_level")
             if price is not None and not 1 <= price <= full:
                 price = None                    # misread: no level costs more than a whole one
             if price is not None and self.money is not None and price > self.money:
@@ -770,8 +858,9 @@ class BloonsHarness:
         if not r:
             return r
         h = self.hero
-        h.level, h.xp_into_level, h.spent = h.level + 1, 0, h.spent + r.cost
-        self._gain_hero_abilities(h.level)
+        h.spent += r.cost
+        self._set_hero_total(rules.hero_xp_to_reach(self.heroes[h.name], h.level + 1))
+        self._xp_anchor = [self._hero_total(), 0.0]    # a bought level starts at 0 XP: exact
         return ActionResult(True, "leveled", r.cost, h.level)
 
 
@@ -1004,6 +1093,10 @@ class BloonsHarness:
     def _ocr_hero_price(self, side):
         f = self.game.grab()
         return "" if f is None else self.game.ocr(f, ui.panel(side)["hero_level_price"])
+
+    def _ocr_hero_level(self, side):
+        f = self.game.grab()
+        return "" if f is None else self.game.ocr(f, ui.panel(side)["hero_level"])
 
     def targeting_label(self, mode):
         """The panel text for a towers.json targeting mode ('lock_in_place' -> 'LOCK IN PLACE')."""
