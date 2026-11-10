@@ -74,6 +74,13 @@ def _icon_diff(a, b):
     return float(np.abs(a.astype(np.int16) - b.astype(np.int16)).mean())
 
 
+def _name_match(want, read):
+    """An OCR'd map name `read` names `want` (both upper-case letters only): contained, or
+    close enough (Windows OCR: 'MONXEYEAEADOW' for 'MONKEYMEADOW')."""
+    from difflib import SequenceMatcher
+    return want in read or SequenceMatcher(None, want, read).ratio() >= 0.75
+
+
 def load_data(name):
     """Parse bloons/data/<name> (JSON)."""
     return json.loads(calib.path(name).read_text())
@@ -1355,7 +1362,7 @@ class BloonsHarness:
         votes = {}
         for n in names:
             for pg, keys in enumerate(pages):
-                if any(k in n for k in keys):
+                if any(_name_match(k, n) for k in keys):
                     votes[pg] = votes.get(pg, 0) + 1
         return max(votes, key=votes.get) if votes else None
 
@@ -1394,7 +1401,7 @@ class BloonsHarness:
             here = self._page_of(names, pages)
             self.pick_trace.append(("page", here, names))
             for i, name in enumerate(names):
-                if want and want in name:
+                if want and _name_match(want, name):
                     self.pick_trace.append(("click", i))
                     self.game.click(*ms["slots"][i])
                     return ActionResult(True, "map", 0, map_name)

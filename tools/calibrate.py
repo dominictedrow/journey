@@ -45,9 +45,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from bloons.coords import box_to_pixels                       # noqa: E402
-from bloons.placement import (Grid, Mask, PathKeepout, SpotMemory, held_tint,  # noqa: E402
-                              load_masks, probe_box, unit_norm)
+from bloons.placement import (Grid, Mask, PathKeepout, SpotMemory, tint_at,  # noqa: E402
+                              load_masks, unit_norm)
 from bloons.ui import UI                                       # noqa: E402
 
 MAPS = ROOT / "bloons/data/maps"
@@ -55,35 +54,18 @@ MAP_BOX = [0.03, 0.0, 0.84, 1.0]     # between the wooden left border (the curso
 SETTLE_S = 0.05                      # tint follows the cursor within ~20 ms
 
 
-def clip(box):
-    return [min(max(v, 0.0), 1.0) for v in box]
-
-
-def crop_px(full_bgr, frame, box):
-    x, y, w, h = box_to_pixels(clip(box), frame.width, frame.height, frame.title_bar_px)
-    return full_bgr[y:y + h, x:x + w]
-
-
-def classify(g, x, y, base, base_frame):
-    import Quartz as Q
-    from bloons.platform import cgimage_bgr
+def classify(g, x, y, base):
+    """Tint of the held tower at (x, y): 'ok' / 'blocked' / 'none' (portable: content arrays)."""
     f = g.grab()
     if f is None:
         raise RuntimeError("capture failed (screen locked or game window off screen?)")
-    box = probe_box(x, y)
-    px = box_to_pixels(clip(box), f.width, f.height, f.title_bar_px)
-    held = cgimage_bgr(Q.CGImageCreateWithImageInRect(f.image, Q.CGRectMake(*px)))
-    cx = x * f.width - px[0]
-    cy = f.title_bar_px + y * (f.height - f.title_bar_px) - px[1]
-    return held_tint(held, crop_px(base, base_frame, box), (cx, cy))
+    return tint_at(base, f.content_bgr(), x, y)
 
 
 def sweep(g, grid, key, log_every=200):
-    from bloons.platform import cgimage_bgr
     g.move(0.92, 0.5)
     time.sleep(0.3)
-    base_frame = g.grab()
-    base = cgimage_bgr(base_frame.image)
+    base = g.grab().content_bgr()
     g.key(key)
     time.sleep(0.6)
     labels = np.full((grid.ny, grid.nx), "", dtype=object)
@@ -95,11 +77,11 @@ def sweep(g, grid, key, log_every=200):
             if not g.move(x, y):
                 raise RuntimeError("game not frontmost")
             time.sleep(SETTLE_S)
-            lab = classify(g, x, y, base, base_frame)
+            lab = classify(g, x, y, base)
             if lab == "none":                 # hold lost (or over UI): pick the tower up again
                 g.key(key)
                 time.sleep(0.6)
-                lab = classify(g, x, y, base, base_frame)
+                lab = classify(g, x, y, base)
                 retries += 1
             labels[j, i] = lab
             none_run = none_run + 1 if lab == "none" else 0
