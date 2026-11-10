@@ -21,6 +21,7 @@ The [`roadmap/`](roadmap/) stages are the core of the plan. For each stage I bui
 | [`fundamentals/nano-gpt_manual`](fundamentals/nano-gpt_manual/) | A GPT-style transformer written by hand in PyTorch: data prep, weight init, forward pass (in progress) | 2026-10 → 2026-11 |
 | [`roadmap/Stage_1&2`](roadmap/Stage_1&2/) | MNIST MLP in NumPy, plus reteach and test exercises | 2026-11 |
 | [`fundamentals/iris`](fundamentals/iris/) | Iris flower classifier: preprocessing, training loop, evaluation | 2026-11 |
+| [`fundamentals/titanic`](fundamentals/titanic/) | Titanic survival classifier in PyTorch: OpenML data loading, preprocessing, single-layer model (in progress) | 2026-11 |
 | [`bloons/`](bloons/) | **Mixed.** An RL agent that plays Bloons TD 6 from screen pixels on macOS. The game harness (screen reading, input, game-state detection) was built with Claude Code. The RL environment, model, training and scripted baseline are mine (in progress). | 2026-11 → |
 
 ## Notes
