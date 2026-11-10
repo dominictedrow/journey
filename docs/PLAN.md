@@ -132,13 +132,13 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 - [x] W.1 `bloons/platform_win.py`: same `Game` / `Frame` interface; PrintWindow capture, SendInput input, glyph HUD reader, keep-awake, `relaunch()` *(2026-11-09)*
 - [x] W.2 `bloons/platform.py` picks the OS backend; tools / scripts / tests import it *(2026-11-09)*
 - [x] W.3 Feasibility gate (live probes, handoff 052): SendInput clicks + keys reach the game; PostMessage doesn't *(2026-11-09)*
-- [ ] W.4 Recalibrate `ui.json` for Steam (HUD done; shop, upgrade panel, hero panel, ability bar, pause, map select, difficulty/mode, prompts), templates, fixtures; `account.json` MK reset
-- [ ] W.5 Live check in `tools/play.py`: new_game, place, upgrade, start_round, observe, sell, restart, go_home
+- [x] W.4 Recalibrate for Steam: Mac calibration ported by one transform (`scripts/port_mac_to_steam.py`), then pause / play button / back / shop / prompts measured; Steam templates + `fixtures/win`; `account.json` MK reset; `bloons/calib.py` picks Steam / Mac files *(2026-11-09; hero panel, ability bar, targeting, range circle are ported but unchecked live)*
+- [x] W.5 Live check through the harness: new_game, place_tower, place_hero, upgrade, start_round, observe, handle_prompts, go_home (victory + defeat) *(2026-11-09; sell / restart not re-run on Steam)*
 
 ## Phase X — XP farm (all towers, 3 paths, tier 5), plan in `docs/max.md` Part B
-- [ ] X.1 Research (XP split, Deflation, map bonus, unlock ranks, `data/xp_costs.json`, XP Monkey Knowledge); measure XP per game live
-- [ ] X.2 `bloons/xp.py`: progress reader + planner
-- [ ] X.3 `tools/farm.py`: unattended loop with recovery, `logs/farm.jsonl`
+- [~] X.1 Research: XP split by cash per tower type, map bonus x1.1/1.2/1.3, Monkey Education +8% (RESEARCH 2026-11-09). XP costs are read off the unlock screen instead of a `xp_costs.json`. Still open: XP per game measured, Deflation
+- [x] X.2 `bloons/xp.py` (unlock screen reader + unlocker) and `bloons/farm.py` survey / choose_targets *(2026-11-09)*
+- [x] X.3 `tools/farm.py`: unattended loop with recovery, `logs/farm.jsonl` *(2026-11-09; started the long run, Meadow Easy)*
 - [ ] X.4 Done condition: every tower x 3 paths x tier 5 unlocked
 
 ---

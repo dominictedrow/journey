@@ -17,7 +17,9 @@ from . import guards, rules
 
 PATH_STEP = 0.004          # normalized spacing of path samples for spot scores
 MIN_COVER = 3              # a spot must see at least this many path samples
-DEFENSE_TIERS = 5          # defence towers are upgraded up to this many tiers in total
+DEFENSE_TIERS = 3          # defence towers' tier budget at first (+1 each time lives drop, up to 7):
+                           # cash in the defence is XP the targets don't get
+DEFENSE_START, DEFENSE_MAX = 2, 4    # defence towers of each kind: at first, and at most
 
 
 def path_samples(h):
@@ -65,6 +67,8 @@ class Spender:
         self.xp_locked = set()        # (kind, path, tier) the account hasn't unlocked
         self.bad_spots = set()
         self.place_fail = {}          # kind -> consecutive placement failures
+        self.defense_count = DEFENSE_START   # raised by play_game when lives drop
+        self.defense_tiers = DEFENSE_TIERS
 
     def _placed(self, kind):
         return [t for t in self.h.registry.values() if t.kind == kind]
@@ -98,7 +102,7 @@ class Spender:
         for t in self.h.registry.values():
             if t.kind not in kinds:
                 continue
-            if t.kind not in self.targets and sum(t.tiers) >= DEFENSE_TIERS:
+            if t.kind not in self.targets and sum(t.tiers) >= self.defense_tiers:
                 continue
             for p in range(3):
                 if (t.kind, p, t.tiers[p] + 1) in self.xp_locked:
@@ -135,8 +139,8 @@ class Spender:
                 if r:
                     return True
                 self.bad_spots.add((round(xy[0], 4), round(xy[1], 4)))
-        for kind in self.defense:                 # the defence: one of each, in order
-            if not self._placed(kind) and kind in h.towers:
+        for kind in self.defense:                 # the defence: defense_count of each, in order
+            if len(self._placed(kind)) < self.defense_count and kind in h.towers:
                 if self._try_place(kind):
                     return True
                 if guards.can_buy_tower(kind, h.guard_state()).reason == "no_money":
@@ -161,12 +165,19 @@ def play_game(h, spender, log=print, timeout_s=3600, tick_s=1.0):
     t0 = time.monotonic()
     started = False
     unknown = 0
+    lives = None
     while time.monotonic() - t0 < timeout_s:
         s = h.observe()
         if s.outcome:
             return s.outcome
         if s.screen == "game":
             unknown = 0
+            if lives is not None and s.lives is not None and s.lives < lives:
+                spender.defense_count = min(DEFENSE_MAX, spender.defense_count + 1)
+                spender.defense_tiers = min(7, spender.defense_tiers + 1)
+                log(f"lives {lives} -> {s.lives}: defence {spender.defense_count} of each, "
+                    f"{spender.defense_tiers} tiers")
+            lives = s.lives if s.lives is not None else lives
             spender.spend()
             if not started or (s.round_active is False and not s.round_ended):
                 r = h.start_round()
