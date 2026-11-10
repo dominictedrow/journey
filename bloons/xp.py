@@ -25,6 +25,8 @@ def ring_class(hsv_px):
         return "red"
     if s >= 150 and v >= 130 and 35 <= h <= 85:
         return "green"
+    if s >= 230 and v >= 215 and 15 <= h <= 30:
+        return "gold"                   # tier 5 once tier 4 is unlocked (affordable or not)
     return "dull"
 
 
@@ -39,15 +41,17 @@ def icon_state(img, col, row):
         x, y = int(cx + dx * k), int(cy + dy * k)
         c = ring_class(hsv[y - 3:y + 4, x - 3:x + 4].reshape(-1, 3).mean(0))
         votes[c] = votes.get(c, 0) + 1
-    best = max(votes, key=votes.get)
-    return best if votes[best] >= 2 else "dull"
+    votes.pop("dull", None)             # icon art abstains; locked icons are greyed out whole
+    best = max(votes, key=votes.get, default="dull")
+    return best if votes.get(best, 0) >= 2 else "dull"
 
 
 @dataclass(frozen=True)
 class XpScreen:
     xp: int | None
     unlocked: tuple          # tiers unlocked per path, e.g. (2, 1, 1)
-    next_state: tuple        # per path: 'afford' / 'poor' / None (path complete or unclear)
+    next_state: tuple        # per path: 'afford' / 'poor' / 'tier5' (gold: compare the cost with xp)
+                             # / None (path complete or unclear)
 
 
 def _crop(img, box):
@@ -68,7 +72,7 @@ def read(img):
         while n < 5 and states[n] == "blue":
             n += 1
         unlocked.append(n)
-        nxt.append(None if n == 5 else {"green": "afford", "red": "poor"}.get(states[n]))
+        nxt.append(None if n == 5 else {"green": "afford", "red": "poor", "gold": "tier5"}.get(states[n]))
     return XpScreen(read_number(glyphs.read(_crop(img, X["xp"]), "bright")), tuple(unlocked), tuple(nxt))
 
 
@@ -76,40 +80,60 @@ def unlock_cost(img):
     return read_number(glyphs.read(_crop(img, X["unlock_cost"])))
 
 
-def unlock_next(h, path, sleep=None):
+def read_settled(h, tries=6):
+    """read() once two reads in a row agree (icons animate for a moment after an unlock)."""
+    last = read(h.content())
+    for _ in range(tries):
+        h.sleep(0.35)
+        now = read(h.content())
+        if now == last:
+            return now
+        last = now
+    return last
+
+
+def select(h, path, tier):
+    """Click an icon, then close the description tooltip it may open (it covers the top row
+    and swallows the next click)."""
+    h.game.click(X["cols_x"][tier], X["rows_y"][path])
+    h.sleep(0.4)
+    h.game.click(*X["dismiss"])
+    h.sleep(0.4)
+
+
+def unlock_next(h, path):
     """On the open XP screen: select the next tier of `path` and unlock it. -> (ok, cost)."""
-    sleep = sleep or h.sleep
-    before = read(h.content())
+    before = read_settled(h)
     tier = before.unlocked[path]
-    if tier >= 5 or before.next_state[path] != "afford":
+    if tier >= 5 or before.next_state[path] not in ("afford", "tier5"):
         return False, None
-    pt = (X["cols_x"][tier], X["rows_y"][path])
-    h.game.click(*pt)
-    sleep(0.6)
+    select(h, path, tier)
     cost = unlock_cost(h.content())
     h.game.click(*X["unlock_button"])
-    sleep(1.2)
-    after = read(h.content())
+    h.sleep(1.0)
+    after = read_settled(h)
     return after.unlocked[path] == tier + 1, cost
 
 
-def unlock_all_affordable(h, log=print, max_steps=15):
-    """Unlock tiers on the open screen, cheapest next tier first, while XP lasts. -> [(path, cost)]."""
-    done = []
+def unlock_all_affordable(h, log=print, max_steps=20):
+    """Unlock tiers on the open screen, cheapest next tier first, while XP lasts. A path that
+    fails twice is left for next time. -> [(path, cost)]."""
+    done, fails = [], {}
     for _ in range(max_steps):
-        s = read(h.content())
-        options = [p for p in range(3) if s.next_state[p] == "afford"]
-        if not options:
-            break
+        s = read_settled(h)
+        options = [p for p in range(3) if s.next_state[p] in ("afford", "tier5") and fails.get(p, 0) < 2]
         costs = {}
         for p in options:                       # select each candidate to see its price
-            h.game.click(X["cols_x"][s.unlocked[p]], X["rows_y"][p])
-            h.sleep(0.5)
+            select(h, p, s.unlocked[p])
             costs[p] = unlock_cost(h.content()) or 10 ** 9
+        costs = {p: c for p, c in costs.items() if s.xp is None or c <= s.xp}
+        if not costs:
+            break
         p = min(costs, key=costs.get)
         ok, cost = unlock_next(h, p)
         log(f"unlock path {p} tier {s.unlocked[p] + 1} for {cost} XP: {'ok' if ok else 'failed'}")
-        if not ok:
-            break
-        done.append((p, cost))
+        if ok:
+            done.append((p, cost))
+        else:
+            fails[p] = fails.get(p, 0) + 1
     return done

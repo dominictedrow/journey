@@ -1248,7 +1248,7 @@ class BloonsHarness:
         return handled
 
     # --- 4.9 games: new / restart / home ----------------------------------------------------
-    MENUS = ("map_select", "difficulty_select", "mode_select")
+    MENUS = ("map_select", "difficulty_select", "mode_select", "monkeys_menu")
 
     def screen_kind(self):
         """The current screen kind; None if the window can't be captured (then try to find
@@ -1309,8 +1309,11 @@ class BloonsHarness:
                     self.sleep(t["menu"])           # home animates in; early clicks are lost
                     return ActionResult(True, "home")
                 return ActionResult(False, "not_home")
-            if kind == "defeat":
-                self._click_ui("menus.defeat_home", wait=0)
+            if kind == "victory":                    # Steam: Next -> the rewards screen
+                self._click_ui("menus.victory_next")
+                continue
+            if kind in ("defeat", "victory_rewards"):
+                self._click_ui("menus.defeat_home" if kind == "defeat" else "menus.victory_home", wait=0)
                 self.new_episode()
                 if self._wait_kind(("home",), t["load_max"]):
                     self.sleep(t["menu"])           # home animates in; early clicks are lost

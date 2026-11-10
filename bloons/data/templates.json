@@ -222,6 +222,26 @@
     0.9833
    ],
    "threshold": 0.8
+  },
+  "victory_rewards": {
+   "src": "victory_after_next.png",
+   "box": [
+    0.4531,
+    0.563,
+    0.5469,
+    0.6019
+   ],
+   "threshold": 0.8
+  },
+  "monkeys_menu": {
+   "src": "menu_monkeys.png",
+   "box": [
+    0.2604,
+    0.9556,
+    0.7396,
+    0.9926
+   ],
+   "threshold": 0.8
   }
  },
  "probes": {
@@ -312,6 +332,23 @@
     ]
    },
    "max_dist": 12
+  },
+  "letterbox": {
+   "_notes": "Steam: black bars top (and bottom) on full-screen reward splashes (a hero unlocked at rank-up); 2026-11-09",
+   "box": [
+    0.1,
+    0.0,
+    0.9,
+    0.05
+   ],
+   "classes": {
+    "black": [
+     0,
+     0,
+     0
+    ]
+   },
+   "max_dist": 6
   }
  }
 }

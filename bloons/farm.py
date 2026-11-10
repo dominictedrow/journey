@@ -17,6 +17,7 @@ from . import guards, rules
 
 PATH_STEP = 0.004          # normalized spacing of path samples for spot scores
 MIN_COVER = 3              # a spot must see at least this many path samples
+DEFENSE_TIERS = 5          # defence towers are upgraded up to this many tiers in total
 
 
 def path_samples(h):
@@ -90,11 +91,14 @@ class Spender:
         return False
 
     def _upgrade_options(self, kinds):
-        """(cost, tid, path) for the next tier of every tower of `kinds`, cheapest first."""
+        """(cost, tid, path) for the next tier of every tower of `kinds`, cheapest first.
+        Defence towers (not targets) stop at DEFENSE_TIERS tiers."""
         s = self.h.guard_state()
         out = []
         for t in self.h.registry.values():
             if t.kind not in kinds:
+                continue
+            if t.kind not in self.targets and sum(t.tiers) >= DEFENSE_TIERS:
                 continue
             for p in range(3):
                 if (t.kind, p, t.tiers[p] + 1) in self.xp_locked:
@@ -137,7 +141,7 @@ class Spender:
                     return True
                 if guards.can_buy_tower(kind, h.guard_state()).reason == "no_money":
                     return False
-        if self._try_upgrade(set(self.targets)):
+        if self._try_upgrade(set(self.targets) | set(self.defense)):
             return True
         for kind in self.targets:
             if self._try_place(kind):
@@ -173,9 +177,79 @@ def play_game(h, spender, log=print, timeout_s=3600, tick_s=1.0):
             done = h.handle_prompts()
             if not done:
                 unknown += 1
-                if unknown >= 5:
+                if unknown == 3:          # most unknown overlays (reward splashes) go on a click
+                    log(f"unknown screen {s.screen}: click")
+                    h.game.click(0.5, 0.5)
+                elif unknown >= 6:
                     log(f"stuck on screen {s.screen}: Escape")
                     h.game.key("escape")
                     unknown = 0
         time.sleep(tick_s)
     return "timeout"
+
+
+# --- planning (docs/max.md B2) ---------------------------------------------------------------
+def card_unlocked(img, cell_xy, probe_px):
+    """Is a Monkeys-menu card coloured (tower unlocked) rather than grey?"""
+    import cv2
+    H, W = img.shape[:2]
+    k = W / 1920
+    x, y = cell_xy[0] * W, cell_xy[1] * H
+    x0, y0, x1, y1 = probe_px
+    patch = img[int(y + y0 * k):int(y + y1 * k), int(x + x0 * k):int(x + x1 * k)]
+    _, s, v = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV).reshape(-1, 3).mean(0)
+    return s >= 60 and v >= 165
+
+
+def survey(h, log=print):
+    """Visit the Monkeys menu: -> {kind: {'unlocked_tower': bool, 'xp', 'unlocked', 'next_state'}}.
+    Only unlocked towers' XP screens are opened (a locked card may offer a paid unlock)."""
+    from . import xp
+    mm = h.ui["monkeys_menu"]
+    out = {}
+    if not h.go_home():
+        return out
+    h._click_ui("monkeys_menu.open")
+    for tab in mm["tabs"]:
+        h.game.click(*mm["tabs"][tab])
+        h.sleep(1.0)
+        for kind, cell in mm["cells"].items():
+            if cell["tab"] != tab:
+                continue
+            if not card_unlocked(h.content(), cell["xy"], mm["card_probe_px"]):
+                out[kind] = {"unlocked_tower": False}
+                continue
+            h.game.click(*cell["xy"])
+            h.sleep(1.5)
+            if h.screen_kind() != "xp_screen":
+                log(f"survey: {kind} didn't open its XP screen")
+                out[kind] = {"unlocked_tower": True}
+                h.go_home()
+                h._click_ui("monkeys_menu.open")
+                h.game.click(*mm["tabs"][tab])
+                h.sleep(1.0)
+                continue
+            s = xp.read_settled(h)
+            out[kind] = {"unlocked_tower": True, "xp": s.xp, "unlocked": list(s.unlocked),
+                         "next_state": list(s.next_state)}
+            h._click_ui("xp_screen.back")
+            h.sleep(0.8)
+    return out
+
+
+def placeable_here(h, kind):
+    """Can `kind` go anywhere on this map (water towers need water masks)?"""
+    masks = h.placeable_masks()
+    return any(c in masks for c in h.mask_classes_of(kind))
+
+
+def choose_targets(h, progress, n=2, exclude=()):
+    """The `n` unlocked, placeable tower types with the most tiers still locked."""
+    cand = []
+    for kind, p in progress.items():
+        if not p.get("unlocked_tower") or kind in exclude or "unlocked" not in p:
+            continue
+        left = 15 - sum(p["unlocked"])
+        if left > 0 and placeable_here(h, kind):
+            cand.append((-left, kind))
+    return [k for _, k in sorted(cand)[:n]]

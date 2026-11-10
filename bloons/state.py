@@ -23,6 +23,7 @@ SCREENS = (
     ("xp_screen", ("xp_screen",)),
     ("restart_confirm", ("restart_confirm",)),
     ("overwrite_save", ("overwrite_save",)),
+    ("victory_rewards", ("victory_rewards",)),
     ("victory", ("victory_banner",)),
     ("defeat", ("defeat_title",)),
     ("collection_event", ("collection_event",)),
@@ -31,8 +32,9 @@ SCREENS = (
     ("mode_select", ("menu_mode_standard",)),
     ("difficulty_select", ("menu_difficulty",)),
     ("home", ("menu_home",)),
+    ("monkeys_menu", ("monkeys_menu",)),
 )
-OUTCOMES = {"victory": "win", "defeat": "loss"}
+OUTCOMES = {"victory": "win", "victory_rewards": "win", "defeat": "loss"}
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,8 @@ def read_screen(img, templates: Optional[Templates] = None) -> Screen:
     for kind, needed in SCREENS:
         if all(n in m and m[n].found for n in needed):
             return Screen(kind, scores=scores)
-    if "reward_bg" in t.spec["probes"] and t.probe(img, "reward_bg").label == "reward":
+    probes = t.spec["probes"]
+    if ("reward_bg" in probes and t.probe(img, "reward_bg").label == "reward") or             ("letterbox" in probes and t.probe(img, "letterbox").label == "black"):
         return Screen("reward", scores=scores)    # Steam rank-up rewards (any kind)
     button = t.button_state(img)
     if button is None and not (m["btn_play"].found or m["btn_ff"].found):

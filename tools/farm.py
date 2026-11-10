@@ -32,18 +32,11 @@ def log(msg):
         f.write(line + "\n")
 
 
-def leave_game(h, outcome):
-    """From victory / defeat / a game back to the home screen."""
-    for _ in range(8):
-        kind = h.screen_kind()
-        if kind == "home":
-            return True
-        if kind == "victory":
-            h._click_ui("menus.victory_next")
-            h._click_ui("menus.victory_home")
-            continue
-        r = h.go_home()
-        if r:
+def leave_game(h):
+    """Back to the home screen from wherever the game ended (go_home knows victory, defeat,
+    prompts); Escape as a last resort."""
+    for _ in range(4):
+        if h.go_home():
             return True
         if not h.handle_prompts():
             h.game.key("escape")
@@ -61,21 +54,35 @@ def spend_xp(h, kinds):
         out[kind] = xp.unlock_all_affordable(h, log=lambda m, k=kind: log(f"xp {k}: {m}"))
         out[kind + "_state"] = xp.read(h.content()).__dict__
         h._click_ui("xp_screen.back")
-        h._click_ui("xp_screen.back")
     return out
 
 
 def open_xp_screen(h, kind):
-    """Home -> Monkeys menu -> the tower's cell (ui.json monkeys_menu)."""
-    mm = h.ui.get("monkeys_menu")
-    if not mm or kind not in mm.get("cells", {}):
-        return False
-    if h.screen_kind() != "home" and not h.go_home():
+    """Home -> Monkeys -> the tower's tab and cell (ui.json monkeys_menu) -> its XP screen."""
+    mm = h.ui["monkeys_menu"]
+    cell = mm["cells"].get(kind)
+    if cell is None or not h.go_home():
         return False
     h._click_ui("monkeys_menu.open")
-    h.game.click(*mm["cells"][kind])
+    h.game.click(*mm["tabs"][cell["tab"]])
+    h.sleep(1.0)
+    h.game.click(*cell["xy"])
     h.sleep(1.5)
     return h.screen_kind() == "xp_screen"
+
+
+def plan(h, a):
+    """Survey the account (logs/xp_progress.json) and pick targets / defence."""
+    progress = farm.survey(h, log=log)
+    (LOGS / "xp_progress.json").write_text(json.dumps(progress, indent=1))
+    done = {k: sum(p.get("unlocked", [])) for k, p in progress.items() if p.get("unlocked_tower")}
+    defense = ([t for t in a.defense.split(",") if t] if a.defense != "auto" else
+               [k for k, _ in sorted(done.items(), key=lambda kv: -kv[1])
+                if farm.placeable_here(h, k)][:2])
+    targets = ([t for t in a.targets.split(",") if t] if a.targets != "auto" else
+               farm.choose_targets(h, progress, n=2, exclude=defense))
+    log(f"plan: targets {targets}, defence {defense}; tiers unlocked {done}")
+    return targets, defense
 
 
 def recover(h, fails):
@@ -84,7 +91,7 @@ def recover(h, fails):
             log("window gone: relaunching through Steam")
             h.game.relaunch()
             h.sleep(30)
-        if leave_game(h, None):
+        if leave_game(h):
             return 0
     except Exception:
         log("recover: " + traceback.format_exc(limit=2))
@@ -104,16 +111,25 @@ def main(argv=None):
     ap.add_argument("--map", default="monkey_meadow")
     ap.add_argument("--difficulty", default="easy")
     ap.add_argument("--hero", default="quincy")
-    ap.add_argument("--targets", default="boomerang_monkey,bomb_shooter")
-    ap.add_argument("--defense", default="")
+    ap.add_argument("--targets", default="auto", help="comma list, or auto (survey + choose_targets)")
+    ap.add_argument("--defense", default="auto", help="comma list, or auto (the 2 most unlocked towers)")
+    ap.add_argument("--survey-every", type=int, default=5)
     ap.add_argument("--games", type=int, default=10 ** 6)
     a = ap.parse_args(argv)
     LOGS.mkdir(exist_ok=True)
-    targets = [t for t in a.targets.split(",") if t]
-    defense = [t for t in a.defense.split(",") if t]
     h = BloonsHarness(Game(), a.map, difficulty=a.difficulty, hero=a.hero)
+    targets = [t for t in a.targets.split(",") if t and t != "auto"]
+    defense = [t for t in a.defense.split(",") if t and t != "auto"]
     fails = 0
     for n in range(a.games):
+        if (a.targets == "auto" or a.defense == "auto") and n % a.survey_every == 0:
+            try:
+                targets, defense = plan(h, a)
+            except Exception:
+                log("plan: " + traceback.format_exc(limit=3))
+            if not targets:
+                log("nothing left to farm on this map: done")
+                break
         t0 = time.time()
         rec = {"game": n, "map": a.map, "difficulty": a.difficulty, "targets": targets}
         try:
@@ -124,8 +140,8 @@ def main(argv=None):
             rec["outcome"] = farm.play_game(h, sp, log=log)
             rec["round"] = h.observe().round
             rec["towers"] = [(t.kind, t.tiers, t.spent) for t in h.registry.values()]
-            leave_game(h, rec["outcome"])
-            rec["xp"] = spend_xp(h, targets)
+            leave_game(h)
+            rec["xp"] = spend_xp(h, list(dict.fromkeys(targets + defense)))
             fails = 0
         except GameNotFound:
             rec["error"] = "game_not_found"

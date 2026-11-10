@@ -648,6 +648,14 @@
   "popup_ok": [
    0.499,
    0.7019
+  ],
+  "victory_home": [
+   0.3729,
+   0.787
+  ],
+  "victory_freeplay": [
+   0.624,
+   0.787
   ]
  },
  "map_select": {
@@ -858,7 +866,7 @@
   "settle_s": 0.4
  },
  "xp_screen": {
-  "_notes": "Steam: a tower's upgrade-unlock screen (Monkeys menu -> tower, or a locked path in game). 3 paths x 5 tiers of icons; an icon's ring colour: blue = unlocked, bright green = next and affordable, red = next but too few XP, dull = not reachable yet, beige = tier 5 not reachable. Clicking an icon selects it; the unlock button shows 'UNLOCK FOR: N XP' for the selection. 2026-11-09, Bomb Shooter.",
+  "_notes": "Steam: a tower's upgrade-unlock screen (Monkeys menu -> tower, or a locked path in game). 3 paths x 5 tiers of icons; an icon's ring colour: blue = unlocked, bright green = next and affordable, red = next but too few XP, dull = not reachable yet, beige = tier 5 not reachable. Clicking an icon selects it; the unlock button shows 'UNLOCK FOR: N XP' for the selection. 2026-11-09, Bomb Shooter. Selecting an icon can pop a description tooltip over the top row that also eats the next click: a click on empty background (dismiss) closes it and keeps the selection.",
   "cols_x": [
    0.325,
    0.4292,
@@ -926,6 +934,225 @@
   "back": [
    0.0391,
    0.0509
+  ],
+  "dismiss": [
+   0.5729,
+   0.9259
+  ]
+ },
+ "monkeys_menu": {
+  "_notes": "Steam home -> MONKEYS: 4 category tabs; each page shows its towers (4 + 3, Support 3 + 2) with banked XP; clicking a tower opens its XP screen (xp_screen). 2026-11-09, rank 9. card_probe_px: a patch of the card's top-left background (px at 1920 wide, from the cell point): unlocked cards are coloured (S >= 60, V >= 165), locked ones grey.",
+  "open": [
+   0.1693,
+   0.9028
+  ],
+  "tabs": {
+   "primary": [
+    0.3021,
+    0.9074
+   ],
+   "military": [
+    0.4333,
+    0.9074
+   ],
+   "magic": [
+    0.5646,
+    0.9074
+   ],
+   "support": [
+    0.6958,
+    0.9074
+   ]
+  },
+  "cells": {
+   "dart_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "boomerang_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "bomb_shooter": {
+    "tab": "primary",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "tack_shooter": {
+    "tab": "primary",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "ice_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "glue_gunner": {
+    "tab": "primary",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "desperado": {
+    "tab": "primary",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "sniper_monkey": {
+    "tab": "military",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "monkey_sub": {
+    "tab": "military",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "monkey_buccaneer": {
+    "tab": "military",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "monkey_ace": {
+    "tab": "military",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "heli_pilot": {
+    "tab": "military",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "mortar_monkey": {
+    "tab": "military",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "dartling_gunner": {
+    "tab": "military",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "wizard_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "super_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "ninja_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "alchemist": {
+    "tab": "magic",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "druid": {
+    "tab": "magic",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "mermonkey": {
+    "tab": "magic",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "skywarden": {
+    "tab": "magic",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "banana_farm": {
+    "tab": "support",
+    "xy": [
+     0.3359,
+     0.2593
+    ]
+   },
+   "spike_factory": {
+    "tab": "support",
+    "xy": [
+     0.4969,
+     0.2593
+    ]
+   },
+   "monkey_village": {
+    "tab": "support",
+    "xy": [
+     0.6594,
+     0.2593
+    ]
+   },
+   "engineer_monkey": {
+    "tab": "support",
+    "xy": [
+     0.4188,
+     0.5741
+    ]
+   },
+   "beast_handler": {
+    "tab": "support",
+    "xy": [
+     0.5813,
+     0.5741
+    ]
+   }
+  },
+  "card_probe_px": [
+   -110,
+   -110,
+   -60,
+   -95
   ]
  }
 }
