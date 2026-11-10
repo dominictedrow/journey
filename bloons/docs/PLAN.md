@@ -38,9 +38,7 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 | Use abilities | `use_ability(slot)`; `use_ability_of(tid)`; `place_ability_target(slot, x, y)` |
 | Configure abilities and targeting | `set_targeting(tid, mode)`; `set_target_point(tid, x, y)`; `set_flight_path(tid, pattern)`; `set_patrol_points(tid, points)` |
 | Remove terrain | `remove_obstacle(obstacle_id)` |
-| Start next round | `start_round()` |
-| Speed up / down | `set_fast_forward(on)` |
-| Auto-start on / off | `set_auto_start(on)` |
+| Start next round | `start_round()` (also switches fast forward on; FF and Auto Start are not actions, removed 2026-11-09 for episode speed) |
 | Handle prompts | `handle_prompts() -> list[str]` (runs automatically before every action) |
 | Episode control | `new_game(map, difficulty, mode, hero)`; `restart()`; `go_home()` |
 
@@ -100,7 +98,7 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 - [x] 4.1 `BloonsHarness` skeleton, `ActionResult`, tower registry, hotkey-or-click helper — *`bloons/harness.py`: data + map keep-out + spots memory, registry (`register` / `record_upgrade` / `unregister`, hero tid 'hero'), `guard_state` / `place_context` / `available_actions`, `press` (hotkey from `ui.json` `hotkeys` / towers.json, else click), `select_shop` (scrolls for Desperado / Mermonkey / Skywarden; `Game.scroll`). Checked live on Meadow. `ActionResult` (`bloons/result.py`) and the guards (`bloons/guards.py`: `can_*` + `available_actions`) exist; every action calls its guard first and returns the refusal without touching the game*
 - [x] 4.2 `place_tower`, `place_hero`, `sell` — *done in `bloons/harness.py`, checked live (Meadow Standard + Sandbox): Dart placed, tree-corner spot refused by tint then by memory, hero placed, both sold at 70 %. Plan was: guard (`can_buy_tower` / `can_place_hero` / `can_sell`) → `placement.can_place` → hold, one `held_tint` read; red = cancel + `record_placement(False)` + `ActionResult(False, "blocked")`; else click and confirm money dropped + hold ended (if not, record blocked)*
 - [x] 4.3 `upgrade`, `buy_hero_level` — *done: select → panel side (`state.read_screen`) → path key / level-up button → close the panel → HUD money confirms. Live in Meadow Sandbox: 4 upgrades to 3-0-1 + 4 hero levels, net money exactly as priced. Plan was: guard first (`can_upgrade`: crosspath, tier ≤ 5, one tier 5 per path per type, money; `can_buy_hero_level`)*
-- [x] 4.4 `start_round`, `set_fast_forward`, `set_auto_start`
+- [x] 4.4 `start_round`, `set_fast_forward`, `set_auto_start` — *2026-11-09: `set_fast_forward` / `set_auto_start` removed (handoff 048); `start_round` keeps FF on, Auto Start stays whatever the game setting is*
 - [x] 4.5 `use_ability`, `use_ability_of`, `place_ability_target` — *guard first (`can_use_ability`: ready flag, round-only abilities)*
 - [x] 4.6 `set_targeting`, `set_target_point`, `set_flight_path`, `set_patrol_points`
 - [ ] 4.7 `remove_obstacle`

@@ -47,7 +47,7 @@ class HeroState:
     name: str
     xy: tuple
     level: int
-    xp_into_level: int              # what the harness assumes (0 after a bought level); panel OCR later
+    xp_into_level: int              # harness estimate: round-end XP since the last level (not read)
     sell_value: int
 
 

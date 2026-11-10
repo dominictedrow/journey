@@ -123,9 +123,12 @@ def _training_discount(account):
     return sum(e.get("training_discount", 0) for e in rules._mk_effects(account))
 
 
-def hero_level_price(s):
+def hero_level_price(s, xp_into_level=None):
+    """The hero's next level's price: $1 per XP still missing (`xp_into_level` default: the
+    estimate on the HeroRec; 0 = the whole level)."""
     h = s.hero
-    return rules.hero_level_cost(s.heroes[h.name], h.level, h.xp_into_level, _training_discount(s.account))
+    xp = h.xp_into_level if xp_into_level is None else xp_into_level
+    return rules.hero_level_cost(s.heroes[h.name], h.level, xp, _training_discount(s.account))
 
 
 def can_buy_hero_level(s: GuardState):

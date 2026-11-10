@@ -17,10 +17,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from bloons.harness import HERO_TID, BloonsHarness   # noqa: E402
+from bloons.harness import HERO_TID, BloonsHarness, load_data   # noqa: E402
 
 PATHS = {"top": 0, "mid": 1, "middle": 1, "bot": 2, "bottom": 2, "0": 0, "1": 1, "2": 2}
-ON_OFF = {"on": True, "off": False, "1": True, "0": False, "true": True, "false": False}
 
 
 class UsageError(ValueError):
@@ -271,20 +270,6 @@ class Play(cmd.Cmd):
         """go: start the next round (Sandbox: send it from the bloon panel)."""
         self.report(self.h.start_round())
 
-    def do_ff(self, line):
-        """ff <on|off>: fast forward."""
-        a = self.args(line, 1, usage="ff <on|off>")
-        if a[0].lower() not in ON_OFF:
-            raise UsageError("ff <on|off>")
-        self.report(self.h.set_fast_forward(ON_OFF[a[0].lower()]))
-
-    def do_auto(self, line):
-        """auto [on|off]: the game's Auto Start setting (no argument: just read it)."""
-        a = self.args(line)
-        if len(a) > 1 or (a and a[0].lower() not in ON_OFF):
-            raise UsageError("auto [on|off]")
-        self.report(self.h.set_auto_start(ON_OFF[a[0].lower()] if a else None))
-
     def do_prompts(self, line):
         """prompts: clear popups (collect / continue / cancel). Victory and defeat are left alone."""
         done = self.h.handle_prompts()
@@ -346,9 +331,13 @@ def main(argv=None):
     ap.add_argument("--spots", default=None, help="learned-spots file (default: the map's own)")
     ap.add_argument("--no-account", action="store_true", help="ignore Monkey Knowledge in prices")
     a = ap.parse_args(argv)
+    try:                                                    # any unique part, like the commands
+        hero = resolve(a.hero, load_data("heroes.json")["heroes"]) if a.hero else None
+    except UsageError as e:
+        ap.error(f"--hero: {e}")
     from bloons.platform_mac import Game
     g = Game()
-    h = BloonsHarness(g, a.map, a.difficulty, hero=a.hero, account=not a.no_account, spots_path=a.spots,
+    h = BloonsHarness(g, a.map, a.difficulty, hero=hero, account=not a.no_account, spots_path=a.spots,
                       mode=a.mode)
     h.refresh_hud()
     Play(h).cmdloop()

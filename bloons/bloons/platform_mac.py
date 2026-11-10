@@ -66,16 +66,12 @@ class Frame:
         """Content area (title bar cut off) as an HxWx3 BGR numpy array, for bloons/vision.py."""
         return cgimage_bgr(self.image)[self.title_bar_px:]
 
-    def bgra(self):
-        """Raw pixels: (bytes, bytes_per_row). Rows may be padded past width * 4."""
-        data = Q.CGDataProviderCopyData(Q.CGImageGetDataProvider(self.image))
-        return bytes(data), Q.CGImageGetBytesPerRow(self.image)
-
     def save_png(self, path, image=None):
         """Write the frame (or another CGImage) as a zlib-compressed RGB PNG. macOS's own PNG
         writer barely compresses (~7.5 MB per 2x frame); this gives ~2-3 MB."""
         Path(path).write_bytes(png_bytes(image or self.image))
         return True
+
 
 def _rgbx(image):
     """CGImage -> (bytes, w, h): tightly packed 8-bit RGBX, whatever the source pixel format."""
@@ -118,15 +114,32 @@ def load_png(path):
     return Q.CGImageSourceCreateImageAtIndex(Q.CGImageSourceCreateWithURL(url, None), 0, None)
 
 
-def ocr_image(image):
-    """Text in a CGImage via Apple Vision (accurate, no language correction), lines joined
-    by spaces. '' if nothing found."""
+OCR_FALLBACK_REVISION = 2
+
+
+def _recognize(image, revision=None):
+    """One accurate Vision text request -> (ok, results)."""
     handler = Vision.VNImageRequestHandler.alloc().initWithCGImage_options_(image, None)
     req = Vision.VNRecognizeTextRequest.alloc().init()
+    if revision is not None:
+        req.setRevision_(revision)
     req.setRecognitionLevel_(Vision.VNRequestTextRecognitionLevelAccurate)
     req.setUsesLanguageCorrection_(False)
-    handler.performRequests_error_([req], None)
-    return " ".join(r.topCandidates_(1)[0].string() for r in (req.results() or []))
+    ok, _err = handler.performRequests_error_([req], None)
+    return ok, req.results() or []
+
+
+def ocr_image(image):
+    """Text in a CGImage via Apple Vision (accurate, no language correction), lines joined
+    by spaces. '' if nothing found.
+
+    macOS 27.0.1: the default revision (3) fails on and off with an e5rt (Neural Engine)
+    error, sometimes on every call in a process; revisions 1 and 2 don't (RESEARCH
+    2026-11-07). A failed request falls back to OCR_FALLBACK_REVISION."""
+    ok, results = _recognize(image)
+    if not ok:
+        ok, results = _recognize(image, revision=OCR_FALLBACK_REVISION)
+    return " ".join(r.topCandidates_(1)[0].string() for r in results)
 
 
 def find_window(owner_substr="bloons"):

@@ -400,7 +400,7 @@ def _feed(tracker, seq):
 
 def test_round_tracker_manual_start():
     from bloons.state import RoundTracker
-    t = RoundTracker(auto_start=False, confirm=2)
+    t = RoundTracker(confirm=2)
     out = _feed(t, [("game", "idle", 1), ("game", "idle", 1),
                     ("game", "ff_on", 1), ("game", "ff_on", 1), ("game", "ff_on", 1),
                     ("game", "idle", 1),                     # one-off misread: ignored
@@ -418,7 +418,7 @@ def test_round_tracker_manual_start():
 
 def test_round_tracker_auto_start():
     from bloons.state import RoundTracker
-    t = RoundTracker(auto_start=True)
+    t = RoundTracker()
     out = _feed(t, [("game", "idle", 1), ("game", "ff_on", 1), ("game", "ff_on", 1),
                     ("game", "ff_on", 1), ("game", "ff_on", 2), ("game", "ff_on", 2),
                     ("game", None, 2), ("game", "ff_on", 3)])
@@ -1172,26 +1172,33 @@ def test_harness_start_round_and_ff(tmp_path):
         if k == "space":
             st["button"] = {"idle": "ff_off", "ff_off": "ff_on", "ff_on": "ff_off"}[st["button"]]
     g.on_key = on_key
-    # FF refused at idle (the press would start the round), nothing sent
-    assert h.set_fast_forward(True).reason == "round_idle" and g.calls == []
+    # FF and Auto Start aren't actions: the harness keeps FF on itself
+    assert not hasattr(h, "set_fast_forward") and not hasattr(h, "set_auto_start")
+    # the round starts at normal speed, so a second press turns FF on
     r = h.start_round()
-    assert r and r.reason == "started" and h.round_active and h.fast_forward is False
-    assert g.calls == [("key", "space")]
+    assert r and r.reason == "started" and h.round_active and h.fast_forward is True
+    assert g.calls == [("key", "space"), ("key", "space")] and st["button"] == "ff_on"
     # the guard now refuses without touching the game
-    assert h.start_round().reason == "round_active" and len(g.calls) == 1
-    # FF: toggled only when it differs
-    assert h.set_fast_forward(False).reason == "unchanged" and len(g.calls) == 1
-    r = h.set_fast_forward(True)
-    assert r and r.reason == "set" and r.value is True and st["button"] == "ff_on" and len(g.calls) == 2
-    assert h.set_fast_forward(True).reason == "unchanged" and len(g.calls) == 2
+    assert h.start_round().reason == "round_active" and len(g.calls) == 2
     # the button already running but the harness thought idle: refuse and learn it
     h.round_active = False
     assert h.start_round().reason == "round_active" and h.round_active and len(g.calls) == 2
+    # a start that comes up on FF already: no second press
+    g.calls.clear()
+    h.round_active, st["button"] = False, "idle"
+    g.on_key = lambda game, k: st.update(button="ff_on")
+    assert h.start_round() and g.calls == [("key", "space")] and h.fast_forward is True
+    # FF press ignored: the round still counts as started, FF stays off
+    g.calls.clear()
+    h.round_active, st["button"] = False, "idle"
+    g.on_key = lambda game, k: st.update(button="ff_off")
+    r = h.start_round()
+    assert r and r.reason == "started" and h.fast_forward is False and len(g.calls) == 2
     # the game ignores the key: unconfirmed
     h.round_active, st["button"], g.on_key = False, "idle", None
     assert h.start_round().reason == "unconfirmed" and not h.round_active
     h.read_button = lambda frame: None
-    assert h.start_round().reason == "no_button" and h.set_fast_forward(True).reason == "no_button"
+    assert h.start_round().reason == "no_button"
 
 
 def test_harness_start_round_sandbox(tmp_path):
@@ -1220,46 +1227,24 @@ def test_harness_start_round_sandbox(tmp_path):
     g.calls.clear()
     st["side"], g.on_click = "shop", None
     assert h.start_round().reason == "no_panel" and ("click", *send) not in g.calls
+    # FF off after a send: one Space turns it on; already on: left alone
+    g.calls.clear()
+    st["side"], g.on_click = "bloons", on_click
+    btn = {"b": "ff_off"}
+    h.read_button = lambda frame: btn["b"]
+    g.on_key = lambda game, k: btn.update(b="ff_on" if btn["b"] == "ff_off" else "ff_off")
+    assert h.start_round() and g.calls[-1] == ("key", "space") and btn["b"] == "ff_on" and h.fast_forward
+    g.calls.clear()
+    assert h.start_round() and ("key", "space") not in g.calls and btn["b"] == "ff_on"
 
 
-def test_harness_set_auto_start(tmp_path):
-    from bloons.ui import UI
+def test_harness_start_round_ff_needs_agreeing_reads(tmp_path):
+    """One misread ff_off frame right after the start mustn't toggle FF (it was already on)."""
     g, h = _round_harness(tmp_path)
-    st = {"kind": "game", "auto": "on"}
-    h.read_kind = lambda frame: st["kind"]
-    h.read_auto_start = lambda frame: st["auto"] if st["kind"] == "pause" else None
-    pt = lambda k, sec="buttons": tuple(round(v, 4) for v in UI[sec][k])
-    gear, toggle, cont = pt("settings"), pt("auto_start_toggle", "pause"), pt("continue", "pause")
-
-    def on_click(game, x, y):
-        p = (round(x, 4), round(y, 4))
-        if p == gear:
-            st["kind"] = "pause"
-        elif p == cont:
-            st["kind"] = "game"
-        elif p == toggle and st["kind"] == "pause":
-            st["auto"] = "off" if st["auto"] == "on" else "on"
-    g.on_click = on_click
-    r = h.set_auto_start(True)
-    assert r and r.reason == "unchanged" and h.auto_start is True
-    assert g.calls == [("click", *gear), ("click", *cont)] and st["kind"] == "game"
-    g.calls.clear()
-    r = h.set_auto_start(False)
-    assert r and r.reason == "set" and st["auto"] == "off" and h.auto_start is False
-    assert g.calls == [("click", *gear), ("click", *toggle), ("click", *cont)]
-    # already paused: leave the menu open
-    g.calls.clear()
-    st["kind"] = "pause"
-    assert h.set_auto_start(True) and st["auto"] == "on" and g.calls == [("click", *toggle)] and st["kind"] == "pause"
-    # read only: nothing toggled, the tracker learns the setting
-    g.calls.clear()
-    st["kind"] = "game"
-    r = h.set_auto_start(None)
-    assert r and r.reason == "unchanged" and r.value is True and h.tracker.auto_start is True
-    assert ("click", *toggle) not in g.calls and st["auto"] == "on"
-    # the menu doesn't open
-    st["kind"], g.on_click = "game", None
-    assert h.set_auto_start(False).reason == "no_pause_menu"
+    reads = ["idle", "idle", "ff_off", "ff_on", "ff_on"]
+    h.read_button = lambda frame: reads.pop(0) if reads else "ff_on"
+    r = h.start_round()
+    assert r and r.reason == "started" and g.calls == [("key", "space")] and h.fast_forward is True
 
 
 # --- abilities (PLAN 4.5) -------------------------------------------------------------------
@@ -1566,6 +1551,28 @@ def test_harness_restart_and_home(tmp_path):
     assert h.go_home() and st["kind"] == "home"
     assert h.go_home().reason == "home"                      # already there
     assert h.restart().reason == "not_in_game:home"
+
+
+def test_harness_open_pause_closes_panel(tmp_path):
+    """Live 2026-11-09: with the right panel open its close ✕ sits where the gear is, so the
+    gear click only closed the panel and go_home / restart / new_game gave no_pause_menu."""
+    g, h, st = _menu_harness(tmp_path, "game")
+    st["panel"] = "right"
+    h.read_panel = lambda frame: st["panel"]
+    menu_click = g.on_click
+
+    def on_click(game, x, y):
+        if st["panel"]:                       # any click with the panel up just closes it
+            st["panel"] = None
+        else:
+            menu_click(game, x, y)
+    g.on_click = on_click
+    g.on_key = lambda game, k: st.update(panel=None)     # close_panel's hotkey, if it has one
+    assert h.go_home() and st["kind"] == "home"
+    # the one panel read missed it: the second gear click still gets there
+    st["kind"], st["panel"] = "game", "right"
+    h.read_panel = lambda frame: None
+    assert h.restart() and st["kind"] == "game"
 
 
 def test_play_repl(tmp_path):
@@ -2128,3 +2135,362 @@ def test_obs_vector_and_grid(tmp_path):
     assert 0.3 < seg(v, "bloons_lead")[0] < 0.7 and seg(v, "bloons_lead")[2] == 1
     assert st.grid_image()[names.index("bloons")].sum() > 0
     assert obsvec.path_progress(st.path, [tuple(st.path[0]), tuple(st.path[-1])]) == pytest.approx([0, 1])
+
+
+# --- review sweep 2026-11-06: round edges either Auto Start setting, live round checks, hero XP ---
+def test_round_tracker_auto_start_with_idle_blip():
+    """Auto Start on shows idle for ~1 s between rounds (RESEARCH 1.5). Whether the tracker sees
+    that blip or not, each round fires round_ended once, and the HUD catching up late doesn't
+    fire it again."""
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "idle", 1), ("game", "ff_on", 1), ("game", "ff_on", 1),
+                    ("game", "idle", 1), ("game", "idle", 1),        # blip seen: round 1 ended
+                    ("game", "ff_on", 1), ("game", "ff_on", 1),      # round 2 running, HUD lags
+                    ("game", "ff_on", 2), ("game", "ff_on", 2),      # HUD catches up: no refire
+                    ("game", "ff_on", 3), ("game", "ff_on", 3)])     # blip missed: round 2 ended
+    assert [i for i, s in enumerate(out) if s.round_ended] == [4, 9]
+
+
+def test_harness_start_round_after_unobserved_round_end(tmp_path):
+    """round_active is only as fresh as the last observe(): start_round reads the button."""
+    g, h = _round_harness(tmp_path)
+    h.read_button = lambda frame: "idle"
+    h.round_active = True                     # a round ran and ended without an observe()
+    g.on_key = lambda game, k: setattr(h, "read_button", lambda frame: "ff_on")
+    r = h.start_round()
+    assert r and r.reason == "started" and g.calls == [("key", "space")]
+
+
+def test_harness_round_only_ability_reads_button(tmp_path):
+    g, h = _round_harness(tmp_path)
+    tid = h.register("boomerang_monkey", (0.3, 0.5), 300)
+    h._gain_ability(tid, "Turbo Charge", 45, between_rounds=False, path=1)
+    h.ability_slots[0]["inst"][(tid, 1)] = -1.0     # ready
+    h.read_bar = lambda content, n, side=None: []
+    h.round_active = True                     # stale: the round has ended since
+    h.read_button = lambda frame: "idle"
+    assert h.use_ability(0).reason == "round_only" and not h.round_active and g.calls == []
+
+
+def test_harness_hero_round_xp(tmp_path):
+    """observe() credits the hero round-end XP and levels it up like the game, with abilities."""
+    from bloons.hud import Hud
+    from bloons.state import Screen
+    g, h = _round_harness(tmp_path)
+    h.hero_choice = "quincy"
+    h.register_hero((0.75, 0.25), 540)
+    seq = []
+    h.read_screen = lambda frame: seq.pop(0) if seq else Screen("game", "idle")
+    h.observe()
+    for r in range(1, 8):                     # rounds 1-7: 40+60+...+160 = 700 XP
+        g.hud = Hud(200, 650, r, 40)
+        seq[:] = [Screen("game", "ff_on")] * 2 + [Screen("game", "idle")] * 2
+        assert sum(h.observe().round_ended for _ in range(4)) == 1
+    # Quincy: 180 to level 2, 460 more to level 3 (640) -> level 3 with 60 XP into it
+    assert (h.hero.level, h.hero.xp_into_level) == (3, 60)
+    assert "Rapid Shot" in [a["name"] for a in h.ability_slots]
+    g2 = h.guard_state()
+    from bloons import guards
+    assert guards.hero_level_price(g2) == int((1000 - 60) * (1 - guards._training_discount(h.account)) + 0.5)
+
+
+def test_harness_ability_drop_resets_bar_filter(tmp_path):
+    from bloons.abilitybar import SlotRead
+    g, h = _round_harness(tmp_path)
+    a = h.register("boomerang_monkey", (0.3, 0.5), 300)
+    b = h.register("boomerang_monkey", (0.5, 0.5), 300)
+    h._gain_ability(a, "Turbo Charge", 45, between_rounds=False, path=1)
+    h._gain_ability(b, "Other", 45, path=1)
+    h.bar_filter.last[1] = (SlotRead(1, True, 0.9), 0.0)
+    h.unregister(a)                           # slot 1 becomes slot 0
+    assert h.bar_filter.last == {}
+
+
+def test_harness_confirmed_spend_updates_money_now(tmp_path):
+    """After a confirmed purchase the guards see the new money at once (HudFilter.accept)."""
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    h.refresh_hud()
+    assert h.money == 650
+    g.hud = Hud(200, 480, 1, 40)
+    assert h._money_moved(650, -170) and h.money == 480
+
+
+def test_harness_heli_tier_keeps_both_abilities(tmp_path):
+    g, h = _round_harness(tmp_path)
+    t = h.register("heli_pilot", (0.3, 0.5), 1000)
+    for _ in range(4):
+        h.record_upgrade(t, 1, 100)
+    assert [a["name"] for a in h.ability_slots] == ["Redeploy", "Support Drop"]
+    h.record_upgrade(t, 1, 100)
+    assert [a["name"] for a in h.ability_slots] == ["Redeploy", "Support Drop", "Special Poperations"]
+
+
+def test_harness_money_before_ignores_one_misread(tmp_path):
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    clock = [0.0]
+    h.clock = lambda: clock[0]
+    h.refresh_hud()                                        # filtered $650
+    clock[0] = 10.0                                        # not fresh: _money_before reads again
+    reads = [Hud(200, 50, 1, 40), Hud(200, 650, 1, 40)]    # '$650' clipped to '$50', then right
+    g.read_hud = lambda frame=None: reads.pop(0) if reads else Hud(200, 650, 1, 40)
+    assert h._money_before() == 650
+    reads[:] = [Hud(200, 900, 1, 40), Hud(200, 905, 1, 40)]   # a real jump (round bonus): two reads agree
+    clock[0] = 20.0
+    assert h._money_before() == 905 and h.money == 905
+
+
+# --- review sweep 3 (2026-11-06): debounced button reads, bounded money confirm, carried abilities ---
+def test_harness_start_round_ignores_one_idle_misread(tmp_path):
+    """Mid-round, one frame misread as idle must not make start_round press Space (it would
+    toggle FF and still report 'started')."""
+    g, h = _round_harness(tmp_path)
+    reads = ["idle", "ff_off", "ff_off"]
+    h.read_button = lambda frame: reads.pop(0) if reads else "ff_off"
+    h.round_active = True
+    assert h.start_round().reason == "round_active" and g.calls == []
+
+
+def test_harness_sync_round_needs_two_reads(tmp_path):
+    g, h = _round_harness(tmp_path)
+    h.round_active = False
+    reads = ["ff_off", "idle", "idle"]                   # one-frame misread, then agreement
+    h.read_button = lambda frame: reads.pop(0) if reads else "idle"
+    h._sync_round(object())
+    assert h.round_active is False
+
+
+def test_harness_money_moved_rejects_dropped_digit(tmp_path):
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    reads = [Hud(200, 357, 1, 40), Hud(200, 1187, 1, 40)]   # '$1,357' clipped, then the real spend
+    g.read_hud = lambda frame=None: reads.pop(0) if reads else Hud(200, 1187, 1, 40)
+    assert h._money_moved(1357, -170) and h.money == 1187
+
+
+def test_harness_upgrade_keeps_carried_ability(tmp_path):
+    g, h = _round_harness(tmp_path)
+    t = h.register("heli_pilot", (0.3, 0.5), 1000)
+    u = h.register("heli_pilot", (0.5, 0.5), 1000)
+    for _ in range(4):
+        h.record_upgrade(t, 1, 100)
+        h.record_upgrade(u, 1, 100)
+    h.ability_slots[0]["inst"][(t, 1)] = -1.0           # Redeploy ready
+    h.record_upgrade(t, 1, 100)                          # 0-5-0 keeps Redeploy (now 15 s)
+    a = h.ability_slots[0]
+    assert a["name"] == "Redeploy" and a["inst"][(t, 1)] == -1.0
+    assert h._cd(a, (t, 1)) == 15.0 and h._cd(a, (u, 1)) == 45.0   # the 0-4-0 heli keeps 45 s
+
+
+def test_round_tracker_hud_jump_ends_each_round():
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "ff_on", 5), ("game", "ff_on", 5), ("game", "ff_on", 7)])
+    assert out[-1].round_ended and out[-1].ended_rounds == (5, 6) and out[-1].ended_round == 6
+    out = _feed(t, [("game", "ff_on", 40)])               # implausible jump: only the last round
+    assert out[-1].ended_rounds == (39,)
+
+
+def test_round_tracker_defeat_continue_ends_lost_round_once():
+    """Continue after Defeat replays the lost round, which never finished: it ends once."""
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "ff_on", 29), ("game", "ff_on", 29), ("game", "ff_on", 30),   # 29 ended
+                    ("defeat", None, 30), ("defeat", None, 30),
+                    ("game", "ff_on", 30), ("game", "ff_on", 30),                         # Continue
+                    ("game", "idle", 30), ("game", "idle", 30)])
+    assert [s.ended_round for s in out if s.round_ended] == [29, 30]
+
+
+def test_round_tracker_hud_one_behind_is_not_a_replay():
+    """Auto Start off: round 6 ends before the filtered HUD shows 6; the HUD still saying 5
+    afterwards mustn't make the next round count as 5 again."""
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "ff_on", 5), ("game", "ff_on", 5), ("game", "idle", 5), ("game", "idle", 5),
+                    ("game", "ff_on", 5), ("game", "ff_on", 5), ("game", "idle", 5), ("game", "idle", 5),
+                    ("game", "ff_on", 5), ("game", "ff_on", 5), ("game", "idle", 7), ("game", "idle", 7)])
+    assert [s.ended_round for s in out if s.round_ended] == [5, 6, 7]
+
+
+def test_harness_round_xp_credited_once(tmp_path):
+    """A round end with no known round number (HUD never read) doesn't credit a round twice."""
+    from bloons.state import RoundState
+    g, h = _round_harness(tmp_path)
+    h.hero_choice = "quincy"
+    h.register_hero((0.75, 0.25), 540)
+    h._hero_prev = True
+    got = []
+    h._hero_round_xp = got.append
+    h.rounds_done = h._xp_round = 3
+    rs = RoundState("game", False, True, None, None)
+    h.tracker.update = lambda screen, hud=None: rs
+    h.observe()
+    h.rounds_done = 3                                    # stale count: the same guess again
+    h.observe()
+    assert got == [4]
+
+
+# --- review sweep 4 (2026-11-06) ---
+def test_harness_money_moved_confirms_bigger_move_on_two_reads(tmp_path):
+    """Hero levels and sells are estimates: a bigger real move confirms once two reads agree,
+    a lone dropped digit doesn't."""
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    reads = [Hud(200, 857, 1, 40), Hud(200, 860, 1, 40)]   # charged $500, guard said $50
+    g.read_hud = lambda frame=None: reads.pop(0) if reads else Hud(200, 860, 1, 40)
+    assert h._money_moved(1357, -50, max_move=600) and h.money in (857, 860)   # the filter's pick
+    reads[:] = [Hud(200, 57, 1, 40)] * 4                  # the same misread repeated: beyond max_move
+    assert not h._money_moved(1357, -300)
+    reads[:] = [Hud(200, 357, 1, 40)] + [Hud(200, None, 1, 40)] * 3   # one misread only
+    assert not h._money_moved(1357, -170)
+
+
+def test_harness_money_before_falls_back_on_miss(tmp_path):
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    h.refresh_hud()
+    g.read_hud = lambda frame=None: Hud(200, None, 1, 40)
+    assert h._money_before() == 650
+
+
+def test_harness_start_round_refuses_on_disagreeing_reads(tmp_path):
+    g, h = _round_harness(tmp_path)
+    reads = ["ff_on", "idle", "ff_on", "idle"]
+    h.read_button = lambda frame: reads.pop(0) if reads else None
+    h.round_active = False                               # stale
+    assert h.start_round().reason == "no_button" and g.calls == []
+
+
+def test_harness_sync_round_one_read_when_tracker_agrees(tmp_path):
+    g, h = _round_harness(tmp_path)
+    h.tracker._button = "ff_on"
+    h._obs_t = h.clock()                                  # observe() just ran
+    n = []
+    h.read_button = lambda frame: n.append(1) or "ff_on"
+    h._sync_round(object())
+    assert h.round_active is True and len(n) == 1
+
+
+def test_round_tracker_lagging_hud_round_still_ends():
+    """Auto Start on: the next round starts while the HUD still shows the finished one, and the
+    HUD isn't read again before the idle blip: that round's end still fires."""
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "ff_on", 4), ("game", "ff_on", 4),
+                    ("game", "idle", 4), ("game", "idle", 4),        # round 4 ended
+                    ("game", "ff_on", 4), ("game", "ff_on", 4),      # round 5, HUD lags
+                    ("game", "idle", None), ("game", "idle", None)])  # HUD unread, blip
+    assert [s.ended_round for s in out if s.round_ended] == [4, 5]
+
+
+def test_round_tracker_big_hud_drop_is_not_a_replay():
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    _feed(t, [("game", "ff_on", 29), ("game", "ff_on", 29), ("game", "ff_on", 30)])   # 29 ended
+    out = _feed(t, [("game", "ff_on", 3), ("game", "ff_on", 30)])                    # misread 3
+    assert not any(s.round_ended for s in out)
+
+
+# --- review sweep 5 (2026-11-06) ---
+def test_harness_sync_round_rereads_when_tracker_is_stale(tmp_path):
+    g, h = _round_harness(tmp_path)
+    clock = [100.0]
+    h.clock = lambda: clock[0]
+    h.tracker._button, h._obs_t = "ff_off", 0.0           # last observe() long ago
+    reads = ["ff_off", "idle", "idle"]                    # one stale-matching misread, then the truth
+    seen = []
+    h.read_button = lambda frame: seen.append(1) or (reads.pop(0) if reads else "idle")
+    h._sync_round(object())
+    assert h.round_active is False and len(seen) == 3     # the first read isn't repeated on its frame
+
+
+def test_harness_hero_placed_after_round_end_gets_no_xp(tmp_path):
+    from bloons.state import RoundState
+    g, h = _round_harness(tmp_path)
+    got = []
+    h._hero_round_xp = got.append
+    rs = [RoundState("game", True, False, None, None)]
+    h.tracker.update = lambda screen, hud=None: rs[0]
+    h.observe()                                           # round 5 running, no hero yet
+    h.hero_choice = "quincy"
+    h.register_hero((0.75, 0.25), 540)                    # placed after round 5 ended, before observe
+    rs[0] = RoundState("game", False, True, None, None, 5, 40, (5,))
+    h.observe()
+    assert got == [] and h.rounds_done == 5
+    rs[0] = RoundState("game", False, True, None, None, 6, 40, (6,))
+    h.observe()
+    assert got == [6]
+
+
+def test_harness_rounds_done_follows_lag_corrected_round(tmp_path):
+    """Auto Start on: after round 5 ends the HUD still says 5 while round 6 runs; rounds_done stays 5."""
+    from bloons.hud import Hud
+    from bloons.state import Screen
+    g, h = _round_harness(tmp_path)
+    seq = [Screen("game", "ff_on")] * 2 + [Screen("game", "idle")] * 2 + [Screen("game", "ff_on")] * 2
+    h.read_screen = lambda frame: seq.pop(0) if seq else Screen("game", "ff_on")
+    g.hud = Hud(200, 650, 5, 40)
+    for _ in range(6):
+        st = h.observe()
+    assert st.round_active and h.rounds_done == 5
+
+
+# --- review sweep 6 (2026-11-06): repeated misreads, hero price either way, jump rollback ---
+def test_harness_money_before_rejects_repeated_drop_misread(tmp_path):
+    """Two quick reads of a still frame can repeat one misread: a drop we didn't cause stands
+    only after an unconfirmed purchase."""
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    clock = [0.0]
+    h.clock = lambda: clock[0]
+    g.read_hud = lambda frame=None: Hud(200, 1357, 1, 40)
+    h.refresh_hud()
+    clock[0] = 10.0
+    g.read_hud = lambda frame=None: Hud(200, 357, 1, 40)
+    assert h._money_before() == 1357 and h.money == 1357
+    h._money_unsure = True                                 # a purchase may have gone through
+    assert h._money_before() == 357 and not h._money_unsure
+
+
+def test_harness_money_moved_books_measured_hero_price(tmp_path):
+    from bloons.hud import Hud
+    g, h = _round_harness(tmp_path)
+    reads = [Hud(200, 1057, 1, 40), Hud(200, 1058, 1, 40)]   # charged $300, estimate $1,000
+    g.read_hud = lambda frame=None: reads.pop(0) if reads else Hud(200, 1058, 1, 40)
+    assert h._money_moved(1357, -1000, max_move=1500, min_move=1) == 299
+    g.read_hud = lambda frame=None: Hud(200, 1357, 1, 40)    # nothing moved
+    assert h._money_moved(1357, -1000, min_move=1) == 0 and h._money_unsure
+
+
+def test_harness_hero_placed_mid_round_earns_that_round(tmp_path):
+    from bloons.result import ActionResult
+    g, h = _round_harness(tmp_path)
+    h.hero_choice = "quincy"
+    h.refresh_hud()
+    h._place = lambda *a, **k: ActionResult(True, "placed")
+    h.read_button = lambda frame: "ff_on"
+    assert h.place_hero(0.75, 0.25) and h._hero_prev is True
+
+
+def test_harness_between_rounds_ability_skips_round_sync(tmp_path):
+    g, h = _round_harness(tmp_path)
+    tid = h.register("boomerang_monkey", (0.3, 0.5), 300)
+    h._gain_ability(tid, "Anytime", 45, between_rounds=True, path=1)
+    synced = []
+    h._sync_round = lambda content: synced.append(1)
+    h.read_bar = lambda content, n, side=None: []
+    h.use_ability(0)
+    assert synced == []
+
+
+def test_round_tracker_jump_misread_rolls_back():
+    """The HUD briefly shows 9 during round 5, then 5 again: rounds 5-8 haven't ended."""
+    from bloons.state import RoundTracker
+    t = RoundTracker()
+    out = _feed(t, [("game", "ff_on", 5), ("game", "ff_on", 5), ("game", "ff_on", 9),
+                    ("game", "ff_on", 5), ("game", "idle", 5), ("game", "idle", 5)])
+    assert out[2].ended_rounds == (5, 6, 7, 8)
+    assert out[-1].round_ended and out[-1].ended_round == 5      # round 5's real end still fires

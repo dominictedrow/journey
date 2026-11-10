@@ -21,7 +21,7 @@ import json
 import time
 from pathlib import Path
 
-from . import abilitybar, guards, panel, rangecircle, ui
+from . import abilitybar, guards, panel, rangecircle, rules, ui
 from .hud import HudFilter
 from .placement import (PathKeepout, PlaceContext, Placed, SpotMemory, can_place, load_masks, mask_classes,
                         footprint_radius, record_placement, shape_of, tint_at, unit_norm)
@@ -34,6 +34,10 @@ HERO_TID = "hero"         # the hero's id in place contexts and can_sell
 PARK = (0.92, 0.5)        # cursor rest point over the shop: off the map, for the before-hold frame
 SETTLE_S = 0.08           # after moving a held tower: the tint follows within ~20 ms (3.2)
 CONFIRM_TRIES = 4         # HUD reads to see the money change after placing / selling
+SYNC_FRESH_S = 1.0        # observe() this recent: one button read agreeing with the tracker will do
+MONEY_FRESH_S = 0.5       # HUD money read this recent: _money_before uses the filtered value
+REFUND_INCOME_SLACK = 300  # $ of pop income that can land on top of a sell refund while confirming
+TOWER_SPRITE_PAD = 4.0    # units past a tower's footprint that the bloon detector leaves out
 
 
 def _read_panel(frame):
@@ -70,7 +74,8 @@ def _icon_diff(a, b):
     return float(np.abs(a.astype(np.int16) - b.astype(np.int16)).mean())
 
 
-def _load(name):
+def load_data(name):
+    """Parse bloons/data/<name> (JSON)."""
     return json.loads((DATA / name).read_text())
 
 
@@ -91,13 +96,13 @@ class BloonsHarness:
         self.hero_choice = hero
         self.sleep = sleep
         self.ui = ui.UI
-        self.towers = _load("towers.json")["towers"]
-        self.n_slots = _load("obs.json")["tower_slots"]   # tower slots in observe() / to_vector
-        self.heroes = _load("heroes.json")["heroes"]
-        ha = _load("hero_abilities.json")
+        self.towers = load_data("towers.json")["towers"]
+        self.n_slots = load_data("obs.json")["tower_slots"]   # tower slots in observe() / to_vector
+        self.heroes = load_data("heroes.json")["heroes"]
+        ha = load_data("hero_abilities.json")
         self.hero_abilities, self.default_cooldown = ha["heroes"], ha["_meta"]["default_cooldown_s"]
         self.clock = time.monotonic     # ability cooldown estimates; tests swap it
-        self.account = _load("account.json") if account else None
+        self.account = load_data("account.json") if account else None
         if hero is not None and hero not in self.heroes:
             raise KeyError(hero)
         self._set_map(map_name, spots_path)
@@ -107,7 +112,6 @@ class BloonsHarness:
         self.read_kind = _read_kind     # content frame -> state.Screen kind ('game', 'pause', ...)
         self.read_screen = _read_screen  # content frame -> state.Screen (kind, button, panel)
         self.read_button = _read_button  # -> 'idle' / 'ff_off' / 'ff_on' / None
-        self.read_auto_start = _read_probe("auto_start_toggle")   # pause menu -> 'on' / 'off' / None
         self.read_sandbox_panel = _read_probe("sandbox_panel")    # -> 'shop' / 'bloons' / None
         self.icon_diff = _icon_diff     # (before, after) slot crops -> mean |diff|; tests swap it
         self.read_bar = abilitybar.read_bar   # (content, n_slots, panel_side) -> [SlotRead]; 5.4
@@ -119,15 +123,14 @@ class BloonsHarness:
         self.pick_trace = []                        # last _pick_map reads / flips / clicks
         self.prompt_actions = {k: v for k, v in self.ui["prompts"].items()
                                if not k.startswith("_") and k not in ("max_steps", "after_click_s")}
-        self.auto_start = None        # the game's Auto Start setting once read (a setting, not per game)
         self.tracker = RoundTracker()
-        self.rounds = {r["round"]: r for r in _load("rounds.json")["rounds"]}
+        self.rounds = {r["round"]: r for r in load_data("rounds.json")["rounds"]}
         self.new_episode()
 
     def _set_map(self, map_name, spots_path=None):
         """Load a map's data: scale, path keep-out and learned-spots memory."""
         self.map_name = map_name
-        self.map = _load(f"maps/{map_name}.json")
+        self.map = load_data(f"maps/{map_name}.json")
         self.unit = unit_norm(self.map)
         self.keepout = PathKeepout.from_json(self.map["path"], self.unit) if "path" in self.map else None
         self.masks = load_masks(self.map) if self.map.get("masks") else {}
@@ -151,7 +154,6 @@ class BloonsHarness:
         # icon (with a ready-count badge), so a slot is an ability name with its instances:
         # {name, cooldown, between_rounds, inst: {(tid, path): ready_at}}.
         self.ability_slots = []
-        self.bar_reads = None         # (clock, [abilitybar.SlotRead]) from the last bar read
         if hasattr(self, "bar_filter"):
             self.bar_filter.reset()
         self.round_active = False     # Standard: set by start_round; the round loop clears it
@@ -169,15 +171,32 @@ class BloonsHarness:
         self.range_mismatches = []    # (kind, tiers, measured, table) off by more than the tolerance
         self.rounds_done = 0          # rounds finished this game, counted by observe() (the HUD
                                       # number is ambiguous between rounds; RESEARCH step 2.x)
+        self._xp_round = 0            # last round whose hero XP was credited (no double credit)
+        self._hero_prev = False       # a hero was placed at the previous observe() (6: XP only
+                                      # for round ends it was there for)
+        self._obs_t = None            # clock() of the last observe() (tracker button freshness)
+        self._money_t = None          # clock() of the last HUD read that agreed with the filter
+        self._money_unsure = False    # a purchase went unconfirmed: money may have dropped unseen
 
     @property
     def money(self):
         """Last accepted HUD money, or None before the first good read."""
         return self.hud.current.money
 
+    def _read_hud(self, frame=None):
+        """Read the HUD once and feed the filter -> the raw Hud. Money counts as fresh
+        (MONEY_FRESH_S) only when the read agrees with the filtered value it leaves."""
+        r = self.game.read_hud(frame)
+        self.hud.update(r)
+        f = self.money
+        if r.money is not None and f is not None and self.hud.agrees("money", f, r.money):
+            self._money_t = self.clock()
+        return r
+
     def refresh_hud(self, frame=None):
         """Read the HUD once and feed the filter -> the smoothed Hud."""
-        return self.hud.update(self.game.read_hud(frame))
+        self._read_hud(frame)
+        return self.hud.current
 
     # --- registry ---------------------------------------------------------------------------
     def register(self, kind, xy, spent):
@@ -204,9 +223,22 @@ class BloonsHarness:
         tiers = list(t.tiers)
         tiers[path] += 1
         t.tiers, t.spent = tuple(tiers), t.spent + int(price)
-        for a in (self.towers[t.kind].get("stats") or {}).get("abilities") or []:
-            if a["path"] == path and a["tier"] == tiers[path]:
+        new = [a for a in (self.towers[t.kind].get("stats") or {}).get("abilities") or []
+               if a["path"] == path and a["tier"] == tiers[path]]
+        if new:
+            # this tier's list replaces the last tier's (Turbo -> Perma Charge). A tier can have
+            # several (Heli 0-4-0: Redeploy + Support Drop), and one that carries over to the
+            # next tier (Redeploy at 0-5-0, Vine Crush, Take Aim) keeps its cooldown and slot
+            names = {a["name"] for a in new}
+            self._drop_abilities(lambda key, name: key == (tid, path) and name not in names)
+        for a in new:
+            kept = next((s for s in self.ability_slots if s["name"] == a["name"] and (tid, path) in s["inst"]), None)
+            if kept is None:
                 self._gain_ability(tid, a["name"], a.get("cooldown"), a.get("between_rounds", True), path)
+            elif a.get("cooldown"):         # carried over, maybe faster (Redeploy 45 s -> 15 s):
+                cd = float(a["cooldown"])       # this tower's instance only, not the slot's others
+                kept["cds"][(tid, path)] = cd
+                kept["inst"][(tid, path)] = min(kept["inst"][(tid, path)], self.clock() + cd)
 
     def unregister(self, tid):
         """Forget a sold tower (or the hero, tid 'hero')."""
@@ -215,7 +247,7 @@ class BloonsHarness:
         else:
             self.registry.pop(tid)
             self.slots = [None if s == tid else s for s in self.slots]
-        self._drop_abilities(lambda key: key[0] == tid)
+        self._drop_abilities(lambda key, name: key[0] == tid)
 
     # --- contexts for guards / placement ----------------------------------------------------
     def guard_state(self):
@@ -228,22 +260,52 @@ class BloonsHarness:
 
     # --- abilities (bar order = the order they were gained) ---------------------------------
     def _gain_ability(self, tid, name, cooldown, between_rounds=True, path=None):
-        """A tower tier or hero level added an activated ability. A tower's later tier on the
-        same path (e.g. Turbo -> Perma Charge) replaces its earlier one. New abilities start
-        on cooldown (seen live, step 4.5)."""
-        if path is not None:
-            self._drop_abilities(lambda key: key == (tid, path))
+        """A tower tier (`path`) or hero level (path None) added an activated ability. Adds
+        only: record_upgrade drops what a later tier replaces (Turbo -> Perma Charge). New
+        abilities start on cooldown (seen live, step 4.5)."""
         cd = float(cooldown) if cooldown else float(self.default_cooldown)
         slot = next((a for a in self.ability_slots if a["name"] == name), None)
         if slot is None:
-            slot = {"name": name, "cooldown": cd, "between_rounds": bool(between_rounds), "inst": {}}
+            slot = {"name": name, "between_rounds": bool(between_rounds), "inst": {}, "cds": {}}
             self.ability_slots.append(slot)
         slot["inst"][(tid, path)] = self.clock() + cd
+        slot["cds"][(tid, path)] = cd
+
+    @staticmethod
+    def _cd(a, key=None):
+        """Cooldown of slot `a`'s instance `key` (default: the one ready soonest). Kept per
+        instance: two towers' copies of one ability can be at different tiers (Heli 0-4-0
+        Redeploy 45 s, 0-5-0 15 s)."""
+        if key is None:
+            key = min(a["inst"], key=a["inst"].get)
+        return a["cds"][key]
 
     def _drop_abilities(self, match):
+        """Drop every instance for which match((tid, path), ability name) holds."""
         for a in self.ability_slots:
-            a["inst"] = {k: v for k, v in a["inst"].items() if not match(k)}
+            a["inst"] = {k: v for k, v in a["inst"].items() if not match(k, a["name"])}
+            a["cds"] = {k: v for k, v in a["cds"].items() if k in a["inst"]}
+        n = len(self.ability_slots)
         self.ability_slots = [a for a in self.ability_slots if a["inst"]]
+        if len(self.ability_slots) != n:    # later slots moved down: their read history is stale
+            self.bar_filter.reset()
+
+    def _hero_round_xp(self, r):
+        """End of round `r` (Standard): the placed hero gains rules.hero_xp_for_round(r) XP and
+        levels up from it the way the game does, gaining each new level's abilities. The four
+        maps are Beginner (XP x 1); XP Monkey Knowledge isn't modelled. An estimate: the game's
+        level isn't read back from the screen."""
+        h = self.hero
+        if h is None or self.mode != "standard":
+            return
+        need = self.heroes[h.name]["level_xp"]
+        h.xp_into_level += rules.hero_xp_for_round(r)
+        while h.level < 20 and h.xp_into_level >= need[h.level - 1]:
+            h.xp_into_level -= need[h.level - 1]
+            h.level += 1
+            self._gain_hero_abilities(h.level)
+        if h.level >= 20:
+            h.xp_into_level = 0
 
     def _gain_hero_abilities(self, level):
         for a in self.hero_abilities.get(self.hero_choice) or []:
@@ -264,18 +326,17 @@ class BloonsHarness:
         """Read the ability bar from `content` (5.4) and set each slot's cooldown estimate from
         it: a ring with fraction f -> the slot's earliest instance is ready in f * cooldown; no
         ring -> it's ready now. Slots the reader can't see are left alone. Returns the
-        filtered reads (also kept in `bar_reads`), or None when there's nothing to read."""
+        filtered reads, or None when there's nothing to read."""
         if content is None or not self.ability_slots:
             return None
         now = self.clock()
         reads = self.bar_filter.update(self.read_bar(content, len(self.ability_slots), panel_side), now,
-                                       [a["cooldown"] for a in self.ability_slots])
+                                       [self._cd(a) for a in self.ability_slots])
         for r, a in zip(reads, self.ability_slots):
             if not r.seen:
                 continue
             key = min(a["inst"], key=a["inst"].get)
-            a["inst"][key] = now + r.frac * a["cooldown"] if r.ring else min(a["inst"][key], now)
-        self.bar_reads = (now, reads)
+            a["inst"][key] = now + r.frac * self._cd(a, key) if r.ring else min(a["inst"][key], now)
         return reads
 
     def place_context(self):
@@ -347,22 +408,78 @@ class BloonsHarness:
         opens the pause menu)."""
         return self.press("cancel_placement", xy=tuple(self.ui["buttons"]["cancel_placement"]))
 
-    def _hud_money(self):
+    def _hud_money(self, raw=False):
         """One raw HUD money read (also fed to the filter); if unreadable, the filter's last
-        accepted value (may be None)."""
-        r = self.game.read_hud()
-        self.hud.update(r)
-        return r.money if r.money is not None else self.money
+        accepted value (may be None), or None with `raw`."""
+        r = self._read_hud()
+        return r.money if r.money is not None or raw else self.money
 
-    def _money_moved(self, before, delta):
+    def _money_before(self):
+        """The money before an action, for _money_moved. A single raw read is used only if it
+        agrees with the filtered value or with a second raw read: a lone misread ($1,357 read
+        as $357) would make a real purchase look unconfirmed, and the tower would go
+        unregistered. Otherwise the filtered value (may be None). A filtered value read in the
+        last MONEY_FRESH_S is used as is (no extra OCR on the action's hot path), unless a
+        purchase went unconfirmed since. These reads aren't fed to the filter: two quick reads
+        of a still frame can repeat one misread, and the filter would take it. So two agreeing
+        reads below the filtered value count only while a drop is possible (_money_unsure:
+        money only falls when we spend); otherwise the filtered value stands."""
+        f = self.money
+        fresh = self._money_t is not None and self.clock() - self._money_t < MONEY_FRESH_S
+        if f is not None and fresh and not self._money_unsure:
+            return f
+        a = self.game.read_hud().money
+        if a is None:
+            return f
+        if f is None or self.hud.agrees("money", f, a):
+            return a
+        b = self.game.read_hud().money
+        if b is not None and self.hud.agrees("money", a, b) and (b > f or self._money_unsure):
+            self.hud.accept("money", b)
+            self._money_unsure = False
+            return b
+        return f
+
+    def _money_moved(self, before, delta, max_move=None, min_move=None):
         """Wait for the HUD money to move by about `delta` (< 0 spent, > 0 refund) from
-        `before`. Pop income can come in meanwhile, so half the amount counts."""
+        `before`. Pop income can come in meanwhile, so half the amount counts. A move up to the
+        expected size (a spend can only look smaller, from income; a refund larger by up to
+        REFUND_INCOME_SLACK) confirms on one read and is forced into the filtered money. The
+        amount is only an estimate for hero levels, sells and table prices the panel didn't
+        show, so a bigger move up to `max_move` (default 1.5x) confirms on two agreeing reads;
+        Beyond `max_move` it's a misread ($1,357 read as $57, maybe repeated on a still frame)
+        and never confirms. Likewise a smaller move down to `min_move` (default: none below
+        half), for an estimate that can be too high (a hero level when XP was missed).
+        -> the amount to book (`delta`'s size on the one-read path, the measured move on the
+        two-read path), or 0 when unconfirmed; then _money_unsure is set, since the action
+        may have gone through anyway."""
+        if before is None:
+            self._money_unsure = True
+            return 0
+        d, sign = abs(delta), (1 if delta > 0 else -1)
+        hi = d + REFUND_INCOME_SLACK if delta > 0 else d * 1.1 + 5
+        top = max(hi, max_move if max_move is not None else d * 1.5 + (REFUND_INCOME_SLACK if delta > 0 else 5))
+        low = d / 2 if min_move is None else min(d / 2, max(1, min_move))
+        other = None                            # last read outside the one-read range
         for _ in range(CONFIRM_TRIES):
-            m = self._hud_money()
-            if m is not None and before is not None and (m - before) * (1 if delta > 0 else -1) >= abs(delta) / 2:
-                return True
-            self.sleep(0.15)
-        return False
+            m = self._hud_money(raw=True)       # a miss isn't a read (no filtered fallback)
+            moved = None if m is None else (m - before) * sign
+            if moved is not None and d / 2 <= moved <= hi:
+                paid = d                        # confirmed: the guards shouldn't wait for 2 more reads
+            elif moved is not None and (hi < moved <= top or low <= moved < d / 2):
+                if other is None or not self.hud.agrees("money", other, m):
+                    other = m
+                    self.sleep(0.15)
+                    continue
+                paid = moved                    # two reads agree: book what really moved
+            else:
+                self.sleep(0.15)
+                continue
+            self.hud.accept("money", m)
+            self._money_unsure = False
+            return paid
+        self._money_unsure = True
+        return 0
 
     # --- 4.2 placing and selling ------------------------------------------------------------
     def _place(self, shop_key, kind, x, y, price):
@@ -372,7 +489,7 @@ class BloonsHarness:
         p = can_place(kind, x, y, ctx)
         if not p:
             return p
-        before = self._hud_money()
+        before = self._money_before()
         if not self.game.move(*PARK):
             return ActionResult(False, "not_front")
         self.sleep(0.2)
@@ -428,7 +545,12 @@ class BloonsHarness:
         r = self._place("hero", self.hero_choice, x, y, g.cost)
         if not r:
             return r
-        return ActionResult(True, "placed", g.cost, self.register_hero((x, y), g.cost))
+        tid = self.register_hero((x, y), g.cost)
+        # placed mid-round: it earns this round's end XP even if no observe() runs before the
+        # round ends; placed at idle, a round end observe() hasn't seen yet isn't its
+        if self.mode == "standard" and self._button_now() in ("ff_off", "ff_on"):
+            self._hero_prev = True
+        return ActionResult(True, "placed", g.cost, tid)
 
     def select_tower(self, tid):
         """Click a placed tower (or the hero) to open its panel."""
@@ -446,7 +568,7 @@ class BloonsHarness:
         g = guards.can_sell(tid, self.guard_state())
         if not g:
             return g
-        before = self._hud_money()
+        before = self._money_before()
         r = self.select_tower(tid)
         if not r:
             return r
@@ -471,11 +593,13 @@ class BloonsHarness:
     def close_panel(self, side):
         return self.press("close_panel", xy=tuple(ui.panel(side)["close"]))
 
-    def _panel_buy(self, tid, guard, press):
+    def _panel_buy(self, tid, guard, press, max_cost=None, min_cost=None):
         """Select `tid`, find its panel, run `press(side)`, confirm the money drop on the HUD,
-        close the panel. -> ActionResult (ok = paid). If `press` returns a cost (the price the
-        panel showed), that's the amount confirmed instead of the guard's."""
-        before = self._hud_money()
+        close the panel. -> ActionResult (ok = paid; cost = the amount booked, see
+        _money_moved). If `press` returns a cost (the price the panel showed), that's the
+        amount confirmed instead of the guard's. `max_cost` / `min_cost`: the range a price
+        estimate can be off by (_money_moved)."""
+        before = self._money_before()
         r = self.select_tower(tid)
         if not r:
             return r
@@ -488,8 +612,9 @@ class BloonsHarness:
             return r
         cost = guard.cost if r.cost is None else r.cost
         # the HUD can miss the drop; a press whose result says the panel saw it ("pips") counts
-        ok = self._money_moved(before, -cost) or r.value == "pips"
-        return ActionResult(ok, "bought" if ok else "unconfirmed", cost)
+        paid = self._money_moved(before, -cost, max_cost, min_cost)
+        ok = bool(paid) or r.value == "pips"
+        return ActionResult(ok, "bought" if ok else "unconfirmed", paid or cost)
 
     def upgrade(self, tid, path):
         """Buy the next tier on `path` (0-2) for tower `tid`: guard (crosspath, tier <= 5, one
@@ -586,7 +711,6 @@ class BloonsHarness:
         ('match'), or the table has no value ('measured'); 'mismatch' (recorded in
         range_mismatches) / 'unreadable' / a selection failure otherwise. The result is kept
         per tower at its current tiers (observe(): TowerState.range_measured)."""
-        from . import rules
         t = self.registry.get(tid)
         if t is None:
             return ActionResult(False, "no_tower")
@@ -621,19 +745,22 @@ class BloonsHarness:
 
     def buy_hero_level(self):
         """Buy the hero's next level with the panel's level-up button. ok -> value is the new
-        level. (The harness assumes no XP earned toward it, so the guard's price is an upper
-        bound; the HUD confirms what was paid.)"""
+        level. The guard's price is $1 per XP still missing, from the XP observe() credits
+        at each round end (_hero_round_xp, an estimate); the HUD confirms what was paid."""
         g = guards.can_buy_hero_level(self.guard_state())
         if not g:
             return g
+        # the XP estimate can be off either way: the game charges between ~$1 (XP missed)
+        # and the whole level (XP over-credited); the amount booked is what the HUD saw go
+        full = guards.hero_level_price(self.guard_state(), xp_into_level=0)
         r = self._panel_buy(HERO_TID, g, lambda side: self.press(
-            "hero_level_up", xy=tuple(ui.panel(side)["hero_level_up"])))
+            "hero_level_up", xy=tuple(ui.panel(side)["hero_level_up"])), max_cost=full, min_cost=1)
         if not r:
             return r
         h = self.hero
-        h.level, h.xp_into_level, h.spent = h.level + 1, 0, h.spent + g.cost
+        h.level, h.xp_into_level, h.spent = h.level + 1, 0, h.spent + r.cost
         self._gain_hero_abilities(h.level)
-        return ActionResult(True, "leveled", g.cost, h.level)
+        return ActionResult(True, "leveled", r.cost, h.level)
 
 
     # --- 4.4 rounds, fast-forward, auto start -----------------------------------------------
@@ -648,6 +775,27 @@ class BloonsHarness:
             if i < tries - 1:
                 self.sleep(wait)
         return v
+
+    def _button_now(self, content=None, tries=4, first=None):
+        """The play button once `tracker.confirm` consecutive reads agree on it (the first from
+        `content` if given; the same count RoundTracker uses), at most `tries` reads ->
+        'idle' / 'ff_off' / 'ff_on', or None. A single frame can misread, and round_active
+        decides whether Space starts a round or toggles FF. `first`: a read the caller already
+        made of `content` (that frame isn't read again)."""
+        need = max(1, self.tracker.confirm)
+        prev, run = None, 0
+        for i in range(max(tries, need)):
+            if i:
+                self.sleep(0.05)
+            if i == 0 and first is not None:
+                cur = first
+            else:
+                cur = self.read_button(content if (i == 0 and content is not None) else self.content())
+            run = run + 1 if cur is not None and cur == prev else (1 if cur is not None else 0)
+            prev = cur
+            if run >= need:
+                return cur
+        return None
 
     def sandbox_panel(self, side):
         """Sandbox: show the tower shop ('shop') or the bloon-send panel ('bloons'); one
@@ -666,7 +814,8 @@ class BloonsHarness:
 
     def start_round(self):
         """Start the next round.
-        Standard: only from idle (▶); play_ff, then the button must turn to ▶▶.
+        Standard: only from idle (▶); play_ff, then the button must turn to ▶▶, and fast
+        forward is switched on if the round started without it (_ensure_ff).
         Sandbox: the ▶▶ button shows all the time and Space doesn't send bloons, so this
         switches to the bloon panel, clicks its send button and switches back to the shop.
         Nothing on screen confirms the send or the round's end there, so a send always goes
@@ -681,16 +830,22 @@ class BloonsHarness:
             self.sleep(self.ui["timing_s"]["after_click"])
             self.round_active = True
             r = self.sandbox_panel("shop")
+            if r:
+                self._ensure_ff()
             return ActionResult(True, "sent", 0) if r else r
+        # The button decides, not round_active: that's only as fresh as the last observe(),
+        # so a round that ended since would be refused.
+        # Only on agreeing reads: on one misread 'idle' mid-round, Space would toggle FF
+        # instead. Reads that never agree -> 'no_button', nothing pressed.
+        b = self._button_now()
+        if b is None:
+            return ActionResult(False, "no_button")
+        self.round_active = b != "idle"
+        if b != "idle":
+            self.fast_forward = b == "ff_on"
         g = guards.can_start_round(self.guard_state())
         if not g:
             return g
-        b = self._poll(self.read_button)
-        if b is None:
-            return ActionResult(False, "no_button")
-        if b != "idle":
-            self.round_active, self.fast_forward = True, b == "ff_on"
-            return ActionResult(False, "round_active")
         r = self.press("play_ff", xy=tuple(self.ui["buttons"]["play_ff"]))
         if not r:
             return r
@@ -698,64 +853,24 @@ class BloonsHarness:
         if b not in ("ff_off", "ff_on"):
             return ActionResult(False, "unconfirmed")
         self.round_active, self.fast_forward = True, b == "ff_on"
+        self._ensure_ff()
         return ActionResult(True, "started", 0)
 
-    def set_fast_forward(self, on):
-        """Fast-forward on/off. Reads the button first and presses only if it differs.
-        Refused at idle ('round_idle'): the same press would start the round."""
-        want = "ff_on" if on else "ff_off"
-        b = self._poll(self.read_button)
-        if b is None:
-            return ActionResult(False, "no_button")
-        if b == "idle":
-            return ActionResult(False, "round_idle")
-        if b != want:
-            r = self.press("play_ff", xy=tuple(self.ui["buttons"]["play_ff"]))
-            if not r:
-                return r
-            if self._poll(self.read_button, lambda v: v == want, tries=6) != want:
-                self.fast_forward = None
-                return ActionResult(False, "unconfirmed")
-        self.fast_forward = bool(on)
-        return ActionResult(True, "set" if b != want else "unchanged", 0, bool(on))
-
-    def set_auto_start(self, on):
-        """Set the game's Auto Start (a game setting, kept across games). Opens the pause menu
-        with the gear button (Escape would only deselect a selected tower), reads the toggle,
-        clicks it only if it differs, and closes the menu with Continue unless it was already
-        open. `on=None` only reads it (reason 'unchanged', value the setting). The harness's
-        RoundTracker gets the value (observe() needs it for round_ended)."""
-        t = self.ui["timing_s"]
-        was_paused = self._poll(self.read_kind, tries=1) == "pause"
-        if not was_paused:
-            if not self.game.click(*self.ui["buttons"]["settings"]):
-                return ActionResult(False, "not_front")
-            self.sleep(t["pause_open"])
-            if self._poll(self.read_kind, lambda v: v == "pause") != "pause":
-                return ActionResult(False, "no_pause_menu")
-        cur = self._poll(self.read_auto_start)
-        if on is None and cur is not None:       # read only
-            on = cur == "on"
-        want = "on" if on else "off"
-        result = None
-        if cur is None:
-            result = ActionResult(False, "unreadable")
-        elif cur != want:
-            self.game.click(*self.ui["pause"]["auto_start_toggle"])
-            self.sleep(t["panel_toggle"])
-            if self._poll(self.read_auto_start, lambda v: v == want) != want:
-                self.auto_start = None
-                result = ActionResult(False, "unconfirmed")
-        if not was_paused:
-            self.game.click(*self.ui["pause"]["continue"])
-            self.sleep(t["pause_open"])
-            if self._poll(self.read_kind, lambda v: v != "pause") == "pause":
-                return ActionResult(False, "pause_stuck")
-        if result is not None:
-            return result
-        self.auto_start = bool(on)
-        self.tracker.auto_start = bool(on)
-        return ActionResult(True, "set" if cur != want else "unchanged", 0, bool(on))
+    def _ensure_ff(self):
+        """Turn fast forward on: one more press of the running ▶▶ button (Space at idle starts
+        a round at normal speed). FF isn't an action: the harness keeps it on so episodes run
+        fast. Best effort: a press that doesn't take leaves fast_forward False / None and the
+        round still counts as started. Pressed only on agreeing ff_off reads (_button_now): one
+        misread frame of a round already on FF would otherwise switch it off."""
+        b = self._button_now()
+        if b is not None:
+            self.fast_forward = b == "ff_on"
+        if b != "ff_off":
+            return
+        if not self.press("play_ff", xy=tuple(self.ui["buttons"]["play_ff"])):
+            return
+        b = self._poll(self.read_button, lambda v: v == "ff_on", tries=6)
+        self.fast_forward = True if b == "ff_on" else (False if b == "ff_off" else None)
 
     # --- 4.5 abilities ----------------------------------------------------------------------
     def slot_crop(self, frame, slot, panel_side=None):
@@ -798,8 +913,20 @@ class BloonsHarness:
             return ActionResult(False, "unconfirmed", 0)
         if key is None:
             key = min(a["inst"], key=a["inst"].get)
-        a["inst"][key] = now + a["cooldown"]
+        a["inst"][key] = now + self._cd(a, key)
         return ActionResult(True, "used", 0, a["name"])
+
+    def _sync_round(self, content):
+        """Standard: set round_active from the play button in `content` when it's readable
+        (the round-only check shouldn't trust the last observe()). Sandbox's button always
+        shows FF, so there it's left alone."""
+        if self.mode == "standard" and content is not None:
+            b = self.read_button(content)
+            fresh = self._obs_t is not None and self.clock() - self._obs_t < SYNC_FRESH_S
+            if b is None or b != self.tracker.button or not fresh:
+                b = self._button_now(first=b)
+            if b is not None:
+                self.round_active = b != "idle"
 
     def use_ability(self, slot, target=None):
         """Activate ability bar slot `slot` (0-based; one icon per ability name, in order of first gain; a press uses one instance):
@@ -807,6 +934,8 @@ class BloonsHarness:
         abilities that ask for a point. Confirmed by the icon changing. ok -> value is the
         ability's name. With no panel open (actions close theirs), the bar is in place."""
         content = self.content()
+        if 0 <= slot < len(self.ability_slots) and not self.ability_slots[slot]["between_rounds"]:
+            self._sync_round(content)       # only round-only abilities care whether one is running
         self.sync_abilities(content)
         g = guards.can_use_ability(slot, self.guard_state())
         if not g:
@@ -833,9 +962,11 @@ class BloonsHarness:
         slot, key = found[0] if found else (None, None)
         if slot is None:
             return ActionResult(False, "no_ability" if tid in self.registry or tid == HERO_TID else "no_tower")
+        content = self.content()
+        if not self.ability_slots[slot]["between_rounds"]:
+            self._sync_round(content)
         if not self.round_active and not self.ability_slots[slot]["between_rounds"]:
             return ActionResult(False, "round_only")
-        content = self.content()
         self.sync_abilities(content)
         if self.clock() < self.ability_slots[slot]["inst"][key]:
             return ActionResult(False, "cooldown")
@@ -1028,11 +1159,21 @@ class BloonsHarness:
         return ok
 
     def _open_pause(self):
+        """Open the pause menu with the gear. An open right-hand panel shifts the HUD left and
+        puts its own close ✕ where the gear is (seen live 2026-11-09), so close any panel
+        first; a second gear click covers a panel the one read missed."""
         if self.screen_kind() == "pause":
             return True
-        self.game.click(*self.ui["buttons"]["settings"])
-        self.sleep(self.ui["timing_s"]["pause_open"])
-        return self._wait_kind(("pause",), 2.0) == "pause"
+        side = self.panel_side(tries=1)
+        if side:
+            self.close_panel(side)
+            self.sleep(self.ui["timing_s"]["panel_toggle"])
+        for _ in range(2):
+            self.game.click(*self.ui["buttons"]["settings"])
+            self.sleep(self.ui["timing_s"]["pause_open"])
+            if self._wait_kind(("pause",), 2.0) == "pause":
+                return True
+        return False
 
     def go_home(self):
         """Back to the home screen from a game (pause -> Home), a defeat screen (Home), or a
@@ -1249,14 +1390,11 @@ class BloonsHarness:
     def _detector_towers(self):
         """Our towers' sprite areas for the detector: footprint + TOWER_SPRITE_PAD units."""
         ctx = self.place_context()
-        from .placement import footprint_radius
         out = []
         for p in self._placed():
             shape = shape_of(p.kind, p.tiers, ctx)
-            out.append((p.xy[0], p.xy[1], (footprint_radius(shape) if shape else 6) + self.TOWER_SPRITE_PAD))
+            out.append((p.xy[0], p.xy[1], (footprint_radius(shape) if shape else 6) + TOWER_SPRITE_PAD))
         return out
-
-    TOWER_SPRITE_PAD = 4.0
 
     def detect_bloons(self, frame=None):
         """[detect.Bloon] on a content frame (grabbed if None); [] without a background."""
@@ -1297,12 +1435,10 @@ class BloonsHarness:
         (table, or `range_measured` from measure_range, 5.5), path and placeable masks. Also syncs
         `round_active` from the play button and counts `rounds_done` (the HUD round reads the
         same before and after a round with auto-start off, so it's only trusted mid-round).
-        Set the Auto Start setting with set_auto_start first (else the tracker assumes off).
         `bloons` (5.2): detect.Bloon list, using the map's stored empty-track background
         (data/maps/<map>.bg.png); [] on idle Standard frames; None off the game screen or
         for a map without a stored background. Call it often: the round edge and outcome are
         worked out across calls."""
-        from . import rules
         from .observe import AbilityState, GameState, HeroState, TowerState, UpgradeOption
         f = self.game.grab()
         content = None if f is None else f.content_bgr()
@@ -1314,10 +1450,22 @@ class BloonsHarness:
                                         # from the bloon panel), so it says nothing about rounds
             if rs.round_active is not None:
                 self.round_active = rs.round_active
-            if rs.round_ended or (rs.outcome == "win" and was_outcome is None):
+            if rs.round_ended:          # the tracker knows which rounds, unless the HUD never read
+                ended = rs.ended_rounds or (self.rounds_done + 1,)
+                for r in ended:
+                    # each round's XP once, and only for a hero that was already placed at the
+                    # previous observe() (placed after the round ended: it didn't earn it)
+                    if r > self._xp_round and self._hero_prev:
+                        self._hero_round_xp(r)
+                    self._xp_round = max(self._xp_round, r)
+                self.rounds_done = ended[-1]
+            elif rs.outcome == "win" and was_outcome is None:
                 self.rounds_done += 1
-            if rs.round_active and hud is not None and hud.round:   # mid-round the HUD says which
-                self.rounds_done = hud.round - 1
+            run = self.tracker.running_round        # lag-corrected, unlike the raw HUD round
+            if rs.round_active and run:
+                self.rounds_done = run - 1
+            self._hero_prev = self.hero is not None
+        self._obs_t = self.clock()
         gs = self.guard_state()
         towers, options = [], {}
         for t in self.registry.values():
@@ -1353,7 +1501,7 @@ class BloonsHarness:
         abilities = []
         for a in self.ability_slots:
             left = min(t - now for t in a["inst"].values())
-            frac = 0.0 if left <= 0 else min(1.0, left / a["cooldown"])
+            frac = 0.0 if left <= 0 else min(1.0, left / self._cd(a))
             abilities.append(AbilityState(len(abilities), a["name"], next(iter(a["inst"]))[0], left <= 0, frac,
                                           a["between_rounds"], len(abilities) in seen))
         bloons = None

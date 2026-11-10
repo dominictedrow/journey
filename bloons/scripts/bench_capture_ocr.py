@@ -13,7 +13,6 @@ from pathlib import Path
 
 import mss
 import mss.tools
-import Quartz as Q
 import Vision
 from Foundation import NSData
 

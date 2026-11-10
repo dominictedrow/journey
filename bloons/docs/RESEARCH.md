@@ -335,3 +335,12 @@ Rule: once a key is confirmed, the harness uses it, otherwise it clicks the UI c
   - **Vision OCR works again** (same session day as the `e5rtError` above; it recovered without anything done in the repo). `Game().read_hud()` read Sandbox money 9,989,034.
   - **Bloons' lane on Meadow is ≈ 4.5 units each side of the centre line**: the round-1 red band (`path.band`, 7,848 unit²) / path length (880 units) / 2. The map's `path.half_width_units` (0.25) is the placement keep-out pad around the centre line, not the visible track. The grid image's path channel uses `obs.json grid.path_half_width_units` = 4.5; it lines up with the holes the path leaves in the swept masks.
   - Live: `observe()` 0.6 s, `to_vector()` < 1 ms (1,200 floats), `grid_image()` 17 ms (8 × 16 × 24).
+- 2026-11-06 — **Review sweep (handoff 045).** `RoundTracker` no longer takes `auto_start`. A round ends on the running → idle edge (Auto Start off, or its ~1 s idle blip when on), or when the HUD round goes up while the button shows a running round. Each round number fires once, so a HUD that lags behind can't fire it twice. The hero's level now follows the round-end XP rule (`rules.hero_xp_for_round`, ×1 on Beginner maps); not yet checked live.
+- 2026-11-09 — **FF and Auto Start removed from the actions (handoff 048)**, Monkey Meadow Easy Standard, live.
+  - **Space at idle starts a round at normal speed (`ff_off`)** even right after a game played on FF (new game and after `restart()`), so `start_round` presses once more to turn FF on: 1.4–1.7 s for the whole call.
+  - **FF carries over Auto Start round changes**: across 8 auto-started rounds in 2 games the button read `ff_on` the whole time; `round_ended` fired once per round (rounds took 7–18 s on FF).
+- 2026-11-09 — **Live check of the 045–047 review sweep (handoff 049).** Meadow Easy Standard + Sandbox.
+  - **An open right-hand panel moves the HUD left**: the gear sits at about x 0.62 and the panel's close ✕ (≈ 0.83, 0.037) is where the gear normally is. The pause menu needs the panel closed first.
+  - **Hero panel level-up button** shows the price ("$2,278" at level 4) and an orange "6" badge with an up arrow (rounds until the next free level?). Benjamin's sell value at level 4 was $1,747 after $1,020 + two bought levels, so hero levels count toward the sell value.
+  - Heli Pilot path 2 prices on Easy with Dom's Monkey Knowledge: $255, $510, $2,975, $8,075, $25,500; Redeploy stays on the bar at 0-5-0.
+

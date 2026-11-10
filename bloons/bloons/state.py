@@ -12,7 +12,7 @@ brightness, so the play button still "matches" under the dimmed victory/pause ov
 from dataclasses import dataclass, field
 from typing import Optional
 
-from bloons.vision import Templates, to_work
+from bloons.vision import Templates, _templates, to_work
 
 # (kind, templates that must all match), highest priority first.
 SCREENS = (
@@ -57,16 +57,6 @@ def read_screen(img, templates: Optional[Templates] = None) -> Screen:
     return Screen("game", button, panel, scores)
 
 
-_default = None
-
-
-def _templates():
-    global _default
-    if _default is None:
-        _default = Templates()
-    return _default
-
-
 @dataclass(frozen=True)
 class RoundState:
     screen: str                     # Screen.kind of the latest frame
@@ -76,6 +66,16 @@ class RoundState:
     outcome: Optional[str]          # None / 'win' / 'loss'; sticky until reset()
     round: Optional[int] = None     # from the filtered HUD
     rounds_total: Optional[int] = None
+    ended_rounds: tuple = ()            # with round_ended: every round that ended, oldest first
+                                        # (several if the HUD jumped between updates); () if unknown
+
+    @property
+    def ended_round(self) -> Optional[int]:
+        """With round_ended: the (last) round that ended, if known."""
+        return self.ended_rounds[-1] if self.ended_rounds else None
+
+
+MAX_ROUND_JUMP = 5     # HUD round rises above this between updates -> credit only the last
 
 
 class RoundTracker:
@@ -84,19 +84,24 @@ class RoundTracker:
     - round_active: the play button shows fast-forward (ff_off / ff_on) -> True; the
       start-round arrow (idle) -> False. Pause, popups and in-game frames without a readable
       button keep the last value; victory/defeat set it False.
-    - round_ended fires on exactly one update per finished round:
-        auto_start=False: when the button goes running -> idle.
-        auto_start=True: the button never goes idle, so when the HUD round number goes up
-        while a round is running. Tell the tracker if the harness changes the setting.
-      Not fired for the final round: outcome='win' covers that.
+    - round_ended fires on exactly one update per finished round, whatever the Auto Start
+      setting: when the button goes running -> idle (Auto Start off; with it on the idle
+      button shows for only ~1 s, RESEARCH 1.5), or when the HUD round number goes up while
+      the button shows a running round (Auto Start on, idle missed). Each finished round
+      fires once: the round number of the running stretch is remembered, so a HUD that
+      catches up a frame late doesn't fire it again. A HUD jump of several rounds between
+      updates (no update for a while with Auto Start on) ends each round in between, up to
+      MAX_ROUND_JUMP; a bigger jump is more likely a misread, so only the last round counts.
+      A running stretch whose HUD still shows a finished round (lagging) is taken as the
+      next round. A HUD round below the last finished one is a lag or a misread, never a
+      replay: a Defeat 'Continue' replays only the round that was lost, which never finished. Not fired for the final round: outcome='win' covers that.
     - outcome: 'win' / 'loss' once the victory / defeat screen has been seen on `confirm`
       consecutive frames. Sticky until reset() (the restart popup over defeat keeps 'loss').
     - Button changes also need `confirm` consecutive frames, like HudFilter.
     Feed it filtered HUD values (hud.HudFilter), so the round number is already debounced.
     """
 
-    def __init__(self, auto_start=False, confirm=2):
-        self.auto_start = auto_start
+    def __init__(self, confirm=2):
         self.confirm = confirm
         self.reset()
 
@@ -107,7 +112,37 @@ class RoundTracker:
         self.round = self.rounds_total = None
         self._button = None            # accepted button state
         self._pending = (None, 0)      # (candidate button or outcome screen, times seen)
+        self._run_round = None         # HUD round of the running stretch (the one that will end)
+        self._finished = None          # last round number round_ended fired for
+        self._ended = []
+        self._jumped = ()              # rounds the last HUD jump finished (undone if the HUD drops back)
         self._last = None
+
+    def _finish(self, rnd):
+        """round_ended for round `rnd` (None = number unknown) unless it already fired."""
+        if rnd is not None and self._finished is not None and rnd <= self._finished:
+            return False
+        if rnd is not None:
+            self._finished = rnd
+            self._ended.append(rnd)
+        return True
+
+    def _running_round(self):
+        """The round a stretch that just started is playing: the HUD's, unless that lags
+        behind a round already finished (Auto Start on: the HUD updates after the button)."""
+        if self._finished is not None and (self.round is None or self.round <= self._finished):
+            return self._finished + 1
+        return self.round
+
+    @property
+    def running_round(self):
+        """The round the current running stretch is playing (lag-corrected), or None."""
+        return self._run_round
+
+    @property
+    def button(self):
+        """The accepted (confirmed) play button state, or None."""
+        return self._button
 
     def _confirmed(self, value):
         cand, seen = self._pending
@@ -117,10 +152,19 @@ class RoundTracker:
 
     def update(self, screen: Screen, hud=None) -> RoundState:
         ended = False
+        self._ended = []
         prev_round = self.round
         if hud is not None:
             if hud.round is not None:
                 self.round = hud.round
+                if self._jumped and self._jumped[0] <= hud.round <= self._jumped[-1]:
+                    # the HUD came back into rounds the last jump finished: the jump was a
+                    # misread (5 read as 9), so those rounds haven't ended; let them end.
+                    # (Below the jump's start it's a misread the other way: ignored.)
+                    self._finished = hud.round - 1
+                    if self.active:
+                        self._run_round = hud.round
+                    self._jumped = ()
             if hud.rounds_total is not None:
                 self.rounds_total = hud.rounds_total
 
@@ -136,16 +180,27 @@ class RoundTracker:
                 was_active = self.active
                 self._button = screen.button
                 self.active = screen.button != "idle"
-                ended = bool(was_active and not self.active and not self.auto_start)
-            if (self.auto_start and self.active and prev_round is not None
+                if self.active and not was_active:
+                    self._run_round = self._running_round()
+                elif was_active and not self.active:
+                    ended = self._finish(self._run_round)
+                    self._jumped = ()
+            if (self.active and screen.button != "idle" and prev_round is not None
                     and self.round is not None and self.round > prev_round):
-                ended = True
+                first = prev_round if self.round - prev_round <= MAX_ROUND_JUMP else self.round - 1
+                done = tuple(r for r in range(first, self.round) if self._finish(r))
+                ended = bool(done) or ended
+                self._jumped = done or self._jumped
+                self._run_round = self.round
+            elif self.active and self._run_round is None:
+                self._run_round = self._running_round()
         else:
             self._pending = (None, 0)
 
         ff = None if self._button is None else self._button == "ff_on"
+        got = tuple(self._ended) if ended else ()
         self._last = RoundState(screen.kind, self.active, ended, ff, self.outcome,
-                                self.round, self.rounds_total)
+                                self.round, self.rounds_total, got)
         return self._last
 
     @property

@@ -101,8 +101,3 @@ def _cluster(edges, c):
 def ground_unit(unit_norm):
     """A map's scale.unit_norm (ux, uy) -> one game unit on the ground (ux, uy * 0.866)."""
     return unit_norm[0], unit_norm[1] * _cfg()["ground_y_scale"]
-
-
-def to_units(radius_px, width_px, unit_norm_x):
-    """Radius in px -> game units, for a frame `width_px` wide."""
-    return None if radius_px is None else radius_px / (unit_norm_x * width_px)

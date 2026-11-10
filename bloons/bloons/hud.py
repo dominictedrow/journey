@@ -137,7 +137,8 @@ class HudFilter:
         self._pending = dict.fromkeys(self.FIELDS)  # (last reading, consecutive agreeing reads)
         self.misses = dict.fromkeys(self.FIELDS, 0)
 
-    def _agree(self, field, a, b):
+    def agrees(self, field, a, b):
+        """Two readings of `field` count as the same value (money: within MONEY_TOL)."""
         if field != "money":
             return a == b
         return abs(a - b) <= max(self.MONEY_TOL[0], self.MONEY_TOL[1] * max(a, b))
@@ -153,11 +154,16 @@ class HudFilter:
                 self.value[f], self._pending[f] = new, None
                 continue
             last, seen = self._pending[f] or (None, 0)
-            seen = seen + 1 if last is not None and self._agree(f, last, new) else 1
+            seen = seen + 1 if last is not None and self.agrees(f, last, new) else 1
             if seen >= self.confirm:
                 self.value[f] = new   # keep the run going: steadily rising money tracks every read
             self._pending[f] = (new, seen)
         return self.current
+
+    def accept(self, field, value):
+        """Take `value` for `field` now, without waiting for `confirm` reads: for a change the
+        caller has confirmed another way (the harness saw the money drop by a purchase's price)."""
+        self.value[field], self._pending[field], self.misses[field] = value, None, 0
 
     @property
     def current(self) -> Hud:
