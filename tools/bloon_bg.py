@@ -37,7 +37,7 @@ def main(argv=None):
         files = sorted(glob.glob(a.src))
         frames, source = [cv2.imread(f) for f in files], f"{len(files)} saved frames ({a.src})"
     else:
-        from bloons.platform_mac import Game
+        from bloons.platform import Game
         g = Game()
         frames = []
         for i in range(a.n):

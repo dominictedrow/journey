@@ -128,6 +128,19 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 - [ ] 8.1 More maps, Medium/Hard, other modes
 - [ ] 8.2 Hero choice and late-game strategy (rounds 40+, MOAB-class)
 
+## Phase W — Windows port (Steam BTD6), plan in `docs/max.md` Part A
+- [x] W.1 `bloons/platform_win.py`: same `Game` / `Frame` interface; PrintWindow capture, SendInput input, glyph HUD reader, keep-awake, `relaunch()` *(2026-11-09)*
+- [x] W.2 `bloons/platform.py` picks the OS backend; tools / scripts / tests import it *(2026-11-09)*
+- [x] W.3 Feasibility gate (live probes, handoff 052): SendInput clicks + keys reach the game; PostMessage doesn't *(2026-11-09)*
+- [ ] W.4 Recalibrate `ui.json` for Steam (HUD done; shop, upgrade panel, hero panel, ability bar, pause, map select, difficulty/mode, prompts), templates, fixtures; `account.json` MK reset
+- [ ] W.5 Live check in `tools/play.py`: new_game, place, upgrade, start_round, observe, sell, restart, go_home
+
+## Phase X — XP farm (all towers, 3 paths, tier 5), plan in `docs/max.md` Part B
+- [ ] X.1 Research (XP split, Deflation, map bonus, unlock ranks, `data/xp_costs.json`, XP Monkey Knowledge); measure XP per game live
+- [ ] X.2 `bloons/xp.py`: progress reader + planner
+- [ ] X.3 `tools/farm.py`: unattended loop with recovery, `logs/farm.jsonl`
+- [ ] X.4 Done condition: every tower x 3 paths x tier 5 unlocked
+
 ---
 
 ## Verification

@@ -335,7 +335,7 @@ def main(argv=None):
         hero = resolve(a.hero, load_data("heroes.json")["heroes"]) if a.hero else None
     except UsageError as e:
         ap.error(f"--hero: {e}")
-    from bloons.platform_mac import Game
+    from bloons.platform import Game
     g = Game()
     h = BloonsHarness(g, a.map, a.difficulty, hero=hero, account=not a.no_account, spots_path=a.spots,
                       mode=a.mode)

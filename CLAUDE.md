@@ -1,6 +1,6 @@
 # Bloons Bot — Project Instructions
 
-RL agent + pixel-based harness for **Bloons TD 6+ (Apple Arcade, macOS)**. Full plan: `docs/PLAN.md`. Game facts: `docs/RESEARCH.md`.
+RL agent + pixel-based harness for **Bloons TD 6+ (Apple Arcade, macOS)** and, since 2026-11-09, **Steam BTD6 on Windows** (`docs/max.md`). Full plan: `docs/PLAN.md`. Game facts: `docs/RESEARCH.md`.
 
 ## Session protocol (mandatory)
 
@@ -24,8 +24,8 @@ Steps:
 Handoffs are append-only. Never edit an old one.
 
 ## Project rules
-- The harness runs in Python on the **Mac**. Windows is only for editing, git, and offline tests (`tests/test_offline.py`, which runs on saved screenshots).
-- `bloons/platform_mac.py` is the only OS-specific file. Everything else stays portable.
+- The harness runs in Python on the **Mac** (BTD6+) or on **Windows** (Steam BTD6). Offline tests (`tests/test_offline.py`) run on both.
+- `bloons/platform_mac.py` / `bloons/platform_win.py` are the only OS-specific files; `bloons/platform.py` picks one. Everything else stays portable.
 - UI coordinates, costs and ranges live in `bloons/data/*.json`, never in code. Data files carry a game-version stamp.
 - Harness actions return `ActionResult(ok, reason)` and don't raise on game-side failures.
 - Use the hotkey when `RESEARCH.md` marks it as confirmed, otherwise click the UI coordinate.

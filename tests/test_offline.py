@@ -283,11 +283,10 @@ def test_hud_filter_money_income():
 
 def test_hud_ocr_live():
     """Mac only: run Vision on the committed crops and parse (skipped elsewhere)."""
-    try:
-        from bloons.platform_mac import load_png, ocr_image
-    except ImportError:
+    if sys.platform != "darwin":
         print("skip test_hud_ocr_live: not on macOS")
         return
+    from bloons.platform import load_png, ocr_image
     fix = Path(__file__).resolve().parents[1] / "bloons/data/fixtures"
     for name, field, _, truth in _hud_truth():
         raw = ocr_image(load_png(fix / f"{name}.png"))
@@ -295,6 +294,17 @@ def test_hud_ocr_live():
 
 
 FIX = Path(__file__).resolve().parents[1] / "bloons/data/fixtures"
+
+
+def test_glyph_hud_steam():
+    """Steam HUD crops read by the glyph templates (bloons/glyphs.py), and parse."""
+    import cv2
+    from bloons import glyphs
+    from bloons.hud import parse_hud
+    truth = json.loads((FIX / "win/hud_truth.json").read_text())
+    for name, text in truth.items():
+        assert glyphs.read(cv2.imread(str(FIX / "win" / name))) == text, name
+    assert parse_hud({"lives": "200", "money": "$767", "round": "4/40"}) == Hud(200, 767, 4, 40)
 
 
 def _frames():
@@ -352,7 +362,7 @@ def test_vision_match_location():
 def test_frame_bgr_mac():
     """Mac only: Quartz -> numpy conversion gives OpenCV's BGR layout (skipped elsewhere)."""
     try:
-        from bloons.platform_mac import cgimage_bgr, load_png
+        from bloons.platform import cgimage_bgr, load_png
     except ImportError:
         print("skip test_frame_bgr_mac: not on macOS")
         return

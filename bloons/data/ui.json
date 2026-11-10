@@ -1,35 +1,35 @@
 {
  "_meta": {
-  "game_version": "57.4",
-  "calibrated": "2026-11-04",
+  "game_version": "57.4 (Steam build 26122510)",
+  "calibrated": "2026-11-09",
   "coords": "normalized 0-1 over the game's content area (window minus title bar); [x0, y0, x1, y1] boxes, [x, y] points",
-  "source": "measured on windowed 1470x830 pt (2x) frames, Monkey Meadow: fixtures_full/ + live Easy Sandbox (step 3.1)"
+  "source": "Steam BTD6 on Windows, full screen 1920x1080 client. Only 'hud' is re-measured so far; every other section is still the Mac values (ui.mac.json) until step A4 finishes."
  },
  "window": {
   "expected_pt": [
-   1470,
-   830
+   1920,
+   1080
   ],
-  "title_bar_pt": 33
+  "title_bar_pt": 0
  },
  "hud": {
   "lives": [
-   0.085,
-   0.0113,
-   0.1361,
-   0.064
+   0.0667,
+   0.0111,
+   0.125,
+   0.0648
   ],
   "money": [
-   0.1905,
-   0.0113,
-   0.3027,
-   0.064
+   0.175,
+   0.0111,
+   0.2917,
+   0.0648
   ],
   "round": [
-   0.7143,
-   0.0238,
-   0.8041,
-   0.069
+   0.7448,
+   0.0315,
+   0.8156,
+   0.0704
   ]
  },
  "buttons": {

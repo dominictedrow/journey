@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from bloons.hud import HudFilter, parse_hud  # noqa: E402
-from bloons.platform_mac import Game  # noqa: E402
+from bloons.platform import Game  # noqa: E402
 from bloons.state import RoundTracker, read_screen  # noqa: E402
 from bloons.vision import SPEC  # noqa: E402
 

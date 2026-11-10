@@ -66,7 +66,7 @@ def crop_px(full_bgr, frame, box):
 
 def classify(g, x, y, base, base_frame):
     import Quartz as Q
-    from bloons.platform_mac import cgimage_bgr
+    from bloons.platform import cgimage_bgr
     f = g.grab()
     if f is None:
         raise RuntimeError("capture failed (screen locked or game window off screen?)")
@@ -79,7 +79,7 @@ def classify(g, x, y, base, base_frame):
 
 
 def sweep(g, grid, key, log_every=200):
-    from bloons.platform_mac import cgimage_bgr
+    from bloons.platform import cgimage_bgr
     g.move(0.92, 0.5)
     time.sleep(0.3)
     base_frame = g.grab()
@@ -253,7 +253,7 @@ def record_path(g, start="sandbox", max_s=PATH_MAX_S, log_every=5.0):
 
 
 def path_cmd(a):
-    from bloons.platform_mac import Game
+    from bloons.platform import Game
     data = load_map(a.map)
     g = Game()
     rec = record_path(g, a.start, a.max_s)
@@ -401,7 +401,7 @@ def main(argv=None):
     if a.cmd in cmds:
         return cmds[a.cmd](a)
 
-    from bloons.platform_mac import Game
+    from bloons.platform import Game
     g = Game()
     w, h = g.bounds[2], g.bounds[3] - g.title_bar_pt
     grid = Grid.over(a.box, a.step, round(a.step * w / h, 5))
