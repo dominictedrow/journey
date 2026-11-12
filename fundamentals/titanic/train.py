@@ -5,17 +5,6 @@ import numpy as np
 from sklearn.datasets import fetch_openml
 
 
-boat = (fetch_openml(name = 'titanic', version = 1))
-x = pd.DataFrame(boat.data)
-y = pd.DataFrame(boat.target)
-x.drop(columns=['name', 'home.dest', ], inplace = True)
-
-print(x['cabin'].value_counts())
-print(x['ticket'].value_counts())
-print(x['embarked'].value_counts())
-print(x['boat'].value_counts())
-
-
 def preprocess():
     #Get data
     boat = (fetch_openml(name = 'titanic', version = 1))
@@ -54,6 +43,14 @@ def preprocess():
                 filter = x['boat'] == unique_b[i]
                 x['boat'][filter] = table_b[1][i]
     
+    x_train = x_train.fillna(0)
+    x_test = x_test.fillna(0)
+    
+    x_train = torch.tensor(x_train.to_numpy(), dtype=torch.float32)
+    x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32)
+    y_train = torch.tensor(y_train.to_numpy(), dtype=torch.float32)
+    y_test = torch.tensor(y_test.to_numpy(), dtype=torch.float32)
+    
     #Normalize values
     m, v = x.mean(dim=0), x.std(dim=0)
     x_train = (x_train - m)/v
@@ -78,6 +75,26 @@ class titanic(nn.Module):
         z = torch.sigmoid(z)
         return z
 
+
+model = titanic()
+def train():
+    x_train, y_train, x_test, y_test = preprocess()
+    model.init_params()
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    for epoch in range(100):
+        optimizer.zero_grad()
+        y_pred = model(x_train)
+        loss = criterion(y_pred, y_train)
+        loss.backward()
+        optimizer.step()
+    #Evaluate the model
+    with torch.no_grad():
+        y_pred_test = model(x_test)
+        loss_test = criterion(y_pred_test, y_test)
+        print(f"Test Loss: {loss_test.item()}")
+
+train()
 
 
 
