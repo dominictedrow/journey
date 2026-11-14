@@ -53,3 +53,5 @@ def test_xp_screen():
     assert xp.read(img("xp_bomb_3.jpg")) == xp.XpScreen(935, (1, 1, 1), ("poor", "afford", "afford"))
     assert xp.read(img("xp_bomb_4.jpg")) == xp.XpScreen(285, (1, 2, 1), ("poor",) * 3)
     assert xp.unlock_cost(img("xp_bomb_4.jpg")) == 2700
+    # maxed tower: darker blue rings; unlocked tier 5s are gold (resolve_tier5 settles them)
+    assert xp.read(img("xp_boomerang_max.png")) == xp.XpScreen(1552619, (4, 4, 4), ("tier5",) * 3)

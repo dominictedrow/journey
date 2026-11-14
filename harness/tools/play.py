@@ -277,14 +277,14 @@ class Play(cmd.Cmd):
 
     # --- games ------------------------------------------------------------------------------
     def do_new(self, line):
-        """new [map] [easy|medium|hard] [standard|sandbox] [overwrite]: start a game from
+        """new [map] [easy|medium|hard] [standard|sandbox|magic_only|deflation] [overwrite]: start a game from
         anywhere (defaults: the current ones). Without 'overwrite' a saved game is kept and
         the result is 'save_exists'."""
         a = [x.lower() for x in self.args(line)]
         overwrite = "overwrite" in a
         a = [x for x in a if x != "overwrite"]
         diff = next((x for x in a if x in ("easy", "medium", "hard")), None)
-        mode = next((x for x in a if x in ("standard", "sandbox")), None)
+        mode = next((x for x in a if x in ("standard", "sandbox", "magic_only", "deflation")), None)
         rest = [x for x in a if x not in (diff, mode)]
         maps = [p.stem for p in (Path(__file__).resolve().parents[1] / "bloons/data/maps").glob("*.json")
                 if "." not in p.stem and not p.name.startswith("._")]      # not <map>.spots / .bg

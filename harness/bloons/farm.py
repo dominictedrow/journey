@@ -20,6 +20,18 @@ MIN_COVER = 3              # a spot must see at least this many path samples
 DEFENSE_TIERS = 3          # defence towers' tier budget at first (+1 each time lives drop, up to 7):
                            # cash in the defence is XP the targets don't get
 DEFENSE_START, DEFENSE_MAX = 2, 4    # defence towers of each kind: at first, and at most
+DEFENSE_SHARE = 0.5        # the defence goes first only while it holds <= this share of the cash
+                           # invested (or right after a life is lost); the rest is target XP
+# The defence also grows with the round (MOABs from round 40 leak in one go, so waiting for
+# lives to drop is too late): tiers 3 + round // 8, count DEFENSE_START + round // 20.
+# Upgrade order per defence kind (the path of each tier bought), anti-MOAB lines first;
+# other kinds take the cheapest unlocked tier.
+DEFENSE_PATHS = {
+    "bomb_shooter": (1, 1, 1, 1, 0, 0, 1),        # Faster Reload .. MOAB Assassin, + Bigger Bombs
+    "boomerang_monkey": (0, 0, 0, 0, 2, 2, 0),    # Glaives .. M.O.A.R. Glaives, + Long Range
+    "dart_monkey": (2, 2, 2, 2, 0, 0, 2),         # Crossbow line, + Sharp Shots
+    "tack_shooter": (0, 0, 0, 0, 2, 2, 0),
+}
 
 
 def path_samples(h):
@@ -69,6 +81,8 @@ class Spender:
         self.place_fail = {}          # kind -> consecutive placement failures
         self.defense_count = DEFENSE_START   # raised by play_game when lives drop
         self.defense_tiers = DEFENSE_TIERS
+        self.round = 0                      # set by play_game
+        self.urgent_until = -1              # defence first through this round (lives dropped)
 
     def _placed(self, kind):
         return [t for t in self.h.registry.values() if t.kind == kind]
@@ -94,17 +108,39 @@ class Spender:
                 return False
         return False
 
+    def budget(self):
+        """(tiers per defence tower, defence towers per kind) for the current round."""
+        return (min(7, max(self.defense_tiers, 3 + self.round // 8)),
+                min(DEFENSE_MAX, max(self.defense_count, DEFENSE_START + self.round // 20)))
+
+    def defense_first(self):
+        spent = {k: 0 for k in ("d", "t")}
+        for t in self.h.registry.values():
+            if t.kind in self.defense:
+                spent["d"] += t.spent or 0
+            elif t.kind in self.targets:
+                spent["t"] += t.spent or 0
+        share = spent["d"] / max(1, spent["d"] + spent["t"])
+        return self.round <= self.urgent_until or share <= DEFENSE_SHARE
+
     def _upgrade_options(self, kinds):
         """(cost, tid, path) for the next tier of every tower of `kinds`, cheapest first.
-        Defence towers (not targets) stop at DEFENSE_TIERS tiers."""
+        Defence towers (not targets) stop at the budget's tiers and follow DEFENSE_PATHS."""
         s = self.h.guard_state()
+        tiers_cap = self.budget()[0]
         out = []
         for t in self.h.registry.values():
             if t.kind not in kinds:
                 continue
-            if t.kind not in self.targets and sum(t.tiers) >= self.defense_tiers:
-                continue
-            for p in range(3):
+            paths = range(3)
+            if t.kind not in self.targets:
+                if sum(t.tiers) >= tiers_cap:
+                    continue
+                seq = DEFENSE_PATHS.get(t.kind, ())
+                n = sum(t.tiers)
+                if n < len(seq) and (t.kind, seq[n], t.tiers[seq[n]] + 1) not in self.xp_locked                         and guards.can_upgrade(t.tid, seq[n], s).reason != "crosspath":
+                    paths = (seq[n],)
+            for p in paths:
                 if (t.kind, p, t.tiers[p] + 1) in self.xp_locked:
                     continue
                 g = guards.can_upgrade(t.tid, p, s)
@@ -139,18 +175,21 @@ class Spender:
                 if r:
                     return True
                 self.bad_spots.add((round(xy[0], 4), round(xy[1], 4)))
-        for kind in self.defense:                 # the defence: defense_count of each, in order
-            if len(self._placed(kind)) < self.defense_count and kind in h.towers:
+        count = self.budget()[1]
+        for kind in self.defense:                 # the defence: `count` of each, in order
+            if len(self._placed(kind)) < count and kind in h.towers:
                 if self._try_place(kind):
                     return True
                 if guards.can_buy_tower(kind, h.guard_state()).reason == "no_money":
                     return False
-        if self._try_upgrade(set(self.targets) | set(self.defense)):
+        if self.defense_first() and self._upgrade_options(set(self.defense)):
+            return self._try_upgrade(set(self.defense))  # (False = saving up for it)
+        if self._try_upgrade(set(self.targets)):
             return True
         for kind in self.targets:
             if self._try_place(kind):
                 return True
-        return False
+        return self._try_upgrade(set(self.defense))   # targets have nothing to buy
 
     def spend(self, max_actions=6):
         n = 0
@@ -175,9 +214,11 @@ def play_game(h, spender, log=print, timeout_s=3600, tick_s=1.0):
             if lives is not None and s.lives is not None and s.lives < lives:
                 spender.defense_count = min(DEFENSE_MAX, spender.defense_count + 1)
                 spender.defense_tiers = min(7, spender.defense_tiers + 1)
+                spender.urgent_until = (s.round or spender.round) + 1
                 log(f"lives {lives} -> {s.lives}: defence {spender.defense_count} of each, "
                     f"{spender.defense_tiers} tiers")
             lives = s.lives if s.lives is not None else lives
+            spender.round = s.round or spender.round
             spender.spend()
             if not started or (s.round_active is False and not s.round_ended):
                 r = h.start_round()
@@ -221,6 +262,7 @@ def survey(h, log=print):
     if not h.go_home():
         return out
     h._click_ui("monkeys_menu.open")
+    h.sleep(1.5)                       # the menu slides in; cards read grey until it settles
     for tab in mm["tabs"]:
         h.game.click(*mm["tabs"][tab])
         h.sleep(1.0)
@@ -240,7 +282,7 @@ def survey(h, log=print):
                 h.game.click(*mm["tabs"][tab])
                 h.sleep(1.0)
                 continue
-            s = xp.read_settled(h)
+            s = xp.resolve_tier5(h, xp.read_settled(h))
             out[kind] = {"unlocked_tower": True, "xp": s.xp, "unlocked": list(s.unlocked),
                          "next_state": list(s.next_state)}
             h._click_ui("xp_screen.back")

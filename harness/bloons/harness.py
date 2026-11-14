@@ -609,6 +609,16 @@ class BloonsHarness:
             still = self.tint(base, self.content(), x, y)
             if still != "none":
                 self.cancel_hold()
+            # Fast-forward income can hide the price drop and the new tower reads as a tint:
+            # click the spot; a panel opening means it was placed.
+            self.game.click(x, y)
+            self.sleep(self.ui["timing_s"]["after_click"])
+            side = self.panel_side(tries=2)
+            if side:
+                self.close_panel(side)
+                record_placement(ctx, kind, x, y, True)
+                return ActionResult(True, "placed", price)
+            if still != "none":
                 record_placement(ctx, kind, x, y, False)
                 return ActionResult(False, "blocked", price)
             return ActionResult(False, "unconfirmed", price)
@@ -1435,7 +1445,7 @@ class BloonsHarness:
             return ActionResult(False, "unknown_map")
         if difficulty not in ("easy", "medium", "hard"):
             return ActionResult(False, "unknown_difficulty")
-        if mode not in ("standard", "sandbox"):
+        if f"mode_{mode}" not in self.ui["menus"]:    # every mode but sandbox plays as standard
             return ActionResult(False, "unknown_mode")
         t = self.ui["timing_s"]
         r = self.go_home()
@@ -1471,7 +1481,7 @@ class BloonsHarness:
             self._click_ui("menus.sandbox_popup_ok")   # harmless on the map if it isn't there
         if map_name != self.map_name:
             self._set_map(map_name)
-        self.difficulty, self.mode = difficulty, mode
+        self.difficulty, self.mode = difficulty, ("sandbox" if mode == "sandbox" else "standard")
         self.new_episode()
         self.refresh_hud()
         return ActionResult(True, "new_game", 0, (map_name, difficulty, mode))

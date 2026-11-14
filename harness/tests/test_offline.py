@@ -2568,3 +2568,15 @@ def test_round_tracker_jump_misread_rolls_back():
                     ("game", "ff_on", 5), ("game", "idle", 5), ("game", "idle", 5)])
     assert out[2].ended_rounds == (5, 6, 7, 8)
     assert out[-1].round_ended and out[-1].ended_round == 5      # round 5's real end still fires
+
+
+def test_farm_defense_share():
+    from types import SimpleNamespace as NS
+    from bloons.farm import Spender
+    reg = {1: NS(kind="bomb_shooter", spent=600), 2: NS(kind="dart_monkey", spent=200)}
+    sp = Spender(NS(registry=reg), ["dart_monkey"], ["bomb_shooter"], log=lambda m: None)
+    assert not sp.defense_first()          # defence holds 75 % of the cash: targets first
+    reg[2].spent = 600
+    assert sp.defense_first()              # 50 %: the defence may catch up
+    reg[2].spent, sp.round, sp.urgent_until = 200, 12, 13
+    assert sp.defense_first()              # lives just dropped

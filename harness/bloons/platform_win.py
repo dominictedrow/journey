@@ -237,7 +237,12 @@ class Game:
             self.refresh()
         except GameNotFound:
             return None
-        img = self._print_window()
+        try:
+            img = self._print_window()
+        except win32ui.error as e:              # the window died mid-capture (game crashed)
+            if not win32gui.IsWindow(self.hwnd):
+                raise GameNotFound("Game window disappeared mid-capture.") from e
+            img = None
         if img is None or img.max() < 8:
             img = self._screen_grab()
         return None if img is None else Frame(img, time.monotonic())

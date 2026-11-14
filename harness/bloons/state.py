@@ -21,6 +21,7 @@ SCREENS = (
     ("unlock_monkey", ("unlock_monkey",)),
     ("popup_ok", ("popup_ok",)),
     ("xp_screen", ("xp_screen",)),
+    ("xp_screen", ("xp_pill",)),         # fully unlocked towers have no Unlock All button
     ("restart_confirm", ("restart_confirm",)),
     ("overwrite_save", ("overwrite_save",)),
     ("victory_rewards", ("victory_rewards",)),

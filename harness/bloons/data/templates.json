@@ -242,6 +242,16 @@
     0.9926
    ],
    "threshold": 0.8
+  },
+  "xp_pill": {
+   "src": "xp_boomerang_max.png",
+   "box": [
+    0.526,
+    0.014,
+    0.566,
+    0.056
+   ],
+   "threshold": 0.8
   }
  },
  "probes": {

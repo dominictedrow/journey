@@ -24,9 +24,10 @@ Steps:
 Handoffs are append-only. Never edit an old one.
 
 ## Project rules
-- The harness runs in Python on the **Mac** (BTD6+) or on **Windows** (Steam BTD6). Offline tests (`tests/test_offline.py`) run on both.
-- `bloons/platform_mac.py` / `bloons/platform_win.py` are the only OS-specific files; `bloons/platform.py` picks one. Everything else stays portable.
-- UI coordinates, costs and ranges live in `bloons/data/*.json`, never in code. Data files carry a game-version stamp.
+- Layout: everything that drives the game (the `bloons` package, `tools/`, `scripts/`, `tests/`, `logs/`) lives in `harness/`. Dom's model code goes in `models/`. Run harness commands from `harness/` (the `logs/*.sh` scripts call `python tools/drive.py`).
+- The harness runs in Python on the **Mac** (BTD6+) or on **Windows** (Steam BTD6). Offline tests (`harness/tests/test_offline.py`) run on both.
+- `harness/bloons/platform_mac.py` / `platform_win.py` are the only OS-specific files; `platform.py` picks one. Everything else stays portable.
+- UI coordinates, costs and ranges live in `harness/bloons/data/*.json`, never in code. Data files carry a game-version stamp.
 - Harness actions return `ActionResult(ok, reason)` and don't raise on game-side failures.
 - Use the hotkey when `RESEARCH.md` marks it as confirmed, otherwise click the UI coordinate.
 - No game modding or memory reading. Pixels and synthetic input only.

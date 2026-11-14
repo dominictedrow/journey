@@ -37,6 +37,7 @@ RING_PX = (80, 150)           # at 2x: past most sprites, inside the smallest ci
 RED_SHIFT_MIN = 40            # median d(R - G) in the ring: blocked 86-103, ok -3..3
 OUTLINE_RED_RATIO = 0.6       # new red / new white: ok <= 0.21, blocked >= 1.3
 OUTLINE_MIN = 0.005           # new red + white fraction below this = no tower drawn
+RING_VISIBLE_MIN = 30         # median |d(BGR)| in the ring: circle drawn (Ninja ok: 63) vs hidden by trees (~0)
 
 
 def is_pure_red(bgr):
@@ -72,13 +73,18 @@ def held_tint(held, base, centre=None):
     white = float((is_white(held) & ~is_white(base)).mean())
     if red + white < OUTLINE_MIN:
         return "none"
-    if red > OUTLINE_RED_RATIO * white:
-        return "blocked"
     m = ring_mask(held.shape, centre)
+    shift = mag = 0.0
     if m.any():
         d = held.astype(np.int16)[m] - base.astype(np.int16)[m]
-        if np.median(d[:, 2] - d[:, 1]) >= RED_SHIFT_MIN:
-            return "blocked"
+        shift = float(np.median(d[:, 2] - d[:, 1]))
+        mag = float(np.median(np.abs(d).sum(1)))
+    if shift >= RED_SHIFT_MIN:
+        return "blocked"
+    if mag >= RING_VISIBLE_MIN:      # a grey circle is drawn: ok, even for red sprites (Ninja)
+        return "ok"
+    if red > OUTLINE_RED_RATIO * white:
+        return "blocked"
     return "ok"
 
 

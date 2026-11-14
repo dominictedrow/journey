@@ -52,7 +52,7 @@ def spend_xp(h, kinds):
             log(f"xp: couldn't open {kind}'s upgrade screen")
             continue
         out[kind] = xp.unlock_all_affordable(h, log=lambda m, k=kind: log(f"xp {k}: {m}"))
-        out[kind + "_state"] = xp.read(h.content()).__dict__
+        out[kind + "_state"] = xp.resolve_tier5(h, xp.read_settled(h)).__dict__
         h._click_ui("xp_screen.back")
     return out
 
@@ -71,16 +71,25 @@ def open_xp_screen(h, kind):
     return h.screen_kind() == "xp_screen"
 
 
-def plan(h, a):
-    """Survey the account (logs/xp_progress.json) and pick targets / defence."""
+def tiers_left(progress, kind):
+    """Tiers still locked (0 = fully unlocked, its XP is useless)."""
+    return 15 - sum(progress[kind].get("unlocked", []))
+
+
+def plan(h, a, duds=()):
+    """Survey the account (logs/xp_progress.json) and pick targets / defence. `duds`: targets
+    that got nothing placed in a game (skipped until the farm restarts)."""
     progress = farm.survey(h, log=log)
+    if not any(p.get("unlocked_tower") for p in progress.values()):
+        raise RuntimeError("survey saw nothing (game not on the home screen?)")
     (LOGS / "xp_progress.json").write_text(json.dumps(progress, indent=1))
     done = {k: sum(p.get("unlocked", [])) for k, p in progress.items() if p.get("unlocked_tower")}
     defense = ([t for t in a.defense.split(",") if t] if a.defense != "auto" else
-               [k for k, _ in sorted(done.items(), key=lambda kv: -kv[1])
-                if farm.placeable_here(h, k)][:2])
+               [k for k, _ in sorted(done.items(), key=lambda kv: -kv[1])   # strongest towers that
+                if tiers_left(progress, k) and farm.placeable_here(h, k)][:2])  # still need XP: maxed
+                                                                             # ones would waste it
     targets = ([t for t in a.targets.split(",") if t] if a.targets != "auto" else
-               farm.choose_targets(h, progress, n=2, exclude=defense))
+               farm.choose_targets(h, progress, n=3, exclude=list(defense) + list(duds)))
     log(f"plan: targets {targets}, defence {defense}; tiers unlocked {done}")
     return targets, defense
 
@@ -91,6 +100,8 @@ def recover(h, fails):
             log("window gone: relaunching through Steam")
             h.game.relaunch()
             h.sleep(30)
+            h.game.click(0.5, 0.9)       # title screen START (ui-free: only seen after a launch)
+            h.sleep(10)
         if leave_game(h):
             return 0
     except Exception:
@@ -121,12 +132,17 @@ def main(argv=None):
     targets = [t for t in a.targets.split(",") if t and t != "auto"]
     defense = [t for t in a.defense.split(",") if t and t != "auto"]
     fails = 0
+    duds, replan = set(), False
     for n in range(a.games):
-        if (a.targets == "auto" or a.defense == "auto") and n % a.survey_every == 0:
+        if (a.targets == "auto" or a.defense == "auto") and (n % a.survey_every == 0 or replan):
+            replan = False
             try:
-                targets, defense = plan(h, a)
+                targets, defense = plan(h, a, duds)
             except Exception:
                 log("plan: " + traceback.format_exc(limit=3))
+                fails = recover(h, fails)
+                replan = True
+                continue
             if not targets:
                 log("nothing left to farm on this map: done")
                 break
@@ -140,6 +156,12 @@ def main(argv=None):
             rec["outcome"] = farm.play_game(h, sp, log=log)
             rec["round"] = h.observe().round
             rec["towers"] = [(t.kind, t.tiers, t.spent) for t in h.registry.values()]
+            placed = {k for k, _, _ in rec["towers"]}
+            new_duds = [k for k in targets if k not in placed] if (rec["round"] or 0) >= 10 else []
+            if new_duds and a.targets == "auto":
+                log(f"targets never placed: {new_duds}: replanning without them")
+                duds.update(new_duds)
+                replan = True
             leave_game(h)
             rec["xp"] = spend_xp(h, list(dict.fromkeys(targets + defense)))
             fails = 0

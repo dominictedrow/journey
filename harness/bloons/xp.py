@@ -19,13 +19,13 @@ X = UI.get("xp_screen", {})
 
 def ring_class(hsv_px):
     h, s, v = hsv_px
-    if s >= 180 and v >= 150 and 92 <= h <= 110:
+    if s >= 150 and v >= 40 and 92 <= h <= 118:     # bright, or darker on some screens (H 111-114, V 50-110)
         return "blue"
     if s >= 180 and v >= 150 and (h <= 10 or h >= 170):
         return "red"
     if s >= 150 and v >= 130 and 35 <= h <= 85:
         return "green"
-    if s >= 230 and v >= 215 and 15 <= h <= 30:
+    if s >= 150 and v >= 190 and 12 <= h <= 32:      # paler on some icons (MOAB Domination)
         return "gold"                   # tier 5 once tier 4 is unlocked (affordable or not)
     return "dull"
 
@@ -68,9 +68,9 @@ def read(img):
     unlocked, nxt = [], []
     for row in range(3):
         states = [icon_state(img, c, row) for c in range(5)]
-        n = 0
-        while n < 5 and states[n] == "blue":
-            n += 1
+        # tiers unlock in order: up to the last blue ring (icon art can hide a ring), and a
+        # gold tier 5 means tier 4 is done
+        n = max([c + 1 for c in range(5) if states[c] == "blue"] + [4 if states[4] == "gold" else 0])
         unlocked.append(n)
         nxt.append(None if n == 5 else {"green": "afford", "red": "poor", "gold": "tier5"}.get(states[n]))
     return XpScreen(read_number(glyphs.read(_crop(img, X["xp"]), "bright")), tuple(unlocked), tuple(nxt))
@@ -112,7 +112,20 @@ def unlock_next(h, path):
     h.game.click(*X["unlock_button"])
     h.sleep(1.0)
     after = read_settled(h)
-    return after.unlocked[path] == tier + 1, cost
+    spent = before.xp is not None and after.xp is not None and after.xp < before.xp
+    return after.unlocked[path] == tier + 1 or spent, cost   # an unlocked tier 5 stays gold
+
+
+def resolve_tier5(h, s):
+    """A gold tier 5 looks the same unlocked or not: select it; no 'unlock for N XP' price
+    means it's unlocked. -> XpScreen with those paths counted as 5."""
+    unlocked, nxt = list(s.unlocked), list(s.next_state)
+    for p in range(3):
+        if nxt[p] == "tier5":
+            select(h, p, 4)
+            if not unlock_cost(h.content()):
+                unlocked[p], nxt[p] = 5, None
+    return XpScreen(s.xp, tuple(unlocked), tuple(nxt))
 
 
 def unlock_all_affordable(h, log=print, max_steps=20):
