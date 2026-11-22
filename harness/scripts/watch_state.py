@@ -1,7 +1,7 @@
 """Live check for step 1.5: watch a game and log what state.py / hud.py see. Sends NO input,
 so Dom can play by hand (or a scripted run can drive) while this runs alongside.
 
-    .venv/bin/python scripts/watch_state.py OUT_DIR [--hz 4]
+    .venv/bin/python scripts/watch_state.py OUT_DIR [--hz 4] [--platform mac|win]
 
 RoundTracker handles Auto Start on or off by itself.
 
@@ -18,6 +18,8 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from bloons import cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 from bloons.hud import HudFilter, parse_hud  # noqa: E402
 from bloons.platform import Game  # noqa: E402
 from bloons.state import RoundTracker, read_screen  # noqa: E402
@@ -34,6 +36,7 @@ def main():
     args = [a for a in argv if not a.startswith("--")]
     out = Path(args[0] if args else "watch_out")
     out.mkdir(parents=True, exist_ok=True)
+    print(cli.describe(), flush=True)
     g, hf, rt = Game(), HudFilter(), RoundTracker()
     kinds, buttons, min_hit = Counter(), Counter(), {}
     last_key, n = None, 0

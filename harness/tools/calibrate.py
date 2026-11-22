@@ -44,12 +44,13 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from bloons import calib, cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 from bloons.placement import (Grid, Mask, PathKeepout, SpotMemory, tint_at,  # noqa: E402
                               load_masks, unit_norm)
 from bloons.ui import UI                                       # noqa: E402
 
-MAPS = ROOT / "bloons/data/maps"
 MAP_BOX = [0.03, 0.0, 0.84, 1.0]     # between the wooden left border (the cursor there drops a held tower) and the shop
 SETTLE_S = 0.05                      # tint follows the cursor within ~20 ms
 
@@ -96,11 +97,11 @@ def sweep(g, grid, key, log_every=200):
 
 
 def load_map(name):
-    return json.loads((MAPS / f"{name}.json").read_text())
+    return json.loads(calib.path(f"maps/{name}.json").read_text())
 
 
 def save_map(name, data):
-    (MAPS / f"{name}.json").write_text(json.dumps(data, indent=1) + "\n")
+    calib.path(f"maps/{name}.json", write=True).write_text(json.dumps(data, indent=1) + "\n")
 
 
 def title_bar_px(img):
@@ -168,7 +169,7 @@ def keepout(a):
 
 def spots(a):
     data = load_map(a.map)
-    path = MAPS / f"{a.map}.spots.json"
+    path = calib.path(f"maps/{a.map}.spots.json", write=True)
     masks = load_masks(data)
     mem = SpotMemory.load(path, cell=(next(iter(masks.values())).grid.dx, next(iter(masks.values())).grid.dy))
     mem.meta.update({"map": a.map, "game_version": UI["_meta"]["game_version"]})
@@ -276,7 +277,7 @@ def path_cmd(a):
     data["_meta"]["path"] = ("entry -> exit centre line + track half-width (keep-out); band = cells bloons "
                              "covered, for display (bloons/pathmap.py)")
     save_map(a.map, data)
-    print(f"wrote {MAPS / (a.map + '.json')}")
+    print(f"wrote {calib.path(f'maps/{a.map}.json', write=True)}")
 
 
 def path_edit(a):
@@ -349,6 +350,7 @@ def path_edit(a):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
+    cli.add_argument(ap)
     sub = ap.add_subparsers(dest="cmd", required=True)
     m = sub.add_parser("mask")
     m.add_argument("map")
@@ -393,7 +395,7 @@ def main(argv=None):
     counts = {k: int((labels == k).sum()) for k in ("ok", "blocked", "none")}
     print(f"done in {time.monotonic() - t0:.0f} s: {counts}")
 
-    out = Path(a.out) if a.out else ROOT / "bloons/data/maps" / f"{a.map}.json"
+    out = Path(a.out) if a.out else calib.path(f"maps/{a.map}.json", write=True)
     data = json.loads(out.read_text()) if out.exists() else {"_meta": {}, "masks": {}}
     data["_meta"].update({"map": a.map, "game_version": UI["_meta"]["game_version"],
                           "window_pt": UI["window"]["expected_pt"],

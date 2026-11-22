@@ -22,17 +22,20 @@ import cv2
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from bloons import calib, cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 from bloons import detect   # noqa: E402
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    cli.add_argument(ap)
     ap.add_argument("map")
     ap.add_argument("--from", dest="src", help="glob of saved content frames instead of the live game")
     ap.add_argument("-n", type=int, default=8)
     a = ap.parse_args(argv)
-    map_json = json.loads((ROOT / f"bloons/data/maps/{a.map}.json").read_text())
+    map_json = json.loads(calib.path(f"maps/{a.map}.json").read_text())
     if a.src:
         files = sorted(glob.glob(a.src))
         frames, source = [cv2.imread(f) for f in files], f"{len(files)} saved frames ({a.src})"

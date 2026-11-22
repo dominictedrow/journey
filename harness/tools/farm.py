@@ -17,6 +17,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from bloons import cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 from bloons import farm, xp  # noqa: E402
 from bloons.harness import BloonsHarness  # noqa: E402
@@ -119,6 +121,7 @@ def recover(h, fails):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
+    cli.add_argument(ap)
     ap.add_argument("--map", default="monkey_meadow")
     ap.add_argument("--difficulty", default="easy")
     ap.add_argument("--hero", default="quincy")
@@ -127,6 +130,7 @@ def main(argv=None):
     ap.add_argument("--survey-every", type=int, default=5)
     ap.add_argument("--games", type=int, default=10 ** 6)
     a = ap.parse_args(argv)
+    log(cli.describe())
     LOGS.mkdir(exist_ok=True)
     h = BloonsHarness(Game(), a.map, difficulty=a.difficulty, hero=a.hero)
     targets = [t for t in a.targets.split(",") if t and t != "auto"]

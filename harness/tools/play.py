@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from bloons import cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 from bloons.harness import HERO_TID, BloonsHarness, load_data   # noqa: E402
 
@@ -324,6 +326,7 @@ class Play(cmd.Cmd):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    cli.add_argument(ap)
     ap.add_argument("--map", default="monkey_meadow")
     ap.add_argument("--difficulty", default="easy", choices=("easy", "medium", "hard"))
     ap.add_argument("--mode", default="standard", choices=("standard", "sandbox"))
@@ -336,6 +339,7 @@ def main(argv=None):
     except UsageError as e:
         ap.error(f"--hero: {e}")
     from bloons.platform import Game
+    print(cli.describe(), flush=True)
     g = Game()
     h = BloonsHarness(g, a.map, a.difficulty, hero=hero, account=not a.no_account, spots_path=a.spots,
                       mode=a.mode)
