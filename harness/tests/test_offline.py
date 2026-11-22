@@ -2580,3 +2580,37 @@ def test_farm_defense_share():
     assert sp.defense_first()              # 50 %: the defence may catch up
     reg[2].spent, sp.round, sp.urgent_until = 200, 12, 13
     assert sp.defense_first()              # lives just dropped
+
+
+def test_env_actions_and_dispatch(tmp_path):
+    from types import SimpleNamespace
+    from bloons.env import ACTIONS, Bot
+    bot = Bot("monkey_meadow", game=FakeGame(), hero="quincy", sleep=lambda s: None, spots_path=tmp_path / "s.json")
+    h = bot.h
+    h.refresh_hud()                                     # $650
+    tid = h.register("dart_monkey", (0.5, 0.5), 170)
+    bot.last = SimpleNamespace(placeable=h.placeable_masks())
+    acts = bot.actions()
+    assert list(acts) == ACTIONS and len(set(ACTIONS)) == len(ACTIONS)
+    assert acts["start_round"] and acts["upgrade 0 0"] and acts["sell 0"] and not acts["sell 1"]
+    assert not acts["sell hero"] and not acts["upgrade 1 0"]
+    assert any(acts[f"place dart_monkey {i} {j}"] for i in range(24) for j in range(16))
+    assert not any(v for n, v in acts.items() if n.startswith("place super_monkey"))   # too expensive
+    assert any(v for n, v in acts.items() if n.startswith("hero "))
+    assert h.slots[0] == tid
+    assert bot.act("sell 5").reason == "no_tower" and bot.act("upgrade 5 1").reason == "no_tower"
+    assert bot.act(ACTIONS.index("sell hero")).reason == "no_hero"
+
+
+def test_env_reward():
+    from types import SimpleNamespace as S
+    from bloons.env import Bot
+    bot = Bot.__new__(Bot)
+    bot.lives0 = None
+    st = lambda lives, ended=False, outcome=None: S(lives=lives, round_ended=ended, outcome=outcome)  # noqa: E731
+    seq = [(None, st(150), 0), (st(150), st(150, True), 3), (st(150), st(140), 0),
+           (st(140), st(140, True), -10), (st(140), st(140, True), 3),
+           (st(140), st(0, outcome="loss"), -11), (st(0, outcome="loss"), st(0, outcome="loss"), 0),
+           (st(0, outcome="loss"), st(140), 0), (st(140), st(140, outcome="win"), 3)]
+    for prev, s, want in seq:
+        assert bot._reward(prev, s) == want, (s, want)

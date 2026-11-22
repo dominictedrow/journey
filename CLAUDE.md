@@ -23,8 +23,23 @@ Steps:
 
 Handoffs are append-only. Never edit an old one.
 
+### On "pop farm"
+When Dom says "pop farm", set up the round-76 infinite-pop farm and leave it running:
+1. Open the pool/beach map save that sits just before round 76. BTD6 only saves at round end.
+2. Sell every tower on the map.
+3. Place these towers and upgrade each one to the tiers shown. Positions are screen pixels at 1920x1080. The reference screenshot is `docs/pop-farm-r76.png`.
+   | Tower | Tiers | Position |
+   |---|---|---|
+   | Glue Gunner | 0-4-2 | ~(1430, 45), top edge next to the round counter |
+   | Heli Pilot | 0-3-0 | helipad at ~(820, 245) |
+   | Monkey Village | 4-1-0 | ~(180, 600), far left |
+   | Alchemist | 4-2-0 | ~(200, 680), under the village, behind the palm tree |
+   | Dart Monkey | 0-2-5 | ~(340, 740), bottom-left corner of the track |
+4. Start round 76 and let it run. Don't stop it until Dom says stop or stops it himself. `harness/logs/STOP` still counts as stop.
+
 ## Project rules
 - Layout: everything that drives the game (the `bloons` package, `tools/`, `scripts/`, `tests/`, `logs/`) lives in `harness/`. Dom's model code goes in `models/`. Run harness commands from `harness/` (the `logs/*.sh` scripts call `python tools/drive.py`).
+- `models/` is Dom's to write. Don't give him model code: no networks, training loops, agent logic, or snippets of them, not even as fixes. Point out bugs and explain them in words. Code is fine only for the harness side: `harness/`, the `bloons.env` API, and how to call it.
 - The harness runs in Python on the **Mac** (BTD6+) or on **Windows** (Steam BTD6). Offline tests (`harness/tests/test_offline.py`) run on both.
 - `harness/bloons/platform_mac.py` / `platform_win.py` are the only OS-specific files; `platform.py` picks one. Everything else stays portable.
 - UI coordinates, costs and ranges live in `harness/bloons/data/*.json`, never in code. Data files carry a game-version stamp.

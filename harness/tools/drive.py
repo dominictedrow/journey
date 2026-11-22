@@ -66,6 +66,8 @@ def serve(argv):
                 if h.screen_kind() in ("defeat", "victory"):
                     self.say("game over: " + h.screen_kind())
                     return
+                if getattr(h, "on_wait", None):   # e.g. banana pickup while saving up
+                    h.on_wait()
                 time.sleep(2)
             self.say("timeout/stop")
 

@@ -13,7 +13,7 @@
  "heroes": ["admiral_brickell", "adora", "benjamin", "captain_churchill", "corvus", "dan_dmonke", "etienne", "ezili", "geraldo", "gwendolin", "obyn_greenfoot", "pat_fusty", "psi", "quincy", "rosalia", "sauda", "silas", "striker_jones"],
  "bloon_types": ["red", "blue", "green", "yellow", "pink", "black", "white", "purple", "zebra", "lead", "rainbow", "ceramic", "moab", "bfb", "zomg", "ddt", "bad"],
  "targeting": ["default", "first", "last", "close", "strong", "other"],
- "tower_slots": 20,
+ "tower_slots": 30,
  "ability_slots": 8,
  "scale": {
   "money": 100000,
