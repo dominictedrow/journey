@@ -1,0 +1,364 @@
+{
+ "_meta": {
+  "game_version": "57.4",
+  "calibrated": "2026-11-09",
+  "work_width": 735,
+  "margin": 0.02,
+  "how": "boxes are normalized [x0, y0, x1, y1] over the content area, same as ui.json. Template PNGs in data/templates/ are cut from fixtures_full/steam/<src> (Steam; Mac: templates.mac.json + fixtures_full/<src>) at work_width by scripts/make_templates.py. Matching is TM_CCOEFF_NORMED in BGR within the box grown by margin, or within 'search' if given. Thresholds come from the score table in RESEARCH.md (step 1.4)."
+ },
+ "templates": {
+  "btn_play": {
+   "src": "idle_play.png",
+   "box": [
+    0.9281,
+    0.8944,
+    0.9792,
+    0.9907
+   ],
+   "threshold": 0.8
+  },
+  "btn_ff": {
+   "src": "running_a.png",
+   "box": [
+    0.9281,
+    0.8944,
+    0.9792,
+    0.9907
+   ],
+   "threshold": 0.8
+  },
+  "victory_banner": {
+   "src": "victory.png",
+   "box": [
+    0.32882,
+    0.105,
+    0.67118,
+    0.205
+   ],
+   "threshold": 0.8
+  },
+  "victory_next": {
+   "src": "victory.png",
+   "box": [
+    0.44294,
+    0.8,
+    0.55706,
+    0.88
+   ],
+   "threshold": 0.8
+  },
+  "defeat_title": {
+   "src": "defeat.png",
+   "box": [
+    0.38588,
+    0.265,
+    0.61412,
+    0.36
+   ],
+   "threshold": 0.8
+  },
+  "defeat_buttons": {
+   "src": "defeat.png",
+   "box": [
+    0.2925,
+    0.69,
+    0.71787,
+    0.85
+   ],
+   "threshold": 0.8
+  },
+  "pause_title": {
+   "src": "pause_menu.png",
+   "box": [
+    0.4479,
+    0.0046,
+    0.5521,
+    0.0574
+   ],
+   "threshold": 0.8
+  },
+  "pause_buttons": {
+   "src": "pause_menu.png",
+   "box": [
+    0.2865,
+    0.7176,
+    0.7188,
+    0.8796
+   ],
+   "threshold": 0.8
+  },
+  "restart_confirm": {
+   "src": "popup_restart_confirm.png",
+   "box": [
+    0.417,
+    0.345,
+    0.583,
+    0.395
+   ],
+   "threshold": 0.8
+  },
+  "collection_event": {
+   "src": "popup_collection_event.png",
+   "box": [
+    0.38069,
+    0.025,
+    0.61931,
+    0.085
+   ],
+   "threshold": 0.8
+  },
+  "collect_button": {
+   "src": "popup_collection_event.png",
+   "box": [
+    0.43775,
+    0.585,
+    0.56225,
+    0.665
+   ],
+   "threshold": 0.8
+  },
+  "sell_button": {
+   "src": "panel_right_dart.png",
+   "box": [
+    0.1365,
+    0.813,
+    0.2083,
+    0.8611
+   ],
+   "search": [
+    0.0,
+    0.76,
+    0.88,
+    0.92
+   ],
+   "threshold": 0.8
+  },
+  "menu_map_select": {
+   "src": "menu_map_select.png",
+   "box": [
+    -0.00318,
+    0.0,
+    0.04869,
+    0.185
+   ],
+   "threshold": 0.8
+  },
+  "menu_mode_standard": {
+   "src": "menu_mode_easy.png",
+   "box": [
+    0.27694,
+    0.455,
+    0.38069,
+    0.66
+   ],
+   "threshold": 0.8
+  },
+  "menu_home": {
+   "src": "menu_home.png",
+   "box": [
+    0.4585,
+    0.8,
+    0.5415,
+    0.98
+   ],
+   "threshold": 0.8
+  },
+  "menu_difficulty": {
+   "src": "menu_difficulty.png",
+   "box": [
+    0.28213,
+    0.29,
+    0.38588,
+    0.5
+   ],
+   "threshold": 0.8
+  },
+  "overwrite_save": {
+   "src": "popup_overwrite_save.png",
+   "box": [
+    0.40144,
+    0.345,
+    0.60375,
+    0.395
+   ],
+   "threshold": 0.8
+  },
+  "level_up": {
+   "src": "popup_level_up.png",
+   "box": [
+    0.4167,
+    0.4954,
+    0.5833,
+    0.5787
+   ],
+   "threshold": 0.8
+  },
+  "unlock_monkey": {
+   "src": "popup_unlock_monkey.png",
+   "box": [
+    0.401,
+    0.1352,
+    0.599,
+    0.1685
+   ],
+   "threshold": 0.8
+  },
+  "popup_ok": {
+   "src": "popup_hint.png",
+   "box": [
+    0.4427,
+    0.6685,
+    0.5573,
+    0.7352
+   ],
+   "threshold": 0.8
+  },
+  "xp_screen": {
+   "src": "xp_bomb_4.png",
+   "box": [
+    0.8438,
+    0.9167,
+    0.9844,
+    0.9833
+   ],
+   "threshold": 0.8
+  },
+  "victory_rewards": {
+   "src": "victory_after_next.png",
+   "box": [
+    0.4531,
+    0.563,
+    0.5469,
+    0.6019
+   ],
+   "threshold": 0.8
+  },
+  "monkeys_menu": {
+   "src": "menu_monkeys.png",
+   "box": [
+    0.2604,
+    0.9556,
+    0.7396,
+    0.9926
+   ],
+   "threshold": 0.8
+  },
+  "xp_pill": {
+   "src": "xp_boomerang_max.png",
+   "box": [
+    0.526,
+    0.014,
+    0.566,
+    0.056
+   ],
+   "threshold": 0.8
+  }
+ },
+ "probes": {
+  "play_button": {
+   "_notes": "Steam: arrow patch of the bottom-right button; FF on = glowing arrows (2026-11-09). idle measured from idle_play.png.",
+   "box": [
+    0.9375,
+    0.9213,
+    0.9714,
+    0.9676
+   ],
+   "classes": {
+    "idle": [
+     127.5,
+     234.4,
+     169.2
+    ],
+    "ff_off": [
+     117.1,
+     230.2,
+     160.2
+    ],
+    "ff_on": [
+     117.1,
+     242.3,
+     179.1
+    ]
+   },
+   "max_dist": 6
+  },
+  "auto_start_toggle": {
+   "_notes": "Pause-menu Auto Start knob: blue when on, dark track when off. Read >= 0.8 s after the menu opens (it zooms in). 2026-11-05, Meadow Sandbox",
+   "box": [
+    0.7021,
+    0.2741,
+    0.7104,
+    0.2926
+   ],
+   "classes": {
+    "on": [
+     250,
+     208,
+     1
+    ],
+    "off": [
+     15,
+     31,
+     54
+    ]
+   },
+   "max_dist": 40
+  },
+  "sandbox_panel": {
+   "_notes": "Sandbox only: the bottom-left toggle button is orange while the tower shop shows, blue while the bloon-send panel shows. 2026-11-05",
+   "box": [
+    0.86623,
+    0.905,
+    0.87557,
+    0.975
+   ],
+   "classes": {
+    "shop": [
+     13,
+     203,
+     255
+    ],
+    "bloons": [
+     240,
+     193,
+     20
+    ]
+   },
+   "max_dist": 50
+  },
+  "reward_bg": {
+   "_notes": "Steam: the dark purple starfield behind rank-up rewards (level up, monkey unlock, Monkey Money, ...); 2026-11-09",
+   "box": [
+    0.02,
+    0.15,
+    0.12,
+    0.3
+   ],
+   "classes": {
+    "reward": [
+     24,
+     9,
+     12
+    ]
+   },
+   "max_dist": 12
+  },
+  "letterbox": {
+   "_notes": "Steam: black bars top (and bottom) on full-screen reward splashes (a hero unlocked at rank-up); 2026-11-09",
+   "box": [
+    0.1,
+    0.0,
+    0.9,
+    0.05
+   ],
+   "classes": {
+    "black": [
+     0,
+     0,
+     0
+    ]
+   },
+   "max_dist": 6
+  }
+ }
+}

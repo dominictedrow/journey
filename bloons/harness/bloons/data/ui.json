@@ -1,0 +1,1166 @@
+{
+ "_meta": {
+  "game_version": "57.4 (Steam build 26122510)",
+  "calibrated": "2026-11-09",
+  "coords": "normalized 0-1 over the game's content area (client area on Windows); [x0, y0, x1, y1] boxes, [x, y] points",
+  "source": "Steam BTD6 on Windows, full screen 1920x1080 client. hud + shop measured on Steam (2026-11-09); everything else ported from ui.mac.json by scripts/port_mac_to_steam.py and spot-checked live."
+ },
+ "window": {
+  "expected_pt": [
+   1920,
+   1080
+  ],
+  "title_bar_pt": 0
+ },
+ "hud": {
+  "lives": [
+   0.0667,
+   0.0111,
+   0.125,
+   0.0648
+  ],
+  "money": [
+   0.175,
+   0.0111,
+   0.2917,
+   0.0648
+  ],
+  "round": [
+   0.7448,
+   0.0315,
+   0.8156,
+   0.0704
+  ]
+ },
+ "buttons": {
+  "cancel_placement": [
+   0.83386,
+   0.1066
+  ],
+  "play_ff": [
+   0.9531,
+   0.9407
+  ],
+  "pause_auto_start_toggle": [
+   0.7063,
+   0.2833
+  ],
+  "settings": [
+   0.83303,
+   0.035
+  ],
+  "powers": [
+   0.8885,
+   0.9407
+  ],
+  "_notes": "powers opens the powers list in a game; in Sandbox the same button toggles the bloon-sending panel and the tower shop. play_ff = Space (confirmed). sandbox_send_round: the green play button next to 'Set round' on the Sandbox bloon panel; it sends that round. In Sandbox neither Space nor play_ff starts a round (2026-11-05).",
+  "sandbox_send_round": [
+   0.95338,
+   0.047
+  ]
+ },
+ "timing_s": {
+  "after_tower_key": 0.5,
+  "after_click": 0.3,
+  "pause_open": 0.9,
+  "panel_toggle": 0.6,
+  "menu": 1.5,
+  "load_max": 30
+ },
+ "shop": {
+  "_notes": "Cell i of 'order' sits in row i//2, column i%2. 6 rows fit. Scroll with HID wheel events over scroll_point: after scrolling all the way up, rows 0-5 show (row r at top_row0_y + r*row_pitch); after scrolling all the way down, rows 8-13 show (row r at bottom_row13_y - (13-r)*row_pitch). Only towers without a hotkey (desperado: top layout; mermonkey, skywarden: bottom layout) need clicks.",
+  "order": [
+   "hero",
+   "dart_monkey",
+   "boomerang_monkey",
+   "bomb_shooter",
+   "tack_shooter",
+   "ice_monkey",
+   "glue_gunner",
+   "desperado",
+   "sniper_monkey",
+   "monkey_sub",
+   "monkey_buccaneer",
+   "monkey_ace",
+   "heli_pilot",
+   "mortar_monkey",
+   "dartling_gunner",
+   "wizard_monkey",
+   "super_monkey",
+   "ninja_monkey",
+   "alchemist",
+   "druid",
+   "mermonkey",
+   "skywarden",
+   "banana_farm",
+   "spike_factory",
+   "monkey_village",
+   "engineer_monkey",
+   "beast_handler"
+  ],
+  "columns_x": [
+   0.8917,
+   0.9521
+  ],
+  "row_pitch": 0.1245,
+  "cell_size": [
+   0.0563,
+   0.1185
+  ],
+  "top_row0_y": 0.2074,
+  "top_rows": [
+   0,
+   5
+  ],
+  "bottom_row13_y": 0.8148,
+  "bottom_rows": [
+   8,
+   13
+  ],
+  "selected_name": [
+   0.862,
+   0.083,
+   0.982,
+   0.125
+  ],
+  "scroll_point": [
+   0.922,
+   0.5
+  ]
+ },
+ "upgrade_panel": {
+  "_notes": "The panel opens on the side opposite the selected tower; find the side with the sell_button template. Left = right shifted by -dx in x (sell_button centres 0.7959 vs 0.1823). ability_icon is the big icon shown next to the panel when the selection has an activated ability (not a dx shift). Towers without targeting (e.g. Tack) show no targeting label. Hero panel: the path rows are replaced by hero_level / hero_level_up / hero_level_price; sell is the same. Path rows (5.3): path_button_box is the inside of each path's buy button (green = can buy, grey-blue = too expensive or MAX UPGRADES, neither = the row reads PATH CLOSED); path_pips is tier 1's pip centre per path, tier t sits pip_dy * (t-1) above it (filled pips are saturated yellow-green). Measured on Dart Monkey frames in Sandbox, 2026-11-05.",
+  "dx": 0.6366,
+  "right": {
+   "panel": [
+    0.65106,
+    0.052,
+    0.85669,
+    0.879
+   ],
+   "close": [
+    0.84341,
+    0.07
+   ],
+   "title": [
+    0.666,
+    0.055,
+    0.84237,
+    0.087
+   ],
+   "info": [
+    0.67222,
+    0.145
+   ],
+   "pops": [
+    0.74381,
+    0.095,
+    0.78531,
+    0.115
+   ],
+   "targeting_label": [
+    0.69712,
+    0.322,
+    0.81125,
+    0.376
+   ],
+   "targeting_prev": [
+    0.67948,
+    0.346
+   ],
+   "targeting_next": [
+    0.82473,
+    0.346
+   ],
+   "path_buttons": [
+    [
+     0.80606,
+     0.45
+    ],
+    [
+     0.80606,
+     0.588
+    ],
+    [
+     0.80606,
+     0.727
+    ]
+   ],
+   "path_prices": [
+    [
+     0.7702,
+     0.482,
+     0.8523,
+     0.513
+    ],
+    [
+     0.7702,
+     0.62,
+     0.8523,
+     0.652
+    ],
+    [
+     0.7702,
+     0.76,
+     0.8523,
+     0.792
+    ]
+   ],
+   "path_names": [
+    [
+     0.76767,
+     0.383,
+     0.84444,
+     0.425
+    ],
+    [
+     0.76767,
+     0.521,
+     0.84444,
+     0.563
+    ],
+    [
+     0.76767,
+     0.66,
+     0.84444,
+     0.702
+    ]
+   ],
+   "path_current": [
+    [
+     0.67118,
+     0.41,
+     0.75937,
+     0.485
+    ],
+    [
+     0.67118,
+     0.548,
+     0.75937,
+     0.623
+    ],
+    [
+     0.67118,
+     0.686,
+     0.75937,
+     0.761
+    ]
+   ],
+   "sell": [
+    0.80699,
+    0.8417
+   ],
+   "sell_value": [
+    0.67845,
+    0.822,
+    0.74692,
+    0.858
+   ],
+   "hero_level": [
+    0.7075,
+    0.395,
+    0.80087,
+    0.425
+   ],
+   "hero_level_up": [
+    0.75315,
+    0.632
+   ],
+   "hero_level_price": [
+    0.69712,
+    0.612,
+    0.81125,
+    0.652
+   ],
+   "ability_icon": [
+    0.61827,
+    0.182
+   ],
+   "path_button_box": [
+    [
+     0.77493,
+     0.4,
+     0.84237,
+     0.51
+    ],
+    [
+     0.77493,
+     0.538,
+     0.84237,
+     0.648
+    ],
+    [
+     0.77493,
+     0.676,
+     0.84237,
+     0.786
+    ]
+   ],
+   "path_pips": [
+    [
+     0.66517,
+     0.4968
+    ],
+    [
+     0.66517,
+     0.6348
+    ],
+    [
+     0.66517,
+     0.7728
+    ]
+   ]
+  },
+  "left": {
+   "panel": [
+    0.01446,
+    0.052,
+    0.22009,
+    0.879
+   ],
+   "close": [
+    0.20681,
+    0.07
+   ],
+   "title": [
+    0.0294,
+    0.055,
+    0.20577,
+    0.087
+   ],
+   "info": [
+    0.03562,
+    0.145
+   ],
+   "pops": [
+    0.10721,
+    0.095,
+    0.14871,
+    0.115
+   ],
+   "targeting_label": [
+    0.06052,
+    0.322,
+    0.17464,
+    0.376
+   ],
+   "targeting_prev": [
+    0.04288,
+    0.346
+   ],
+   "targeting_next": [
+    0.18813,
+    0.346
+   ],
+   "path_buttons": [
+    [
+     0.16946,
+     0.45
+    ],
+    [
+     0.16946,
+     0.588
+    ],
+    [
+     0.16946,
+     0.727
+    ]
+   ],
+   "path_prices": [
+    [
+     0.1336,
+     0.482,
+     0.2157,
+     0.513
+    ],
+    [
+     0.1336,
+     0.62,
+     0.2157,
+     0.652
+    ],
+    [
+     0.1336,
+     0.76,
+     0.2157,
+     0.792
+    ]
+   ],
+   "path_names": [
+    [
+     0.13107,
+     0.383,
+     0.20784,
+     0.425
+    ],
+    [
+     0.13107,
+     0.521,
+     0.20784,
+     0.563
+    ],
+    [
+     0.13107,
+     0.66,
+     0.20784,
+     0.702
+    ]
+   ],
+   "path_current": [
+    [
+     0.03458,
+     0.41,
+     0.12277,
+     0.485
+    ],
+    [
+     0.03458,
+     0.548,
+     0.12277,
+     0.623
+    ],
+    [
+     0.03458,
+     0.686,
+     0.12277,
+     0.761
+    ]
+   ],
+   "sell": [
+    0.17039,
+    0.8417
+   ],
+   "sell_value": [
+    0.04185,
+    0.822,
+    0.11032,
+    0.858
+   ],
+   "hero_level": [
+    0.0709,
+    0.395,
+    0.16427,
+    0.425
+   ],
+   "hero_level_up": [
+    0.11655,
+    0.632
+   ],
+   "hero_level_price": [
+    0.06052,
+    0.612,
+    0.17464,
+    0.652
+   ],
+   "ability_icon": [
+    0.24997,
+    0.182
+   ],
+   "path_button_box": [
+    [
+     0.13833,
+     0.4,
+     0.20577,
+     0.51
+    ],
+    [
+     0.13833,
+     0.538,
+     0.20577,
+     0.648
+    ],
+    [
+     0.13833,
+     0.676,
+     0.20577,
+     0.786
+    ]
+   ],
+   "path_pips": [
+    [
+     0.02857,
+     0.4968
+    ],
+    [
+     0.02857,
+     0.6348
+    ],
+    [
+     0.02857,
+     0.7728
+    ]
+   ]
+  },
+  "pip_dy": -0.0228
+ },
+ "ability_bar": {
+  "_notes": "Bottom-left, one icon per activated ability, left to right; the bottom of each icon is cut off by the screen edge. chevron collapses/expands the bar. With the panel open on the left the whole bar moves right by panel_left_dx. Ready = full-colour icon; after use a full orange ring appears over a darkened icon and shrinks as the cooldown runs (2026-11-05). icon_half: crop half-size around a slot point (bottom clipped at the screen edge); used_min_diff: mean |diff| of that crop that counts as 'the ability fired' (~32 seen vs ~5 frame noise). Key '1' confirmed for slot 0; others see hotkeys.ability. Cooldown ring (5.4, 2026-11-06): a red-orange annulus inside the icon (radius ~25-38 px at 2x, fully on screen) centred at (slot x, ring_y); it shrinks clockwise, so the remaining arc ends at 12 o'clock and its angle = remaining fraction. ring_radii: sample radii as a fraction of content width; ring_samples angles; an arc missing at most full_gap samples (the white tick at 12 o'clock) reads 1.0; min_frac: smaller arcs count as no ring. filter_*: abilitybar.BarFilter (a ring-less read is held while > filter_slack_s s should be left, for up to filter_confirm_s). Keys 1, 2, 3 fire slots 0, 1, 2. icon_min_v: an icon area darker than this (mean HSV V) is unreadable.",
+  "chevron": [
+   0.04247,
+   0.957
+  ],
+  "slot0": [
+   0.10368,
+   0.955
+  ],
+  "slot_pitch": 0.05187,
+  "panel_left_dx": 0.21683,
+  "icon_half": [
+   0.02594,
+   0.05
+  ],
+  "used_min_diff": 12,
+  "ring_y": 0.9625,
+  "ring_radii": [
+   0.00986,
+   0.01089,
+   0.01203
+  ],
+  "ring_samples": 72,
+  "full_gap": 3,
+  "min_frac": 0.02,
+  "filter_jump_frac": 0.15,
+  "filter_confirm_s": 2.0,
+  "icon_min_v": 40,
+  "filter_slack_s": 1.0
+ },
+ "pause": {
+  "_notes": "Steam (2026-11-09): opens with Escape (toggles; nothing selected) or the gear; it doesn't zoom like the Mac's, but wait ~0.8 s. Buttons Store / Home / Restart / Continue along y 0.778; toggles' knobs sit right when on (blue), the dark track shows there when off.",
+  "auto_start_toggle": [
+   0.7063,
+   0.2833
+  ],
+  "game_hints_toggle": [
+   0.7063,
+   0.3519
+  ],
+  "drag_drop_toggle": [
+   0.4469,
+   0.2833
+  ],
+  "hotkeys": [
+   0.1833,
+   0.4259
+  ],
+  "home": [
+   0.4406,
+   0.7778
+  ],
+  "restart": [
+   0.5573,
+   0.7778
+  ],
+  "continue": [
+   0.674,
+   0.7778
+  ],
+  "store": [
+   0.3229,
+   0.7778
+  ]
+ },
+ "menus": {
+  "home_play": [
+   0.5,
+   0.872
+  ],
+  "map_monkey_meadow": [
+   0.27953,
+   0.235
+  ],
+  "difficulty_easy": [
+   0.32622,
+   0.374
+  ],
+  "mode_standard": [
+   0.32985,
+   0.544
+  ],
+  "mode_deflation": [
+   0.667,
+   0.417
+  ],
+  "mode_magic_only": [
+   0.5,
+   0.417
+  ],
+  "mode_sandbox": [
+   0.5,
+   0.684
+  ],
+  "sandbox_popup_ok": [
+   0.5,
+   0.703
+  ],
+  "victory_next": [
+   0.5,
+   0.84
+  ],
+  "collect": [
+   0.5,
+   0.625
+  ],
+  "defeat_home": [
+   0.32529,
+   0.7474
+  ],
+  "defeat_restart": [
+   0.44107,
+   0.7474
+  ],
+  "defeat_review_map": [
+   0.55644,
+   0.7474
+  ],
+  "defeat_continue": [
+   0.67191,
+   0.7474
+  ],
+  "restart_confirm_cancel": [
+   0.40715,
+   0.677
+  ],
+  "restart_confirm_restart": [
+   0.59068,
+   0.677
+  ],
+  "difficulty_medium": [
+   0.5,
+   0.374
+  ],
+  "difficulty_hard": [
+   0.67326,
+   0.374
+  ],
+  "back": [
+   0.0396,
+   0.052
+  ],
+  "_notes": " difficulty_*: the 3 medallions on the difficulty screen (y 0.374). back: the arrow at the top left of the map-select and difficulty screens (2026-11-05). Leaving a game through pause -> Home asks nothing: a 'Loading...' screen, then home in ~4 s. overwrite_save_*: 'Overwrite save?' popup after choosing a mode when that map/difficulty has a saved game (same layout as the restart confirm); Cancel goes back to mode select.",
+  "overwrite_save_cancel": [
+   0.40663,
+   0.674
+  ],
+  "overwrite_save_ok": [
+   0.5913,
+   0.674
+  ],
+  "level_up_continue": [
+   0.5,
+   0.7037
+  ],
+  "unlock_monkey": [
+   0.499,
+   0.937
+  ],
+  "popup_ok": [
+   0.499,
+   0.7019
+  ],
+  "victory_home": [
+   0.3729,
+   0.787
+  ],
+  "victory_freeplay": [
+   0.624,
+   0.787
+  ]
+ },
+ "map_select": {
+  "_notes": "Beginner map grid: 6 thumbnails per page (2 rows x 3), slots in reading order, each with its name above (slot point + name_dy, +-name_half). Map select reopens on the LAST map's page (not the first; corrected 2026-11-05). next_page / prev_page wrap around all ~17 pages (Beginner -> ... -> Expert -> Beginner), and category_beginner isn't a reliable 'first page'. So new_game reads the names, works out the current page from any map in 'maps' it sees (page = Beginner page index), flips toward the target's page, and clicks once the name shows (forward for up to cycle_pages if no known map is in view). Names OCR only with name_half 0.105 x 0.035 (a bare 'LOGS' reads as nothing in a tighter box); results carry junk ('TREE STUMP 10'), so the match is 'contains'. A green floppy icon at a thumbnail's top-left marks a map with a saved game. Sandbox is locked on maps not yet beaten (Tree Stump): use Standard there.",
+  "next_page": [
+   0.85897,
+   0.398
+  ],
+  "prev_page": [
+   0.14103,
+   0.398
+  ],
+  "slots": [
+   [
+    0.27953,
+    0.235
+   ],
+   [
+    0.5,
+    0.235
+   ],
+   [
+    0.72047,
+    0.235
+   ],
+   [
+    0.27953,
+    0.52
+   ],
+   [
+    0.5,
+    0.52
+   ],
+   [
+    0.72047,
+    0.52
+   ]
+  ],
+  "maps": {
+   "monkey_meadow": {
+    "page": 0,
+    "slot": 0
+   },
+   "tree_stump": {
+    "page": 1,
+    "slot": 0
+   },
+   "town_center": {
+    "page": 1,
+    "slot": 1
+   },
+   "logs": {
+    "page": 4,
+    "slot": 0
+   }
+  },
+  "beginner_pages": [
+   [
+    "Monkey Meadow",
+    "In The Loop",
+    "Skulltweak",
+    "Three Mines 'Round",
+    "Spa Pits",
+    "Tinkerton"
+   ],
+   [
+    "Tree Stump",
+    "Town Center",
+    "Middle of the Road",
+    "One Two Tree",
+    "Scrapyard",
+    "The Cabin"
+   ],
+   [
+    "Resort",
+    "Skates",
+    "Lotus Island",
+    "Candy Falls",
+    "Winter Park",
+    "Carved"
+   ],
+   [
+    "Park Path",
+    "Alpine Run",
+    "Frozen Over",
+    "Cubism",
+    "Four Circles",
+    "Hedge"
+   ],
+   [
+    "Logs",
+    "End of the Road"
+   ]
+  ],
+  "category_beginner": [
+   0.29977,
+   0.915
+  ],
+  "name_dy": -0.11,
+  "name_half": [
+   0.10894,
+   0.035
+  ],
+  "cycle_pages": 20
+ },
+ "hotkeys": {
+  "_notes": "Keys confirmed in game (RESEARCH hotkey table). Tower keys are towers.json 'hotkey' (null = unbound: click the shop cell). Not listed = not confirmed: click instead (rule in RESEARCH). Ability keys 1-3 confirmed (2026-11-06); 4-0/-/= untested. 'ability': slot i's key (only confirmed ones are listed; the game's defaults are 1-0, -, =).",
+  "hero": "u",
+  "upgrade": [
+   ",",
+   ".",
+   "/"
+  ],
+  "sell": "backspace",
+  "targeting_next": "tab",
+  "play_ff": "space",
+  "pause_toggle": "escape",
+  "ability": [
+   "1",
+   "2",
+   "3"
+  ]
+ },
+ "targeting": {
+  "_notes": "Targeting label = towers.json stats.targeting mode with '_' -> ' ', upper case, unless listed in 'labels'. Tab (hotkey targeting_next) cycles forward; upgrades can add modes, so set_targeting reads the label after each press. Point modes: after choosing the mode, its label is a green button at the same spot; clicking it closes the panel and shows a 'Click to set ...' banner; then 'points' map clicks, after which the panel reopens (2026-11-05, Mortar / Heli). targeting_label boxes made 0.02 wider / 0.022 taller so two-line labels (FOLLOW MOUSE, LOCK IN PLACE) OCR.",
+  "labels": {
+   "follow_touch": "FOLLOW MOUSE",
+   "figure_infinite": "FIGURE INFINITE",
+   "target_selected_point": "SET TARGET"
+  },
+  "point_modes": {
+   "target_selected_point": 1,
+   "lock_in_place": 1,
+   "patrol_points": 2
+  },
+  "point_mode_of": {
+   "mortar_monkey": "target_selected_point",
+   "heli_pilot": "lock_in_place"
+  },
+  "max_presses": 8
+ },
+ "prompts": {
+  "_notes": "handle_prompts(): state.read_screen kind -> default click (a 'section.key' point in this file), or null = report only and leave it (outcomes: the env decides). Overridable per harness (h.prompt_actions) or per call. Pause -> Continue because the game pauses itself when it loses focus (RESEARCH 1.5). Restart confirm -> Cancel: restarting is new_game/restart's job (4.9). Steam (2026-11-09): rank-up 'LEVEL UP!' (click anywhere), the 'choose a monkey to unlock' screen (Unlock takes the pre-selected one: every monkey unlocks eventually), and info popups with one OK (game hints, tutorial tips) are cleared too.",
+  "collection_event": "menus.collect",
+  "pause": "pause.continue",
+  "restart_confirm": "menus.restart_confirm_cancel",
+  "victory": null,
+  "defeat": null,
+  "max_steps": 5,
+  "after_click_s": 1.0,
+  "level_up": "menus.level_up_continue",
+  "unlock_monkey": "menus.unlock_monkey",
+  "popup_ok": "menus.popup_ok",
+  "xp_screen": "xp_screen.back",
+  "reward": "menus.level_up_continue"
+ },
+ "range_circle": {
+  "_notes": "5.5 rangecircle.measure: lengths are fractions of content width. diff_min: per-channel change that counts; rays: angles sampled; min_r: rays start here; start_r: the disc's run must begin before this; min_run: shortest run that can be the disc; max_r: farthest edge looked for; margin: unchanged stretch that ends the disc; min_rays: fewer counted rays = unreadable. ability_icon_half: box excluded around the big ability icon next to the panel. exclude_always: UI drawn over the circle (shop column, top HUD, round + gear, ability bar, the map's left wooden border). ground_y_scale: the map is seen at a tilt, so one game unit along y is this fraction of one along x on screen (range circles are ellipses, ry/rx 0.863-0.867 on Dart / Wizard / Ice / Tack, 2026-11-06; cos 30 deg). The maps' scale.unit_norm y assumes 1.0 (step 2.5 measured widths only): ground unit = (ux, uy * ground_y_scale). edge_bias_px: added to each ray's last changed px (reads were ~1 px short); cluster_bin / cluster_keep (units): the densest bin of ray edges and the band kept around it; min_rays: fewer rays in that band = unreadable. tolerance: |measured - table| units that still counts as a match (19 live reads were within 0.07); settle_s: wait after selecting before the grab.",
+  "diff_min": 10,
+  "rays": 180,
+  "min_r": 0.0083,
+  "max_r": 0.46687,
+  "margin": 0.00415,
+  "min_rays": 15,
+  "ability_icon_half": [
+   0.03631,
+   0.06
+  ],
+  "exclude_always": [
+   [
+    0.85482,
+    0.0,
+    1.01874,
+    1.0
+   ],
+   [
+    -0.01874,
+    0.0,
+    0.35475,
+    0.085
+   ],
+   [
+    0.7075,
+    0.0,
+    0.85482,
+    0.085
+   ],
+   [
+    -0.01874,
+    0.9,
+    0.39625,
+    1.0
+   ],
+   [
+    -0.01874,
+    0.0,
+    0.01238,
+    1.0
+   ]
+  ],
+  "start_r": 0.0415,
+  "ground_y_scale": 0.866,
+  "min_run": 0.01037,
+  "edge_bias_px": 1,
+  "cluster_bin": 0.5,
+  "cluster_keep": 1.0,
+  "tolerance": 1.0,
+  "settle_s": 0.4
+ },
+ "xp_screen": {
+  "_notes": "Steam: a tower's upgrade-unlock screen (Monkeys menu -> tower, or a locked path in game). 3 paths x 5 tiers of icons; an icon's ring colour: blue = unlocked, bright green = next and affordable, red = next but too few XP, dull = not reachable yet, beige = tier 5 not reachable. Clicking an icon selects it; the unlock button shows 'UNLOCK FOR: N XP' for the selection. 2026-11-09, Bomb Shooter. Selecting an icon can pop a description tooltip over the top row that also eats the next click: a click on empty background (dismiss) closes it and keeps the selection.",
+  "cols_x": [
+   0.325,
+   0.4292,
+   0.5365,
+   0.6427,
+   0.7479
+  ],
+  "rows_y": [
+   0.3056,
+   0.5093,
+   0.7093
+  ],
+  "samples_px": [
+   [
+    -55,
+    25
+   ],
+   [
+    55,
+    25
+   ],
+   [
+    0,
+    62
+   ],
+   [
+    -62,
+    -10
+   ],
+   [
+    62,
+    -10
+   ]
+  ],
+  "unlock_button": [
+   0.1771,
+   0.6852
+  ],
+  "unlock_cost": [
+   0.1042,
+   0.6898,
+   0.2552,
+   0.7259
+  ],
+  "xp": [
+   0.526,
+   0.0148,
+   0.6615,
+   0.0556
+  ],
+  "title": [
+   0.3438,
+   0.013,
+   0.5182,
+   0.0574
+  ],
+  "next_tower": [
+   0.7708,
+   0.0556
+  ],
+  "prev_tower": [
+   0.2271,
+   0.0556
+  ],
+  "back": [
+   0.0391,
+   0.0509
+  ],
+  "dismiss": [
+   0.5729,
+   0.9259
+  ]
+ },
+ "monkeys_menu": {
+  "_notes": "Steam home -> MONKEYS: 4 category tabs; each page shows its towers (4 + 3, Support 3 + 2) with banked XP; clicking a tower opens its XP screen (xp_screen). 2026-11-09, rank 9. card_probe_px: a patch of the card's top-left background (px at 1920 wide, from the cell point): unlocked cards are coloured (S >= 60, V >= 165), locked ones grey.",
+  "open": [
+   0.1693,
+   0.9028
+  ],
+  "tabs": {
+   "primary": [
+    0.3021,
+    0.9074
+   ],
+   "military": [
+    0.4333,
+    0.9074
+   ],
+   "magic": [
+    0.5646,
+    0.9074
+   ],
+   "support": [
+    0.6958,
+    0.9074
+   ]
+  },
+  "cells": {
+   "dart_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "boomerang_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "bomb_shooter": {
+    "tab": "primary",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "tack_shooter": {
+    "tab": "primary",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "ice_monkey": {
+    "tab": "primary",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "glue_gunner": {
+    "tab": "primary",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "desperado": {
+    "tab": "primary",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "sniper_monkey": {
+    "tab": "military",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "monkey_sub": {
+    "tab": "military",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "monkey_buccaneer": {
+    "tab": "military",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "monkey_ace": {
+    "tab": "military",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "heli_pilot": {
+    "tab": "military",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "mortar_monkey": {
+    "tab": "military",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "dartling_gunner": {
+    "tab": "military",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "wizard_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.2552,
+     0.2593
+    ]
+   },
+   "super_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.4167,
+     0.2593
+    ]
+   },
+   "ninja_monkey": {
+    "tab": "magic",
+    "xy": [
+     0.5802,
+     0.2593
+    ]
+   },
+   "alchemist": {
+    "tab": "magic",
+    "xy": [
+     0.7427,
+     0.2593
+    ]
+   },
+   "druid": {
+    "tab": "magic",
+    "xy": [
+     0.3354,
+     0.5741
+    ]
+   },
+   "mermonkey": {
+    "tab": "magic",
+    "xy": [
+     0.499,
+     0.5741
+    ]
+   },
+   "skywarden": {
+    "tab": "magic",
+    "xy": [
+     0.6615,
+     0.5741
+    ]
+   },
+   "banana_farm": {
+    "tab": "support",
+    "xy": [
+     0.3359,
+     0.2593
+    ]
+   },
+   "spike_factory": {
+    "tab": "support",
+    "xy": [
+     0.4969,
+     0.2593
+    ]
+   },
+   "monkey_village": {
+    "tab": "support",
+    "xy": [
+     0.6594,
+     0.2593
+    ]
+   },
+   "engineer_monkey": {
+    "tab": "support",
+    "xy": [
+     0.4188,
+     0.5741
+    ]
+   },
+   "beast_handler": {
+    "tab": "support",
+    "xy": [
+     0.5813,
+     0.5741
+    ]
+   }
+  },
+  "card_probe_px": [
+   -110,
+   -110,
+   -60,
+   -95
+  ]
+ }
+}
