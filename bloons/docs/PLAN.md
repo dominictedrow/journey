@@ -143,6 +143,12 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 
 ---
 
+## Phase M — Mac/Windows platform switch, plan in `docs/PLATFORM-FLAG-PLAN.md`
+- [x] M.1-M.3 `Bot(platform=)` / `--platform` / `BLOONS_PLATFORM`, default win (062)
+- [x] M.4-M.5 Mac `Game` + data parity (063)
+- [ ] M.6-M.7 live on the Mac (BTD6+), calibrate missing Mac UI
+- [ ] M.8 docs
+
 ## Verification
 - `pytest tests/test_offline.py`: OCR, templates and data rules on fixtures (Windows or Mac).
 - Phase 4 gate, in `tools/play.py`: `place_tower("dart", .4, .5)`, `upgrade(0, 0)`, `start_round()`, `observe()`. Each must match the screen.

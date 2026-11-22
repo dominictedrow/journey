@@ -3,7 +3,8 @@
     import sys; sys.path.insert(0, "../harness")
     from bloons.env import ACTIONS, Bot
 
-    bot = Bot("monkey_meadow", "medium", hero="quincy")   # game open on that map
+    bot = Bot("monkey_meadow", "medium", hero="quincy")   # Steam BTD6 (Windows), game open on that map
+    bot = Bot(..., platform="mac")                        # BTD6+ on the Mac instead
     s = bot.state()            # GameState (s.to_vector() / s.grid_image() for the network)
     bot.reward                 # reward since the last state(): +3 clean round, -10 leaky round, -11 defeat
     acts = bot.actions()       # {name: available} in ACTIONS order; list(acts.values()) is the mask
@@ -21,8 +22,7 @@ Action names (fixed list, so ACTIONS[i] is model output i):
 cooldowns, the placeable masks); the game can still refuse a spot, and act() then returns
 ok=False with the reason.
 """
-from . import guards, obsvec
-from .harness import HERO_TID, BloonsHarness
+from . import calib, guards, obsvec
 from .placement import placeable
 
 SPEC = obsvec.load_spec()
@@ -38,8 +38,14 @@ ACTIONS = (["start_round", "hero_level", "sell hero"]
 
 
 class Bot:
-    def __init__(self, map_name="monkey_meadow", difficulty="easy", hero=None, game=None, **kw):
-        """`game`: default the real one (platform.Game); tests pass a fake. `kw` go to BloonsHarness."""
+    def __init__(self, map_name="monkey_meadow", difficulty="easy", hero=None, game=None, platform=None, **kw):
+        """`platform`: 'win' (Steam BTD6) or 'mac' (BTD6+); None keeps BLOONS_PLATFORM, else win.
+        It picks the data files and the game backend, so it must be the first thing in the process
+        to load harness data: a later Bot with a different platform raises RuntimeError.
+        `game`: default the real one (platform.Game); tests pass a fake. `kw` go to BloonsHarness."""
+        self.platform = calib.use(platform)
+        from .harness import HERO_TID, BloonsHarness   # after use(): it loads the calibrated data
+        self.hero_tid = HERO_TID
         if game is None:
             from .platform import Game
             game = Game()
@@ -52,7 +58,7 @@ class Bot:
             "place": lambda k, i, j: h.place_tower(k, *cell(i, j)),
             "hero": lambda i, j: h.place_hero(*cell(i, j)),
             "upgrade": lambda s, p: h.upgrade(self._tid(s), int(p)),
-            "sell": lambda s: h.sell(HERO_TID if s == "hero" else self._tid(s)),
+            "sell": lambda s: h.sell(self.hero_tid if s == "hero" else self._tid(s)),
             "ability": lambda a: h.use_ability(int(a)),
         }
 
@@ -87,7 +93,7 @@ class Bot:
         s = self.last or self.state()
         h = self.h
         ok = dict.fromkeys(ACTIONS, False)
-        slot = {t: i for i, t in enumerate(h.slots) if t is not None} | {HERO_TID: "hero"}
+        slot = {t: i for i, t in enumerate(h.slots) if t is not None} | {self.hero_tid: "hero"}
         for a in guards.available_actions(h.guard_state()):
             kind = a["action"]
             if kind in ("buy_tower", "place_hero"):

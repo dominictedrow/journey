@@ -27,6 +27,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from bloons import calib, cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 from bloons import detect   # noqa: E402
 
@@ -83,6 +85,7 @@ def classify(C, f):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    cli.add_argument(ap)
     ap.add_argument("dir")
     ap.add_argument("--run", action="append", required=True, help="<run>:<kind>,<kind>,...")
     ap.add_argument("--map", default="monkey_meadow")
@@ -90,7 +93,7 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true", help="only print the held-out check")
     a = ap.parse_args(argv)
     runs = [(r.split(":")[0], r.split(":")[1].split(",")) for r in a.run]
-    map_json = json.loads((ROOT / f"bloons/data/maps/{a.map}.json").read_text())
+    map_json = json.loads(calib.path(f"maps/{a.map}.json").read_text())
     rows = collect(a.dir, runs, map_json)
     train = [r for r in rows if r[1] % 2 == 0]
     test = [r for r in rows if r[1] % 2 == 1]

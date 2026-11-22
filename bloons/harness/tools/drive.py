@@ -1,6 +1,7 @@
 """Let Claude drive the game by hand: a play.py REPL behind a localhost socket.
 
-    python tools/drive.py serve [--difficulty easy] [--hero quincy]   (keep running, game open)
+    python tools/drive.py serve [--platform mac|win] [--difficulty easy] [--hero quincy]
+                                                                       (keep running, game open)
     python tools/drive.py <play.py command ...>                        e.g. drive.py place dart .4 .5
     python tools/drive.py shot                                         -> logs/shot.png (half size)
     python tools/drive.py stop                                         Dom's kill switch
@@ -17,6 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
+from bloons import cli  # noqa: E402
+cli.pre_parse()   # --platform mac|win; must precede every other bloons import
 
 STOP = ROOT / "logs" / "STOP"
 PORT = 47613
@@ -32,10 +35,12 @@ def serve(argv):
     from bloons.platform import Game
 
     ap = argparse.ArgumentParser()
+    cli.add_argument(ap)
     ap.add_argument("--map", default="monkey_meadow")
     ap.add_argument("--difficulty", default="easy")
     ap.add_argument("--hero", default="quincy")
     a = ap.parse_args(argv)
+    print(cli.describe(), flush=True)
     h = BloonsHarness(Game(), a.map, a.difficulty, hero=a.hero)
 
     class Drive(Play):

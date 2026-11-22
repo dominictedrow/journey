@@ -1,9 +1,10 @@
 # START HERE
 
-**Phase:** X: pop farm for the Gift Box on Dom's Steam account. All harness code is in `harness/` (run commands from there); `models/` is for Dom's model.
-**Status:** Stopped by Dom in game 3. med4.txt (no farms/village) won 2/2; game 3 stalled after the post-victory menus (see 061). logs/STOP is set.
-**Latest handoff:** [docs/handoffs/061-2026-11-15.md](handoffs/061-2026-11-15.md)
+**Phase:** M: Mac/Windows platform switch (`docs/PLATFORM-FLAG-PLAN.md`). Phase X (Steam pop farm) is paused, see handoff 061. All harness code is in `harness/` (run commands from there); `models/` is for Dom's model.
+**Status:** Steps 1-5 done (offline). `Bot(platform="mac"|"win")` (default win), `--platform` on every tool. Mac `Game` matches Windows' API, and the UI-key parity test is green. Tests on the Mac: 130 offline + 3 steam.
+**Latest handoff:** [docs/handoffs/063-2026-11-22.md](handoffs/063-2026-11-22.md)
 
-**Next action:** When Dom says go: pause -> Restart the open game, `python tools/drive.py serve --difficulty medium` (background), `bash logs/loop.sh logs/med4.txt`. When `logs/gift.png` shows Mermonkey ready: claim it, select Beast Handler, then Dartling.
+**Next action:** Step 6, live on the Mac (Dom opens BTD6+ on Monkey Meadow, windowed 1470x830): `../.venv/bin/python scripts/smoke_platform.py`, then `scripts/watch_state.py logs/watch --platform mac`.
 
-Kill switch: `harness\tools\stop.cmd` (writes harness/logs/STOP; only Dom deletes it).
+Run modes: Windows `python tools/drive.py serve` (default) · Mac `python tools/drive.py serve --platform mac`, or `Bot(platform="mac")` in code.
+Kill switch: `harness\tools\stop.cmd` on Windows, `sh harness/tools/stop.sh` on the Mac (only Dom deletes harness/logs/STOP).

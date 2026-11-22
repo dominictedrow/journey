@@ -35,6 +35,7 @@ try:
 except OSError:
     pass  # already set for this process
 
+calib.use("win")   # importing this backend directly (scripts) means win data too
 UI = json.loads(calib.path("ui.json").read_text())
 TITLE = "BloonsTD6"
 STEAM_URL = "steam://rungameid/960090"
