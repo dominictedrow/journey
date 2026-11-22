@@ -17,6 +17,7 @@ Methods return True/False or None for game-side problems; they raise only when t
 window can't be found at all.
 """
 import json
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -30,6 +31,7 @@ from bloons import calib
 from bloons.coords import box_to_pixels, to_norm, to_screen
 from bloons.hud import parse_hud
 
+calib.use("mac")   # importing this backend directly (scripts) means mac data too
 UI = json.loads(calib.path("ui.json").read_text())
 
 # macOS virtual keycodes (ANSI layout).
@@ -157,6 +159,19 @@ def find_window(owner_substr="bloons"):
     return max(game, key=lambda w: w["kCGWindowBounds"]["Width"] * w["kCGWindowBounds"]["Height"])
 
 
+_caffeinate = []   # the running `caffeinate` process, if any
+
+
+def keep_awake(on=True):
+    """Stop the Mac sleeping or blanking the display while the bot runs (a locked or asleep
+    screen makes captures come back white). Holds a `caffeinate` tied to this process, so it
+    also ends when the bot exits."""
+    if on and not (_caffeinate and _caffeinate[0].poll() is None):
+        _caffeinate[:] = [subprocess.Popen(["caffeinate", "-dims", "-w", str(os.getpid())])]
+    elif not on and _caffeinate:
+        _caffeinate.pop().terminate()
+
+
 class Game:
     """Handle on the running BTD6+ window."""
 
@@ -169,6 +184,7 @@ class Game:
         self.owner = w["kCGWindowOwnerName"]
         self.title_bar_pt = UI["window"]["title_bar_pt"]
         self.bounds = self._read_bounds()
+        keep_awake()
 
     # --- window -------------------------------------------------------------------------
     def _read_bounds(self):
@@ -194,6 +210,12 @@ class Game:
             if time.monotonic() >= deadline:
                 return False
             time.sleep(0.25)
+
+    def relaunch(self, timeout=120.0):
+        """Start BTD6+ again (after a crash) and reattach. The app name is data/ui.mac.json
+        window.app. True once the window is back."""
+        subprocess.run(["open", "-a", UI["window"].get("app", "BloonsTD6+")], check=False)
+        return self.reattach(timeout)
 
     def refresh(self):
         """Re-read the window position (it can move between actions)."""
@@ -276,6 +298,11 @@ class Game:
     def ocr(self, frame, box):
         """Text in a normalized box of a frame, via Apple Vision. '' if nothing found."""
         return ocr_image(frame.crop(box))
+
+    def read_number(self, frame, box):
+        """Prices and other outlined numbers ('$1,530'). Vision reads that font fine on the Mac
+        (Windows needs glyph templates), so this is plain OCR."""
+        return self.ocr(frame, box)
 
     def read_hud_raw(self, frame=None):
         """Raw OCR text of each HUD field in data/ui.json: {'lives': '178', 'money': '$1,552', ...}.

@@ -3,14 +3,17 @@
   "game_version": "57.4",
   "calibrated": "2026-11-04",
   "coords": "normalized 0-1 over the game's content area (window minus title bar); [x0, y0, x1, y1] boxes, [x, y] points",
-  "source": "measured on windowed 1470x830 pt (2x) frames, Monkey Meadow: fixtures_full/ + live Easy Sandbox (step 3.1)"
+  "source": "measured on windowed 1470x830 pt (2x) frames, Monkey Meadow: fixtures_full/ + live Easy Sandbox (step 3.1)",
+  "steam_only": ["menus.victory_home", "monkeys_menu.open", "xp_screen.back"],
+  "steam_only_notes": "ui.json points the shared code reads that BTD6+ has no calibration for (checked by tests/test_offline.py). victory_home: only after the victory_rewards screen, which the Mac template set cannot detect. monkeys_menu / xp_screen: the XP farm, Steam-only (tools/farm.py refuses mac)."
  },
  "window": {
   "expected_pt": [
    1470,
    830
   ],
-  "title_bar_pt": 33
+  "title_bar_pt": 33,
+  "app": "BloonsTD6+"
  },
  "hud": {
   "lives": [

@@ -1,6 +1,6 @@
 # Plan: a `--platform mac|win` switch for the harness
 
-> **Revised 2026-11-22 (Dom):** the main switch is the constructor arg `Bot(platform="mac")`, set in `run.py`, and the default is **win** on every OS. Steps 1-3 are done (handoff 062). Sections 1-4 below describe what was built.
+> **Revised 2026-11-22 (Dom):** the main switch is the constructor arg `Bot(platform="mac")`, set in `run.py`, and the default is **win** on every OS. Steps 1-5 are done (handoffs 062-063). Sections 1-4 below describe what was built.
 
 ## Context
 Dom wants one flag that puts the harness in Mac mode (BTD6+, Apple Arcade) or Windows mode (Steam BTD6). Since the Windows port (Phase W, 2026-11-09) Windows is the mode that gets built out. Mac still works offline (121/121 `tests/test_offline.py` pass on the Mac, 2026-11-22), but nobody has run it live since the port, and there's no explicit way to choose it.
@@ -70,8 +70,8 @@ The Windows side gained features the Mac never got. Each gap gets closed, or Mac
 1. [x] `calib.PLATFORM` resolver + `describe()`; `platform.py` picks by it with the mismatch error. Tests.
 2. [x] `bloons/cli.py` `pre_parse` + wire `--platform` into every tool and `watch_state.py`. Tests.
 3. [x] `Bot(platform=)` switch (lazy harness import) + `calib.path(write=True)`. Tests with a fake game.
-4. [ ] Mac `Game` parity: `relaunch`, `read_number`, `width/height`, `keep_awake`; `tools/stop.sh`. AST parity test.
-5. [ ] Data parity audit: script that lists keys the code reads that are missing from the Mac set; Steam-only list in `data/ui.mac.json` `_meta`; farm refuses Mac mode.
+4. [x] Mac `Game` parity: `relaunch` (`open -a`, app name in `ui.mac.json` window.app), `read_number` (Vision OCR), `keep_awake` (`caffeinate -w <pid>`); `tools/stop.sh`; AST parity test. (`width/height` turned out to be `Frame` attributes on both, not a gap.)
+5. [x] Data parity: test resolves every `section.key` UI point the code names on both sets. Only 3 are Steam-only (`menus.victory_home`, `monkeys_menu.open`, `xp_screen.back`), listed in `ui.mac.json` `_meta.steam_only`. `tools/farm.py` refuses non-win.
 6. [ ] **Live on the Mac (needs Dom with BTD6+ open):** `scripts/smoke_platform.py`, `scripts/watch_state.py --platform mac`, then `tools/drive.py serve --platform mac --difficulty easy` and one full Monkey Meadow game. Re-calibrate anything a BTD6+ update has moved (`ui.mac.json` is stamped 57.4).
 7. [ ] Calibrate the missing in-game Mac UI/templates (victory_home, popup_ok, level_up) from step 6 screenshots.
 8. [ ] Docs: CLAUDE.md "Project rules" (the flag), START-HERE run commands for both modes, RESEARCH.md for any BTD6+ changes found, handoff.

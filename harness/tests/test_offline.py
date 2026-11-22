@@ -2712,3 +2712,63 @@ def test_calib_write_path_never_hits_steam_file_on_mac():
     assert out == "nowhere.json nowhere.mac.json monkey_meadow.spots.mac.json"
     out = _fresh("from bloons import calib; print(calib.path('maps/monkey_meadow.spots.json', write=True).name)")
     assert out == "monkey_meadow.spots.json"                  # win/steam writes its own file
+
+
+def _public_api(path):
+    """{'module': names, 'Game': names, 'Frame': names}: public defs, properties and dataclass
+    fields, read with ast (works on any OS: neither backend gets imported)."""
+    import ast
+    tree = ast.parse(Path(path).read_text())
+    api = {"module": set()}
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and not node.name.startswith("_"):
+            api["module"].add(node.name)
+        if isinstance(node, ast.ClassDef) and node.name in ("Game", "Frame"):
+            api[node.name] = {n.name for n in node.body if isinstance(n, ast.FunctionDef)} | {
+                n.target.id for n in node.body if isinstance(n, ast.AnnAssign)}
+            api[node.name] = {n for n in api[node.name] if not n.startswith("_")}
+    return api
+
+
+def test_platform_backends_have_the_same_api():
+    root = Path(__file__).resolve().parents[1] / "bloons"
+    mac, win = _public_api(root / "platform_mac.py"), _public_api(root / "platform_win.py")
+    for part in ("module", "Game", "Frame"):
+        assert mac[part] == win[part], (part, "mac only:", mac[part] - win[part], "win only:", win[part] - mac[part])
+    assert {"relaunch", "read_number", "grab", "click", "key", "read_hud"} <= mac["Game"]
+
+
+def test_ui_refs_resolve_on_both_platforms():
+    """Every 'section.key' UI point the shared code names exists in ui.json, and in ui.mac.json
+    unless ui.mac.json _meta.steam_only lists it. Prompt defaults resolve in their own file."""
+    import ast
+    import re
+    root = Path(__file__).resolve().parents[1]
+    steam = json.loads((root / "bloons/data/ui.json").read_text())
+    mac = json.loads((root / "bloons/data/ui.mac.json").read_text())
+
+    def has(d, ref):
+        for part in ref.split("."):
+            if not isinstance(d, dict) or part not in d:
+                return False
+            d = d[part]
+        return True
+    tops = {k for k in steam if not k.startswith("_")}
+    refs = set()
+    for f in [*(root / "bloons").glob("*.py"), *(root / "tools").glob("*.py")]:
+        if f.name.startswith("._"):                      # macOS metadata files on the external drive
+            continue
+        for n in ast.walk(ast.parse(f.read_text(encoding="utf-8"))):
+            if (isinstance(n, ast.Constant) and isinstance(n.value, str) and not n.value.endswith("_")
+                    and re.fullmatch(r"[a-z_0-9]+(\.[a-z_0-9]+)+", n.value) and n.value.split(".")[0] in tops):
+                refs.add(n.value)
+    refs |= {f"menus.difficulty_{d}" for d in ("easy", "medium", "hard")}    # built with f-strings
+    refs |= {f"menus.mode_{m}" for m in ("standard", "sandbox")}             # (play.py --mode choices)
+    assert len(refs) > 10
+    steam_only = set(mac["_meta"]["steam_only"])
+    assert [r for r in refs if not has(steam, r)] == []
+    assert sorted(r for r in refs - steam_only if not has(mac, r)) == []
+    assert steam_only <= refs, "steam_only lists a key the code no longer uses"
+    for d in (steam, mac):
+        for kind, ref in d["prompts"].items():
+            assert not isinstance(ref, str) or kind.startswith("_") or has(d, ref), (kind, ref)

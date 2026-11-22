@@ -130,6 +130,9 @@ def main(argv=None):
     ap.add_argument("--survey-every", type=int, default=5)
     ap.add_argument("--games", type=int, default=10 ** 6)
     a = ap.parse_args(argv)
+    if cli.calib.PLATFORM != "win":
+        sys.exit("tools/farm.py is Steam-only (XP farm on Dom's Steam account, docs/max.md Part B): "
+                 "run it with --platform win on the Windows PC")
     log(cli.describe())
     LOGS.mkdir(exist_ok=True)
     h = BloonsHarness(Game(), a.map, difficulty=a.difficulty, hero=a.hero)

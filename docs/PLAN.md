@@ -145,7 +145,7 @@ Every action returns `ActionResult(ok: bool, reason: str)` and doesn't raise on 
 
 ## Phase M — Mac/Windows platform switch, plan in `docs/PLATFORM-FLAG-PLAN.md`
 - [x] M.1-M.3 `Bot(platform=)` / `--platform` / `BLOONS_PLATFORM`, default win (062)
-- [ ] M.4-M.5 Mac `Game` + data parity
+- [x] M.4-M.5 Mac `Game` + data parity (063)
 - [ ] M.6-M.7 live on the Mac (BTD6+), calibrate missing Mac UI
 - [ ] M.8 docs
 
