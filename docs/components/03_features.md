@@ -2,7 +2,7 @@
 
 > Build spec for Phase 3. Written from Dom's answers in [`docs/interrogation/03_features.md`](../interrogation/03_features.md) (S04, 2026-11-26).
 > Where this file and `docs/spec/system_spec_v2.md` disagree, this file wins. Decision: D-033.
-> Items marked **(default)** were not asked in the questioning. Claude picked them, and **Dom must accept or change them before the build starts.**
+> Items marked **(default)** were not asked in the questioning. Claude picked them; **Dom accepted all of them** (S04, 2026-11-26).
 
 ## 1. Purpose
 Turn raw, point-in-time rows into the two daily matrices every model reads, plus the regime signals:
