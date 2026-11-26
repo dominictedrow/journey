@@ -4,26 +4,31 @@
 
 ---
 
-## CURRENT CHECKPOINT: v13 / 2026-11-26 (Session 04, Phase 3 build step 4b)
+## CURRENT CHECKPOINT: v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3 (Features + regimes): build steps 1–4 done** (foundations; 36 price features; fundamentals + ranks + composites, D-037; 57 market features, D-038; event clock + crypto structure, 13 features + FOMC/CPI calendar collectors, D-039); Phase 2 exit gate still running in parallel |
-| **Last session** | S04: questioning, spec, steps 1–4b, identity fix ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
-| **Git** | `89f522d` pushed (4a `509f639` was already pushed) |
-| **Tests** | 650 passed, ruff clean |
-| **Service** | launchd `com.qt.scheduler` (paper), restarted on `89f522d` (PID 62917); weekly job runs `fomc_cal`/`cpi_cal` from Sun 18:00 ET; Congress backfill driver still running |
+| **Phase** | **Phase 3 (Features + regimes): build steps 1–4 and 5a done** (5a: quadrant, HMM filtered-only, stress score, time-series z, masks, staleness; D-040). 5b (matrix/build/jobs) and 5c (survivorship) left. Phase 2 exit gate still running in parallel |
+| **Last session** | S05: step 5a ([handoff](docs/handoffs/2026-11-26_s05_features_build_step5.md)) |
+| **Git** | `8bab645` committed, **not pushed** |
+| **Tests** | 691 passed, ruff clean |
+| **Service** | launchd `com.qt.scheduler` (paper), PID 62917 on `89f522d`; no restart needed for 5a |
 
 ### Next exact task
-1. Phase 3 build step 5: regime (§6), normalization + masks (§7), `matrix.py`/`build.py`, §9 survivorship.
-2. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
+1. Phase 3 step 5b: `matrix.py` (`features_asof`), `build.py` (daily job + backfill CLI writing `features`/`regime`), HMM refit job (`hmm_fits`, stability alert/report), `features_daily` at 18:00 ET with the stale-input gate.
+2. Step 5c: §9 survivorship (CIK mapping, SIC → GICS, delisted bars).
+3. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
+- [ ] Push `8bab645`?
+- [ ] Oct 2025 CPI missing (shutdown): bridge one missing month in `infl_mom_*` v2? (Today the quadrant is NaN until ~Dec 10.)
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v13 / 2026-11-26 (Session 04, Phase 3 build step 4b)
+- Event clock + crypto structure (D-039), SoSoValue envelope fix. Pushed as `89f522d`/`6cbfad0`.
 ### v12 / 2026-11-26 (Session 04, Phase 3 build step 4a)
 - 57 market features (`features/market.py`), ALFRED fixes, D-038. Pushed as `509f639`.
 ### v11 / 2026-11-26 (Session 04, Phase 3 build step 3)
