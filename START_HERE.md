@@ -4,30 +4,30 @@
 
 ---
 
-## CURRENT CHECKPOINT: v7 / 2026-11-26 (Session 03d, Phase 2 build step 4)
+## CURRENT CHECKPOINT: v8 / 2026-11-26 (Session 03e, Phase 2 build step 5)
 
 | | |
 |---|---|
-| **Phase** | **Phase 2 (Collectors): build in progress, step 4 of 5 done** (Alpaca bars/assets, membership, aliases) |
-| **Last session** | S03d: 1.77M equity/ETF bars (742 assets from 2016), 40k crypto bars, S&P 500 membership as securities, 2,450 aliases, migration 007 ([handoff](docs/handoffs/2026-11-26_s03d_collectors_build_prices.md)) |
-| **Git** | Branch `vibe/quant_trader`; steps 1–4 `34fbe52`, `434e551`, `ba2804b`, `eca541a`. Nothing pushed |
-| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-030 |
-| **Tests** | 149 passed, ruff clean |
-| **DB** | Migrated to 007; ALFRED, prices, membership, aliases loaded; news + Fed accumulating |
-| **Service** | launchd `com.qt.scheduler` (paper) under `caffeinate -is`. `uv run python scripts/install_scheduler.py --status` |
+| **Phase** | **Phase 2 (Collectors): build complete (5 of 5); exit gate pending** (Congress backfill finishing, 5-day unattended run) |
+| **Last session** | S03e: yfinance, corporate actions, EDGAR facts (1.52M), earnings (25k), Congress (in progress), CoinGecko, DefiLlama, funding, OI ([handoff](docs/handoffs/2026-11-26_s03e_collectors_build_rest.md)) |
+| **Git** | Branch `vibe/quant_trader`; steps 1–4 pushed; step 5 `32c5117` **not pushed** |
+| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-031 |
+| **Tests** | 168 passed, ruff clean |
+| **DB** | Migrated to 007; every Phase 2 raw table populated; 0 null `released_at` |
+| **Service** | launchd `com.qt.scheduler` (paper) under `caffeinate -is`, on step 5 code. `uv run python scripts/install_scheduler.py --status` |
 
 ### Next exact task
-1. Build step 5: yfinance, Alpaca corporate actions, EDGAR facts, Congress, earnings, crypto structure; register; `backfill --all --report`.
-2. Then the Phase 2 exit gate (5-day unattended run).
+1. Confirm the Congress backfill finished (`collector_state` cursor `backfill.done`); the 06:00 ET job continues it otherwise.
+2. Phase 2 exit gate: 5 consecutive unattended days (component doc §13 item 5). Check each daily summary.
+3. Meanwhile: Phase 3 questioning.
 
 ### Open questions for Dom (carried forward)
-- [ ] Fed Board roles in `configs/collect.yaml` correct? (Warsh Chair?)
-- [ ] OK with D-029 release-time changes (18:00 ET default; HY/VIX next session 12:00 ET)?
-- [ ] OK to push steps 1–4?
+- [ ] OK to push step 5?
+- [ ] SoSoValue free key (ETF flows), or keep it dropped (D-031)?
+- [ ] Accept the survivorship gaps (no EDGAR facts for delisted members; 3 delisted names without bars)?
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
 - [ ] Whole shares vs fractional shares (D-003) → Phase 6
 - [ ] Keep the "never sell same session" rule now that PDT is retired? (D-002) → Phase 5
-- [ ] Is the SoSoValue key free? Verified during the Phase 2 build (D-007)
 - [ ] The paper account's starting NAV → Phase 5
 - [ ] Crypto order-size cap: which volume source (D-021) → Phase 6
 
@@ -39,6 +39,8 @@
 ---
 
 ## Prior checkpoints
+### v7 / 2026-11-26 (Session 03d, Phase 2 build step 4)
+- Alpaca bars/assets, S&P 500 membership as securities, aliases, migration 007, D-030. Committed as `eca541a`, pushed. [Handoff](docs/handoffs/2026-11-26_s03d_collectors_build_prices.md)
 ### v6 / 2026-11-25 (Session 03c, Phase 2 build step 3)
 - FRED/ALFRED all vintages (186k rows), HY archive, migration 006, D-029. Committed as `ba2804b`. [Handoff](docs/handoffs/2026-11-25_s03c_collectors_build_fred.md)
 ### v5 / 2026-11-25 (Session 03b, Phase 2 build step 2)
