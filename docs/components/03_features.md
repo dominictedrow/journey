@@ -136,8 +136,8 @@ Mean of z(VIX), z(BAA10Y), z(−curve slope 10y−3m) and the VIX/VIX3M > 1 flag
 - Accepted mappings are written to `configs/cik_overrides.yaml` (ticker, security_key, CIK, match type), loaded into `assets.cik`, and then `edgar_facts` backfills them.
 - **Target:** ≥ 80% of the 135 names mapped **(default)**. The rest are listed as a known gap.
 
-### 9.3 Bars for 3 delisted names (Q9b)
-- SNDK (old, to 2016-05), TE (to 2016-06), STI (to 2019-12): try yfinance, then Stooq.
+### 9.3 Bars for delisted names (Q9b; list widened by D-035)
+- SNDK (old, to 2016-05), TE (to 2016-06), STI (to 2019-12), plus three found in S04: Paramount Global (`SPX:PARA:2022-02-17`, 2022-02-17 → 2025-08-06; its Alpaca bars were another company's and are excluded), WYND and AABA (no bars inside their membership spells). Try yfinance, then Stooq.
 - Accept only an exact ticker whose last bar matches the known delisting date within 5 sessions **(default)**. Never splice in a successor company's prices.
 - Stored as `raw_prices` source `yfinance` / `stooq` under the existing asset. Misses are documented.
 

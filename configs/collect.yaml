@@ -63,6 +63,7 @@ freshness:
     membership: {critical: false, max_hours: 192}   # weekly
     aliases: {critical: false, max_hours: 192}
     fred: {critical: true, max_hours: 6, session_paced: true}
+    succ_bars: {critical: false, max_hours: 168}   # one-off refetches; reruns are no-ops
     hy_archive: {critical: false, max_hours: 6, session_paced: true}
     news: {critical: true, max_hours: 2}
     fed_rss: {critical: false, max_hours: 2}       # polled with news every 15 min
@@ -124,6 +125,31 @@ universe:
   extra_etfs: [SPY, QQQ, VNQ, XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY,
                # Phase 3 top-up (D-033): TLT for stock-bond corr; risk-appetite ratios
                TLT, IEF, HYG, IWM, RSP, SOXX, KRE, EEM]
+
+# Identity overrides (D-035). Alpaca serves a symbol's history for whoever holds the symbol
+# *today*, so a delisted member whose symbol was reused carries another company's bars. Per
+# security (security_key): listed_until is forced (membership stops linking it to the live
+# Alpaca asset and bars_equity stops fetching), exclude_sources hides that source's bars from the
+# feature layer (raw rows stay; the table is append-only), and successor refetches the real
+# history under the symbol Alpaca files it under now (stored as source 'alpaca_succ').
+identity_overrides:
+  - security_key: "SPX:BBT:2015-12-31"
+    listed_until: "2019-12-06"          # last BBT session; BB&T traded as TFC from 2019-12-09
+    exclude_sources: [alpaca]           # stored BBT bars are a later holder of the symbol
+    successor: {symbol: TFC, start: "2016-01-01", end: "2019-12-06"}
+    note: "BB&T; TFC probe 2017-06-01 close 42.42, vol 3.8M (BBT symbol: 35.80, 0.33M)"
+  - security_key: "SPX:PARA:2022-02-17"
+    listed_until: "2025-08-06"          # merged into Paramount Skydance (PSKY) 2025-08-07
+    exclude_sources: [alpaca]           # stored PARA bars are Bannix (BNZI renamed PARA 2026-08)
+    note: "Paramount Global; no Alpaca symbol serves its 2022-2025 history (PSKY starts 2025-08-07)"
+
+# Daily-summary check for more such cases (identity_check.py): an index member whose median
+# daily dollar volume during its membership is below this is listed. NWS (class B, ~$13M) is the
+# lowest genuine member; the two contaminated ones were $0.2M and $6.1M.
+identity_check:
+  sources: [alpaca, alpaca_succ]
+  min_median_dollar_volume: 10000000
+  min_bars: 20
 
 # Alpaca market data (component doc 6.1). The trading API URL is the hard-coded paper URL.
 alpaca:

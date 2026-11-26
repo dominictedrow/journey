@@ -22,7 +22,8 @@ from qt.common.calendar import ET
 
 # Order matters: membership creates the member assets that aliases and bars_equity then use.
 ORDER = [
-    "membership", "alpaca_assets", "crypto_assets", "aliases", "bars_equity", "bars_crypto",
+    "membership", "alpaca_assets", "crypto_assets", "aliases", "bars_equity", "succ_bars",
+    "bars_crypto",
     "corp_actions", "yfinance", "fred", "hy_archive", "edgar_facts", "funding", "crypto_oi",
     "coingecko", "defillama", "sosovalue", "earnings", "congress",
 ]  # fmt: skip

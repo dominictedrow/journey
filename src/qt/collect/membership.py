@@ -437,6 +437,10 @@ class MembershipCollector:
             cache=cursor.setdefault("identity", {}),
         )
         secs = resolve(snaps, ident)
+        for s in secs:  # D-035: a forced end date wins over the one inferred from bars
+            o = c.override(s.key)
+            if o is not None and o.listed_until is not None:
+                s.listed_until = o.listed_until
         active = {a["symbol"]: a for a in alpaca.assets("us_equity")}
         ids = upsert_member_assets(ctx.conn, secs, active, {r["symbol"]: r for r in wiki_rows})
         # An unchanged weekly snapshot adds nothing (as-of reads take the latest snapshot <= T),

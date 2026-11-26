@@ -4,7 +4,8 @@
 bars:
   # Per asset and bar date the first source present wins. Equities and ETFs come from Alpaca;
   # yfinance fills index/futures/FX and ETF history before Alpaca's 2016 start.
-  source_priority: [alpaca, yfinance]
+  # alpaca_succ: real history refetched under a successor symbol (collect.identity_overrides).
+  source_priority: [alpaca, alpaca_succ, yfinance]
   # yfinance Close is split-adjusted as of the fetch (D-031), so never mix it with Alpaca bars
   # for an asset class that splits; only these classes may take yfinance bars.
   yfinance_classes: [etf, index, future, fx]

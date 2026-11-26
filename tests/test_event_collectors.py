@@ -579,3 +579,102 @@ def test_yfinance_release_rules_and_assets(env):
         ("^VIX", et("2026-11-25", 16, 15)),
         ("NQ=F", et("2026-11-25", 17)),
     }
+
+
+# ---------------------------------------------------------------- identity overrides (D-035)
+def _override_settings(kw):
+    from qt.common.config import IdentityOverrideCfg
+
+    s = kw["settings"]
+    ov = IdentityOverrideCfg(
+        security_key="SPX:AAA:2016-01-01",
+        listed_until=D("2026-11-20"),
+        exclude_sources=["alpaca"],
+        successor={"symbol": "NEWAAA", "start": "2026-11-18", "end": "2026-11-20"},
+        note="test",
+    )
+    collect = s.config.collect.model_copy(update={"identity_overrides": [ov]})
+    return dict(
+        kw,
+        settings=dataclasses.replace(
+            s, config=s.config.model_copy(update={"collect": collect})
+        ),
+    )
+
+
+class FakeBars:
+    def __init__(self):
+        self.calls = []
+
+    def stock_bars(self, symbol, start, end, adjustment="raw"):
+        from qt.collect.alpaca import Bar
+
+        self.calls.append((symbol, start, end))
+        days = [D("2026-11-18"), D("2026-11-19"), D("2026-11-20"), D("2026-11-23")]
+        return [Bar(et(str(d)).astimezone(UTC), 1, 1, 1, 40.0 + i, 1e6, None, None)
+                for i, d in enumerate(days)]  # fmt: skip
+
+
+@pytest.mark.db
+def test_succ_bars_refetch_once_under_successor_symbol(env):
+    from qt.collect.bars import SuccessorBarsCollector
+
+    kw = _override_settings(env[0])
+    fake = FakeBars()
+    col = SuccessorBarsCollector(clock=lambda: NOW, alpaca=lambda ctx: fake)
+    out = run_collector(col, **kw)
+    assert out.status == "ok", out.error
+    rows = _q(
+        kw,
+        "SELECT a.security_key, p.ts, p.close, p.source, p.released_at FROM raw_prices p "
+        "JOIN assets a USING (asset_id) ORDER BY p.ts",
+    )
+    # stored under the overridden security, capped at successor.end, released at the close
+    assert [(r[0], r[2], r[3]) for r in rows] == [
+        ("SPX:AAA:2016-01-01", 40.0, "alpaca_succ"),
+        ("SPX:AAA:2016-01-01", 41.0, "alpaca_succ"),
+        ("SPX:AAA:2016-01-01", 42.0, "alpaca_succ"),
+    ]
+    assert rows[0][4] == et("2026-11-18", 16)
+    assert fake.calls == [("NEWAAA", D("2026-11-18"), D("2026-11-20"))]
+    assert run_collector(col, **kw).status == "ok"
+    assert len(fake.calls) == 1  # done: not requested again
+
+
+@pytest.mark.db
+def test_bar_exclusions_and_identity_check(env):
+    from qt.collect import identity_check
+    from qt.features.inputs import bar_exclusions, load_bars
+
+    kw = _override_settings(env[0])
+    s = kw["settings"]
+    with kw["connect"]() as c:
+        aid = c.execute(
+            "SELECT asset_id FROM assets WHERE security_key = 'SPX:AAA:2016-01-01'"
+        ).fetchone()[0]
+        for i in range(25):  # a "member" whose stored bars trade $10k a day: contaminated
+            t = et("2026-10-01").astimezone(UTC) + timedelta(days=i)
+            for src, close in (("alpaca", 1.0), ("alpaca_succ", 50.0)):
+                vol = 1e4 if src == "alpaca" else 1e6
+                c.execute(
+                    "INSERT INTO raw_prices (asset_id, ts, close, volume, source, released_at) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    (aid, t, close, vol, src, t + timedelta(hours=16)),
+                )
+        c.execute(
+            "INSERT INTO index_membership (index_code, snapshot_at, ticker, source, asset_id, "
+            "released_at) VALUES ('SPX', %s, 'AAA', 'fja05680', %s, %s)",
+            (et("2026-09-30"), aid, et("2026-09-30")),
+        )
+        c.commit()
+        excl = bar_exclusions(c, s.config.collect.identity_overrides)
+        assert excl == [(aid, "alpaca")]
+        bars = load_bars(c, NOW, s.config.features.bars, exclude=excl)
+        assert set(bars["source"]) == {"alpaca_succ"}
+        # with the override the hidden bars don't count; without it the asset is flagged
+        assert identity_check.suspects(c, s.config.collect) == []
+        bare = s.config.collect.model_copy(
+            update={"identity_overrides": [], "identity_check": s.config.collect.identity_check
+                    .model_copy(update={"sources": ["alpaca"]})}
+        )  # fmt: skip
+        assert [r[1] for r in identity_check.suspects(c, bare)] == ["SPX:AAA:2016-01-01"]

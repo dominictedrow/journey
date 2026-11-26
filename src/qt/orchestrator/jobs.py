@@ -16,7 +16,7 @@ from pathlib import Path
 
 from qt.collect.aliases import AliasesCollector
 from qt.collect.assets import AlpacaAssetsCollector, CryptoAssetsCollector
-from qt.collect.bars import BarsCryptoCollector, BarsEquityCollector
+from qt.collect.bars import BarsCryptoCollector, BarsEquityCollector, SuccessorBarsCollector
 from qt.collect.base import Collector, Connect, Outcome, alert_stale, freshness, run_all
 from qt.collect.congress import CongressCollector
 from qt.collect.corp_actions import CorpActionsCollector
@@ -41,7 +41,8 @@ log = logging.getLogger("qt.orchestrator")
 JOB_COLLECTORS: dict[str, Callable[[], list[Collector]]] = {
     "news_loop": lambda: [NewsCollector(), FedRssCollector()],
     "stock_daily": lambda: [
-        AlpacaAssetsCollector(), BarsEquityCollector(), CorpActionsCollector(),
+        AlpacaAssetsCollector(), BarsEquityCollector(), SuccessorBarsCollector(),
+        CorpActionsCollector(),
         YfinanceCollector(), FredCollector(), HyArchiveCollector(),
     ],
     "crypto_daily": lambda: [

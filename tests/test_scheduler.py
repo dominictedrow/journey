@@ -91,7 +91,8 @@ def test_known_collectors_fit_stage_limit():
     names = jobs.known_collectors()
     assert names == [
         "news", "fed_rss",
-        "alpaca_assets", "bars_equity", "corp_actions", "yfinance", "fred", "hy_archive",
+        "alpaca_assets", "bars_equity", "succ_bars", "corp_actions", "yfinance", "fred",
+        "hy_archive",
         "crypto_assets", "bars_crypto", "funding", "crypto_oi", "coingecko", "defillama",
         "sosovalue",
         "congress", "earnings",

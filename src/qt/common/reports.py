@@ -53,8 +53,12 @@ def write_daily_summary(
     alerts_rows: list[tuple[Any, ...]] = []
     backups: list[tuple[Any, ...]] = []
     collected: list[tuple[Any, ...]] = []
+    identity: list[tuple[Any, ...]] | None = None
     if connect is not None:
+        from qt.collect import identity_check  # collect builds on common; import late
+
         with connect() as conn:
+            identity = identity_check.suspects(conn, settings.config.collect)
             for t in RAW_TABLES:
                 n = conn.execute(
                     f"SELECT count(*) FROM {t} WHERE ingested_at >= %s AND ingested_at < %s",
@@ -85,6 +89,13 @@ def write_daily_summary(
         else PENDING
     )
     collected_md = _table(["table", "rows inserted"], collected) if connect else PENDING
+    identity_md = (
+        ("None flagged." if not identity else
+         "Members whose bars look like another company's (D-035); add an identity override:\n\n"
+         + _table(["ticker", "security", "median $M/day", "bars"], identity))
+        if identity is not None
+        else PENDING
+    )
     hb_md = (
         ("No gaps." if not heartbeat_gaps else
          _table(["from (UTC)", "to (UTC)", "minutes"], heartbeat_gaps))
@@ -100,6 +111,9 @@ Profile `{settings.profile}` · config `{settings.config_hash[:12]}`
 
 ## Rows collected
 {collected_md}
+
+## Identity check
+{identity_md}
 
 ## Scheduler heartbeat
 {hb_md}

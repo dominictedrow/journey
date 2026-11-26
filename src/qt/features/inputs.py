@@ -65,9 +65,12 @@ def load_bars(
     *,
     asset_ids: Iterable[int] | None = None,
     since: datetime | None = None,
+    exclude: Iterable[tuple[int, str]] = (),
 ) -> pd.DataFrame:
     """Daily bars released by ``asof``, one row per (asset, date) after source priority.
 
+    ``exclude`` lists ``(asset_id, source)`` pairs whose bars are hidden (identity overrides,
+    D-035: another company's history stored under a reused symbol).
     Columns: asset_id, date, open, high, low, close, volume, source, released_at, asset_class.
     """
     where_in = {"asset_id": list(asset_ids)} if asset_ids is not None else None
@@ -87,6 +90,10 @@ def load_bars(
     classes = load_assets(conn).set_index("asset_id")["asset_class"]
     df = df.assign(asset_class=df["asset_id"].map(classes))
     df = df[df["source"].isin(cfg.source_priority)]
+    excl = set(exclude)
+    if excl:
+        keys = pd.Series(list(zip(df["asset_id"], df["source"], strict=True)), index=df.index)
+        df = df[~keys.isin(excl)]
     df = df[(df["source"] != "yfinance") | df["asset_class"].isin(cfg.yfinance_classes)]
     filler = df["asset_class"].isin(cfg.drop_zero_volume_classes) & ~(df["volume"] > 0)
     df = df[~filler]
@@ -101,6 +108,17 @@ def load_bars(
     for c in ("open", "high", "low", "close", "volume"):
         df[c] = df[c].astype(float)
     return df.reset_index(drop=True)
+
+
+def bar_exclusions(conn: psycopg.Connection, overrides: Sequence) -> list[tuple[int, str]]:
+    """``(asset_id, source)`` pairs to hide, from ``collect.identity_overrides``."""
+    keys = {o.security_key: o.exclude_sources for o in overrides if o.exclude_sources}
+    if not keys:
+        return []
+    rows = conn.execute(
+        "SELECT security_key, asset_id FROM assets WHERE security_key = ANY(%s)", (list(keys),)
+    ).fetchall()
+    return [(int(aid), src) for key, aid in rows for src in keys[key]]
 
 
 def bars_known_at(bars: pd.DataFrame, asof: datetime) -> pd.DataFrame:

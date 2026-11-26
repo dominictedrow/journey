@@ -433,6 +433,26 @@ class ScheduleCfg(_Strict):
         return _check_hhmm(v)
 
 
+class SuccessorCfg(_Strict):
+    symbol: str
+    start: date
+    end: date
+
+
+class IdentityOverrideCfg(_Strict):
+    security_key: str
+    listed_until: date | None = None
+    exclude_sources: list[str] = []
+    successor: SuccessorCfg | None = None
+    note: str
+
+
+class IdentityCheckCfg(_Strict):
+    sources: list[str]
+    min_median_dollar_volume: float = Field(gt=0)
+    min_bars: int = Field(ge=1)
+
+
 class CollectCfg(_Strict):
     pit: PitCfg
     http: HttpCfg
@@ -454,6 +474,14 @@ class CollectCfg(_Strict):
     derivs: DerivsCfg
     fred: FredCfg
     schedule: ScheduleCfg
+    identity_overrides: list[IdentityOverrideCfg] = []
+    identity_check: IdentityCheckCfg
+
+    def override(self, security_key: str | None) -> IdentityOverrideCfg | None:
+        for o in self.identity_overrides:
+            if o.security_key == security_key:
+                return o
+        return None
 
 
 # ---------------------------------------------------------------- aliases.yaml

@@ -208,3 +208,56 @@ class BarsCryptoCollector:
                     res.rejected += bad
                 ctx.conn.commit()
         return res
+
+
+class SuccessorBarsCollector:
+    """Real history for a reused-symbol security, fetched under its successor symbol (D-035).
+
+    For each ``collect.identity_overrides`` entry with a ``successor``, request
+    ``successor.symbol`` over ``[start, end]`` and store the bars under the overridden security's
+    asset as source ``alpaca_succ`` (same release rule as any Alpaca stock bar). A finished entry
+    is recorded in the cursor and skipped afterwards; re-running is a no-op (ON CONFLICT).
+    """
+
+    name = "succ_bars"
+    required_secrets: tuple[str, ...] = ("alpaca_api_key_id", "alpaca_api_secret_key")
+    source = "alpaca_succ"
+
+    def __init__(
+        self,
+        clock: Callable[[], datetime] = _now,
+        alpaca: Callable[[RunCtx], Any] = _default_alpaca,
+    ) -> None:
+        self.clock, self.make_alpaca = clock, alpaca
+
+    def collect(self, ctx: RunCtx, *, since: datetime | None, until: datetime) -> CollectResult:
+        c = ctx.settings.config.collect
+        now = self.clock()
+        cursor = dict(ctx.cursor)
+        done = dict(cursor.get("done") or {})
+        res = CollectResult(cursor=cursor)
+        todo = [o for o in c.identity_overrides if o.successor is not None]
+        api = None
+        for o in todo:
+            s = o.successor
+            sig = f"{s.symbol}:{s.start}:{s.end}"
+            if done.get(o.security_key) == sig:
+                continue
+            row = ctx.conn.execute(
+                "SELECT asset_id FROM assets WHERE security_key = %s", (o.security_key,)
+            ).fetchone()
+            if row is None:
+                raise RuntimeError(f"identity override for unknown security {o.security_key}")
+            api = api or self.make_alpaca(ctx)
+            bars = api.stock_bars(s.symbol, s.start, s.end)
+            rows, bad = equity_rows(row[0], bars, self.source, ctx.cal, now, s.end)
+            res.add("raw_prices", insert_rows(ctx.conn, "raw_prices", PRICE_COLS, rows))
+            res.rejected += bad
+            ctx.conn.commit()
+            done[o.security_key] = sig
+            log.info(
+                "successor_bars_done",
+                extra={"security_key": o.security_key, "symbol": s.symbol, "bars": len(rows)},
+            )
+        cursor["done"] = done
+        return res
