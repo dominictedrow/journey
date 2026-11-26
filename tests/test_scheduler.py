@@ -93,6 +93,7 @@ def test_known_collectors_fit_stage_limit():
         "news", "fed_rss",
         "alpaca_assets", "bars_equity", "corp_actions", "yfinance", "fred", "hy_archive",
         "crypto_assets", "bars_crypto", "funding", "crypto_oi", "coingecko", "defillama",
+        "sosovalue",
         "congress", "earnings",
         "membership", "aliases", "edgar_facts",
     ]  # fmt: skip

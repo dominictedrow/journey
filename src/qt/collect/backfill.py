@@ -24,7 +24,7 @@ from qt.common.calendar import ET
 ORDER = [
     "membership", "alpaca_assets", "crypto_assets", "aliases", "bars_equity", "bars_crypto",
     "corp_actions", "yfinance", "fred", "hy_archive", "edgar_facts", "funding", "crypto_oi",
-    "coingecko", "defillama", "earnings", "congress",
+    "coingecko", "defillama", "sosovalue", "earnings", "congress",
 ]  # fmt: skip
 
 

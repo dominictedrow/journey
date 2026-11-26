@@ -29,6 +29,7 @@ from qt.collect.fred import FredCollector, HyArchiveCollector
 from qt.collect.http import HttpClient
 from qt.collect.membership import MembershipCollector
 from qt.collect.news.collector import NewsCollector
+from qt.collect.sosovalue import SosovalueCollector
 from qt.collect.yfin import YfinanceCollector
 from qt.common.calendar import ET, TradingCalendar
 from qt.common.config import Settings
@@ -45,7 +46,7 @@ JOB_COLLECTORS: dict[str, Callable[[], list[Collector]]] = {
     ],
     "crypto_daily": lambda: [
         CryptoAssetsCollector(), BarsCryptoCollector(), FundingCollector(), CryptoOiCollector(),
-        CoingeckoCollector(), DefillamaCollector(),
+        CoingeckoCollector(), DefillamaCollector(), SosovalueCollector(),
     ],
     "congress_daily": lambda: [CongressCollector()],
     "earnings_daily": lambda: [EarningsCollector()],

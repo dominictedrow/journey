@@ -339,3 +339,81 @@ def test_oi_snapshot_all_venues_and_partial_failure(env):
     assert out.status == "failed" and "kraken" in out.error
     n = _q(kw, "SELECT count(*) FROM raw_crypto_derivs WHERE ts = %s", later)[0][0]
     assert n == 9  # the other venues were still stored
+
+
+# ---------------------------------------------------------------- SoSoValue
+def sosovalue_env(kw, rows_by_symbol):
+    from qt.collect.sosovalue import SosovalueCollector
+
+    s = kw["settings"]
+    s = dataclasses.replace(
+        s, secrets=s.secrets.model_copy(update={"sosovalue_api_key": SecretStr("soso-test")})
+    )
+    seen = []
+
+    def handler(req):
+        seen.append((req.headers.get("x-soso-api-key"), dict(req.url.params)))
+        return httpx.Response(200, json=rows_by_symbol[req.url.params["symbol"]])
+
+    http = HttpClient(
+        s.config.collect.http, transport=httpx.MockTransport(handler), sleep=lambda _: None
+    )
+    return dict(kw, settings=s, http=http), SosovalueCollector, seen
+
+
+@pytest.mark.db
+def test_sosovalue_release_rule_and_t1_nulls(env):
+    from qt.common.calendar import ET
+
+    kw, _ = env
+    unsettled = {
+        "date": "2026-11-25",
+        "total_net_inflow": None,
+        "total_value_traded": 4.7e9,
+        "total_net_assets": None,
+        "cum_net_inflow": None,
+    }
+    settled = {
+        "date": "2026-11-24",
+        "total_net_inflow": -5.5e7,
+        "total_value_traded": 4.1e9,
+        "total_net_assets": 5.6e10,
+        "cum_net_inflow": 1.35e10,
+    }
+    rows = {"BTC": [unsettled, settled], "ETH": [settled], "SOL": []}
+    kw2, Col, seen = sosovalue_env(kw, rows)
+    out = run_collector(Col(clock=lambda: NOW), **kw2)
+    assert out.status == "ok", out.error
+    assert seen[0][0] == "soso-test" and seen[0][1]["limit"] == "300"
+    n = _q(kw2, "SELECT count(*) FROM raw_metrics WHERE source = 'sosovalue'")[0][0]
+    assert n == 4 + 1 + 4  # BTC: 4 settled fields + 1 unsettled day's traded value; ETH: 4
+    nov24_next_9 = datetime(2026, 11, 25, 9, 0, tzinfo=ET).astimezone(UTC)
+    rel24 = _q(
+        kw2,
+        "SELECT DISTINCT released_at FROM raw_metrics WHERE ts = %s",
+        datetime(2026, 11, 24, tzinfo=ET).astimezone(UTC),
+    )
+    assert rel24 == [(nov24_next_9,)]  # history rule: next morning 09:00 ET
+    # 2026-11-25's rule time (11-26 09:00 ET) is after the fetch: known from when we fetched it
+    v25 = _q(
+        kw2,
+        "SELECT released_at FROM raw_metrics WHERE ts = %s",
+        datetime(2026, 11, 25, tzinfo=ET).astimezone(UTC),
+    )
+    assert v25 == [(NOW,)]
+
+    rows["BTC"][0] = dict(settled, date="2026-11-25")  # it settles the next day
+    later = NOW + timedelta(days=1)
+    out = run_collector(Col(clock=lambda: later), **kw2)
+    assert out.result.rows["raw_metrics"] == 3  # the three fields that were null
+    assert seen[-1][1]["limit"] == "10"
+    kw2["http"].close()
+
+
+@pytest.mark.db
+def test_sosovalue_skipped_without_key(env):
+    from qt.collect.sosovalue import SosovalueCollector
+
+    kw, _ = env
+    out = run_collector(SosovalueCollector(clock=lambda: NOW), **kw)
+    assert out.status == "skipped" and "SOSOVALUE_API_KEY" in out.error

@@ -10,21 +10,19 @@
 |---|---|
 | **Phase** | **Phase 2 (Collectors): build complete (5 of 5); exit gate pending** (Congress backfill finishing, 5-day unattended run) |
 | **Last session** | S03e: yfinance, corporate actions, EDGAR facts (1.52M), earnings (25k), Congress (in progress), CoinGecko, DefiLlama, funding, OI ([handoff](docs/handoffs/2026-11-26_s03e_collectors_build_rest.md)) |
-| **Git** | Branch `vibe/quant_trader`; steps 1–4 pushed; step 5 `32c5117` **not pushed** |
+| **Git** | Branch `vibe/quant_trader`; steps 1–5 pushed; SoSoValue collector committed after |
 | **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-031 |
-| **Tests** | 168 passed, ruff clean |
+| **Tests** | 170 passed, ruff clean |
 | **DB** | Migrated to 007; every Phase 2 raw table populated; 0 null `released_at` |
 | **Service** | launchd `com.qt.scheduler` (paper) under `caffeinate -is`, on step 5 code. `uv run python scripts/install_scheduler.py --status` |
 
 ### Next exact task
 1. Confirm the Congress backfill finished (`collector_state` cursor `backfill.done`); the 06:00 ET job continues it otherwise.
 2. Phase 2 exit gate: 5 consecutive unattended days (component doc §13 item 5). Check each daily summary.
-3. Meanwhile: Phase 3 questioning.
+3. Meanwhile: Phase 3 questioning (now 9 questions; Q9 = survivorship gaps, D-032).
 
 ### Open questions for Dom (carried forward)
-- [ ] OK to push step 5?
-- [ ] SoSoValue free key (ETF flows), or keep it dropped (D-031)?
-- [ ] Accept the survivorship gaps (no EDGAR facts for delisted members; 3 delisted names without bars)?
+- [ ] **Dom: get a SoSoValue key** (sosovalue.com/developer/dashboard → "Apply your Key"), put it in `.env` as `SOSOVALUE_API_KEY`, restart the service. Then check the history depth on the first run (D-032)
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
 - [ ] Whole shares vs fractional shares (D-003) → Phase 6
 - [ ] Keep the "never sell same session" rule now that PDT is retired? (D-002) → Phase 5

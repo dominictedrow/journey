@@ -69,3 +69,9 @@ None.
 - OK to push step 5 (`32c5117` + handoff)?
 - SoSoValue: want to sign up for a free key so ETF flows come back? Otherwise they stay dropped.
 - Accept the survivorship gaps (no EDGAR facts for delisted members; 3 delisted names without bars), or look for a source in Phase 3?
+
+## Addendum (same session, after Dom's answers)
+- Dom: push step 5, get a SoSoValue key, close the survivorship gaps in Phase 3. Step 5 pushed (`e147c04`).
+- **`sosovalue` collector built** (D-032): skipped until `SOSOVALUE_API_KEY` is set; 2 tests; 170 passed.
+- Survivorship gaps added as Phase 3 question 9, with unverified leads (SEC `cik-lookup-data.txt` for delisted CIKs; Stooq or successor tickers for the 3 bar-less names).
+- Congress backfill: slice 2 done (115th congress, offset 2,250); the driver continues.

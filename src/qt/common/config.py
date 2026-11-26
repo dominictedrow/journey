@@ -355,6 +355,14 @@ class CoingeckoCfg(_Strict):
     ids: dict[str, str] = Field(min_length=1)
 
 
+class SosovalueCfg(_Strict):
+    base_url: str
+    country_code: str
+    symbols: list[str] = Field(min_length=1)
+    history_limit: int = Field(ge=1, le=300)
+    daily_limit: int = Field(ge=1, le=300)
+
+
 class DefillamaCfg(_Strict):
     stablecoins_url: str
 
@@ -441,6 +449,7 @@ class CollectCfg(_Strict):
     earnings: EarningsCfg
     coingecko: CoingeckoCfg
     defillama: DefillamaCfg
+    sosovalue: SosovalueCfg
     derivs: DerivsCfg
     fred: FredCfg
     schedule: ScheduleCfg

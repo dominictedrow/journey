@@ -45,6 +45,7 @@ http:
     api.coingecko.com: 0.4            # Demo: 30 calls/min
     api.nasdaq.com: 1
     www.okx.com: 4                    # public: 10 req / 2 s
+    openapi.sosovalue.com: 0.3        # 20 req/min
     api.hyperliquid.xyz: 0.5          # 429s at 2 req/s (backfill 2026-11-26)
 
 # Freshness: Phase 2 records and alerts; Phase 5 turns stale critical feeds into NO TRADE.
@@ -72,6 +73,7 @@ freshness:
     edgar_facts: {critical: false, max_hours: 192}
     congress: {critical: false, max_hours: 26}
     earnings: {critical: false, max_hours: 72}
+    sosovalue: {critical: false, max_hours: 26}
 
 # News (D-008, D-022). Every article is stored; filtering happens downstream (Phase 8).
 news:
@@ -289,6 +291,15 @@ coingecko:
 
 defillama:
   stablecoins_url: https://stablecoins.llama.fi/stablecoincharts/all
+
+# SoSoValue spot ETF flows (6.10, Q10, D-032). Non-critical; skipped until SOSOVALUE_API_KEY is
+# set (dashboard: sosovalue.com/developer/dashboard). Limits: 20 req/min, 100k/month.
+sosovalue:
+  base_url: https://openapi.sosovalue.com/openapi/v1
+  country_code: US
+  symbols: [BTC, ETH, SOL]
+  history_limit: 300                    # first run: as many rows as the API gives (max 300)
+  daily_limit: 10                       # later runs: re-read recent days (T+1 settlement)
 
 derivs:
   symbols: [BTC, ETH, SOL]
