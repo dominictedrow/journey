@@ -4,43 +4,32 @@
 
 ---
 
-## CURRENT CHECKPOINT: v15 / 2026-11-26 (Session 06, model plan; ran alongside S05)
+## CURRENT CHECKPOINT: v15 / 2026-11-26 (Session 05, Phase 3 build step 5b)
 
 | | |
 |---|---|
-| **Phase** | Phase 3 step 5b still next (see v14). **New:** model plan for Dom's model descriptions accepted (`docs/plan/MODEL_PLAN.md`, D-041); MASTER_PLAN Phases 7–10 re-scoped |
-| **Last session** | S06: model plan + question files 07–10 rewritten, 04 Q8 ([handoff](docs/handoffs/2026-11-26_s06_model_plan.md)) |
-| **Git** | S06 docs committed, not pushed |
+| **Phase** | **Phase 3: steps 1–4, 5a, 5b done** (5b: build/matrix/jobs, migration 009, D-042; infl v2 D-041). 5c (survivorship) left, then the exit gate. Phase 2 gate still running in parallel |
+| **Last session** | S05 ([handoff](docs/handoffs/2026-11-26_s05_features_build_step5.md)) |
+| **Git** | `70b05bf` committed, not pushed (`97ba2f2` pushed) |
+| **Tests** | 708 passed, ruff clean |
+| **Service** | `com.qt.scheduler` (paper), PID 95722 on `70b05bf`, with `features_daily` 18:00 ET and `hmm_refit` first Sunday |
+| **Data** | 154 HMM fits; feature backfill 2016-01-01 → 2026-11-01 running/ran (`logs/features_backfill_20261126.log`) |
 
 ### Next exact task
-1. Model questioning runs in phase order, starting with Phase 4 (now with Q8 on k-fold).
-2. Everything in v14 below is still live (step 5b, 5c, Phase 2 gate, open questions).
-
----
-
-## Still-live checkpoint: v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
-
-| | |
-|---|---|
-| **Phase** | **Phase 3 (Features + regimes): build steps 1–4 and 5a done** (5a: quadrant, HMM filtered-only, stress score, time-series z, masks, staleness; D-040). 5b (matrix/build/jobs) and 5c (survivorship) left. Phase 2 exit gate still running in parallel |
-| **Last session** | S05: step 5a ([handoff](docs/handoffs/2026-11-26_s05_features_build_step5.md)) |
-| **Git** | `8bab645` committed, **not pushed** |
-| **Tests** | 691 passed, ruff clean |
-| **Service** | launchd `com.qt.scheduler` (paper), PID 62917 on `89f522d`; no restart needed for 5a |
-
-### Next exact task
-1. Phase 3 step 5b: `matrix.py` (`features_asof`), `build.py` (daily job + backfill CLI writing `features`/`regime`), HMM refit job (`hmm_fits`, stability alert/report), `features_daily` at 18:00 ET with the stale-input gate.
-2. Step 5c: §9 survivorship (CIK mapping, SIC → GICS, delisted bars).
-3. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
+1. Verify the backfill (rows, size ~1.8 GB, NaN rates); fix the Nov 2–25 rows once Dom decides (see open questions).
+2. Step 5c: §9 survivorship (CIK mapping script, SIC → GICS, delisted bars via yfinance/Stooq).
+3. Exit gate: `features_daily` unattended 3 sessions; Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 2026-11-27).
 
 ### Open questions for Dom
-- [ ] Push `8bab645`?
-- [ ] Oct 2025 CPI missing (shutdown): bridge one missing month in `infl_mom_*` v2? (Today the quadrant is NaN until ~Dec 10.)
+- [ ] OK to delete the Nov 2–25 `features` rows from my timing run (SPY-context features stored as NaN by a since-fixed bug) and rebuild those days? Needs a one-off bypass of the append-only trigger.
+- [ ] Push `d8c37b4` and `70b05bf`?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
+- Regime (quadrant, HMM, stress), normalization, masks, staleness (D-040). Pushed as `8bab645`/`97ba2f2`.
 ### v13 / 2026-11-26 (Session 04, Phase 3 build step 4b)
 - Event clock + crypto structure (D-039), SoSoValue envelope fix. Pushed as `89f522d`/`6cbfad0`.
 ### v12 / 2026-11-26 (Session 04, Phase 3 build step 4a)

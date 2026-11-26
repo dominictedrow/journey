@@ -65,3 +65,30 @@
 ## Questions to ask Dom next session
 - Push `8bab645`?
 - The missing Oct 2025 CPI: add a `infl_mom_*` v2 that bridges one missing month (so the quadrant isn't NaN for ~a year of history)?
+
+## Addendum 1: pushes, inflation v2, step 5b (Dom: "Yes to both begin 5b")
+- Pushed `6cbfad0..97ba2f2`.
+- **D-041:** `infl_mom_core_{cpi,pce}` v2 bridges one missing month with the geometric mean of its neighbours (Oct 2025 shutdown). The quadrant uses v2. `_tsz` features now take their base's version. Committed as `d8c37b4`.
+- **Step 5b (D-042), committed as `70b05bf`:**
+  - `features/catalog.py`: every family registered once (338 current features).
+  - `features/build.py`: the daily job and backfill on one code path, plus the HMM refit (`ensure_fits`, joblib + `hmm_fits`, stability alert and report) and a CLI (`--since/--until`, `--daily`, `--refit-hmm`).
+  - `features/matrix.py`: `features_asof(T, versions)`.
+  - Migration 009: compression re-segmented by (feature, version); `runs.status` gains `stale_inputs`. **Applied live.**
+  - Scheduler jobs: `features_daily` (18:00 ET daily, stale gate on bars_equity/bars_crypto/fred) and `hmm_refit` (first Sunday 06:00 ET), both as subprocesses.
+  - The daily summary has a Features section.
+  - Tests: `test_features_build.py` (9). The central one: a daily run at T writes the same rows as a backfill with later-cut inputs. 708 tests pass.
+- **Live:**
+  - 154 HMM fits (2014-02-02 → 2026-11-01) in 3.4 min. Max relabel 15%, no alert. `reports/hmm_stability_20261126.md`.
+  - Timing run Nov 2–25: 1.31M rows, 215 s, 1.2 GB RSS.
+  - Compression probe: 207 → 9 bytes/row (23×), so the full history is about 1.8 GB.
+- **Bugs found on live data:**
+  - `fundamentals.parse` failed for instants-only filers. Fixed by splitting before masking (same output otherwise).
+  - "SPY" was taken for a FRED id, so every SPY-context feature (beta, resid vol, corr_spy) was NaN. Fixed, and the build test now requires these features to be finite.
+- **Open:** the Nov 2–25 timing-run rows hold those NaN values for the SPY-context features and their ranks/z, plus `comp_low_vol`, which uses beta_252d. `features` is append-only, so replacing them needs Dom's OK to delete them (trigger bypass in one transaction), then a rebuild of Nov 2–25.
+- **Backfill 2016-01-01 → 2026-11-01** started in the background (`logs/features_backfill_20261126.log`).
+- Scheduler restarted on `70b05bf` (PID 95722). `features_daily` is registered, first run 18:00 ET today (holiday: crypto + non-session market rows only).
+
+## Next exact task (updated)
+1. Check the backfill result: rows, size, NaN rates, compression. Then the Nov 2–25 fix once Dom decides.
+2. Step 5c: §9 survivorship (`scripts/map_delisted_ciks.py`, SIC → GICS, delisted bars).
+3. Exit gate item 7: `features_daily` unattended for 3 sessions (Fri 11-27, Mon 11-30, Tue 12-1).
