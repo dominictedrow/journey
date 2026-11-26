@@ -54,6 +54,8 @@ def write_daily_summary(
     backups: list[tuple[Any, ...]] = []
     collected: list[tuple[Any, ...]] = []
     identity: list[tuple[Any, ...]] | None = None
+    feats: list[tuple[Any, ...]] | None = None
+    feats_asof = None
     if connect is not None:
         from qt.collect import identity_check  # collect builds on common; import late
 
@@ -76,6 +78,23 @@ def write_daily_summary(
                 "FROM alerts_log WHERE ts >= %s AND ts < %s ORDER BY ts",
                 (start, end),
             ).fetchall()
+            # Features: the newest decision time on or before the end of this day
+            feats_asof = conn.execute(
+                "SELECT max(asof) FROM features WHERE asof < %s AND asof > %s",
+                (end, end - timedelta(days=4)),
+            ).fetchone()[0]
+            if feats_asof is not None:
+                feats = [
+                    (g, f"{n:,}", f"{a:,}", f"{nan:.1%}")
+                    for g, n, a, nan in conn.execute(
+                        "SELECT coalesce(r.feature_group, '?'), count(*), "
+                        "count(DISTINCT f.asset_id), avg((f.value IS NULL)::int) "
+                        "FROM features f LEFT JOIN feature_registry r ON r.feature_name = "
+                        "f.feature_name AND r.version = f.feature_version WHERE f.asof = %s "
+                        "GROUP BY 1 ORDER BY 1",
+                        (feats_asof,),
+                    ).fetchall()
+                ]
             backups = conn.execute(
                 "SELECT to_char(ts AT TIME ZONE 'UTC', 'HH24:MI'), status, dump_file, dump_bytes, "
                 "mismatches::text FROM backup_log WHERE ts >= %s AND ts < %s ORDER BY ts",
@@ -96,6 +115,11 @@ def write_daily_summary(
         if identity is not None
         else PENDING
     )
+    feats_md = (
+        (f"Decision time {feats_asof:%Y-%m-%d %H:%M} UTC.\n\n"
+         + _table(["group", "values", "assets", "NaN"], feats)) if feats
+        else ("No feature rows yet." if connect else PENDING)
+    )
     hb_md = (
         ("No gaps." if not heartbeat_gaps else
          _table(["from (UTC)", "to (UTC)", "minutes"], heartbeat_gaps))
@@ -114,6 +138,9 @@ Profile `{settings.profile}` · config `{settings.config_hash[:12]}`
 
 ## Identity check
 {identity_md}
+
+## Features
+{feats_md}
 
 ## Scheduler heartbeat
 {hb_md}

@@ -133,6 +133,52 @@ class JobRunner:
             d, self.settings, connect=self.connect, freshness=rows, heartbeat_gaps=gaps
         )
 
+    # ------------------------------------------------------------ feature jobs (Phase 3)
+    def stale_gate_feeds(self, now: datetime | None = None) -> list[str]:
+        """Gate feeds of ``features_daily`` that are stale now (never-run counts as stale)."""
+        now = now or datetime.now(UTC)
+        gate = self.settings.config.features.build.gate_feeds
+        with self.connect() as conn:
+            report = freshness(conn, self.settings.config.collect.freshness, gate, now, self.cal)
+        return sorted(f.collector for f in report if f.stale)
+
+    def features_daily(self, now: datetime | None = None) -> str:
+        """18:00 ET every day: the feature build for today's decision time, unless a gate feed is
+        stale (then the run is recorded as ``stale_inputs`` and alerts). Returns the status."""
+        from qt.common import alerts
+        from qt.common.runs import run_context
+
+        stale = self.stale_gate_feeds(now)
+        if stale:
+            with run_context("features", self.settings, self.connect) as run:
+                run.status, run.note = "stale_inputs", "stale: " + ", ".join(stale)
+            alerts.alert("warn", "features_stale_inputs", "features_daily skipped: stale inputs",
+                         ", ".join(stale))  # fmt: skip
+            log.warning("features_stale_inputs", extra={"feeds": stale})
+            return "stale_inputs"
+        return self._run_build(["--daily"], "features_daily")
+
+    def hmm_refit(self) -> str:
+        """First Sunday of the month: fit the new monthly HMM (and any missed ones)."""
+        return self._run_build(["--refit-hmm"], "hmm_refit")
+
+    def _run_build(self, args: list[str], job: str) -> str:
+        """Run ``python -m qt.features.build`` in a subprocess: the build loads the full history
+        (~1-2 GB), which shouldn't stay resident in the long-running scheduler."""
+        import subprocess
+        import sys
+
+        from qt.common.paths import REPO_ROOT
+
+        timeout = self.settings.config.features.build.job_timeout_min * 60
+        env = {**os.environ, "QT_PROFILE": self.settings.profile}
+        p = subprocess.run([sys.executable, "-m", "qt.features.build", *args], cwd=REPO_ROOT,
+                           env=env, timeout=timeout, capture_output=True, text=True)  # fmt: skip
+        if p.returncode != 0:
+            raise RuntimeError(f"{job} failed ({p.returncode}): {p.stderr[-2000:]}")
+        log.info("job_done", extra={"job": job, "out": p.stdout[-500:]})
+        return "ok"
+
     def backup(self) -> bool:
         from qt.db.backup import backup_job
 

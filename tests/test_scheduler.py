@@ -44,7 +44,7 @@ def test_build_scheduler_jobs(settings, cal):
     assert set(js) == {
         "news_loop", "heartbeat", "freshness", "crypto_daily", "congress_daily",
         "earnings_daily", "weekly", "backup", "daily_summary", "stock_daily_replan",
-        "stock_daily",
+        "stock_daily", "features_daily", "hmm_refit",
     }  # fmt: skip
     sc = settings.config.collect.schedule
     assert isinstance(js["news_loop"].trigger, IntervalTrigger)
@@ -63,6 +63,15 @@ def test_build_scheduler_jobs(settings, cal):
     assert fire("daily_summary", now).astimezone(ET).strftime("%H:%M") == "21:30"
     w = fire("weekly", now).astimezone(ET)
     assert (w.strftime("%a %H:%M"), w.date()) == ("Sun 18:00", date(2026, 11, 29))
+    # Phase 3: features at 18:00 ET every day; HMM refit on the first Sunday of the month
+    f = fire("features_daily", now).astimezone(ET)
+    assert (f.strftime("%H:%M"), f.date()) == ("18:00", date(2026, 11, 24))
+    sat = fire("features_daily", utc(2026, 11, 28, 12, 0)).astimezone(ET)
+    assert sat.date() == date(2026, 11, 28)  # weekends too (crypto)
+    h = fire("hmm_refit", now).astimezone(ET)
+    assert (h.strftime("%a %H:%M"), h.date()) == ("Sun 06:00", date(2026, 12, 6))
+    h2 = fire("hmm_refit", h + timedelta(hours=1)).astimezone(ET)
+    assert h2.date() == date(2027, 1, 3)
     # jobs pick these up when the scheduler starts (pending jobs don't carry them yet)
     assert sched._job_defaults == {
         "coalesce": True, "max_instances": 1, "misfire_grace_time": sc.misfire_grace_s,
@@ -129,3 +138,37 @@ def test_session_paced_freshness_ignores_weekends_and_holidays(settings, cal):
     assert stale_after(morning, rule, cal) == utc(2026, 11, 24, 21, 30) + timedelta(hours=6)
     plain = FreshnessRule(critical=True, max_hours=2)
     assert stale_after(wed, plain, None) == wed + timedelta(hours=2)
+
+
+# ---------------------------------------------------------------- features_daily gate
+def test_features_daily_gate(settings, cal, monkeypatch):
+    from qt.common import alerts
+
+    r = _runner(settings, cal)
+    calls, sent, runs = [], [], []
+    monkeypatch.setattr(r, "_run_build", lambda args, job: calls.append(args) or "ok")
+    monkeypatch.setattr(alerts, "alert", lambda *a, **k: sent.append(a) or True)
+
+    import contextlib
+
+    from qt.common import runs as runs_mod
+
+    @contextlib.contextmanager
+    def fake_ctx(stage, s, connect):
+        run = runs_mod.Run("20261124T2300Z-features-abcd", stage, s)
+        yield run
+        runs.append((run.status, run.note))
+
+    monkeypatch.setattr(runs_mod, "run_context", fake_ctx)
+    monkeypatch.setattr(r, "stale_gate_feeds", lambda now=None: ["bars_equity"])
+    assert r.features_daily() == "stale_inputs"
+    assert calls == [] and runs == [("stale_inputs", "stale: bars_equity")]
+    assert sent and sent[0][0] == "warn"
+    monkeypatch.setattr(r, "stale_gate_feeds", lambda now=None: [])
+    assert r.features_daily() == "ok" and calls == [["--daily"]]
+    assert r.hmm_refit() == "ok" and calls[-1] == ["--refit-hmm"]
+
+
+def test_stale_gate_only_checks_feature_feeds(settings, cal):
+    gate = settings.config.features.build.gate_feeds
+    assert "news" not in gate and {"bars_equity", "fred"} <= set(gate)

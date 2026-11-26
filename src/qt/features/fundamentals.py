@@ -67,7 +67,8 @@ def parse(facts: pd.DataFrame) -> pd.DataFrame:
         return facts.assign(start=[], end=[], rel=pd.Series(dtype="int64"))
     fp = facts["fiscal_period"].astype(str)
     has = fp.str.contains("/")
-    start = fp.where(has).str.split("/").str[0]
+    # split first, then mask: an all-instant asset (e.g. shares only) leaves no strings to split
+    start = fp.str.split("/").str[0].where(has)
     end = fp.where(has, fp).str.split("/").str[-1]
     out = facts.assign(
         start=[date.fromisoformat(x) if isinstance(x, str) else None for x in start],

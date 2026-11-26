@@ -372,3 +372,17 @@ def test_asset_without_facts_is_all_nan():
     f = frame(facts=FACTS.iloc[:0])
     for s in SPECS:
         assert np.isnan(np.asarray(s.fn(f), dtype=float)).all(), s.name
+
+
+def test_parse_instants_only():
+    # an asset whose facts are all balance-sheet instants (no duration to split)
+    facts = pd.DataFrame({
+        "asset_id": [1, 1], "fiscal_period": ["2023-12-31", "2024-03-31"],
+        "metric": ["dei:EntityCommonStockSharesOutstanding"] * 2, "value": [1e6, 1.1e6],
+        "unit": ["shares", "shares"], "accession": ["a", "b"],
+        "released_at": pd.to_datetime(["2024-02-01", "2024-05-01"], utc=True),
+    })  # fmt: skip
+    p = fu.parse(facts)
+    assert p["start"].isna().all() and list(p["end"]) == [date(2023, 12, 31), date(2024, 3, 31)]
+    tl = fu.timeline(facts, CFG.fundamentals)
+    assert len(tl) == 2 and tl["shares"].iloc[-1] == 1.1e6

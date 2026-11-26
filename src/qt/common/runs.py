@@ -53,6 +53,9 @@ class Run:
     run_id: str
     stage: str
     settings: Settings
+    # A body may set these to finish as e.g. 'stale_inputs' (009) instead of 'ok'.
+    status: str = "ok"
+    note: str | None = None
 
 
 @contextmanager
@@ -87,8 +90,8 @@ def run_context(
             log.error("run_failed: %s", err, exc_info=True)
             _finish(connect, run.run_id, "failed", err)
             raise
-        _finish(connect, run.run_id, "ok", None)
-        log.info("run_finished")
+        _finish(connect, run.run_id, run.status, run.note)
+        log.info("run_finished", extra={"status": run.status})
     finally:
         run_id_var.reset(t_run)
         stage_var.reset(t_stage)

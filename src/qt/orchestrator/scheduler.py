@@ -109,6 +109,11 @@ def build_scheduler(
     add(runner.backup, _cron_et(settings.config.backup.evening_time_et), "backup")
     add(runner.daily_summary, _cron_et(sc.summary_et), "daily_summary")
     add(plan_stock_daily, _cron_et(sc.replan_et), "stock_daily_replan", [sched, runner, cal])
+    fb, hm = settings.config.features.build, settings.config.features.regime.hmm
+    add(runner.features_daily, _cron_et(fb.run_et), "features_daily")
+    # first <weekday> of the month: APScheduler ANDs day and day_of_week
+    add(runner.hmm_refit, _cron_et(hm.refit_et, day="1-7", day_of_week=hm.refit_weekday),
+        "hmm_refit")  # fmt: skip
     plan_stock_daily(sched, runner, cal, now=now, catch_up=True)
 
     sched.add_listener(_on_event, EVENT_JOB_ERROR | EVENT_JOB_MISSED | EVENT_JOB_MAX_INSTANCES)

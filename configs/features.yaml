@@ -275,3 +275,20 @@ normalize:
   mask_windows: [21, 63, 126, 252]   # hist_ok_<n>: the asset has n returns (n + 1 bars)
   # days_since_release for every macro series these market groups read
   staleness_groups: [macro_rates, macro_growth_inflation, credit_vol, cross_asset, framework, gli]
+
+# Build (section 10): the daily job and the backfill write `features` / `regime` (append-only).
+build:
+  run_et: "18:00"                     # decision time T = this New York time, every calendar day
+  asset_classes: [equity, etf, crypto]   # the asset matrix (index/future/fx are context only)
+  # An asset gets rows at T only while its newest bar known at T is at most this many calendar
+  # days old (delisted names stop; a weekend + holiday is 4 days).
+  max_bar_age_days: 5
+  # On non-sessions only these are computed: crypto assets and these market groups.
+  nonsession_market_groups: [crypto_ratio, crypto_structure]
+  breadth: {sma: 200, hl: 252}        # matches the breadth feature formulas
+  write_batch_rows: 500000            # rows per COPY
+  # features_daily doesn't run while one of these feeds is stale (the run is recorded as
+  # stale_inputs and alerts). Only the feeds the features read: a stale news feed doesn't block it.
+  gate_feeds: [bars_equity, bars_crypto, fred]
+  job_timeout_min: 60                 # the scheduler runs the build in a subprocess
+  compress: true                      # compress each finished 30-day chunk during a backfill

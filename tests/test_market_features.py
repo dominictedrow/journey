@@ -437,7 +437,8 @@ def test_mutation_is_visible_without_the_cut():
     clean = market.compute(state(end), SPECS)
     dirty = market.compute(state(end, *_mutate_after(t)), SPECS)
     changed = {k[0] for k in clean if not _same(clean[k], dirty[k])}
-    assert len(changed) >= len({s.name for s in SPECS}) - 2, sorted({s.name for s in SPECS} - changed)
+    names = {s.name for s in SPECS}
+    assert len(changed) >= len(names) - 2, sorted(names - changed)
 
 
 def test_breadth_table_counts():

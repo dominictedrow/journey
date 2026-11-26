@@ -827,6 +827,28 @@ class NormalizeCfg(_Strict):
     staleness_groups: list[str]
 
 
+class BreadthCfg(_Strict):
+    sma: int = Field(ge=2)
+    hl: int = Field(ge=2)
+
+
+class BuildCfg(_Strict):
+    run_et: str
+    asset_classes: list[str] = Field(min_length=1)
+    max_bar_age_days: int = Field(ge=1)
+    nonsession_market_groups: list[str]
+    breadth: BreadthCfg
+    write_batch_rows: int = Field(ge=1000)
+    compress: bool
+    gate_feeds: list[str] = []
+    job_timeout_min: int = Field(ge=1)
+
+    @field_validator("run_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
     adjust: AdjustCfg
@@ -836,6 +858,7 @@ class FeaturesCfg(_Strict):
     market: MarketCfg
     regime: RegimeCfg
     normalize: NormalizeCfg
+    build: BuildCfg
 
 
 class Config(_Strict):
