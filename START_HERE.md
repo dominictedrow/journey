@@ -10,25 +10,23 @@
 |---|---|
 | **Phase** | **Phase 3 (Features + regimes): build steps 1–4 done** (foundations; 36 price features; fundamentals + ranks + composites, D-037; 57 market features, D-038; event clock + crypto structure, 13 features + FOMC/CPI calendar collectors, D-039); Phase 2 exit gate still running in parallel |
 | **Last session** | S04: questioning, spec, steps 1–4b, identity fix ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
-| **Git** | `32ad4b8` pushed; step 4a and 4b commits not pushed |
+| **Git** | `89f522d` pushed (4a `509f639` was already pushed) |
 | **Tests** | 648 passed, ruff clean |
-| **Service** | launchd `com.qt.scheduler` (paper). Needs a restart on the 4b commit to run the new weekly collectors; Congress backfill driver still running |
+| **Service** | launchd `com.qt.scheduler` (paper), restarted on `89f522d` (PID 62917); weekly job runs `fomc_cal`/`cpi_cal` from Sun 18:00 ET; Congress backfill driver still running |
 
 ### Next exact task
 1. Phase 3 build step 5: regime (§6), normalization + masks (§7), `matrix.py`/`build.py`, §9 survivorship.
 2. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
-- [ ] Push the step 4a and 4b commits?
-- [ ] OK to restart the scheduler service on the 4b commit?
-- [ ] **SoSoValue key:** the `.env` line still holds only a placeholder comment. Paste the key after `SOSOVALUE_API_KEY=`
+- [ ] **SoSoValue key:** Dom is getting it (walkthrough given S04). Once in `.env`, run `python -m qt.collect.backfill --source sosovalue` and check for 403
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
 ### v12 / 2026-11-26 (Session 04, Phase 3 build step 4a)
-- 57 market features (`features/market.py`), ALFRED fixes, D-038. Not pushed.
+- 57 market features (`features/market.py`), ALFRED fixes, D-038. Pushed as `509f639`.
 ### v11 / 2026-11-26 (Session 04, Phase 3 build step 3)
 - Fundamentals, ranks, composites, EDGAR top-up + predecessor CIKs, D-037. Pushed as `32ad4b8`.
 ### v10 / 2026-11-26 (Session 04, Phase 3 build step 2)
