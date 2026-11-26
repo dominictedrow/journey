@@ -172,13 +172,24 @@ def curve(m: MarketState, long: str, short: str, n: int | None = None) -> float:
     return chg(a - b)
 
 
-def infl_momentum(m: MarketState, sid: str) -> float:
+def _monthly_bridged(s: pd.Series, months_back: int) -> float:
+    """:func:`_monthly_at`, but a single missing month is bridged by the geometric mean of the
+    months either side (October 2025 CPI was never published: shutdown). D-041."""
+    v = _monthly_at(s, months_back)
+    if math.isfinite(v) or not len(s):
+        return v
+    before, after = _monthly_at(s, months_back + 1), _monthly_at(s, months_back - 1)
+    return math.sqrt(before * after) if before > 0 and after > 0 else math.nan
+
+
+def infl_momentum(m: MarketState, sid: str, bridge: bool = False) -> float:
     s = m.mac(sid)
     c = m.cfg.infl_months
     if not len(s):
         return math.nan
     now = float(s.iloc[-1])
-    short, long = _monthly_at(s, c.short), _monthly_at(s, c.long)
+    at = _monthly_bridged if bridge else _monthly_at
+    short, long = at(s, c.short), at(s, c.long)
     if not (short > 0 and long > 0):
         return math.nan
     return (now / short) ** (12 / c.short) - 1 - (now / long - 1)
@@ -414,6 +425,12 @@ def register(cfg: MarketCfg) -> list[registry.FeatureSpec]:
         reg(f"infl_mom_{nm}", G_GROWTH,
             f"{sid}: {im.short}-month annualized - {im.long}-month change", [sid],
             lambda m, sid=sid: infl_momentum(m, sid))  # fmt: skip
+        registry.feature(f"infl_mom_{nm}", 2, kind="market", group=G_GROWTH, sources=(sid,),
+                         formula=f"{sid}: {im.short}-month annualized - {im.long}-month change; "
+                                 "a single missing month is bridged by the geometric mean of the "
+                                 "months either side")(
+            lambda m, sid=sid: infl_momentum(m, sid, bridge=True))  # fmt: skip
+        keys.append((f"infl_mom_{nm}", 2))
     sc = cfg.sahm
     reg("sahm", G_GROWTH, f"UNRATE {sc.avg_months}-month avg - min of it over the prior "
         f"{sc.lookback_months} months", ["UNRATE"], sahm)  # fmt: skip

@@ -61,7 +61,8 @@ def register_ts_z(
     """A ``_tsz`` feature for every spec of ``base`` in ``groups`` (same kind as its base).
 
     ``fn`` takes the base feature's value history (oldest first) and returns the z of each row
-    (asset kind: the whole array) or of the newest row (market kind: a float).
+    (asset kind: the whole array) or of the newest row (market kind: a float). A z's version is
+    its base's version, so bumping a base bumps its z (older base versions keep their old z).
     """
     keys = []
     w, cap, frac = cfg.z_window, cfg.winsor, cfg.min_frac
@@ -77,11 +78,11 @@ def register_ts_z(
         else:
             def fn(x, w=w, cap=cap, frac=frac):
                 return z_last(x, w, cap, frac)
-        registry.feature(name, 1, kind=b.kind, group=group, window=w,
+        registry.feature(name, b.version, kind=b.kind, group=group, window=w,
                          formula=f"z of {b.name} v{b.version} vs its last {w} values (incl. "
                                  f"this one), clipped to +-{cap:g}, needs {frac:g} of them",
                          sources=(f"feature:{b.name}:v{b.version}",))(fn)  # fmt: skip
-        keys.append((name, 1))
+        keys.append((name, b.version))
     return [registry.get(*k) for k in keys]
 
 

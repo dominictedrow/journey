@@ -476,3 +476,23 @@ def test_regime_features_and_row(fits):
     assert row["hmm_stress"] == p[2] and row["stress_score"] == vals["stress_score"]
     assert row["quadrant"] is None  # no UNRATE / GDP / CPI in this fixture
     assert all(registry.get(s.name, s.version) is s for s in specs)
+
+
+def test_infl_mom_v2_bridges_one_missing_month():
+    cpi = _cpi(True)
+    gap = 47 - 13  # the month 12 before the newest (2020-11) never published
+    df = _quad_macro(FLAT_UNRATE, RISING_GDP, cpi)
+    df = df[~((df.series_id == "CPILFESL") & (df.period == date(2020, 11, 1)))]
+    m = state(at18(date(2021, 12, 31)), macro=df, prices={})
+    v1, v2 = registry.get("infl_mom_core_cpi", 1), registry.get("infl_mom_core_cpi", 2)
+    assert math.isnan(v1.fn(m))
+    bridged = math.sqrt(cpi[gap - 1] * cpi[gap + 1])
+    want = (cpi[-1] / cpi[-4]) ** 4 - 1 - (cpi[-1] / bridged - 1)
+    assert v2.fn(m) == pytest.approx(want, rel=1e-12)
+    assert quadrant.inflation_up(m, RCFG.quadrant) is (want > 0)
+    # with no gap both versions agree; two adjacent missing months stay NaN
+    full = state(at18(date(2021, 12, 31)), macro=_quad_macro(FLAT_UNRATE, RISING_GDP, cpi),
+                 prices={})  # fmt: skip
+    assert v1.fn(full) == pytest.approx(v2.fn(full), rel=1e-12)
+    two = df[~((df.series_id == "CPILFESL") & (df.period == date(2020, 12, 1)))]
+    assert math.isnan(v2.fn(state(at18(date(2021, 12, 31)), macro=two, prices={})))

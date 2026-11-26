@@ -32,7 +32,7 @@ def register(mcfg: MarketCfg, cfg: RegimeCfg) -> list[registry.FeatureSpec]:
     q = cfg.quadrant
     qrule = (f"growth up = Sahm <= mean of its last {q.sahm_avg_months} months + "
              f"{q.sahm_flat_tol:g} and GDPC1 QoQ ann > mean of its last {q.gdp_avg_quarters} "
-             f"quarters; inflation up = {q.inflation_series} momentum > 0")  # fmt: skip
+             f"quarters; inflation up = {q.inflation_series} momentum v2 > 0")  # fmt: skip
     qsrc = ["UNRATE", "GDPC1", q.inflation_series]
     for name in quadrant.QUADRANTS:
         reg(f"quad_{name}", G_QUADRANT, f"1 if quadrant is {name} ({qrule})", qsrc,

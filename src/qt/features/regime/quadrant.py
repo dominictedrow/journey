@@ -56,7 +56,7 @@ def growth_up(m: MarketState, cfg: QuadrantCfg) -> bool | None:
 
 
 def inflation_up(m: MarketState, cfg: QuadrantCfg) -> bool | None:
-    x = market.infl_momentum(m, cfg.inflation_series)
+    x = market.infl_momentum(m, cfg.inflation_series, bridge=True)  # infl_mom_* v2 (D-041)
     return None if not math.isfinite(x) else bool(x > 0)
 
 
