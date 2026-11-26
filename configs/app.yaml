@@ -1,0 +1,15 @@
+# Logging, alerts, reports (D-015, D-016).
+logging:
+  level: INFO
+  dir: logs
+  retention_days: 30
+alerts:
+  enabled: true
+  provider: ntfy
+  server: https://ntfy.sh
+  coalesce_window_s: 300
+  timeout_s: 5
+  priority: {info: 3, warn: 4, critical: 5}
+  os_fallback: true
+reports:
+  daily_dir: reports/daily

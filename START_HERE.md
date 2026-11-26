@@ -4,33 +4,23 @@
 
 ---
 
-## CURRENT CHECKPOINT: v1 / 2026-11-25 (Session 01)
+## CURRENT CHECKPOINT: v2 / 2026-11-25 (Session 01, build)
 
 | | |
 |---|---|
-| **Phase** | **Phase 1 (Infrastructure), step (b): build**. Step (a) questioning is done |
-| **Last session** | S01: Phase 1 questioning done, build spec written, D-012 to D-018 logged ([handoff](docs/handoffs/2026-11-25_s01_infra_questioning.md)) |
-| **Git** | Branch `vibe/quant_trader` on `dominictedrow/journey`. S01 doc changes not yet committed |
-| **Code written** | None yet. Package skeleton only. |
-| **Tests** | None yet |
+| **Phase** | **Phase 1 (Infrastructure): built**. One exit-gate item is left (Dom's phone check), then **Phase 2 questioning** |
+| **Last session** | S01: Phase 1 questioning and build ([handoff](docs/handoffs/2026-11-25_s01_infra_questioning.md)) |
+| **Git** | Branch `vibe/quant_trader`. Questioning docs are committed as `5e6985a`; the build is not yet committed. Nothing is pushed |
+| **Code written** | Config, run_id, logging, ntfy alerts, calendar, migrations 001 to 004, backup job |
+| **Tests** | `uv run pytest`: 55 passed. Ruff is clean |
+| **DB** | `docker compose up -d` brings up `qt_db` (54320) and `qt_db_backup` (54321). Primary is migrated to 004 and has no data yet |
 
 ### Next exact task
-**Build Phase 1** from [`docs/components/01_infrastructure.md`](docs/components/01_infrastructure.md), in this order:
-1. uv project
-2. docker-compose (`db` + `db_backup`)
-3. migrations 001 to 004 and the runner
-4. config and profiles
-5. `run_id` and `run_context`
-6. logging and ntfy alerts
-7. `scripts/db_backup.py`
-8. calendar
-9. tests
+1. Dom subscribes to `NTFY_TOPIC` (in `.env`) in the ntfy app and confirms the test pushes arrived. Then mark Phase 1 ✅.
+2. Dom confirms D-020: pushes only in the `paper` profile.
+3. Start the **Phase 2 questioning**, with the news collector and the `BAMLH0A0HYM2` archive first (D-001, D-018). Only the collectors will run on the Mac.
 
-Exit gate: §14 of that file, including one test push reaching Dom's phone.
-
-Before building, check that Docker Desktop is installed and that Dom has the ntfy app; generate an `NTFY_TOPIC` for him.
-
-**Urgent: news collection starts on day one.** Per D-018, only the collectors run on the Mac. Text models can only learn from news collected from the first collection day onward. Phase 2 should reach the news collector quickly, even before the other collectors are finished. Also archive `BAMLH0A0HYM2` daily from day one (D-001).
+Until the Phase 2 scheduler exists, the backup runs by hand: `QT_PROFILE=paper uv run python scripts/db_backup.py`.
 
 ### Open questions for Dom (carried forward)
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
@@ -47,6 +37,9 @@ Before building, check that Docker Desktop is installed and that Dom has the ntf
 ---
 
 ## Prior checkpoints
+### v1 / 2026-11-25 (Session 01, questioning)
+- Phase 1 questioning done and the build spec written (D-012 to D-018). Commit `5e6985a`.
+
 ### v0 / 2026-11-25 (Session 00)
 - Phase 0 (Framework) done: repo, docs, folder tree and branch.
 - Next task was the Phase 1 questioning, which was completed in S01.

@@ -1,0 +1,5 @@
+# Trading calendar (exchange_calendars).
+exchange: XNYS
+tz: America/New_York
+start: "2000-01-01"
+decision_offset_min: 30   # post-close cycle runs this many minutes after the close

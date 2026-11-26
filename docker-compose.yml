@@ -1,0 +1,37 @@
+# TimescaleDB primary + backup (D-009, D-017). Data lives in named volumes, never on exFAT (D-010).
+# Both services MUST use the same image tag: TimescaleDB restores need matching extension versions.
+x-db: &db
+  image: timescale/timescaledb:2.32.1-pg17
+  restart: unless-stopped
+  environment:
+    POSTGRES_USER: ${POSTGRES_USER:-qt}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    POSTGRES_DB: quant_trader
+    TZ: UTC
+    PGTZ: UTC
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d quant_trader"]
+    interval: 5s
+    timeout: 5s
+    retries: 20
+
+services:
+  db:
+    <<: *db
+    container_name: qt_db
+    ports:
+      - "127.0.0.1:${QT_DB_PORT:-54320}:5432"
+    volumes:
+      - qt_pgdata:/var/lib/postgresql/data
+
+  db_backup:
+    <<: *db
+    container_name: qt_db_backup
+    ports:
+      - "127.0.0.1:${QT_DB_BACKUP_PORT:-54321}:5432"
+    volumes:
+      - qt_pgdata_backup:/var/lib/postgresql/data
+
+volumes:
+  qt_pgdata:
+  qt_pgdata_backup:

@@ -1,0 +1,4 @@
+# Offline research runs. No pushes; results stay in logs/reports.
+app:
+  alerts:
+    enabled: false

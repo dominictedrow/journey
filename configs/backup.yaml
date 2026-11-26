@@ -1,0 +1,4 @@
+# Evening backup into the separate backup DB + rolling dump files (D-017).
+evening_time_et: "21:00"
+dump_dir: data/backups
+keep_dumps: 7

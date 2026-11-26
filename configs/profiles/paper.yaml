@@ -1,0 +1,5 @@
+# Unattended runs against live feeds + Alpaca paper: collectors, backups, the daily cycle.
+# Alerts on: every failure and every trade (D-016).
+app:
+  alerts:
+    enabled: true

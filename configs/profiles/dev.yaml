@@ -1,0 +1,6 @@
+# Interactive development on the Mac. Push alerts off so dev mistakes don't page Dom.
+app:
+  logging:
+    level: DEBUG
+  alerts:
+    enabled: false

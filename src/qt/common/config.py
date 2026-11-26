@@ -1,0 +1,239 @@
+"""Config loader (D-014).
+
+Base YAML per component (``configs/<stem>.yaml`` -> top-level key ``<stem>``), deep-merged with a
+thin profile overlay (``configs/profiles/<profile>.yaml``), validated with pydantic
+(``extra="forbid"``). Secrets come only from the environment / ``.env``.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+
+from qt.common.paths import CONFIG_DIR, ENV_FILE, visible_files
+
+PROFILES = ("dev", "paper", "backtest")
+DEFAULT_PROFILE = "dev"
+
+# Paper trading only (CLAUDE.md hard rule). Not configurable on purpose.
+ALPACA_PAPER_BASE_URL = "https://paper-api.alpaca.markets"
+
+
+class ConfigError(ValueError):
+    """Raised for any invalid configuration, so startup fails loudly."""
+
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+# ---------------------------------------------------------------- db.yaml
+class PoolCfg(_Strict):
+    min_size: int = Field(ge=0)
+    max_size: int = Field(ge=1)
+    max_idle_s: int = Field(ge=1)
+
+
+class HypertableCfg(_Strict):
+    chunk_days: int = Field(ge=1)
+    compress_after_days: int = Field(ge=1)
+
+
+class DbCfg(_Strict):
+    host: str
+    port: int
+    backup_port: int
+    name: str
+    connect_timeout_s: int = Field(ge=1)
+    pool: PoolCfg
+    hypertables: dict[str, HypertableCfg]
+
+
+# ---------------------------------------------------------------- app.yaml
+class LoggingCfg(_Strict):
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+    dir: str
+    retention_days: int = Field(ge=1)
+
+
+class AlertPriorityCfg(_Strict):
+    info: int = Field(ge=1, le=5)
+    warn: int = Field(ge=1, le=5)
+    critical: int = Field(ge=1, le=5)
+
+
+class AlertsCfg(_Strict):
+    enabled: bool
+    provider: Literal["ntfy"]
+    server: str
+    coalesce_window_s: int = Field(ge=0)
+    timeout_s: float = Field(gt=0)
+    priority: AlertPriorityCfg
+    os_fallback: bool
+
+
+class ReportsCfg(_Strict):
+    daily_dir: str
+
+
+class AppCfg(_Strict):
+    logging: LoggingCfg
+    alerts: AlertsCfg
+    reports: ReportsCfg
+
+
+# ---------------------------------------------------------------- backup.yaml
+class BackupCfg(_Strict):
+    evening_time_et: str
+    dump_dir: str
+    keep_dumps: int = Field(ge=1)
+
+    @field_validator("evening_time_et")
+    @classmethod
+    def _hhmm(cls, v: str) -> str:
+        if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
+            raise ValueError("evening_time_et must be HH:MM (24h)")
+        return v
+
+
+# ---------------------------------------------------------------- calendar.yaml
+class CalendarCfg(_Strict):
+    exchange: str
+    tz: str
+    start: str
+    decision_offset_min: int = Field(ge=0)
+
+
+class Config(_Strict):
+    db: DbCfg
+    app: AppCfg
+    backup: BackupCfg
+    calendar: CalendarCfg
+
+
+# ---------------------------------------------------------------- secrets
+class Secrets(_Strict):
+    postgres_user: str = "qt"
+    postgres_password: SecretStr | None = None
+    database_url: SecretStr | None = None
+    backup_database_url: SecretStr | None = None
+    ntfy_topic: SecretStr | None = None
+    alpaca_api_key_id: SecretStr | None = None
+    alpaca_api_secret_key: SecretStr | None = None
+    fred_api_key: SecretStr | None = None
+
+    @field_validator("alpaca_api_key_id")
+    @classmethod
+    def _paper_key(cls, v: SecretStr | None) -> SecretStr | None:
+        if v is not None and v.get_secret_value() and not v.get_secret_value().startswith("PK"):
+            raise ValueError("ALPACA_API_KEY_ID must be a PAPER key (starts with 'PK')")
+        return v
+
+
+def _secrets_from_env() -> Secrets:
+    def get(name: str) -> str | None:
+        val = os.environ.get(name)
+        return val if val else None
+
+    raw = {
+        "postgres_user": get("POSTGRES_USER") or "qt",
+        "postgres_password": get("POSTGRES_PASSWORD"),
+        "database_url": get("DATABASE_URL"),
+        "backup_database_url": get("BACKUP_DATABASE_URL"),
+        "ntfy_topic": get("NTFY_TOPIC"),
+        "alpaca_api_key_id": get("ALPACA_API_KEY_ID"),
+        "alpaca_api_secret_key": get("ALPACA_API_SECRET_KEY"),
+        "fred_api_key": get("FRED_API_KEY"),
+    }
+    try:
+        return Secrets(**raw)
+    except Exception as e:  # pydantic ValidationError -> ConfigError, without echoing values
+        raise ConfigError(f"invalid secrets in environment: {_errors(e)}") from None
+
+
+# ---------------------------------------------------------------- loader
+@dataclass(frozen=True)
+class Settings:
+    profile: str
+    config: Config
+    secrets: Secrets
+    config_hash: str
+
+
+def deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge ``overlay`` onto ``base``. Overlay keys must already exist in base."""
+    out = dict(base)
+    for k, v in overlay.items():
+        if k not in base:
+            raise ConfigError(f"profile key '{k}' does not exist in the base config")
+        if isinstance(v, dict) and isinstance(base[k], dict):
+            out[k] = deep_merge(base[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+def _read_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ConfigError(f"{path.name} must contain a mapping")
+    return data
+
+
+def config_hash(resolved: dict[str, Any]) -> str:
+    canonical = json.dumps(resolved, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _errors(e: Exception) -> str:
+    errs = getattr(e, "errors", None)
+    if callable(errs):
+        return "; ".join(f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in errs())
+    return str(e)
+
+
+def load(
+    profile: str | None = None,
+    config_dir: Path | None = None,
+    env_file: Path | None = None,
+) -> Settings:
+    config_dir = config_dir or CONFIG_DIR
+    env_file = env_file or ENV_FILE
+    if env_file.exists():
+        load_dotenv(env_file, override=False)
+
+    profile = profile or os.environ.get("QT_PROFILE") or DEFAULT_PROFILE
+    if profile not in PROFILES:
+        raise ConfigError(f"unknown profile '{profile}', expected one of {PROFILES}")
+
+    base: dict[str, Any] = {p.stem: _read_yaml(p) for p in visible_files(config_dir, "*.yaml")}
+    overlay_path = config_dir / "profiles" / f"{profile}.yaml"
+    overlay = _read_yaml(overlay_path) if overlay_path.exists() else {}
+    resolved = deep_merge(base, overlay)
+
+    # Env port overrides keep docker-compose and the app pointing at the same ports.
+    db = resolved.get("db", {})
+    for env_name, key in (("QT_DB_PORT", "port"), ("QT_DB_BACKUP_PORT", "backup_port")):
+        if os.environ.get(env_name) and isinstance(db, dict):
+            db[key] = int(os.environ[env_name])
+
+    try:
+        cfg = Config.model_validate(resolved)
+    except Exception as e:
+        raise ConfigError(f"invalid config (profile={profile}): {_errors(e)}") from None
+
+    return Settings(
+        profile=profile,
+        config=cfg,
+        secrets=_secrets_from_env(),
+        config_hash=config_hash({"profile": profile, **cfg.model_dump()}),
+    )

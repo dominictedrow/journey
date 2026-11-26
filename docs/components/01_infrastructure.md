@@ -29,7 +29,7 @@ It contains no data collection, no features and no models.
 | XNYS calendar helpers | |
 
 ## 3. Docker
-`docker-compose.yml` at the repo root defines two services. Both use the same pinned image, **`timescale/timescaledb:<exact-tag>-pg17`**. Pin the exact tag during the build and record it in DECISIONS. The two services must use the same version, because restoring a TimescaleDB dump requires matching extension versions.
+`docker-compose.yml` at the repo root defines two services. Both use the same pinned image, **`timescale/timescaledb:2.32.1-pg17`**, pinned in D-019. The two services must use the same version, because restoring a TimescaleDB dump requires matching extension versions.
 
 | Service | Container | Named volume | Host port (env, default) | DB name |
 |---|---|---|---|---|
@@ -193,7 +193,8 @@ tz: America/New_York
 ## 9. Backups (D-017)
 `uv run python scripts/db_backup.py`. Phase 1 builds it and the Phase 2 scheduler runs it daily at `backup.evening_time_et`, after the post-close pipeline.
 
-1. Run `pg_dump -Fc` on `quant_trader` inside `qt_db` (via `docker compose exec -T`), writing to `data/backups/qt_YYYYMMDD.dump`. Dump files are fine on exFAT.
+1. Run `pg_dump -Fc` on `quant_trader` inside `qt_db` (via `docker compose exec -T`), writing to `data/backups/qt_YYYYMMDD.dump`. `YYYYMMDD` is the **ET** date, because the ~21:00 ET run already falls on the next UTC day. Dump files are fine on exFAT.
+   - Safety guard: before dropping anything, the job checks that the backup server is a different Postgres cluster from the primary (`pg_control_system().system_identifier`).
 2. Refresh the backup DB in `qt_db_backup`:
    1. drop and recreate the database
    2. `CREATE EXTENSION timescaledb`
@@ -215,6 +216,11 @@ This module wraps `exchange_calendars` XNYS. All inputs and outputs are tz-aware
 - `is_early_close(date) -> bool`.
 - `to_et(dt)` and `to_utc(dt)`.
 - `decision_time(session) -> datetime`: the UTC instant of the post-close cycle. It is close + 30 min, set in config, which handles early closes.
+
+## 10a. Build notes (S01)
+- **Alert default per profile (D-020):** pushes are **on** in `paper`, which every unattended job runs under (collectors, backup, the daily cycle). They are **off** in `dev` and `backtest`, so interactive mistakes and research runs don't page Dom. With pushes off, alerts are still written to `alerts_log`.
+- **AppleDouble files:** exFAT makes macOS write `._*` twins next to every file. The config loader, the migration runner, dump pruning and pytest collection all skip `._*` (`qt.common.paths.visible_files`, `collect_ignore_glob`).
+- **Test push:** `scripts/alert_test.py [--error]` sends a test push through the real alert path.
 
 ## 11. Mac runtime policy (D-018)
 - **On the Mac:** only lightweight collectors run continuously, meaning news plus the daily `BAMLH0A0HYM2` archive and other cheap feeds. Features, models and trading run only as smoke tests until the Windows box is set up.
