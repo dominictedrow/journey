@@ -4,26 +4,26 @@
 
 ---
 
-## CURRENT CHECKPOINT: v6 / 2026-11-25 (Session 03c, Phase 2 build step 3)
+## CURRENT CHECKPOINT: v7 / 2026-11-26 (Session 03d, Phase 2 build step 4)
 
 | | |
 |---|---|
-| **Phase** | **Phase 2 (Collectors): build in progress, step 3 of 5 done** (FRED/ALFRED + HY archive) |
-| **Last session** | S03c: ALFRED all vintages (186k rows, 23 series), HY archive, migration 006, PIT release fixes ([handoff](docs/handoffs/2026-11-25_s03c_collectors_build_fred.md)) |
-| **Git** | Branch `vibe/quant_trader`; steps 1–2 `34fbe52`, `434e551`, step 3 committed after. Nothing pushed |
-| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-029 |
-| **Tests** | 134 passed, ruff clean |
-| **DB** | Migrated to 006; ALFRED loaded; articles + Fed events accumulating |
-| **Service** | launchd `com.qt.scheduler` running (paper). `uv run python scripts/install_scheduler.py --status`; heartbeat `data/run/heartbeat.json` |
+| **Phase** | **Phase 2 (Collectors): build in progress, step 4 of 5 done** (Alpaca bars/assets, membership, aliases) |
+| **Last session** | S03d: 1.77M equity/ETF bars (742 assets from 2016), 40k crypto bars, S&P 500 membership as securities, 2,450 aliases, migration 007 ([handoff](docs/handoffs/2026-11-26_s03d_collectors_build_prices.md)) |
+| **Git** | Branch `vibe/quant_trader`; steps 1–4 `34fbe52`, `434e551`, `ba2804b`, `eca541a`. Nothing pushed |
+| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-030 |
+| **Tests** | 149 passed, ruff clean |
+| **DB** | Migrated to 007; ALFRED, prices, membership, aliases loaded; news + Fed accumulating |
+| **Service** | launchd `com.qt.scheduler` (paper) under `caffeinate -is`. `uv run python scripts/install_scheduler.py --status` |
 
 ### Next exact task
-1. Build step 4: Alpaca bars (equities/ETFs from 2016 + crypto) + assets + fja05680 membership + EDGAR ticker map → aliases + backfill.
-2. Then step 5 (yfinance, EDGAR facts, Congress, earnings, crypto structure) and the backfill report.
+1. Build step 5: yfinance, Alpaca corporate actions, EDGAR facts, Congress, earnings, crypto structure; register; `backfill --all --report`.
+2. Then the Phase 2 exit gate (5-day unattended run).
 
 ### Open questions for Dom (carried forward)
 - [ ] Fed Board roles in `configs/collect.yaml` correct? (Warsh Chair?)
 - [ ] OK with D-029 release-time changes (18:00 ET default; HY/VIX next session 12:00 ET)?
-- [ ] `caffeinate` the service so Mac sleep doesn't break the 5-day gate?
+- [ ] OK to push steps 1–4?
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
 - [ ] Whole shares vs fractional shares (D-003) → Phase 6
 - [ ] Keep the "never sell same session" rule now that PDT is retired? (D-002) → Phase 5
@@ -39,6 +39,8 @@
 ---
 
 ## Prior checkpoints
+### v6 / 2026-11-25 (Session 03c, Phase 2 build step 3)
+- FRED/ALFRED all vintages (186k rows), HY archive, migration 006, D-029. Committed as `ba2804b`. [Handoff](docs/handoffs/2026-11-25_s03c_collectors_build_fred.md)
 ### v5 / 2026-11-25 (Session 03b, Phase 2 build step 2)
 - News loop, Fed RSS, scheduler, launchd service (paper). Committed as `434e551`. [Handoff](docs/handoffs/2026-11-25_s03b_collectors_build_news_scheduler.md)
 ### v4 / 2026-11-25 (Session 03, Phase 2 build step 1)
