@@ -50,11 +50,23 @@ def service_log_dir() -> Path:
     return Path.home() / "Library" / "Logs" / "quant_trader"
 
 
+CAFFEINATE = Path("/usr/bin/caffeinate")
+
+
+def program(py: Path) -> list[str]:
+    """The scheduler, wrapped in ``caffeinate -is`` so the Mac doesn't idle-sleep (-i), or sleep
+    at all on AC power (-s), while it runs: sleep stops the news loop and the 5-day gate (D-030).
+    caffeinate exits when its child does, so KeepAlive still restarts a crash. Closing the lid
+    still sleeps the Mac unless it's in clamshell mode with an external display."""
+    cmd = [str(py), "-m", "qt.orchestrator.scheduler"]
+    return [str(CAFFEINATE), "-is", *cmd] if CAFFEINATE.exists() else cmd
+
+
 def plist(py: Path) -> dict:
     logs = service_log_dir()
     return {
         "Label": LABEL,
-        "ProgramArguments": [str(py), "-m", "qt.orchestrator.scheduler"],
+        "ProgramArguments": program(py),
         "WorkingDirectory": str(Path.home()),
         "EnvironmentVariables": {
             "QT_PROFILE": "paper",

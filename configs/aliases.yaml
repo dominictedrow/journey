@@ -4,4 +4,21 @@ finance_cues: [shares, stock, stocks, earnings, revenue, investors, analysts, Na
                "S&P 500", quarter, guidance, dividend, market cap, valuation, CEO]
 strip_suffixes: [Inc, "Inc.", Corp, "Corp.", Corporation, Co, "Co.", Company, Ltd, "Ltd.",
                  plc, PLC, Holdings, Group, "N.V.", "S.A.", "& Co", "/DE/", Class A, Class B]
-manual: []                            # filled in build step 4 (aliases + membership)
+strip_parentheticals: true            # "Alphabet Inc. (Class A)" -> "Alphabet Inc."
+min_short_len: 3                      # shorter stripped names are dropped
+# Names that EDGAR doesn't give. ticker = the asset's CURRENT ticker; the tagger maps it to
+# the ticker valid on the article's date (a 2019 "Facebook" -> FB).
+manual:
+  - {ticker: GOOGL, alias: Google}
+  - {ticker: GOOG, alias: Google}
+  - {ticker: META, alias: Facebook}
+  - {ticker: META, alias: Instagram}
+  - {ticker: BRK.B, alias: Berkshire}
+  - {ticker: BTC/USD, alias: Bitcoin}
+  - {ticker: BTC/USD, alias: BTC, case_sensitive: true}
+  - {ticker: ETH/USD, alias: Ethereum}
+  - {ticker: ETH/USD, alias: Ether, case_sensitive: true}
+  - {ticker: ETH/USD, alias: ETH, case_sensitive: true}
+  - {ticker: SOL/USD, alias: Solana}
+  - {ticker: XRP/USD, alias: XRP, case_sensitive: true}
+  - {ticker: DOGE/USD, alias: Dogecoin}

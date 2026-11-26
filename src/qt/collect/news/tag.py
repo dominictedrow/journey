@@ -61,11 +61,28 @@ class Tagger:
         return sorted(out)
 
 
+def _overlap(a0: date | None, a1: date | None, b0: date | None, b1: date | None):
+    lo = max((x for x in (a0, b0) if x is not None), default=None)
+    hi = min((x for x in (a1, b1) if x is not None), default=None)
+    return (lo, hi) if lo is None or hi is None or lo < hi else None
+
+
 def load_aliases(conn: psycopg.Connection) -> list[Alias]:
+    """Aliases with each name expanded over its asset's ticker eras, so a tag is the ticker that
+    was valid on the article's date ("Facebook" in 2019 -> FB, in 2023 -> META). Eras come from
+    the ``ticker`` aliases; an asset without them (ETF, coin) has one era, its current ticker."""
     rows = conn.execute(
-        """
-        SELECT s.ticker, a.alias, a.case_sensitive, a.needs_cue, a.valid_from, a.valid_to
-        FROM aliases a JOIN assets s USING (asset_id)
-        """
+        "SELECT a.asset_id, s.ticker, a.alias, a.kind, a.case_sensitive, a.needs_cue, "
+        "a.valid_from, a.valid_to FROM aliases a JOIN assets s USING (asset_id)"
     ).fetchall()
-    return [Alias(*r) for r in rows]
+    eras: dict[int, list[tuple[str, date | None, date | None]]] = {}
+    for aid, _, alias, kind, _, _, vf, vt in rows:
+        if kind == "ticker":
+            eras.setdefault(aid, []).append((alias, vf, vt))
+    out = []
+    for aid, current, alias, _, cs, cue, vf, vt in rows:
+        for t, ef, et in eras.get(aid, [(current, None, None)]):
+            win = _overlap(vf, vt, ef, et)
+            if win is not None:
+                out.append(Alias(t, alias, cs, cue, win[0], win[1]))
+    return out

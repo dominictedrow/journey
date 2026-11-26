@@ -88,7 +88,10 @@ def test_session_job_skips_holiday(settings, cal, monkeypatch):
 
 def test_known_collectors_fit_stage_limit():
     names = jobs.known_collectors()
-    assert names == ["news", "fed_rss", "fred", "hy_archive"]
+    assert names == [
+        "news", "fed_rss", "alpaca_assets", "bars_equity", "fred", "hy_archive",
+        "crypto_assets", "bars_crypto", "membership", "aliases",
+    ]  # fmt: skip
     assert all(len(f"collect_{n}") <= 21 for n in names)
 
 

@@ -237,6 +237,45 @@ class WeeklyCfg(_Strict):
         return _check_hhmm(v)
 
 
+class UniverseCfg(_Strict):
+    index: str
+    candidates: int = Field(ge=1)
+    membership_start: str
+    extra_etfs: list[str]
+
+
+class AlpacaCfg(_Strict):
+    data_url: str
+    stock_feed: Literal["sip", "iex"]
+    recent_guard_min: int = Field(ge=15)
+    page_limit: int = Field(ge=1, le=10000)
+    adjustments: dict[str, str] = Field(min_length=1)
+    multi_symbols: int = Field(ge=1, le=1000)
+    prices_start: str
+    crypto_loc: str
+    crypto_start: str
+
+
+class CryptoCfg(_Strict):
+    quote: str
+    stablecoin_exclude: list[str]
+
+
+class MembershipCfg(_Strict):
+    fja_url: str
+    wikipedia_url: str
+    wikipedia_table_id: str
+    wikipedia_min_rows: int = Field(ge=1)
+    gap_sessions: int = Field(ge=1)
+    rename_lookback_days: int = Field(ge=1)
+    crosscheck_report: str
+
+
+class EdgarCfg(_Strict):
+    tickers_url: str
+    max_rps: float = Field(gt=0, le=10)
+
+
 class FredCfg(_Strict):
     base_url: str
     series: list[str] = Field(min_length=1)
@@ -272,6 +311,11 @@ class CollectCfg(_Strict):
     freshness: FreshnessCfg
     news: NewsCfg
     fed: FedCfg
+    universe: UniverseCfg
+    alpaca: AlpacaCfg
+    crypto: CryptoCfg
+    membership: MembershipCfg
+    edgar: EdgarCfg
     fred: FredCfg
     schedule: ScheduleCfg
 
@@ -290,6 +334,8 @@ class ManualAlias(_Strict):
 class AliasesCfg(_Strict):
     finance_cues: list[str]
     strip_suffixes: list[str]
+    strip_parentheticals: bool = True
+    min_short_len: int = Field(default=3, ge=1)
     manual: list[ManualAlias]
 
 

@@ -39,6 +39,8 @@ http:
     default: 2
     data.alpaca.markets: 3
     api.stlouisfed.org: 1.5           # ~120 req/min limit; stay under it
+    www.sec.gov: 8                    # SEC fair access: <= 10 req/s
+    data.sec.gov: 8
 
 # Freshness: Phase 2 records and alerts; Phase 5 turns stale critical feeds into NO TRADE.
 freshness:
@@ -49,6 +51,9 @@ freshness:
     bars_equity: {critical: true, max_hours: 6, session_paced: true}
     bars_crypto: {critical: true, max_hours: 26}
     alpaca_assets: {critical: true, max_hours: 6, session_paced: true}
+    crypto_assets: {critical: true, max_hours: 26}
+    membership: {critical: false, max_hours: 192}   # weekly
+    aliases: {critical: false, max_hours: 192}
     fred: {critical: true, max_hours: 6, session_paced: true}
     hy_archive: {critical: false, max_hours: 6, session_paced: true}
     news: {critical: true, max_hours: 2}
@@ -93,6 +98,48 @@ fed:
 
 # Scheduler (component doc section 7). APScheduler 3.x, timezone America/New_York.
 # The backup time comes from backup.yaml (evening_time_et); the stock job from calendar.yaml.
+# Universe (D-025): S&P 500 members since membership_start + these ETFs + the crypto pool.
+universe:
+  index: SPX
+  candidates: 80                      # weekly screen output size, used in Phase 3
+  membership_start: "2016-01-01"
+  extra_etfs: [SPY, QQQ, VNQ, XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY]
+
+# Alpaca market data (component doc 6.1). The trading API URL is the hard-coded paper URL.
+alpaca:
+  data_url: https://data.alpaca.markets
+  stock_feed: sip                     # free for data older than 15 min
+  recent_guard_min: 20                # never request bars newer than this (free SIP limit)
+  page_limit: 10000
+  # adjustment -> raw_prices.source. Raw only: adjusted bars are adjusted as of the fetch, so an
+  # append-only store would mix adjustment bases after each new split. Phase 3 adjusts from raw
+  # + corporate actions (step 5) instead (D-030, supersedes the 6.1 alpaca_adj default)
+  adjustments: {raw: alpaca}
+  multi_symbols: 100                  # symbols per request for daily increments
+  prices_start: "2016-01-01"
+  crypto_loc: us
+  crypto_start: "2021-01-01"          # Alpaca's earliest daily crypto bar (probe 2026-11-25)
+
+crypto:
+  quote: USD
+  stablecoin_exclude: [USDC, USDT, DAI, PYUSD, USDG]
+
+# S&P 500 membership (6.5). fja05680 history to its last update, then our weekly Wikipedia
+# snapshots. Securities are traced across renames by identical bars (D-030).
+membership:
+  fja_url: "https://raw.githubusercontent.com/fja05680/sp500/master/S%26P%20500%20Historical%20Components%20%26%20Changes%20(Updated).csv"
+  wikipedia_url: "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+  wikipedia_table_id: constituents
+  wikipedia_min_rows: 450             # fewer rows than this = the page layout changed
+  gap_sessions: 10                    # a bar gap longer than this ends a security
+  rename_lookback_days: 10            # window for an old ticker's last bar before a change
+  crosscheck_report: reports/membership_crosscheck.md
+
+# SEC EDGAR (6.4). The User-Agent comes from SEC_EDGAR_USER_AGENT (secret: has Dom's email).
+edgar:
+  tickers_url: https://www.sec.gov/files/company_tickers.json
+  max_rps: 10
+
 # FRED / ALFRED (component doc 6.3, D-023). Every vintage of every series -> raw_macro
 # (source 'alfred'); release times are in pit.fred_release_time_et.
 fred:
