@@ -135,6 +135,17 @@ def fomc_schedule(cfg: PitCfg, meeting: date) -> datetime:
     return at_et(date(_day(meeting, "fomc_schedule").year - 1, k.month, k.day), "00:00")
 
 
+def cpi_schedule(cfg: PitCfg, release: date) -> datetime:
+    """Scheduled CPI release dates (backfill): known from Dec 1 of the preceding year, 00:00 ET."""
+    k = cfg.cpi_schedule_known
+    return at_et(date(_day(release, "cpi_schedule").year - 1, k.month, k.day), "00:00")
+
+
+def fomc_unscheduled(cfg: PitCfg, meeting: date) -> datetime:
+    """Backfilled unscheduled FOMC meeting or notation vote: the end of its day in ET."""
+    return at_et(_day(meeting, "fomc_unscheduled"), cfg.fomc_unscheduled_et)
+
+
 def fed_item_backfill(published: datetime | None) -> datetime:
     """Backfilled Fed statement/minutes/speech: the item's official published time."""
     if published is None:

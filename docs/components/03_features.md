@@ -74,8 +74,8 @@ As in the spec table, unchanged:
 - curve slope (10y−2y, 10y−3m, each with a 21-day change); real yield DFII10 (level, 21-day change); policy path (2y − fed funds); inflation momentum (core CPI and core PCE, 3-month annualized − YoY); Sahm; real GDP QoQ annualized
 - **credit stress on BAA10Y only (Q2):** level, 252-day z-score, 21-day change. The ICE series is archived but not a feature
 - VIX/VIX3M; VIX 252-day z-score; dollar (DXY 21-day return, 252-day z-score); 63-day SPY/TLT correlation; gold residual (gold return − 252-day OLS fit on the real-yield change, z-scored); VNQ/SPY 63-day return
-- event clock: days to next FOMC, next CPI, and the next earnings-heavy week. **(default)** An earnings-heavy week has ≥ 20% of members reporting
-- crypto structure: BTC dominance and its 21-day change; stablecoin supply 30-day % change; 7-day average funding (annualized, venue average); OI / market cap; 5-day ETF net flows (NaN + mask until SoSoValue has a key)
+- event clock: days to next FOMC, next CPI, and the next earnings-heavy week. **(default)** An earnings-heavy week has ≥ 20% of members reporting. Built in step 4b (D-039): calendars from federalreserve.gov and FRED `release/dates`, report dates visible up to T + 7 days, plus `earn_week_share`
+- crypto structure: BTC dominance and its 21-day change; stablecoin supply 30-day % change; 7-day average funding (annualized, venue average); OI / market cap; 5-day ETF net flows (NaN + mask until SoSoValue has a key). Built in step 4b (D-039): funding, OI/cap and flows per coin (BTC, ETH); stablecoin supply from 2020 only
 - **GLI**, weekly, in USD billions: `(WALCL − WTREGEN − RRPONTSYD) + ECBASSETSW × DEXUSEU + JPNASSETS / DEXJPUS`, with unit conversion per series in config. Features: level, 13-week % change, 252-day z-score
 
 **Added in Q1:**
@@ -151,6 +151,7 @@ src/qt/features/
   fundamentals.py    point-in-time TTM/instants and the §5.2 ratios (added in the build, D-037)
   cross_section.py   ranks, sector ranks, composites, EDGAR concept map
   market.py          §5.3 incl. GLI, framework additions, breadth (named market.py in the build, D-038)
+  events.py          event clock: FOMC / CPI / earnings-heavy week (added in the build, D-039)
   crypto.py          crypto structure
   normalize.py       rolling z, winsorize, masks, days_since_release
   matrix.py          features_asof(T, versions) → market vector, asset matrix

@@ -26,6 +26,11 @@ pit:
   fred_release_lag_sessions: {BAMLH0A0HYM2: 1, VIXCLS: 1}
   edgar_fallback_days: 1              # no acceptanceDateTime -> filed + 1 day at 00:00 ET
   fomc_schedule_known: {month: 12, day: 1}   # Dec 1 of the preceding year
+  # BLS publishes next year's CPI release schedule in the autumn; FRED serves only the dates
+  # that happened, so a backfilled year counts as known from Dec 1 of the preceding year
+  # (approximate: a reschedule, e.g. the 2025 shutdown, is seen early; D-039)
+  cpi_schedule_known: {month: 12, day: 1}
+  fomc_unscheduled_et: "23:59:59"     # backfilled unscheduled meeting / notation vote: end of its day
   congress_backfill_et: "23:59:59"
   earnings_backfill_lead_days: 7      # backfilled report dates: report date - 7 days, approx
   sosovalue_history_et: "09:00"       # trade date + 1 day at 09:00 ET
@@ -77,6 +82,8 @@ freshness:
     congress: {critical: false, max_hours: 26}
     earnings: {critical: false, max_hours: 72}
     sosovalue: {critical: false, max_hours: 26}
+    fomc_cal: {critical: false, max_hours: 192}    # weekly
+    cpi_cal: {critical: false, max_hours: 192}
 
 # News (D-008, D-022). Every article is stored; filtering happens downstream (Phase 8).
 news:
@@ -413,6 +420,16 @@ fred:
   # FRED serves only the last ~3 years of ICE BofA series: snapshot the current values daily
   # (source 'fred_archive', released_at = fetch time) so history accumulates (D-001)
   archive_series: [BAMLH0A0HYM2]
+
+# Event calendars (Phase 3 step 4b, D-039) -> raw_events, one row per year's schedule snapshot.
+calendars:
+  fomc:
+    current_url: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm   # ~last 5 years + next
+    historical_url: https://www.federalreserve.gov/monetarypolicy/fomchistorical{year}.htm
+    start_year: 2015
+  cpi:
+    release_id: 10                      # FRED release "Consumer Price Index" (BLS)
+    start: "2015-01-01"
 
 schedule:
   news_every_min: 15

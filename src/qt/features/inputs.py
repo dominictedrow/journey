@@ -522,3 +522,52 @@ class MacroState:
     def last_release(self, series_id: str) -> pd.Timestamp | None:
         """When the newest row of ``series_id`` known now was released."""
         return self._last_release.get(series_id)
+
+
+# ---------------------------------------------------------------- event calendars, crypto structure
+def load_schedules(
+    conn: psycopg.Connection, asof: datetime, source: str, kind: str
+) -> pd.DataFrame:
+    """Year schedule snapshots (``qt.collect.calendars``) released by ``asof``.
+
+    Columns: ``year``, ``dates`` (list of ``date``), ``released_at``. A year's schedule at T is its
+    newest snapshot released by T (see :func:`qt.features.events.schedule_at`).
+    """
+    df = frame_asof(conn, "raw_events", asof, where={"source": source, "kind": kind},
+                    columns=["payload", "released_at"])  # fmt: skip
+    if df.empty:
+        return pd.DataFrame(columns=["year", "dates", "released_at"])
+    return pd.DataFrame({
+        "year": df["payload"].map(lambda p: int(p["year"])),
+        "dates": df["payload"].map(lambda p: [date.fromisoformat(d) for d in p["dates"]]),
+        "released_at": pd.to_datetime(df["released_at"], utc=True),
+    })  # fmt: skip
+
+
+def load_metrics(
+    conn: psycopg.Connection, asof: datetime, source: str, metrics: Sequence[str]
+) -> pd.DataFrame:
+    """``raw_metrics`` rows released by ``asof``: metric, subject, ts, value, released_at."""
+    df = frame_asof(conn, "raw_metrics", asof, where={"source": source},
+                    where_in={"metric": list(metrics)},
+                    columns=["metric", "subject", "ts", "value", "released_at"],
+                    order_by=("metric", "subject", "ts"))  # fmt: skip
+    for c in ("ts", "released_at"):
+        df[c] = pd.to_datetime(df[c], utc=True)
+    return df
+
+
+def load_derivs(
+    conn: psycopg.Connection, asof: datetime, kind: str, symbols: Sequence[str]
+) -> pd.DataFrame:
+    """``raw_crypto_derivs`` rows of ``kind`` ('funding' | 'oi') released by ``asof``."""
+    df = frame_asof(conn, "raw_crypto_derivs", asof, where={"kind": kind},
+                    where_in={"symbol": list(symbols)},
+                    columns=["venue", "symbol", "ts", "funding_rate", "funding_interval_h",
+                             "oi_usd", "released_at"],
+                    order_by=("venue", "symbol", "ts"))  # fmt: skip
+    for c in ("ts", "released_at"):
+        df[c] = pd.to_datetime(df[c], utc=True)
+    for c in ("funding_rate", "funding_interval_h", "oi_usd"):
+        df[c] = pd.to_numeric(df[c], errors="coerce").astype(float)
+    return df

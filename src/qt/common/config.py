@@ -137,11 +137,14 @@ class PitCfg(_Strict):
     fred_release_lag_sessions: dict[str, int] = {}
     edgar_fallback_days: int = Field(ge=0)
     fomc_schedule_known: MonthDayCfg
+    cpi_schedule_known: MonthDayCfg
+    fomc_unscheduled_et: str
     congress_backfill_et: str
     earnings_backfill_lead_days: int = Field(ge=0)
     sosovalue_history_et: str
 
-    @field_validator("futures_release_et", "congress_backfill_et", "sosovalue_history_et")
+    @field_validator("futures_release_et", "congress_backfill_et", "sosovalue_history_et",
+                     "fomc_unscheduled_et")
     @classmethod
     def _time(cls, v: str) -> str:
         return _check_hhmm(v)
@@ -411,6 +414,22 @@ class DerivsCfg(_Strict):
     kraken: KrakenCfg
 
 
+class FomcCalendarCfg(_Strict):
+    current_url: str
+    historical_url: str  # with a {year} placeholder
+    start_year: int = Field(ge=1936)
+
+
+class CpiCalendarCfg(_Strict):
+    release_id: int = Field(ge=1)
+    start: str
+
+
+class CalendarsCfg(_Strict):
+    fomc: FomcCalendarCfg
+    cpi: CpiCalendarCfg
+
+
 class FredCfg(_Strict):
     base_url: str
     series: list[str] = Field(min_length=1)
@@ -480,6 +499,7 @@ class CollectCfg(_Strict):
     sosovalue: SosovalueCfg
     derivs: DerivsCfg
     fred: FredCfg
+    calendars: CalendarsCfg
     schedule: ScheduleCfg
     identity_overrides: list[IdentityOverrideCfg] = []
     identity_check: IdentityCheckCfg
@@ -704,6 +724,35 @@ class MacroFixesCfg(_Strict):
     late_listed_lag_days: dict[str, int] = {}
 
 
+class EventsCfg(_Strict):
+    fomc_statement_et: str
+    cpi_release_et: str
+    earnings_heavy_share: float = Field(gt=0, le=1)
+    earnings_visible_days: int = Field(ge=0)
+
+    @field_validator("fomc_statement_et", "cpi_release_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+
+class CryptoStructCfg(_Strict):
+    symbols: list[str] = Field(min_length=1)
+    dominance_chg_days: int = Field(ge=1)
+    stable_chg_days: int = Field(ge=1)
+    funding_days: int = Field(ge=1)
+    funding_venues: list[str] = Field(min_length=1)
+    funding_min_coverage: float = Field(gt=0, le=1)
+    oi_venues: list[str] = Field(min_length=1)
+    oi_max_age_h: float = Field(gt=0)
+    max_age_days: int = Field(ge=1)
+    match_tolerance_days: int = Field(ge=0)
+    etf_days: int = Field(ge=1)
+    etf_window_days: int = Field(ge=1)
+    etf_subject: str  # SoSoValue subject with a {symbol} placeholder
+    valid_from: dict[str, date] = {}  # input name -> observations dated before it are ignored
+
+
 class MarketCfg(_Strict):
     z_window: int = Field(ge=10)
     chg_window: int = Field(ge=1)
@@ -719,6 +768,8 @@ class MarketCfg(_Strict):
     macro_fixes: MacroFixesCfg = MacroFixesCfg()
     tickers: dict[str, str]
     ratios: list[tuple[str, str]]
+    events: EventsCfg
+    crypto: CryptoStructCfg
 
 
 class FeaturesCfg(_Strict):

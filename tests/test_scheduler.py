@@ -96,7 +96,7 @@ def test_known_collectors_fit_stage_limit():
         "crypto_assets", "bars_crypto", "funding", "crypto_oi", "coingecko", "defillama",
         "sosovalue",
         "congress", "earnings",
-        "membership", "aliases", "edgar_facts",
+        "membership", "aliases", "edgar_facts", "fomc_cal", "cpi_cal",
     ]  # fmt: skip
     cfg = config.load(profile="dev").config.collect.freshness.collectors
     assert set(names) <= set(cfg)  # every collector has an explicit freshness rule

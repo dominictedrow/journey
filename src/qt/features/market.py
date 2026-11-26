@@ -22,6 +22,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -51,6 +52,8 @@ class MarketState:
     sessions: np.ndarray  # XNYS sessions, datetime64[D]
     cfg: MarketCfg
     breadth: pd.DataFrame | None = None  # index date; columns + ready_ns
+    events: Any = None  # qt.features.events.EventInputs (event clock, step 4b)
+    crypto: Any = None  # qt.features.crypto.CryptoInputs (crypto structure, step 4b)
     _cache: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:

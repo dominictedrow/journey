@@ -139,3 +139,28 @@
    - Crypto structure: BTC dominance, stablecoin supply, funding, OI/market cap, ETF flows. NaN + masks where history is short.
 2. Then: regime (§6), normalization + masks (§7), `build.py`, §9 survivorship.
 
+## Addendum 6: build step 4b, event clock + crypto structure (Dom: "Move on with 4b")
+- D-039. 648 tests pass (58 new), ruff clean. Committed, not pushed; the step 4a commit (`509f639`) is unpushed too.
+- **New collectors** in `collect/calendars.py`, both in the weekly job, non-critical:
+  - `fomc_cal` scrapes federalreserve.gov: the calendars page plus the historical pages, from 2015.
+  - `cpi_cal` reads FRED `release/dates` for release 10.
+  - Each year's schedule is one snapshot row in `raw_events`; a changed schedule is a new row.
+  - **Backfilled live:** FOMC 2015–2027 (14 rows, 2020 has two around the cancelled March meeting) plus 8 unscheduled meetings/notation votes; CPI 2015–2026 (12 rows). Rerun = 0 rows.
+- **New features (13):**
+  - `features/events.py`: `fomc_days_next`, `cpi_days_next`, `earn_heavy_sessions_next`, `earn_week_share`.
+  - `features/crypto.py`: BTC dominance and its 21-day change, stablecoin 30-day change, and per BTC/ETH: 7-day funding, OI/market cap, 5-day ETF flows.
+  - New loaders: `inputs.load_schedules`, `load_metrics`, `load_derivs`.
+- **Found on live data:**
+  - FRED's CPI release dates include February seasonal-factor posts. Keeping the last date per month matches every CPIAUCSL first vintage 2015–2026 exactly.
+  - DefiLlama's stablecoin total is about $0.06bn in 2018 and $0.66bn in Jan 2019, against a market of about $2.5bn. Most likely Omni USDT isn't counted. So the feature uses it from 2020 only (`valid_from`); before that, its +27,000% "change" in Jan 2018 was an artifact.
+  - The backfilled 2025 CPI schedule already contains the shutdown reschedule (Oct 24 rather than Oct 15). This is a known approximation, `approx=true`.
+  - FRED has no 2027 CPI dates yet, so `cpi_days_next` goes NaN after the Dec 10, 2026 release until FRED lists them. The weekly collector picks them up.
+- **Live smoke:** FOMC is 2 days before the 2018-01-31 decision and 13 days from 2026-11-26 to Dec 9. CPI is 34 days across the shutdown gap. Funding is 2–12% annualized. BTC OI/cap is 0.4% (4 venues, no Binance/CME). Stablecoin −5.9% over 30 days is real: $301bn → $282bn since Oct 20. About 16 ms per decision time.
+- **NaN until history builds:** BTC dominance and OI (from 2026-11-26), dominance 21-day change (from about 2026-12-17), ETF flows (SoSoValue key).
+- **Tests:**
+  - `test_calendar_collectors.py` (25): parsing, snapshot logic, both collectors end to end with fakes, rerun and change.
+  - `test_event_features.py` (11) and `test_crypto_struct_features.py` (22): a loop-based "known at T" rebuild, no-lookahead with mutated later rows, mutation strength, gaps and staleness.
+
+## Next exact task (updated)
+1. Phase 3 build step 5: regime (§6: quadrant, HMM, stress), normalization + masks (§7), `matrix.py`/`build.py` (one entry point that loads everything, incl. the new event/crypto inputs), §9 survivorship.
+2. Restart `com.qt.scheduler` on the new commit so the weekly job runs `fomc_cal`/`cpi_cal` (first run Sun 18:00 ET).

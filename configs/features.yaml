@@ -194,3 +194,32 @@ market:
     - [KRE, SPY]
     - [EEM, SPY]
     - [HYG, IEF]
+  # Event clock (step 4b, D-039). "Days" are calendar days from T's New York date; the next event
+  # is the first one whose release instant is after T.
+  events:
+    fomc_statement_et: "14:00"
+    cpi_release_et: "08:30"
+    earnings_heavy_share: 0.20        # an earnings-heavy week: >= 20% of PIT members report in it
+    # Report dates count only up to T + this many days, the backfill's visibility (collect.pit.
+    # earnings_backfill_lead_days); live sees 28 days, so training and live see the same horizon
+    earnings_visible_days: 7
+  # Crypto structure (step 4b, D-039). Windows are calendar days (crypto trades 7 days a week).
+  crypto:
+    symbols: [BTC, ETH]               # funding, OI / market cap and ETF flows per coin
+    dominance_chg_days: 21
+    stable_chg_days: 30
+    funding_days: 7
+    funding_venues: [okx, hyperliquid]
+    funding_min_coverage: 0.9         # a venue counts if its settlements cover 90% of the window
+    oi_venues: [okx, hyperliquid, deribit, kraken]   # OI = USD sum over all four (D-026), else NaN
+    oi_max_age_h: 26                  # newest OI snapshot per venue must be this recent
+    max_age_days: 2                   # dominance, market cap, stablecoin supply: newest obs age
+    match_tolerance_days: 2           # "n days ago" = newest obs within this many days before
+    etf_days: 5                       # 5-day ETF net flows = the last 5 trade dates
+    etf_window_days: 9                # ... which must all fall within this many days of T
+    etf_subject: "US-{symbol}"        # sosovalue subject (collect.sosovalue.country_code)
+    # Inputs whose early history is unrepresentative: observations dated before these are ignored.
+    # DefiLlama's total covers ~$0.06bn in 2018 and $0.66bn in Jan 2019 (the market was ~$2.5bn:
+    # most USDT was on Omni, apparently untracked), so early % changes measure chain migration,
+    # not supply. From 2020 it tracks the market (Jan 2020: $5.2bn). D-039
+    valid_from: {stablecoins: "2020-01-01"}

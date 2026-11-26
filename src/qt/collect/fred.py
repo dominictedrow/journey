@@ -83,6 +83,22 @@ class FredApi:
             if not batch or offset >= int(j.get("count", 0)):
                 return out
 
+    def release_dates(self, release_id: int, start: str) -> list[date]:
+        """Every date the release was (or is scheduled to be) published since ``start``."""
+        out: list[date] = []
+        offset = 0
+        while True:
+            j = self._get(
+                "release/dates", release_id=release_id, realtime_start=start,
+                realtime_end=REALTIME_END, include_release_dates_with_no_data="true",
+                sort_order="asc", limit=10000, offset=offset,
+            )  # fmt: skip
+            batch = j.get("release_dates", [])
+            out += [date.fromisoformat(d["date"]) for d in batch]
+            offset += len(batch)
+            if not batch or offset >= int(j.get("count", 0)):
+                return out
+
     def observations(self, series_id: str, **params: Any) -> Iterator[Obs]:
         offset = 0
         while True:

@@ -18,6 +18,7 @@ from qt.collect.aliases import AliasesCollector
 from qt.collect.assets import AlpacaAssetsCollector, CryptoAssetsCollector
 from qt.collect.bars import BarsCryptoCollector, BarsEquityCollector, SuccessorBarsCollector
 from qt.collect.base import Collector, Connect, Outcome, alert_stale, freshness, run_all
+from qt.collect.calendars import CpiCalendarCollector, FomcCalendarCollector
 from qt.collect.congress import CongressCollector
 from qt.collect.corp_actions import CorpActionsCollector
 from qt.collect.crypto_derivs import CryptoOiCollector, FundingCollector
@@ -52,7 +53,8 @@ JOB_COLLECTORS: dict[str, Callable[[], list[Collector]]] = {
     "congress_daily": lambda: [CongressCollector()],
     "earnings_daily": lambda: [EarningsCollector()],
     # aliases fills assets.cik, which edgar_facts reads
-    "weekly": lambda: [MembershipCollector(), AliasesCollector(), EdgarFactsCollector()],
+    "weekly": lambda: [MembershipCollector(), AliasesCollector(), EdgarFactsCollector(),
+                       FomcCalendarCollector(), CpiCalendarCollector()],
 }  # fmt: skip
 
 
