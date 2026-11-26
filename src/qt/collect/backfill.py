@@ -23,7 +23,8 @@ from qt.common.calendar import ET
 # Order matters: membership creates the member assets that aliases and bars_equity then use.
 ORDER = [
     "membership", "alpaca_assets", "crypto_assets", "aliases", "bars_equity", "bars_crypto",
-    "fred", "hy_archive",
+    "corp_actions", "yfinance", "fred", "hy_archive", "edgar_facts", "funding", "crypto_oi",
+    "coingecko", "defillama", "earnings", "congress",
 ]  # fmt: skip
 
 
@@ -49,6 +50,21 @@ REPORT_QUERIES = {
         "SELECT source, min(snapshot_at)::date, max(snapshot_at)::date, count(*), "
         "count(DISTINCT snapshot_at) FROM index_membership GROUP BY 1 ORDER BY 1",
         "snapshots",
+    ),
+    "raw_metrics": (
+        "SELECT source || ' / ' || metric, min(ts)::date, max(ts)::date, count(*), "
+        "count(DISTINCT subject) FROM raw_metrics GROUP BY 1 ORDER BY 1",
+        "subjects",
+    ),
+    "raw_crypto_derivs": (
+        "SELECT venue || ' / ' || kind, min(ts)::date, max(ts)::date, count(*), "
+        "count(DISTINCT symbol) FROM raw_crypto_derivs GROUP BY 1 ORDER BY 1",
+        "symbols",
+    ),
+    "raw_fundamentals": (
+        "SELECT split_part(metric, ':', 1), min(released_at)::date, max(released_at)::date, "
+        "count(*), count(DISTINCT asset_id) FROM raw_fundamentals GROUP BY 1 ORDER BY 1",
+        "companies",
     ),
     "raw_events": (
         "SELECT source || ' / ' || kind, min(released_at)::date, max(released_at)::date, "

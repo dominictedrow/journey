@@ -41,6 +41,11 @@ http:
     api.stlouisfed.org: 1.5           # ~120 req/min limit; stay under it
     www.sec.gov: 8                    # SEC fair access: <= 10 req/s
     data.sec.gov: 8
+    api.congress.gov: 4               # api.data.gov: 20,000 req/h (header, probe 2026-11-26)
+    api.coingecko.com: 0.4            # Demo: 30 calls/min
+    api.nasdaq.com: 1
+    www.okx.com: 4                    # public: 10 req / 2 s
+    api.hyperliquid.xyz: 0.5          # 429s at 2 req/s (backfill 2026-11-26)
 
 # Freshness: Phase 2 records and alerts; Phase 5 turns stale critical feeds into NO TRADE.
 freshness:
@@ -57,7 +62,16 @@ freshness:
     fred: {critical: true, max_hours: 6, session_paced: true}
     hy_archive: {critical: false, max_hours: 6, session_paced: true}
     news: {critical: true, max_hours: 2}
+    fed_rss: {critical: false, max_hours: 2}       # polled with news every 15 min
     funding: {critical: true, max_hours: 26}
+    crypto_oi: {critical: false, max_hours: 26}
+    coingecko: {critical: false, max_hours: 26}
+    defillama: {critical: false, max_hours: 26}
+    yfinance: {critical: false, max_hours: 6, session_paced: true}
+    corp_actions: {critical: false, max_hours: 6, session_paced: true}
+    edgar_facts: {critical: false, max_hours: 192}
+    congress: {critical: false, max_hours: 26}
+    earnings: {critical: false, max_hours: 72}
 
 # News (D-008, D-022). Every article is stored; filtering happens downstream (Phase 8).
 news:
@@ -85,7 +99,7 @@ fed:
     - {pattern: "economic projections", kind: projections}
     - {pattern: "schedule of Federal Open Market Committee meetings", kind: fomc_schedule}
   feed_default_kind: {press_monetary: press, speeches: speech, press_all: press}
-  speaker_roles:                      # speeches feed titles are "<Surname>, <title>". VERIFY roles.
+  speaker_roles:                      # speeches feed titles are "<Surname>, <title>". Roles confirmed by Dom 2026-11-26.
     Warsh: Chair
     Jefferson: Vice Chair
     Bowman: Vice Chair for Supervision
@@ -139,6 +153,164 @@ membership:
 edgar:
   tickers_url: https://www.sec.gov/files/company_tickers.json
   max_rps: 10
+  # Per-company companyfacts + submissions, not the weekly companyfacts.zip bulk file: the zip is
+  # ~1.4 GB, while ~600 mapped CIKs at 8 req/s take a few minutes, and an unchanged filer (same
+  # newest accession as last week) is skipped (D-031)
+  facts_url: https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json
+  submissions_url: https://data.sec.gov/submissions/CIK{cik}.json
+  submissions_file_url: https://data.sec.gov/submissions/{name}
+  cache_dir: data/cache/edgar           # older submissions pages never change: cached for good
+  concepts:                             # taxonomy:concept -> raw_fundamentals.metric (all units)
+    - us-gaap:Revenues
+    - us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax
+    - us-gaap:SalesRevenueNet
+    - us-gaap:GrossProfit
+    - us-gaap:OperatingIncomeLoss
+    - us-gaap:NetIncomeLoss
+    - us-gaap:EarningsPerShareDiluted
+    - us-gaap:EarningsPerShareBasic
+    - us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding
+    - us-gaap:Assets
+    - us-gaap:Liabilities
+    - us-gaap:StockholdersEquity
+    - us-gaap:CashAndCashEquivalentsAtCarryingValue
+    - us-gaap:LongTermDebt
+    - us-gaap:LongTermDebtNoncurrent
+    - us-gaap:NetCashProvidedByUsedInOperatingActivities
+    - us-gaap:PaymentsToAcquirePropertyPlantAndEquipment
+    - us-gaap:CommonStockDividendsPerShareDeclared
+    - dei:EntityCommonStockSharesOutstanding
+
+# yfinance (6.2): spec tickers daily + index-level history from 2000 for the HMM. Never mixed with
+# Alpaca rows (source 'yfinance'). Close is yfinance's split-adjusted close (its "raw" close).
+yfinance:
+  start: "2000-01-01"
+  tickers:                              # ticker -> pit rule (xnys | futures_fx) and asset_class
+    SPY: {rule: xnys, asset_class: etf}
+    QQQ: {rule: xnys, asset_class: etf}
+    XLB: {rule: xnys, asset_class: etf}
+    XLE: {rule: xnys, asset_class: etf}
+    XLF: {rule: xnys, asset_class: etf}
+    XLI: {rule: xnys, asset_class: etf}
+    XLK: {rule: xnys, asset_class: etf}
+    XLP: {rule: xnys, asset_class: etf}
+    XLU: {rule: xnys, asset_class: etf}
+    XLV: {rule: xnys, asset_class: etf}
+    XLY: {rule: xnys, asset_class: etf}
+    "^VIX": {rule: xnys, asset_class: index}
+    "^VIX3M": {rule: xnys, asset_class: index}
+    "NQ=F": {rule: futures_fx, asset_class: future}
+    "GC=F": {rule: futures_fx, asset_class: future}
+    "DX-Y.NYB": {rule: futures_fx, asset_class: fx}
+  refetch_days: 10                      # daily runs re-request this many days (ON CONFLICT skips)
+  sleep_s: 1.0                          # between tickers (yfinance has no published limit)
+  cache_dir: data/cache/yfinance
+
+# Alpaca corporate actions (D-030: Phase 3 adjusts raw bars from these). raw_events, source
+# 'alpaca_ca'. released_at = min(fetch time, ex/effective date 00:00 ET) (D-031).
+corp_actions:
+  start: "2016-01-01"
+  lookahead_days: 90                    # daily runs also fetch announced future actions
+  refetch_days: 30
+  symbols_per_request: 100
+  page_limit: 1000
+
+# Congress.gov (6.8). Bills are listed per congress (title + latest action); actions are fetched
+# only for bills that moved after introduction or match a tag; a bill is kept if any action
+# touches one of the committees or it has a tag. Backfill runs in budgeted slices (D-031).
+congress:
+  base_url: https://api.congress.gov/v3
+  first_congress: 114                   # 2015-2016: covers the 2016 price start
+  committees: [hswm00, hsba00, hsap00, hsbu00, ssfi00, ssbk00, ssap00, ssbu00]
+  page_limit: 250
+  backfill_budget: 4000                 # actions requests per run for the backfill slice
+  status_rules:                         # first match wins: action type (optional) + text regex
+    - {status: became_law, type: BecameLaw, pattern: "."}
+    - {status: vetoed, pattern: "^Vetoed by President|Veto message"}
+    - {status: to_president, type: President, pattern: "^Presented to President"}
+    - {status: resolving_differences, type: ResolvingDifferences, pattern: "."}
+    - {status: passed_house, pattern: "^Passed/agreed to in House"}
+    - {status: passed_senate, pattern: "^Passed/agreed to in Senate"}
+    - {status: reported, type: Committee, pattern: "^(Reported|Ordered to be reported)"}
+  event_statuses: [reported, passed_house, passed_senate, resolving_differences, to_president,
+                   became_law, vetoed]
+  tags:                                 # title or action text regex (case-insensitive)
+    debt_ceiling: "debt (ceiling|limit)|public debt limit|statutory limit on the public debt"
+    cr_shutdown: "continuing appropriations|continuing resolution|government shutdown|lapse in appropriations"
+
+# Earnings calendar (6.9): api.nasdaq.com (unofficial; needs a browser-like UA). Finnhub fallback
+# is not built: no key (D-031). Rows for tickers ever in the universe only.
+earnings:
+  url: https://api.nasdaq.com/api/calendar/earnings
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+  lookahead_days: 28
+  backfill_start: "2016-01-01"
+  backfill_budget: 600                  # calendar days per run for the backfill slice
+
+# Crypto structure (6.10).
+coingecko:
+  base_url: https://api.coingecko.com/api/v3
+  history_days: 365                     # Demo plan limit (probe 2026-11-26: 400 above 365)
+  refetch_days: 30
+  ids:                                  # Alpaca pool symbol -> CoinGecko id (markets probe 2026-11-26)
+    AAVE: aave
+    ADA: cardano
+    ARB: arbitrum
+    AVAX: avalanche-2
+    BAT: basic-attention-token
+    BCH: bitcoin-cash
+    BONK: bonk
+    BTC: bitcoin
+    CRV: curve-dao-token
+    DOGE: dogecoin
+    DOT: polkadot
+    ETH: ethereum
+    FIL: filecoin
+    GRT: the-graph
+    HYPE: hyperliquid
+    LDO: lido-dao
+    LINK: chainlink
+    LTC: litecoin
+    ONDO: ondo-finance
+    PAXG: pax-gold
+    PEPE: pepe
+    POL: polygon-ecosystem-token
+    RENDER: render-token
+    SHIB: shiba-inu
+    SKY: sky
+    SOL: solana
+    SUSHI: sushi
+    TRUMP: official-trump
+    UNI: uniswap
+    WIF: dogwifcoin
+    XRP: ripple
+    XTZ: tezos
+    YFI: yearn-finance
+
+defillama:
+  stablecoins_url: https://stablecoins.llama.fi/stablecoincharts/all
+
+derivs:
+  symbols: [BTC, ETH, SOL]
+  funding_start: "2023-06-01"           # Hyperliquid backfill start; OKX serves ~3 months only
+  okx:
+    base_url: https://www.okx.com/api/v5/public
+    inst: {BTC: BTC-USDT-SWAP, ETH: ETH-USDT-SWAP, SOL: SOL-USDT-SWAP}
+    default_interval_h: 8
+    page_limit: 100
+  hyperliquid:
+    url: https://api.hyperliquid.xyz/info
+    interval_h: 1
+  deribit:
+    url: https://www.deribit.com/api/v2/public/get_book_summary_by_instrument
+    # oi_unit: what open_interest is quoted in (inverse perps: USD; linear USDC perps: base coin)
+    inst:
+      BTC: {name: BTC-PERPETUAL, oi_unit: usd}
+      ETH: {name: ETH-PERPETUAL, oi_unit: usd}
+      SOL: {name: SOL_USDC-PERPETUAL, oi_unit: base}
+  kraken:
+    url: https://futures.kraken.com/derivatives/api/v3/tickers/{symbol}
+    inst: {BTC: PF_XBTUSD, ETH: PF_ETHUSD, SOL: PF_SOLUSD}   # openInterest in base coin
 
 # FRED / ALFRED (component doc 6.3, D-023). Every vintage of every series -> raw_macro
 # (source 'alfred'); release times are in pit.fred_release_time_et.

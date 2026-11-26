@@ -140,3 +140,23 @@ class Alpaca:
             {"symbols": ",".join(symbols), "timeframe": "1Day", "start": start.isoformat(),
              "end": self._end(end)},
         )  # fmt: skip
+
+    # ------------------------------------------------------------ corporate actions
+    def corporate_actions(
+        self, symbols: list[str], start: date, end: date, limit: int = 1000
+    ) -> list[tuple[str, dict[str, Any]]]:
+        """``(type, record)`` for every corporate action of ``symbols`` with a date in range
+        (``cash_dividends``, ``forward_splits``, ``reverse_splits``, ``name_changes``, ...)."""
+        out: list[tuple[str, dict[str, Any]]] = []
+        token = None
+        while True:
+            q: dict[str, Any] = {"symbols": ",".join(symbols), "start": start.isoformat(),
+                                 "end": end.isoformat(), "limit": limit}  # fmt: skip
+            if token:
+                q["page_token"] = token
+            j = self._get(f"{self.cfg.data_url}/v1/corporate-actions", **q)
+            for kind, recs in (j.get("corporate_actions") or {}).items():
+                out += [(kind, r) for r in recs]
+            token = j.get("next_page_token")
+            if not token:
+                return out

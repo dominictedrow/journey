@@ -226,9 +226,18 @@ def test_membership_collect_end_to_end(env):
     cc = (tmp / "cc.md").read_text()
     assert "Only in fja05680 (0)" in cc and "Only in Wikipedia (1): CA" in cc
 
-    # next week: only the new Wikipedia snapshot is added; asset rows are stable
+    # next week, same constituents: nothing is stored again (D-031); asset rows are stable
     out = run_collector(MembershipCollector(clock=lambda: t0 + timedelta(days=7),
                                             alpaca=lambda ctx: fake), **kw)  # fmt: skip
-    assert out.status == "ok" and out.result.rows == {"index_membership": 4}
+    assert out.status == "ok" and out.result.rows == {"index_membership": 0}
+    assert out.result.cursor["snapshot_unchanged"] is True
     with kw["connect"]() as cx:
         assert cx.execute("SELECT count(*) FROM assets").fetchone()[0] == 6
+
+    # the week after, CA leaves the index: the changed snapshot is stored
+    wiki_key = kw["settings"].config.collect.membership.wikipedia_url.replace("%26", "&")
+    router.routes[wiki_key] = wiki_html(["AAA", "META", "NEW1"])
+    out = run_collector(MembershipCollector(clock=lambda: t0 + timedelta(days=14),
+                                            alpaca=lambda ctx: fake), **kw)  # fmt: skip
+    assert out.status == "ok" and out.result.rows == {"index_membership": 3}
+    assert out.result.cursor["snapshot_unchanged"] is False

@@ -170,6 +170,16 @@ def sosovalue_history(cfg: PitCfg, trade_date: date) -> datetime:
     return at_et(d, cfg.sosovalue_history_et)
 
 
+# ---------------------------------------------------------------- corporate actions
+def corp_action(event_date: date, fetched_at: datetime) -> datetime:
+    """Split/dividend/name change: ``min(fetch time, event date 00:00 ET)`` (D-031).
+
+    Actions are announced before their ex/effective date, so 00:00 ET that day is a conservative
+    upper bound for history; an announced future action is known from when we fetched it.
+    """
+    return min(_aware(fetched_at, "corp_action"), at_et(_day(event_date, "corp_action"), "00:00"))
+
+
 # ---------------------------------------------------------------- membership
 def membership_fja(snapshot: date) -> datetime:
     """fja05680 membership snapshot: the effective date at 00:00 ET (conservative)."""

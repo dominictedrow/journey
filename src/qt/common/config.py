@@ -274,6 +274,125 @@ class MembershipCfg(_Strict):
 class EdgarCfg(_Strict):
     tickers_url: str
     max_rps: float = Field(gt=0, le=10)
+    facts_url: str
+    submissions_url: str
+    submissions_file_url: str
+    cache_dir: str
+    concepts: list[str] = Field(min_length=1)
+
+    @field_validator("concepts")
+    @classmethod
+    def _concepts(cls, v: list[str]) -> list[str]:
+        for c in v:
+            if c.count(":") != 1:
+                raise ValueError(f"concept {c!r} must be taxonomy:Concept")
+        return v
+
+
+class YfTicker(_Strict):
+    rule: Literal["xnys", "futures_fx"]
+    asset_class: Literal["etf", "index", "future", "fx"]
+
+
+class YfinanceCfg(_Strict):
+    start: str
+    tickers: dict[str, YfTicker] = Field(min_length=1)
+    refetch_days: int = Field(ge=1)
+    sleep_s: float = Field(ge=0)
+    cache_dir: str
+
+
+class CorpActionsCfg(_Strict):
+    start: str
+    lookahead_days: int = Field(ge=0)
+    refetch_days: int = Field(ge=1)
+    symbols_per_request: int = Field(ge=1, le=500)
+    page_limit: int = Field(ge=1, le=1000)
+
+
+class StatusRule(_Strict):
+    status: str
+    type: str | None = None
+    pattern: str
+
+    @field_validator("pattern")
+    @classmethod
+    def _regex(cls, v: str) -> str:
+        re.compile(v)
+        return v
+
+
+class CongressCfg(_Strict):
+    base_url: str
+    first_congress: int = Field(ge=93)
+    committees: list[str] = Field(min_length=1)
+    page_limit: int = Field(ge=1, le=250)
+    backfill_budget: int = Field(ge=1)
+    status_rules: list[StatusRule]
+    event_statuses: list[str]
+    tags: dict[str, str]
+
+    @field_validator("tags")
+    @classmethod
+    def _regexes(cls, v: dict[str, str]) -> dict[str, str]:
+        for p in v.values():
+            re.compile(p)
+        return v
+
+
+class EarningsCfg(_Strict):
+    url: str
+    user_agent: str
+    lookahead_days: int = Field(ge=1)
+    backfill_start: str
+    backfill_budget: int = Field(ge=1)
+
+
+class CoingeckoCfg(_Strict):
+    base_url: str
+    history_days: int = Field(ge=1)
+    refetch_days: int = Field(ge=1)
+    ids: dict[str, str] = Field(min_length=1)
+
+
+class DefillamaCfg(_Strict):
+    stablecoins_url: str
+
+
+class OkxCfg(_Strict):
+    base_url: str
+    inst: dict[str, str]
+    default_interval_h: float = Field(gt=0)
+    page_limit: int = Field(ge=1, le=100)
+
+
+class HyperliquidCfg(_Strict):
+    url: str
+    interval_h: float = Field(gt=0)
+
+
+class DeribitInst(_Strict):
+    name: str
+    oi_unit: Literal["usd", "base"]
+
+
+class DeribitCfg(_Strict):
+    url: str
+    inst: dict[str, DeribitInst]
+
+
+class KrakenCfg(_Strict):
+    url: str
+    inst: dict[str, str]
+
+
+class DerivsCfg(_Strict):
+    symbols: list[str] = Field(min_length=1)
+    funding_start: str
+    okx: OkxCfg
+    hyperliquid: HyperliquidCfg
+    deribit: DeribitCfg
+    kraken: KrakenCfg
 
 
 class FredCfg(_Strict):
@@ -316,6 +435,13 @@ class CollectCfg(_Strict):
     crypto: CryptoCfg
     membership: MembershipCfg
     edgar: EdgarCfg
+    yfinance: YfinanceCfg
+    corp_actions: CorpActionsCfg
+    congress: CongressCfg
+    earnings: EarningsCfg
+    coingecko: CoingeckoCfg
+    defillama: DefillamaCfg
+    derivs: DerivsCfg
     fred: FredCfg
     schedule: ScheduleCfg
 

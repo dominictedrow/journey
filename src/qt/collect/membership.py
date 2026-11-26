@@ -439,8 +439,13 @@ class MembershipCollector:
         secs = resolve(snaps, ident)
         active = {a["symbol"]: a for a in alpaca.assets("us_equity")}
         ids = upsert_member_assets(ctx.conn, secs, active, {r["symbol"]: r for r in wiki_rows})
-        rows = membership_rows(snaps, secs, ids, index)
+        # An unchanged weekly snapshot adds nothing (as-of reads take the latest snapshot <= T),
+        # so it's used for identity resolution above but not stored again (D-031)
+        unchanged = bool(prior) and prior[-1].tickers == wiki_now.tickers
+        stored = snaps[:-1] if unchanged else snaps
+        rows = membership_rows(stored, secs, ids, index)
         res.add("index_membership", insert_rows(ctx.conn, "index_membership", MEMBER_COLS, rows))
+        cursor["snapshot_unchanged"] = unchanged
         if not prior:
             write_crosscheck(cfg.crosscheck_report, fja[-1], wiki_now)
         cursor["securities"] = len(secs)

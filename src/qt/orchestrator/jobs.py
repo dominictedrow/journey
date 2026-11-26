@@ -18,11 +18,18 @@ from qt.collect.aliases import AliasesCollector
 from qt.collect.assets import AlpacaAssetsCollector, CryptoAssetsCollector
 from qt.collect.bars import BarsCryptoCollector, BarsEquityCollector
 from qt.collect.base import Collector, Connect, Outcome, alert_stale, freshness, run_all
+from qt.collect.congress import CongressCollector
+from qt.collect.corp_actions import CorpActionsCollector
+from qt.collect.crypto_derivs import CryptoOiCollector, FundingCollector
+from qt.collect.crypto_structure import CoingeckoCollector, DefillamaCollector
+from qt.collect.earnings import EarningsCollector
+from qt.collect.edgar import EdgarFactsCollector
 from qt.collect.fed import FedRssCollector
 from qt.collect.fred import FredCollector, HyArchiveCollector
 from qt.collect.http import HttpClient
 from qt.collect.membership import MembershipCollector
 from qt.collect.news.collector import NewsCollector
+from qt.collect.yfin import YfinanceCollector
 from qt.common.calendar import ET, TradingCalendar
 from qt.common.config import Settings
 from qt.common.paths import repo_path
@@ -32,14 +39,19 @@ log = logging.getLogger("qt.orchestrator")
 
 JOB_COLLECTORS: dict[str, Callable[[], list[Collector]]] = {
     "news_loop": lambda: [NewsCollector(), FedRssCollector()],
-    "stock_daily": lambda: [  # + step 5: yfinance
-        AlpacaAssetsCollector(), BarsEquityCollector(), FredCollector(), HyArchiveCollector(),
+    "stock_daily": lambda: [
+        AlpacaAssetsCollector(), BarsEquityCollector(), CorpActionsCollector(),
+        YfinanceCollector(), FredCollector(), HyArchiveCollector(),
     ],
-    "crypto_daily": lambda: [CryptoAssetsCollector(), BarsCryptoCollector()],  # + step 5
-    "congress_daily": lambda: [],  # step 5
-    "earnings_daily": lambda: [],  # step 5
-    "weekly": lambda: [MembershipCollector(), AliasesCollector()],  # + step 5: EDGAR facts
-}
+    "crypto_daily": lambda: [
+        CryptoAssetsCollector(), BarsCryptoCollector(), FundingCollector(), CryptoOiCollector(),
+        CoingeckoCollector(), DefillamaCollector(),
+    ],
+    "congress_daily": lambda: [CongressCollector()],
+    "earnings_daily": lambda: [EarningsCollector()],
+    # aliases fills assets.cik, which edgar_facts reads
+    "weekly": lambda: [MembershipCollector(), AliasesCollector(), EdgarFactsCollector()],
+}  # fmt: skip
 
 
 def known_collectors() -> list[str]:

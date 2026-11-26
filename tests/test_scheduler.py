@@ -9,6 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from qt.common import config
 from qt.common.calendar import ET, TradingCalendar
 from qt.orchestrator import jobs
 from qt.orchestrator.jobs import JobRunner, heartbeat, heartbeat_gaps
@@ -89,9 +90,14 @@ def test_session_job_skips_holiday(settings, cal, monkeypatch):
 def test_known_collectors_fit_stage_limit():
     names = jobs.known_collectors()
     assert names == [
-        "news", "fed_rss", "alpaca_assets", "bars_equity", "fred", "hy_archive",
-        "crypto_assets", "bars_crypto", "membership", "aliases",
+        "news", "fed_rss",
+        "alpaca_assets", "bars_equity", "corp_actions", "yfinance", "fred", "hy_archive",
+        "crypto_assets", "bars_crypto", "funding", "crypto_oi", "coingecko", "defillama",
+        "congress", "earnings",
+        "membership", "aliases", "edgar_facts",
     ]  # fmt: skip
+    cfg = config.load(profile="dev").config.collect.freshness.collectors
+    assert set(names) <= set(cfg)  # every collector has an explicit freshness rule
     assert all(len(f"collect_{n}") <= 21 for n in names)
 
 
