@@ -31,6 +31,14 @@ SPEC_TABLES = {
     "risk_events",
 }
 EXTRA_TABLES = {"alerts_log", "backup_log", "article_scores", "schema_migrations"}
+COLLECTOR_TABLES = {  # 005
+    "index_membership",
+    "aliases",
+    "raw_events",
+    "raw_metrics",
+    "raw_crypto_derivs",
+    "collector_state",
+}
 
 
 def test_migrate_empty_db(settings, empty_db):
@@ -47,7 +55,7 @@ def test_migrate_empty_db(settings, empty_db):
             r[0]
             for r in c.execute("SELECT viewname FROM pg_views WHERE schemaname='public'").fetchall()
         }
-    assert SPEC_TABLES | EXTRA_TABLES <= tables
+    assert SPEC_TABLES | EXTRA_TABLES | COLLECTOR_TABLES <= tables
     assert "model_input_latest" in views
 
 

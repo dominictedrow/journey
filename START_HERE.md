@@ -4,20 +4,21 @@
 
 ---
 
-## CURRENT CHECKPOINT: v3 / 2026-11-25 (Session 02, Phase 2 questioning)
+## CURRENT CHECKPOINT: v4 / 2026-11-25 (Session 03, Phase 2 build step 1)
 
 | | |
 |---|---|
-| **Phase** | Phase 1 ✅ (pushes confirmed on Dom's phone). **Phase 2 (Collectors): questioning done, build next** |
-| **Last session** | S02: Phase 1 close-out + Phase 2 questioning ([handoff](docs/handoffs/2026-11-25_s02_collectors_questioning.md)) |
-| **Git** | Branch `vibe/quant_trader`. Phase 1 build is committed as `9788e9c`; the S02 docs are committed. Nothing is pushed |
-| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-026 |
-| **Tests** | 55 passed, ruff clean (no code changed in S02) |
-| **DB** | Migrated to 004, no market data yet |
+| **Phase** | **Phase 2 (Collectors): build in progress, step 1 of 5 done** (foundations) |
+| **Last session** | S03: migration 005, `collect/{pit,http,base}.py`, `db/pit.py`, PIT + no-lookahead tests ([handoff](docs/handoffs/2026-11-25_s03_collectors_build_foundations.md)) |
+| **Git** | Branch `vibe/quant_trader`, last commit `fc919dc`. S03 work uncommitted. Nothing pushed |
+| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-027 |
+| **Tests** | 102 passed, ruff clean |
+| **DB** | Migrated to 005, no market data yet |
+| **Keys** | Alpaca paper, FRED, Congress, CoinGecko, SEC UA set. SoSoValue, Finnhub empty (optional) |
 
 ### Next exact task
-1. Dom fills the empty `.env` keys (the spec defaults are accepted): Alpaca paper, FRED, `CONGRESS_API_KEY`, `COINGECKO_DEMO_API_KEY` (optional: SoSoValue, Finnhub).
-2. Phase 2 build. Start with migration 005 and the PIT helpers, then get the **news loop + scheduler** running first so history starts accumulating (D-018).
+1. Build step 2: news loop + Fed RSS + scheduler + launchd installer, so news history starts accumulating (D-018). Ask Dom before loading the launchd agent.
+2. Then FRED/ALFRED + HY archive → Alpaca + membership + backfill → everything else.
 
 Until the scheduler exists, the backup runs by hand: `QT_PROFILE=paper uv run python scripts/db_backup.py`.
 
@@ -37,6 +38,8 @@ Until the scheduler exists, the backup runs by hand: `QT_PROFILE=paper uv run py
 ---
 
 ## Prior checkpoints
+### v3 / 2026-11-25 (Session 02, Phase 2 questioning)
+- Phase 1 closed (pushes confirmed). Phase 2 questioning done, spec `docs/components/02_collectors.md`, D-021 to D-026. [Handoff](docs/handoffs/2026-11-25_s02_collectors_questioning.md)
 ### v2 / 2026-11-25 (Session 01, build)
 - Phase 1 built: config, run_id, logging, ntfy alerts, calendar, migrations 001–004, backup job. 55 tests green. Committed in S02 as `9788e9c`.
 

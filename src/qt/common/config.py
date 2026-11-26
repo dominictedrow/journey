@@ -113,11 +113,90 @@ class CalendarCfg(_Strict):
     decision_offset_min: int = Field(ge=0)
 
 
+# ---------------------------------------------------------------- collect.yaml
+_HHMM = re.compile(r"([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?")
+
+
+def _check_hhmm(v: str) -> str:
+    if not _HHMM.fullmatch(v):
+        raise ValueError(f"{v!r} must be HH:MM or HH:MM:SS (24h)")
+    return v
+
+
+class MonthDayCfg(_Strict):
+    month: int = Field(ge=1, le=12)
+    day: int = Field(ge=1, le=31)
+
+
+class PitCfg(_Strict):
+    yfinance_xnys_offset_min: int = Field(ge=0)
+    futures_release_et: str
+    fred_release_time_et: dict[str, str]
+    edgar_fallback_days: int = Field(ge=0)
+    fomc_schedule_known: MonthDayCfg
+    congress_backfill_et: str
+    earnings_backfill_lead_days: int = Field(ge=0)
+    sosovalue_history_et: str
+
+    @field_validator("futures_release_et", "congress_backfill_et", "sosovalue_history_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+    @field_validator("fred_release_time_et")
+    @classmethod
+    def _times(cls, v: dict[str, str]) -> dict[str, str]:
+        if "default" not in v:
+            raise ValueError("fred_release_time_et needs a 'default' entry")
+        for t in v.values():
+            _check_hhmm(t)
+        return v
+
+
+class HttpCfg(_Strict):
+    timeout_s: float = Field(gt=0)
+    retries: int = Field(ge=0)
+    backoff_base_s: float = Field(ge=0)
+    backoff_max_s: float = Field(ge=0)
+    jitter_s: float = Field(ge=0)
+    user_agent: str
+    per_host_rps: dict[str, float]
+
+    @field_validator("per_host_rps")
+    @classmethod
+    def _rps(cls, v: dict[str, float]) -> dict[str, float]:
+        if "default" not in v:
+            raise ValueError("per_host_rps needs a 'default' entry")
+        if any(r <= 0 for r in v.values()):
+            raise ValueError("per_host_rps values must be > 0")
+        return v
+
+
+class FreshnessRule(_Strict):
+    critical: bool
+    max_hours: float = Field(gt=0)
+
+
+class FreshnessCfg(_Strict):
+    default: FreshnessRule
+    collectors: dict[str, FreshnessRule]
+
+    def rule(self, collector: str) -> FreshnessRule:
+        return self.collectors.get(collector, self.default)
+
+
+class CollectCfg(_Strict):
+    pit: PitCfg
+    http: HttpCfg
+    freshness: FreshnessCfg
+
+
 class Config(_Strict):
     db: DbCfg
     app: AppCfg
     backup: BackupCfg
     calendar: CalendarCfg
+    collect: CollectCfg
 
 
 # ---------------------------------------------------------------- secrets
@@ -130,6 +209,18 @@ class Secrets(_Strict):
     alpaca_api_key_id: SecretStr | None = None
     alpaca_api_secret_key: SecretStr | None = None
     fred_api_key: SecretStr | None = None
+    congress_api_key: SecretStr | None = None
+    coingecko_demo_api_key: SecretStr | None = None
+    sosovalue_api_key: SecretStr | None = None
+    finnhub_api_key: SecretStr | None = None
+    sec_edgar_user_agent: SecretStr | None = None  # contains Dom's contact email: keep secret
+
+    def has(self, name: str) -> bool:
+        """True if the secret field ``name`` is set to a non-empty value."""
+        v = getattr(self, name)
+        if v is None:
+            return False
+        return bool(v.get_secret_value() if isinstance(v, SecretStr) else v)
 
     @field_validator("alpaca_api_key_id")
     @classmethod
@@ -153,6 +244,11 @@ def _secrets_from_env() -> Secrets:
         "alpaca_api_key_id": get("ALPACA_API_KEY_ID"),
         "alpaca_api_secret_key": get("ALPACA_API_SECRET_KEY"),
         "fred_api_key": get("FRED_API_KEY"),
+        "congress_api_key": get("CONGRESS_API_KEY"),
+        "coingecko_demo_api_key": get("COINGECKO_DEMO_API_KEY"),
+        "sosovalue_api_key": get("SOSOVALUE_API_KEY"),
+        "finnhub_api_key": get("FINNHUB_API_KEY"),
+        "sec_edgar_user_agent": get("SEC_EDGAR_USER_AGENT"),
     }
     try:
         return Secrets(**raw)
