@@ -415,19 +415,47 @@ def members_at(membership: pd.DataFrame, asof: datetime) -> set[int]:
 
 
 # ---------------------------------------------------------------- macro
-def load_macro(conn: psycopg.Connection, series: Sequence[str], asof: datetime) -> pd.DataFrame:
-    """Every vintage of ``series`` released by ``asof`` (ALFRED rows, source 'alfred')."""
-    df = frame_asof(
-        conn,
-        "raw_macro",
-        asof,
-        where={"source": "alfred"},
-        where_in={"series_id": list(series)},
-        columns=["series_id", "period", "value", "vintage", "released_at"],
-        order_by=("released_at", "series_id", "period"),
-    )
+def load_macro(
+    conn: psycopg.Connection, series: Sequence[str], asof: datetime, fixes=None
+) -> pd.DataFrame:
+    """Every vintage of ``series`` released by ``asof`` (ALFRED rows, source 'alfred').
+
+    ``fixes`` (``features.market.macro_fixes``) rescales vintages from before a unit change and
+    moves the first vintage of late-listed series back to period + lag (see the config).
+    """
+    late = dict(fixes.late_listed_lag_days) if fixes is not None else {}
+    cols = ["series_id", "period", "value", "vintage", "released_at"]
+    normal = [s for s in series if s not in late]
+    df = frame_asof(conn, "raw_macro", asof, where={"source": "alfred"},
+                    where_in={"series_id": normal}, columns=cols,
+                    order_by=("released_at", "series_id", "period"))  # fmt: skip
     df["released_at"] = pd.to_datetime(df["released_at"], utc=True)
-    return df
+    for sid, lag in late.items():
+        if sid not in series:
+            continue
+        # every vintage (the first one moves earlier); then cut on the moved release times
+        x = frame_asof(conn, "raw_macro", datetime.max.replace(tzinfo=UTC),
+                       where={"source": "alfred", "series_id": sid}, columns=cols,
+                       order_by=("released_at", "period"))  # fmt: skip
+        if x.empty:
+            continue
+        x["released_at"] = pd.to_datetime(x["released_at"], utc=True)
+        first = x["vintage"].min()
+        moved = pd.to_datetime(x["period"]).dt.tz_localize(ET) + pd.Timedelta(days=lag)
+        is_first = x["vintage"] == first
+        x.loc[is_first, "released_at"] = moved[is_first].dt.tz_convert(UTC).where(
+            moved[is_first].dt.tz_convert(UTC) < x.loc[is_first, "released_at"],
+            x.loc[is_first, "released_at"],
+        )
+        x = x[x["released_at"] <= pd.Timestamp(asof)]
+        df = pd.concat([df, x], ignore_index=True)
+    if fixes is not None:
+        for u in fixes.unit_changes:
+            hit = (df["series_id"] == u.series) & (df["vintage"] < u.before_vintage)
+            df.loc[hit, "value"] = df.loc[hit, "value"].astype(float) * u.multiply
+    return df.sort_values(["released_at", "series_id", "period"], kind="stable").reset_index(
+        drop=True
+    )
 
 
 class MacroState:

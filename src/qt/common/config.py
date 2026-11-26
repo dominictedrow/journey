@@ -661,12 +661,73 @@ class CrossSectionCfg(_Strict):
     composites: dict[str, list[str]]
 
 
+class InflMonthsCfg(_Strict):
+    short: int = Field(ge=1)
+    long: int = Field(ge=2)
+
+
+class SahmCfg(_Strict):
+    avg_months: int = Field(ge=1)
+    lookback_months: int = Field(ge=1)
+
+
+class ClaimsCfg(_Strict):
+    avg_weeks: int = Field(ge=1)
+    yoy_days: int = Field(ge=1)
+
+
+class GoldResidCfg(_Strict):
+    fit_window: int = Field(ge=10)
+    horizon: int = Field(ge=1)
+
+
+class GliTermCfg(_Strict):
+    series: str
+    factor: float
+    fx: str | None = None
+    fx_op: Literal["mul", "div"] | None = None
+
+
+class GliCfg(_Strict):
+    window_days: int = Field(ge=1)
+    terms: list[GliTermCfg] = Field(min_length=1)
+
+
+class UnitChangeCfg(_Strict):
+    series: str
+    before_vintage: date
+    multiply: float
+
+
+class MacroFixesCfg(_Strict):
+    unit_changes: list[UnitChangeCfg] = []
+    late_listed_lag_days: dict[str, int] = {}
+
+
+class MarketCfg(_Strict):
+    z_window: int = Field(ge=10)
+    chg_window: int = Field(ge=1)
+    ret_window: int = Field(ge=1)
+    corr_window: int = Field(ge=5)
+    ratio_window: int = Field(ge=1)
+    infl_months: InflMonthsCfg
+    sahm: SahmCfg
+    nfci_chg_days: int = Field(ge=1)
+    claims: ClaimsCfg
+    gold_resid: GoldResidCfg
+    gli: GliCfg
+    macro_fixes: MacroFixesCfg = MacroFixesCfg()
+    tickers: dict[str, str]
+    ratios: list[tuple[str, str]]
+
+
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
     adjust: AdjustCfg
     price: PriceCfg
     fundamentals: FundamentalsCfg
     cross_section: CrossSectionCfg
+    market: MarketCfg
 
 
 class Config(_Strict):

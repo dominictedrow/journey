@@ -150,7 +150,7 @@ src/qt/features/
   price.py           §5.1
   fundamentals.py    point-in-time TTM/instants and the §5.2 ratios (added in the build, D-037)
   cross_section.py   ranks, sector ranks, composites, EDGAR concept map
-  macro.py           §5.3 incl. GLI, framework additions, breadth
+  market.py          §5.3 incl. GLI, framework additions, breadth (named market.py in the build, D-038)
   crypto.py          crypto structure
   normalize.py       rolling z, winsorize, masks, days_since_release
   matrix.py          features_asof(T, versions) → market vector, asset matrix

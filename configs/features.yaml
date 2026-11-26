@@ -145,3 +145,52 @@ cross_section:
     momentum: [mom_12_1, ret_63d]
     low_vol: [-rvol_252d, -beta_252d]
     growth: [revenue_yoy, eps_yoy]
+
+# Market vector (section 5.3). Computed at each decision time T from what is known at T: macro
+# from the ALFRED vintages released by T (MacroState), prices from bars released by T. "n-day"
+# windows count XNYS sessions; a series is sampled at each session as its latest observation dated
+# on or before it (so weekly/monthly series forward-fill, never back-fill).
+market:
+  z_window: 252                       # rolling z-scores: latest vs the last n session samples
+  chg_window: 21                      # "21-day change"
+  ret_window: 21
+  corr_window: 63
+  ratio_window: 63                    # risk-appetite ratios: 63-day log return of A/B
+  infl_months: {short: 3, long: 12}   # 3-month annualized - YoY
+  sahm: {avg_months: 3, lookback_months: 12}
+  nfci_chg_days: 28                   # NFCI 4-week change (calendar days)
+  claims: {avg_weeks: 4, yoy_days: 364}
+  gold_resid: {fit_window: 252, horizon: 21}   # 21-day gold residual vs a 252-day fit on dDFII10
+  gli:
+    window_days: 91                   # 13-week % change (calendar days)
+    # USD billions = sum of sign x factor x series [x or / fx]; units checked on FRED 2026-11-26
+    terms:
+      - {series: WALCL, factor: 0.001}                 # millions USD
+      - {series: WTREGEN, factor: -0.001}              # millions USD (TGA)
+      - {series: RRPONTSYD, factor: -1.0}              # billions USD
+      - {series: ECBASSETSW, factor: 0.001, fx: DEXUSEU, fx_op: mul}   # millions EUR x USD/EUR
+      - {series: JPNASSETS, factor: 0.1, fx: DEXJPUS, fx_op: div}      # 100M JPY / JPY per USD
+  # ALFRED quirks, applied when macro rows are loaded (inputs.load_macro):
+  macro_fixes:
+    # FRED re-based WTREGEN from billions to millions on 2025-11-13: older vintages are scaled to
+    # the current unit (checked: every period's value x1000 at that vintage; no other series has
+    # a systematic jump between vintages).
+    unit_changes:
+      - {series: WTREGEN, before_vintage: "2025-11-13", multiply: 1000}
+    # Series that entered ALFRED long after the observations they carry (ECBASSETSW: first
+    # vintage 2020-02-25). The first vintage's rows count as released this many days after their
+    # period (the series' median lag), instead of on 2020-02-25. Approximate, like the earnings
+    # backfill; without it the GLI has no history before 2020.
+    late_listed_lag_days: {ECBASSETSW: 7}
+  # Price inputs by ticker (adjusted closes; ETFs carry dividends, like price.py context series)
+  tickers: {spy: SPY, tlt: TLT, vnq: VNQ, vix: "^VIX", vix3m: "^VIX3M", dxy: DX-Y.NYB,
+            gold: GC=F, copper: HG=F, wti: CL=F, move: "^MOVE", skew: "^SKEW", vvix: "^VVIX",
+            btc: BTC/USD, eth: ETH/USD}
+  ratios:                             # ratio_<a>_<b>_63d
+    - [IWM, SPY]
+    - [RSP, SPY]
+    - [XLY, XLP]
+    - [SOXX, SPY]
+    - [KRE, SPY]
+    - [EEM, SPY]
+    - [HYG, IEF]

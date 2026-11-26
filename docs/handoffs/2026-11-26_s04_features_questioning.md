@@ -119,7 +119,23 @@
   - About 70 s for 503 members at one T (after a 10× timeline speedup).
   - 2019-06-28 works too; coverage there is a little lower, because delisted members have no CIK yet (§9.2).
 
+## Addendum 5: build step 4a, market vector (Dom: "go with your fix, push both, continue")
+- Pushed `498b7f2..32ad4b8`; only one commit was unpushed. Dom said "step 2", which was already done, so I continued with step 4. D-038. 590 tests pass.
+- **`features/market.py`:** 57 market features covering rates/curve, growth/inflation, credit/vol, cross-asset, the framework four, 7 risk-appetite ratios, breadth, GLI and ETH/BTC, plus `breadth_table`. `inputs.load_macro(..., fixes)` applies the ALFRED fixes.
+- **Found on live data:**
+  - WTREGEN switched units in the 2025-11-13 vintage (×1000).
+  - ECBASSETSW's first ALFRED vintage is 2020-02-25, so the strict-PIT GLI was empty before 2020. Fixed with a lag-7 approximation.
+  - Oct 2025 CPI and UNRATE are missing (shutdown), which left Sahm NaN for a year. Fixed.
+- **Checks on live data:**
+  - COVID low: BAA z 6.4, VIX z 3.8, VIX/VIX3M > 1.
+  - GLI 2019 ≈ $14.1T (hand check of the components).
+  - Breadth: 3% of members above SMA200 at the COVID low, 76% at the Nov 2021 peak.
+  - About 0.13 s per decision time, so roughly 8 min for a full backfill.
+- **Tests:** `test_market_features.py` (117): a naive "known at T" rebuild from raw rows for every feature, at 5 decision times including a weekend; no-lookahead with later values and revisions of old periods; mutation strength; breadth counts; the missing month.
+
 ## Next exact task (updated)
-1. Build step 4: market vector (§5.3): macro, cross-asset, GLI, breadth, crypto structure.
-2. Later: §9.2 CIK mapping for delisted members (lifts historical fundamentals coverage), the SIC sector map, and `build.py` (persisting price, fundamentals and ranks per T).
+1. Build step 4b:
+   - FOMC meeting calendar + CPI release dates (FRED `release/dates`), with the event clock (days to next FOMC/CPI, earnings-heavy week).
+   - Crypto structure: BTC dominance, stablecoin supply, funding, OI/market cap, ETF flows. NaN + masks where history is short.
+2. Then: regime (§6), normalization + masks (§7), `build.py`, §9 survivorship.
 
