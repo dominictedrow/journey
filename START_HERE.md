@@ -4,39 +4,31 @@
 
 ---
 
-## CURRENT CHECKPOINT: v8 / 2026-11-26 (Session 03e, Phase 2 build step 5)
+## CURRENT CHECKPOINT: v9 / 2026-11-26 (Session 04, Phase 3 questioning)
 
 | | |
 |---|---|
-| **Phase** | **Phase 2 (Collectors): build complete (5 of 5); exit gate pending** (Congress backfill finishing, 5-day unattended run) |
-| **Last session** | S03e: yfinance, corporate actions, EDGAR facts (1.52M), earnings (25k), Congress (in progress), CoinGecko, DefiLlama, funding, OI ([handoff](docs/handoffs/2026-11-26_s03e_collectors_build_rest.md)) |
-| **Git** | Branch `vibe/quant_trader`; steps 1–5 pushed; SoSoValue collector committed after |
-| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-031 |
-| **Tests** | 170 passed, ruff clean |
-| **DB** | Migrated to 007; every Phase 2 raw table populated; 0 null `released_at` |
-| **Service** | launchd `com.qt.scheduler` (paper) under `caffeinate -is`, on step 5 code. `uv run python scripts/install_scheduler.py --status` |
+| **Phase** | **Phase 3 (Features + regimes): questioning done, spec written**; Phase 2 exit gate still running in parallel |
+| **Last session** | S04: Q1–Q9 answered, [`docs/components/03_features.md`](docs/components/03_features.md), D-033 (closes D-001) ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
+| **Git** | `308483b` + S04 docs; not committed/pushed yet |
+| **Tests** | 170 passed (no code change) |
+| **Service** | launchd `com.qt.scheduler` (paper); Congress backfill driver still running |
 
 ### Next exact task
-1. Confirm the Congress backfill finished (`collector_state` cursor `backfill.done`); the 06:00 ET job continues it otherwise.
-2. Phase 2 exit gate: 5 consecutive unattended days (component doc §13 item 5). Check each daily summary.
-3. Meanwhile: Phase 3 questioning (now 9 questions; Q9 = survivorship gaps, D-032).
+1. Dom accepts or changes the **(default)** items in the Phase 3 spec.
+2. Phase 3 build step 1: collector top-up (§4, incl. TLT) + migration 008 + registry/inputs/adjust skeleton.
+3. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
-### Open questions for Dom (carried forward)
-- [ ] **Dom: get a SoSoValue key** (sosovalue.com/developer/dashboard → "Apply your Key"), put it in `.env` as `SOSOVALUE_API_KEY`, restart the service. Then check the history depth on the first run (D-032)
-- [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
-- [ ] Whole shares vs fractional shares (D-003) → Phase 6
-- [ ] Keep the "never sell same session" rule now that PDT is retired? (D-002) → Phase 5
-- [ ] The paper account's starting NAV → Phase 5
-- [ ] Crypto order-size cap: which volume source (D-021) → Phase 6
-
-### Prohibited until a later gate
-- Live trading. Paper only until the Phase 11 go-live gate and Dom's explicit authorization.
-- Paid APIs without Dom's approval.
-- Training the text models (Transformer, CNN #2) before 6+ months of news exist.
+### Open questions for Dom
+- [ ] Accept the Phase 3 (default) items?
+- [ ] **SoSoValue key:** the `.env` line still holds only a placeholder comment. Paste the key after `SOSOVALUE_API_KEY=`
+- [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v8 / 2026-11-26 (Session 03e, Phase 2 build step 5)
+- Phase 2 build complete (5 of 5): yfinance, corp actions, EDGAR facts, earnings, Congress, crypto structure, SoSoValue collector (D-031, D-032). `32c5117`/`e147c04` pushed, `308483b` not. [Handoff](docs/handoffs/2026-11-26_s03e_collectors_build_rest.md)
 ### v7 / 2026-11-26 (Session 03d, Phase 2 build step 4)
 - Alpaca bars/assets, S&P 500 membership as securities, aliases, migration 007, D-030. Committed as `eca541a`, pushed. [Handoff](docs/handoffs/2026-11-26_s03d_collectors_build_prices.md)
 ### v6 / 2026-11-25 (Session 03c, Phase 2 build step 3)
