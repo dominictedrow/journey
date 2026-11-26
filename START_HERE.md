@@ -4,30 +4,32 @@
 
 ---
 
-## CURRENT CHECKPOINT: v15 / 2026-11-26 (Session 05, Phase 3 build step 5b)
+## CURRENT CHECKPOINT: v16 / 2026-11-26 (Session 07, Phase 3 build step 5c)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3: steps 1–4, 5a, 5b done** (5b: build/matrix/jobs, migration 009, D-042; infl v2 D-041). 5c (survivorship) left, then the exit gate. Phase 2 gate still running in parallel |
-| **Last session** | S05 ([handoff](docs/handoffs/2026-11-26_s05_features_build_step5.md)) |
-| **Git** | `70b05bf` committed, not pushed (`97ba2f2` pushed) |
-| **Tests** | 708 passed, ruff clean |
-| **Service** | `com.qt.scheduler` (paper), PID 95722 on `70b05bf`, with `features_daily` 18:00 ET and `hmm_refit` first Sunday |
-| **Data** | 154 HMM fits; feature backfill 2016-01-01 → 2026-11-01 running/ran (`logs/features_backfill_20261126.log`) |
+| **Phase** | **Phase 3: steps 1–5c done** (5c survivorship, D-043, migration 010). Left: verify the rebuild, then the exit gate (3 unattended `features_daily` sessions). Phase 2 gate still running in parallel |
+| **Last session** | S07 ([handoff](docs/handoffs/2026-11-26_s07_survivorship_step5c.md)) |
+| **Git** | `5008828` committed, not pushed (`153e9ad` = origin) |
+| **Tests** | 739 passed, ruff clean |
+| **Service** | `com.qt.scheduler` (paper), PID 22950 on `5008828`. First unattended `features_daily` 2026-11-26: ok |
+| **Data** | 120/137 former-member CIKs (+298k EDGAR facts), 226 historical sectors. `features` wiped and being rebuilt 2016-01-01 → 2026-11-26 (`logs/features_rebuild_20261126.log`) |
 
 ### Next exact task
-1. Verify the backfill (rows, size ~1.8 GB, NaN rates); fix the Nov 2–25 rows once Dom decides (see open questions).
-2. Step 5c: §9 survivorship (CIK mapping script, SIC → GICS, delisted bars via yfinance/Stooq).
-3. Exit gate: `features_daily` unattended 3 sessions; Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 2026-11-27).
+1. Verify the rebuild: rows, size (~1.8 GB), NaN rates per group, compression; delisted members carry fundamentals ranks.
+2. Exit gate: `features_daily` unattended Fri 11-27, Mon 11-30, Tue 12-1; Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3 and start Phase 4 questioning.
 
 ### Open questions for Dom
-- [ ] OK to delete the Nov 2–25 `features` rows from my timing run (SPY-context features stored as NaN by a since-fixed bug) and rebuild those days? Needs a one-off bypass of the append-only trigger.
-- [ ] Push `d8c37b4` and `70b05bf`?
+- [ ] Push `5008828` and the S07 docs commit?
+- [ ] 17 CIK review names (`reports/cik_review_20261126.md`): confirm any as `match: manual`, or accept as the known gap?
+- [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v15 / 2026-11-26 (Session 05, Phase 3 build step 5b)
+- Build/matrix/jobs, migration 009, D-042; inflation v2 (D-041). `d8c37b4`/`70b05bf`/`153e9ad` on origin.
 ### v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
 - Regime (quadrant, HMM, stress), normalization, masks, staleness (D-040). Pushed as `8bab645`/`97ba2f2`.
 ### v13 / 2026-11-26 (Session 04, Phase 3 build step 4b)
