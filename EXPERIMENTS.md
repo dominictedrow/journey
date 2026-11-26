@@ -18,3 +18,10 @@ Verdicts: `RETAIN` · `REJECT` · `INCONCLUSIVE` · `RUNNING` · `PLANNED`
 | EXP-007 | — | 8 | LLM size sweep inside 50–125M params | extraction F1, Δ usefulness | — | PLANNED | — |
 | EXP-008 | — | 3 | HY OAS proxy: `BAA10Y` vs ICE series over the overlap window (D-001) | correlation, HMM state agreement | — | PLANNED | — |
 | EXP-009 | — | 10 | Price-transformer limit head vs the q70 rule | fill rate, slippage bps | — | PLANNED | — |
+| EXP-010 | — | 7 | Pipeline parallelism on one device (micro-batched stages): learning exercise, parity with the unsplit model | memory, throughput, parity | — | — | PLANNED | — |
+| EXP-011 | — | 8 | 2-expert MoE (learned top-1 router + balancing loss) vs dense LLM | val loss, expert load, Δ usefulness | — | — | PLANNED | — |
+| EXP-012 | — | 8/9 | Attention Residuals (Block AttnRes) vs standard residual | val loss, OOS IC, memory | — | — | PLANNED | — |
+| EXP-013 | — | 9 | Spatial pyramid pooling vs global pooling (CNN #1, CNN #2) | OOS IC | — | — | PLANNED | — |
+| EXP-014 | — | 8 | Speculative decoding on the LLM (small draft model) | tokens/s, output agreement | — | — | PLANNED | — |
+
+EXP-015+ (one per data transform Dom keeps in Phase 9 Q15) are added after that question is answered.

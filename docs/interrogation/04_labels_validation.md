@@ -10,3 +10,4 @@
 5. **Costs:** 10 bps per side for equities and 30 bps per side for crypto (Alpaca taker is 25 bps). Also run 2× and 3× cost stress tests?
 6. **IC significance:** use a Newey-West t-stat, because overlapping 5-day labels are autocorrelated?
 7. **Metric report:** what goes in each fold's report, and in what format (Markdown plus CSV in `reports/`)?
+8. **"All models should use k-fold training" (Dom, `docs/spec/model_descriptions_v1.md`):** CLAUDE.md bans random splits. Which reading do you mean? (A) K sequential walk-forward folds with purge + embargo; these build the out-of-fold set for the meta learner and the final evaluation. (B) (A) plus combinatorial purged CV (CPCV) for model selection and overfitting checks only. CPCV folds are contiguous and purged, but some train on later data. (C) Shuffled k-fold, which would break the hard rule. Research recommends (B). See `docs/plan/MODEL_PLAN.md` §6.1.

@@ -4,7 +4,21 @@
 
 ---
 
-## CURRENT CHECKPOINT: v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
+## CURRENT CHECKPOINT: v15 / 2026-11-26 (Session 06, model plan; ran alongside S05)
+
+| | |
+|---|---|
+| **Phase** | Phase 3 step 5b still next (see v14). **New:** model plan for Dom's model descriptions accepted (`docs/plan/MODEL_PLAN.md`, D-041); MASTER_PLAN Phases 7–10 re-scoped |
+| **Last session** | S06: model plan + question files 07–10 rewritten, 04 Q8 ([handoff](docs/handoffs/2026-11-26_s06_model_plan.md)) |
+| **Git** | S06 docs committed, not pushed |
+
+### Next exact task
+1. Model questioning runs in phase order, starting with Phase 4 (now with Q8 on k-fold).
+2. Everything in v14 below is still live (step 5b, 5c, Phase 2 gate, open questions).
+
+---
+
+## Still-live checkpoint: v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
 
 | | |
 |---|---|
