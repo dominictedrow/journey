@@ -85,9 +85,23 @@ def fred_release_time(cfg: PitCfg, series_id: str) -> str:
     return table.get(series_id, table["default"])
 
 
-def fred_vintage(cfg: PitCfg, series_id: str, vintage: date) -> datetime:
-    """ALFRED vintage (realtime_start): the vintage date at the series' release time ET."""
-    return at_et(_day(vintage, "fred_vintage"), fred_release_time(cfg, series_id))
+def fred_vintage(
+    cfg: PitCfg, series_id: str, vintage: date, cal: TradingCalendar | None = None
+) -> datetime:
+    """ALFRED vintage (realtime_start): the vintage date at the series' release time ET.
+
+    Some series are stamped with the observation date but posted by FRED the next business
+    morning (BAMLH0A0HYM2, VIXCLS; D-029). For those, ``fred_release_lag_sessions`` moves the
+    release to the N-th XNYS session after the vintage date.
+    """
+    d = _day(vintage, "fred_vintage")
+    lag = cfg.fred_release_lag_sessions.get(series_id, 0)
+    if lag:
+        if cal is None:
+            raise ValueError(f"{series_id} has a release lag; fred_vintage needs the calendar")
+        for _ in range(lag):
+            d = cal.next_session(d)
+    return at_et(d, fred_release_time(cfg, series_id))
 
 
 def first_seen(fetched_at: datetime) -> datetime:

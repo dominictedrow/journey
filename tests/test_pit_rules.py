@@ -66,7 +66,18 @@ def test_futures_day_d_invisible_at_day_d_decision(cal, cfg):
 def test_fred_vintage_release_times(cfg):
     assert pit.fred_vintage(cfg, "CPIAUCSL", date(2026, 11, 13)) == utc(2026, 11, 13, 13, 30)
     assert pit.fred_vintage(cfg, "CPIAUCSL", date(2026, 7, 15)) == utc(2026, 7, 15, 12, 30)
-    assert pit.fred_vintage(cfg, "DGS10", date(2026, 11, 13)) == utc(2026, 11, 13, 22, 0)
+    assert pit.fred_vintage(cfg, "DGS10", date(2026, 11, 13)) == utc(2026, 11, 13, 23, 0)  # 18:00
+
+
+def test_fred_vintage_lagged_series(cfg, cal):
+    # HY OAS for Tue 11-24 is stamped 11-24 but posted 11-25 morning -> 11-25 12:00 ET
+    assert pit.fred_vintage(cfg, "BAMLH0A0HYM2", date(2026, 11, 24), cal) == utc(2026, 11, 25, 17)
+    # Wed 11-25 -> Thanksgiving closed -> Fri 11-27 12:00 ET
+    assert pit.fred_vintage(cfg, "VIXCLS", date(2026, 11, 25), cal) == utc(2026, 11, 27, 17)
+    # Fri 11-20 -> Mon 11-23: a weekend crypto decision must not see Friday's value
+    assert pit.fred_vintage(cfg, "VIXCLS", date(2026, 11, 20), cal) == utc(2026, 11, 23, 17)
+    with pytest.raises(ValueError, match="calendar"):
+        pit.fred_vintage(cfg, "VIXCLS", date(2026, 11, 20))
 
 
 def test_first_seen_requires_aware():

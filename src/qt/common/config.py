@@ -132,6 +132,8 @@ class PitCfg(_Strict):
     yfinance_xnys_offset_min: int = Field(ge=0)
     futures_release_et: str
     fred_release_time_et: dict[str, str]
+    # series whose ALFRED vintage date is earlier than FRED actually posts them (D-029)
+    fred_release_lag_sessions: dict[str, int] = {}
     edgar_fallback_days: int = Field(ge=0)
     fomc_schedule_known: MonthDayCfg
     congress_backfill_et: str
@@ -175,6 +177,10 @@ class HttpCfg(_Strict):
 class FreshnessRule(_Strict):
     critical: bool
     max_hours: float = Field(gt=0)
+    # True for collectors that run once per XNYS session (stock_daily): max_hours then counts
+    # from the first session decision time after the last ok run, so weekends and holidays
+    # don't read as stale. False: max_hours since the last ok run.
+    session_paced: bool = False
 
 
 class FreshnessCfg(_Strict):
@@ -231,6 +237,15 @@ class WeeklyCfg(_Strict):
         return _check_hhmm(v)
 
 
+class FredCfg(_Strict):
+    base_url: str
+    series: list[str] = Field(min_length=1)
+    realtime_origin: str
+    max_vintages_per_request: int = Field(ge=1)
+    page_limit: int = Field(ge=1)
+    archive_series: list[str] = []
+
+
 class ScheduleCfg(_Strict):
     news_every_min: int = Field(ge=1)
     crypto_utc: str
@@ -257,6 +272,7 @@ class CollectCfg(_Strict):
     freshness: FreshnessCfg
     news: NewsCfg
     fed: FedCfg
+    fred: FredCfg
     schedule: ScheduleCfg
 
 

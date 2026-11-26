@@ -4,24 +4,25 @@
 
 ---
 
-## CURRENT CHECKPOINT: v5 / 2026-11-25 (Session 03b, Phase 2 build step 2)
+## CURRENT CHECKPOINT: v6 / 2026-11-25 (Session 03c, Phase 2 build step 3)
 
 | | |
 |---|---|
-| **Phase** | **Phase 2 (Collectors): build in progress, step 2 of 5 done** (news, Fed RSS, scheduler, launchd) |
-| **Last session** | S03b: news loop, Fed RSS, APScheduler service, launchd installer ([handoff](docs/handoffs/2026-11-25_s03b_collectors_build_news_scheduler.md)) |
-| **Git** | Branch `vibe/quant_trader`; step 1 `34fbe52`, step 2 committed after it. Nothing pushed |
-| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-028 |
-| **Tests** | 124 passed, ruff clean |
-| **DB** | Migrated to 005; articles + Fed events accumulating |
+| **Phase** | **Phase 2 (Collectors): build in progress, step 3 of 5 done** (FRED/ALFRED + HY archive) |
+| **Last session** | S03c: ALFRED all vintages (186k rows, 23 series), HY archive, migration 006, PIT release fixes ([handoff](docs/handoffs/2026-11-25_s03c_collectors_build_fred.md)) |
+| **Git** | Branch `vibe/quant_trader`; steps 1–2 `34fbe52`, `434e551`, step 3 committed after. Nothing pushed |
+| **Spec** | [`docs/components/02_collectors.md`](docs/components/02_collectors.md), decisions D-021 to D-029 |
+| **Tests** | 134 passed, ruff clean |
+| **DB** | Migrated to 006; ALFRED loaded; articles + Fed events accumulating |
 | **Service** | launchd `com.qt.scheduler` running (paper). `uv run python scripts/install_scheduler.py --status`; heartbeat `data/run/heartbeat.json` |
 
 ### Next exact task
-1. Build step 3: FRED/ALFRED all vintages (D-023) + the `BAMLH0A0HYM2` archive; register in `JOB_COLLECTORS`.
-2. Then Alpaca + membership + aliases + backfill → everything else.
+1. Build step 4: Alpaca bars (equities/ETFs from 2016 + crypto) + assets + fja05680 membership + EDGAR ticker map → aliases + backfill.
+2. Then step 5 (yfinance, EDGAR facts, Congress, earnings, crypto structure) and the backfill report.
 
 ### Open questions for Dom (carried forward)
 - [ ] Fed Board roles in `configs/collect.yaml` correct? (Warsh Chair?)
+- [ ] OK with D-029 release-time changes (18:00 ET default; HY/VIX next session 12:00 ET)?
 - [ ] `caffeinate` the service so Mac sleep doesn't break the 5-day gate?
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
 - [ ] Whole shares vs fractional shares (D-003) → Phase 6
@@ -38,6 +39,8 @@
 ---
 
 ## Prior checkpoints
+### v5 / 2026-11-25 (Session 03b, Phase 2 build step 2)
+- News loop, Fed RSS, scheduler, launchd service (paper). Committed as `434e551`. [Handoff](docs/handoffs/2026-11-25_s03b_collectors_build_news_scheduler.md)
 ### v4 / 2026-11-25 (Session 03, Phase 2 build step 1)
 - Migration 005, `collect/{pit,http,base}.py`, `db/pit.py`, PIT + no-lookahead tests. Committed as `34fbe52`. [Handoff](docs/handoffs/2026-11-25_s03_collectors_build_foundations.md)
 ### v3 / 2026-11-25 (Session 02, Phase 2 questioning)

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from qt.collect.base import Collector, Connect, Outcome, alert_stale, freshness, run_all
 from qt.collect.fed import FedRssCollector
+from qt.collect.fred import FredCollector, HyArchiveCollector
 from qt.collect.http import HttpClient
 from qt.collect.news.collector import NewsCollector
 from qt.common.calendar import ET, TradingCalendar
@@ -27,7 +28,7 @@ log = logging.getLogger("qt.orchestrator")
 
 JOB_COLLECTORS: dict[str, Callable[[], list[Collector]]] = {
     "news_loop": lambda: [NewsCollector(), FedRssCollector()],
-    "stock_daily": lambda: [],  # step 3-4: alpaca bars/assets, yfinance, fred, hy archive
+    "stock_daily": lambda: [FredCollector(), HyArchiveCollector()],  # + step 4: alpaca, yfinance
     "crypto_daily": lambda: [],  # step 4-5: alpaca crypto, coingecko, defillama, derivs
     "congress_daily": lambda: [],  # step 5
     "earnings_daily": lambda: [],  # step 5
@@ -76,7 +77,7 @@ class JobRunner:
         now = now or datetime.now(UTC)
         with self.connect() as conn:
             report = freshness(
-                conn, self.settings.config.collect.freshness, known_collectors(), now
+                conn, self.settings.config.collect.freshness, known_collectors(), now, self.cal
             )
         stale_now = {f.collector for f in report if f.stale and f.last_status is not None}
         newly = [f for f in report if f.collector in stale_now - self._stale]
@@ -91,7 +92,7 @@ class JobRunner:
         sched = self.settings.config.collect.schedule
         with self.connect() as conn:
             report = freshness(
-                conn, self.settings.config.collect.freshness, known_collectors(), now
+                conn, self.settings.config.collect.freshness, known_collectors(), now, self.cal
             )
         rows = [
             (

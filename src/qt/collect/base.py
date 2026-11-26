@@ -18,7 +18,7 @@ import logging
 import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 import psycopg
@@ -26,8 +26,8 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from qt.collect.http import HttpClient
-from qt.common.calendar import TradingCalendar
-from qt.common.config import FreshnessCfg, Settings
+from qt.common.calendar import ET, TradingCalendar
+from qt.common.config import FreshnessCfg, FreshnessRule, Settings
 from qt.common.runs import run_context
 
 log = logging.getLogger("qt.collect")
@@ -261,10 +261,32 @@ class Freshness:
     last_ok_at: datetime | None
     last_status: str | None
     age_hours: float | None
+    stale_after: datetime | None  # the instant this feed counts as stale (None: never ran)
+    now: datetime
 
     @property
     def stale(self) -> bool:
-        return self.age_hours is None or self.age_hours > self.max_hours
+        return self.stale_after is None or self.now > self.stale_after
+
+
+def stale_after(
+    last_ok: datetime, rule: FreshnessRule, cal: TradingCalendar | None
+) -> datetime:
+    """When a feed whose last ok run was ``last_ok`` becomes stale.
+
+    Session-paced feeds are due at the first session decision time after ``last_ok``; they're
+    stale ``max_hours`` after that. Others are stale ``max_hours`` after ``last_ok``.
+    """
+    grace = timedelta(hours=rule.max_hours)
+    if not rule.session_paced:
+        return last_ok + grace
+    if cal is None:
+        raise ValueError("session-paced freshness needs a TradingCalendar")
+    d = last_ok.astimezone(ET).date()
+    due = cal.decision_time(d) if cal.is_session(d) else None
+    if due is None or due <= last_ok:
+        due = cal.decision_time(cal.next_session(d))
+    return due + grace
 
 
 def freshness(
@@ -272,6 +294,7 @@ def freshness(
     cfg: FreshnessCfg,
     collectors: Iterable[str],
     now: datetime,
+    cal: TradingCalendar | None = None,
 ) -> list[Freshness]:
     names = list(collectors)
     state = {
@@ -287,7 +310,8 @@ def freshness(
         rule = cfg.rule(n)
         last_ok, status = state.get(n, (None, None))
         age = (now - last_ok).total_seconds() / 3600 if last_ok else None
-        out.append(Freshness(n, rule.critical, rule.max_hours, last_ok, status, age))
+        due = stale_after(last_ok, rule, cal) if last_ok else None
+        out.append(Freshness(n, rule.critical, rule.max_hours, last_ok, status, age, due, now))
     return out
 
 

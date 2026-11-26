@@ -17,6 +17,7 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -82,6 +83,17 @@ def _domain() -> str:
     return f"gui/{os.getuid()}"
 
 
+def _wait_unloaded(timeout_s: float = 30.0) -> bool:
+    """bootout returns before the old process has exited; bootstrapping during that window
+    fails with "5: Input/output error". Wait until launchd no longer knows the label."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if _launchctl("print", f"{_domain()}/{LABEL}", check=False).returncode != 0:
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def install_macos(dry_run: bool) -> int:
     data = plistlib.dumps(plist(venv_python())).decode()
     if dry_run:
@@ -91,6 +103,9 @@ def install_macos(dry_run: bool) -> int:
     p.parent.mkdir(parents=True, exist_ok=True)
     service_log_dir().mkdir(parents=True, exist_ok=True)
     _launchctl("bootout", f"{_domain()}/{LABEL}", check=False)  # replace a running copy
+    if not _wait_unloaded():
+        print(f"{LABEL} did not unload within 30 s; not reinstalling", file=sys.stderr)
+        return 1
     p.write_text(data, encoding="utf-8")
     r = _launchctl("bootstrap", _domain(), str(p), check=False)
     if r.returncode != 0:

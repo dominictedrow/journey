@@ -88,7 +88,7 @@ def test_session_job_skips_holiday(settings, cal, monkeypatch):
 
 def test_known_collectors_fit_stage_limit():
     names = jobs.known_collectors()
-    assert names == ["news", "fed_rss"]
+    assert names == ["news", "fed_rss", "fred", "hy_archive"]
     assert all(len(f"collect_{n}") <= 21 for n in names)
 
 
@@ -102,3 +102,19 @@ def test_heartbeat_and_gaps(tmp_path):
         ("2026-11-25 15:10", "2026-11-25 15:40", 30)
     ]
     assert heartbeat_gaps(tmp_path, date(2026, 11, 26), 15) == []
+
+
+def test_session_paced_freshness_ignores_weekends_and_holidays(settings, cal):
+    from qt.collect.base import stale_after
+    from qt.common.config import FreshnessRule
+
+    rule = FreshnessRule(critical=True, max_hours=6, session_paced=True)
+    wed = utc(2026, 11, 25, 21, 35)  # ran 16:35 ET Wed; Thu is Thanksgiving
+    # next due: Fri 11-27 13:30 ET (early close + 30) -> stale 6 h later
+    assert stale_after(wed, rule, cal) == utc(2026, 11, 27, 18, 30) + timedelta(hours=6)
+    fri = utc(2026, 11, 27, 18, 31)
+    assert stale_after(fri, rule, cal) == utc(2026, 11, 30, 21, 30) + timedelta(hours=6)  # Mon
+    morning = utc(2026, 11, 24, 14, 0)  # last ok before today's decision time: due today
+    assert stale_after(morning, rule, cal) == utc(2026, 11, 24, 21, 30) + timedelta(hours=6)
+    plain = FreshnessRule(critical=True, max_hours=2)
+    assert stale_after(wed, plain, None) == wed + timedelta(hours=2)
