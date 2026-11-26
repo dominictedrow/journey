@@ -145,6 +145,17 @@ def test_corp_actions_backfill_then_window(env):
     assert out.result.rows["raw_events"] == 1
     assert fake.calls[1][1] == D("2026-11-25") - timedelta(days=30)
 
+    # A symbol added after the backfill (a new extra ETF) gets its full history, the rest a window.
+    with kw["connect"]() as c:
+        c.execute("INSERT INTO assets (ticker, asset_class) VALUES ('TLT', 'etf')")
+        c.commit()
+    fake.calls.clear()
+    assert run_collector(col, **kw).status == "ok"
+    assert [(syms, start) for syms, start, _ in fake.calls] == [
+        (("TLT",), D("2016-01-01")),
+        (("AAA", "SPY"), D("2026-11-25") - timedelta(days=30)),
+    ]
+
 
 # ---------------------------------------------------------------- Congress
 def bill(num, title, intro, latest, ctype="HR"):

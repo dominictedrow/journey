@@ -10,6 +10,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from typing import Any
 
+import pandas as pd
 import psycopg
 from psycopg import sql
 
@@ -92,3 +93,40 @@ def latest_rows(
     cur = conn.execute(q, params)
     names = [d.name for d in cur.description or []]
     return [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
+
+
+def frame_asof(
+    conn: psycopg.Connection,
+    table: str,
+    asof: datetime,
+    *,
+    where: Mapping[str, Any] | None = None,
+    where_in: Mapping[str, Sequence[Any]] | None = None,
+    columns: Sequence[str] | None = None,
+    order_by: Sequence[str] = ("released_at",),
+) -> pd.DataFrame:
+    """Bulk form of :func:`latest_rows` as a DataFrame, with ``IN`` filters for many keys.
+
+    Same rule: only rows with ``released_at <= asof``. Phase 3 loads a whole history once with the
+    run's last decision time, then cuts each earlier decision time in memory on ``released_at``.
+    """
+    if table not in PIT_TABLES:
+        raise ValueError(f"{table!r} is not a point-in-time table")
+    cols = sql.SQL(", ").join(map(sql.Identifier, columns)) if columns else sql.SQL("*")
+    conds = [sql.SQL("released_at <= %s")]
+    params: list[Any] = [_aware(asof)]
+    for k, v in (where or {}).items():
+        conds.append(sql.SQL("{} = %s").format(sql.Identifier(k)))
+        params.append(v)
+    for k, vs in (where_in or {}).items():
+        conds.append(sql.SQL("{} = ANY(%s)").format(sql.Identifier(k)))
+        params.append(list(vs))
+    q = sql.SQL("SELECT {} FROM {} WHERE {} ORDER BY {}").format(
+        cols,
+        sql.Identifier(table),
+        sql.SQL(" AND ").join(conds),
+        sql.SQL(", ").join(map(sql.Identifier, order_by)),
+    )
+    cur = conn.execute(q, params)
+    names = [d.name for d in cur.description or []]
+    return pd.DataFrame(cur.fetchall(), columns=names)

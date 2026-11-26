@@ -18,6 +18,8 @@ pit:
     PCEPI: "08:30"
     PCEPILFE: "08:30"
     GDPC1: "08:30"
+    NFCI: "09:00"                     # Chicago Fed posts ~08:38 ET Wednesdays (probe 2026-11-26)
+    ICSA: "09:00"                     # DOL 08:30 ET Thursday; FRED ~08:34 ET (probe 2026-11-26)
   # ALFRED stamps these with the observation date, but FRED posts them the next business
   # morning (~10:15 ET, last_updated probe 2026-11-25): release = next XNYS session at the time
   # above. Without this the 00:15 UTC crypto decision would see a value ~15 h early (D-029)
@@ -119,7 +121,9 @@ universe:
   index: SPX
   candidates: 80                      # weekly screen output size, used in Phase 3
   membership_start: "2016-01-01"
-  extra_etfs: [SPY, QQQ, VNQ, XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY]
+  extra_etfs: [SPY, QQQ, VNQ, XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY,
+               # Phase 3 top-up (D-033): TLT for stock-bond corr; risk-appetite ratios
+               TLT, IEF, HYG, IWM, RSP, SOXX, KRE, EEM]
 
 # Alpaca market data (component doc 6.1). The trading API URL is the hard-coded paper URL.
 alpaca:
@@ -204,6 +208,12 @@ yfinance:
     "NQ=F": {rule: futures_fx, asset_class: future}
     "GC=F": {rule: futures_fx, asset_class: future}
     "DX-Y.NYB": {rule: futures_fx, asset_class: fx}
+    # Phase 3 top-up (D-033); history from 2000-08 (HG, CL), 2002-11 (MOVE), 2007-01 (VVIX)
+    "HG=F": {rule: futures_fx, asset_class: future}
+    "CL=F": {rule: futures_fx, asset_class: future}
+    "^MOVE": {rule: xnys, asset_class: index}
+    "^SKEW": {rule: xnys, asset_class: index}
+    "^VVIX": {rule: xnys, asset_class: index}
   refetch_days: 10                      # daily runs re-request this many days (ON CONFLICT skips)
   sleep_s: 1.0                          # between tickers (yfinance has no published limit)
   cache_dir: data/cache/yfinance
@@ -329,7 +339,9 @@ fred:
   base_url: https://api.stlouisfed.org/fred
   series: [DGS3MO, DGS2, DGS10, DFII10, T10YIE, DFF, BAMLH0A0HYM2, BAA10Y, VIXCLS,
            CPIAUCSL, CPILFESL, PCEPI, PCEPILFE, UNRATE, PAYEMS, GDPC1,
-           WALCL, WTREGEN, RRPONTSYD, ECBASSETSW, JPNASSETS, DEXUSEU, DEXJPUS]
+           WALCL, WTREGEN, RRPONTSYD, ECBASSETSW, JPNASSETS, DEXUSEU, DEXJPUS,
+           # Phase 3 top-up (D-033): AUD, 5y5y, ACM term premium, NFCI, claims, Japan 3-month
+           DEXUSAL, T5YIFR, THREEFYTP10, NFCI, ICSA, IR3TIB01JPM156N]
   realtime_origin: "1776-07-04"       # ALFRED's "all vintages" start
   # API limit is 2000 vintage dates per realtime range (HTTP 400 above), but FRED's count can run
   # 1 higher than its vintagedates list: keep a margin; a 400 still splits the window in half

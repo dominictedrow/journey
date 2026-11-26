@@ -39,6 +39,7 @@ COLLECTOR_TABLES = {  # 005
     "raw_crypto_derivs",
     "collector_state",
 }
+FEATURE_TABLES = {"hmm_fits"}  # 008
 
 
 def test_migrate_empty_db(settings, empty_db):
@@ -55,8 +56,8 @@ def test_migrate_empty_db(settings, empty_db):
             r[0]
             for r in c.execute("SELECT viewname FROM pg_views WHERE schemaname='public'").fetchall()
         }
-    assert SPEC_TABLES | EXTRA_TABLES | COLLECTOR_TABLES <= tables
-    assert "model_input_latest" in views
+    assert SPEC_TABLES | EXTRA_TABLES | COLLECTOR_TABLES | FEATURE_TABLES <= tables
+    assert "model_input_latest" not in views  # dropped in 008 (matrix.features_asof replaces it)
 
 
 def test_migrate_idempotent(settings, db):

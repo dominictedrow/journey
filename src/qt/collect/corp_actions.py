@@ -75,10 +75,6 @@ class CorpActionsCollector:
         today = now.astimezone(ET).date()
         cursor = dict(ctx.cursor)
         res = CollectResult(cursor=cursor)
-        start = (
-            today - timedelta(days=cfg.refetch_days)
-            if cursor.get("backfilled") else date.fromisoformat(cfg.start)
-        )  # fmt: skip
         end = today + timedelta(days=cfg.lookahead_days)
         symbols = [r[0] for r in ctx.conn.execute(
             "SELECT ticker FROM index_membership UNION "
@@ -86,14 +82,26 @@ class CorpActionsCollector:
         ).fetchall()]  # fmt: skip
         if not symbols:
             raise RuntimeError("no symbols: run membership and alpaca_assets first")
+        # Symbols already backfilled get a short refetch; any symbol added since (a new ETF in
+        # universe.extra_etfs, a new index member) gets the full history from cfg.start. Cursors
+        # from before the per-symbol list existed are treated as not backfilled (idempotent).
+        done = set(cursor.get("symbols_done") or [])
+        recent = today - timedelta(days=cfg.refetch_days)
+        full = date.fromisoformat(cfg.start)
+        batches = [
+            (full, [s for s in symbols if s not in done]),
+            (recent, [s for s in symbols if s in done]),
+        ]
         api = self.make_alpaca(ctx)
         n = cfg.symbols_per_request
-        for i in range(0, len(symbols), n):
-            recs = api.corporate_actions(symbols[i : i + n], start, end, cfg.page_limit)
-            rows = [r for r in (ca_row(k, rec, now) for k, rec in recs) if r is not None]
-            res.rejected += len(recs) - len(rows)
-            res.add("raw_events", insert_rows(ctx.conn, "raw_events", EVENT_COLS, rows))
-            ctx.conn.commit()
+        for start, syms in batches:
+            for i in range(0, len(syms), n):
+                recs = api.corporate_actions(syms[i : i + n], start, end, cfg.page_limit)
+                rows = [r for r in (ca_row(k, rec, now) for k, rec in recs) if r is not None]
+                res.rejected += len(recs) - len(rows)
+                res.add("raw_events", insert_rows(ctx.conn, "raw_events", EVENT_COLS, rows))
+                ctx.conn.commit()
         cursor["backfilled"] = True
+        cursor["symbols_done"] = sorted(done | set(symbols))
         cursor["symbols"] = len(symbols)
         return res

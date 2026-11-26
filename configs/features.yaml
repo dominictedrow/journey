@@ -1,0 +1,37 @@
+# Phase 3 feature layer (docs/components/03_features.md, D-033). Every number lives here.
+
+# Price inputs (section 3, D-030): raw bars are adjusted in memory, never written back.
+bars:
+  # Per asset and bar date the first source present wins. Equities and ETFs come from Alpaca;
+  # yfinance fills index/futures/FX and ETF history before Alpaca's 2016 start.
+  source_priority: [alpaca, yfinance]
+  # yfinance Close is split-adjusted as of the fetch (D-031), so never mix it with Alpaca bars
+  # for an asset class that splits; only these classes may take yfinance bars.
+  yfinance_classes: [etf, index, future, fx]
+  # Alpaca serves flat zero-volume filler bars around delistings (D-030): drop them for traded
+  # classes. Index levels legitimately report zero volume.
+  drop_zero_volume_classes: [equity, etf, crypto]
+
+adjust:
+  splits: true                      # forward, reverse and unit splits: price x old/new
+  dividends: true                   # total-return: price x (1 - D / prior close) before ex date
+  special_dividends: true
+  # Ignored kinds (logged once per run): spin-offs carry no price ratio in Alpaca's payload, and
+  # mergers/name changes don't change the price path of the surviving security.
+  ignore_kinds: [ca_spin_offs, ca_cash_mergers, ca_stock_mergers, ca_stock_and_cash_mergers,
+                 ca_name_changes, ca_stock_dividends]
+  # A dividend larger than this share of the prior close is treated as a data error and skipped
+  # (KDP's 2018 special was 84% of the price, so this is only a guard against garbage).
+  max_dividend_frac: 0.9
+  # A split is applied only if the raw price move into its ex date agrees with its ratio within
+  # this many log points (ln 2: a real split plus at most a 2x move that day). Catches Alpaca
+  # rows that are really spin-offs (CNX 2017) or belong to a later holder of the symbol (PARA
+  # 2026). Needs a bar within split_bar_window_days on both sides of the ex date.
+  split_check_tol: 0.693
+  split_bar_window_days: 10
+  # Actions missing from Alpaca, added by hand (each with a source). Applied like Alpaca rows,
+  # without the size guard. released_at = ex date 00:00 ET (same rule as pit.corp_action).
+  manual:
+    - {security_key: "SPX:KDP:2015-12-31", kind: ca_cash_dividends, ex_date: "2018-07-10",
+       rate: 103.75, special: true,
+       source: "Keurig Dr Pepper merger special dividend to DPS holders (8-K 2018-07-09)"}

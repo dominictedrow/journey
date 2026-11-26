@@ -12,6 +12,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
@@ -474,6 +475,40 @@ class AliasesCfg(_Strict):
     manual: list[ManualAlias]
 
 
+# ---------------------------------------------------------------- features.yaml (Phase 3)
+class FeatureBarsCfg(_Strict):
+    source_priority: list[str] = Field(min_length=1)
+    yfinance_classes: list[str]
+    drop_zero_volume_classes: list[str] = []
+
+
+class ManualActionCfg(_Strict):
+    security_key: str
+    kind: str
+    ex_date: date
+    rate: float | None = None
+    old_rate: float | None = None
+    new_rate: float | None = None
+    special: bool = False
+    source: str
+
+
+class AdjustCfg(_Strict):
+    splits: bool = True
+    dividends: bool = True
+    special_dividends: bool = True
+    ignore_kinds: list[str] = []
+    max_dividend_frac: float = Field(default=0.9, gt=0, lt=1)
+    split_check_tol: float = Field(default=0.693, gt=0)
+    split_bar_window_days: int = Field(default=10, ge=1)
+    manual: list[ManualActionCfg] = []
+
+
+class FeaturesCfg(_Strict):
+    bars: FeatureBarsCfg
+    adjust: AdjustCfg
+
+
 class Config(_Strict):
     db: DbCfg
     app: AppCfg
@@ -481,6 +516,7 @@ class Config(_Strict):
     calendar: CalendarCfg
     collect: CollectCfg
     aliases: AliasesCfg
+    features: FeaturesCfg
 
 
 # ---------------------------------------------------------------- secrets

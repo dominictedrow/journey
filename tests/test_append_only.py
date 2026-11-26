@@ -71,3 +71,29 @@ def test_market_feature_unique_with_null_asset(db_conn):
     )
     assert db_conn.execute(ins, (T0,)).rowcount == 1
     assert db_conn.execute(ins, (T0,)).rowcount == 0
+
+
+def test_features_append_only(db_conn):
+    db_conn.execute(
+        "INSERT INTO features (asof, asset_id, feature_name, feature_version, value) "
+        "VALUES (%s, NULL, 'vix', 1, 20)",
+        (T0,),
+    )
+    for stmt in ("UPDATE features SET value = 21", "DELETE FROM features"):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            with db_conn.transaction():
+                db_conn.execute(stmt)
+
+
+def test_registry_definition_immutable(db_conn):
+    db_conn.execute(
+        "INSERT INTO feature_registry (feature_name, version, formula) VALUES ('vix', 1, 'f1')"
+    )
+    db_conn.execute("UPDATE feature_registry SET status = 'frozen', changelog = 'retired'")
+    for stmt in (
+        "UPDATE feature_registry SET formula = 'f2'",
+        "DELETE FROM feature_registry",
+    ):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            with db_conn.transaction():
+                db_conn.execute(stmt)
