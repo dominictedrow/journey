@@ -7,6 +7,7 @@ dependencies = [
     "apscheduler>=3.10,<4",
     "exchange-calendars>=4.13.3",
     "feedparser>=6.0.14",
+    "hmmlearn==0.3.3",
     "httpx>=0.28.1",
     "lxml>=6.0",
     "pandas>=3.1.1",
@@ -15,6 +16,8 @@ dependencies = [
     "pydantic>=2.14.4",
     "python-dotenv>=1.2.4",
     "pyyaml>=6.0.4",
+    "rapidfuzz>=3.10",
+    "scikit-learn>=1.6",
     "trafilatura>=2.4.0",
     "yfinance>=0.2",
 ]

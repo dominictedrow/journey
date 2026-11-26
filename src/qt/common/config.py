@@ -772,6 +772,61 @@ class MarketCfg(_Strict):
     crypto: CryptoStructCfg
 
 
+class QuadrantCfg(_Strict):
+    sahm_flat_tol: float = Field(ge=0)
+    sahm_avg_months: int = Field(ge=1)
+    gdp_avg_quarters: int = Field(ge=1)
+    inflation_series: str
+
+
+class StressCfg(_Strict):
+    z_window: int = Field(ge=10)
+
+
+class HmmCfg(_Strict):
+    states: int = Field(ge=2)
+    covariance: Literal["full", "diag", "spherical", "tied"]
+    n_seeds: int = Field(ge=1)
+    n_iter: int = Field(ge=1)
+    tol: float = Field(gt=0)
+    min_covar: float = Field(gt=0)
+    min_weeks: int = Field(ge=10)
+    ret_window: int = Field(ge=2)
+    vol_window: int = Field(ge=2)
+    credit_chg_window: int = Field(ge=1)
+    annualization: int = Field(ge=1)
+    first_obs: date
+    sample_et: str
+    refit_weekday: int = Field(ge=0, le=6)
+    refit_et: str
+    stability_weeks: int = Field(ge=1)
+    stability_threshold: float = Field(gt=0, le=1)
+    model_dir: str
+
+    @field_validator("refit_et", "sample_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+
+class RegimeCfg(_Strict):
+    version: int = Field(ge=1)
+    quadrant: QuadrantCfg
+    stress: StressCfg
+    hmm: HmmCfg
+
+
+class NormalizeCfg(_Strict):
+    z_window: int = Field(ge=10)
+    winsor: float = Field(gt=0)
+    min_frac: float = Field(gt=0, le=1)
+    market_groups: list[str]
+    asset_classes: list[str]
+    asset_groups: list[str]
+    mask_windows: list[int] = Field(min_length=1)
+    staleness_groups: list[str]
+
+
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
     adjust: AdjustCfg
@@ -779,6 +834,8 @@ class FeaturesCfg(_Strict):
     fundamentals: FundamentalsCfg
     cross_section: CrossSectionCfg
     market: MarketCfg
+    regime: RegimeCfg
+    normalize: NormalizeCfg
 
 
 class Config(_Strict):

@@ -54,6 +54,7 @@ class MarketState:
     breadth: pd.DataFrame | None = None  # index date; columns + ready_ns
     events: Any = None  # qt.features.events.EventInputs (event clock, step 4b)
     crypto: Any = None  # qt.features.crypto.CryptoInputs (crypto structure, step 4b)
+    regime: Any = None  # qt.features.regime.hmm.HmmInputs (fits; step 5)
     _cache: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
@@ -183,26 +184,55 @@ def infl_momentum(m: MarketState, sid: str) -> float:
     return (now / short) ** (12 / c.short) - 1 - (now / long - 1)
 
 
-def sahm(m: MarketState) -> float:
-    """3-month average of UNRATE minus its minimum over the prior 12 months, on calendar months.
+def sahm_values(m: MarketState) -> pd.Series:
+    """The Sahm indicator for every calendar month of UNRATE as known at T (index: Period[M]).
 
-    A missing month (e.g. October 2025, not published in the shutdown) is skipped: each average
-    needs all but one of its months.
+    Month i: 3-month average of UNRATE minus its minimum over the prior 12 months. A missing month
+    (e.g. October 2025, not published in the shutdown) is skipped: each average needs all but one
+    of its months, and the prior window all but one of its averages.
     """
+    key = ("sahm_values",)
+    if key in m._cache:
+        return m._cache[key]
     s = m.mac("UNRATE")
     c = m.cfg.sahm
     if not len(s):
-        return math.nan
-    idx = pd.period_range(pd.Timestamp(s.index[0]), pd.Timestamp(s.index[-1]), freq="M")
-    monthly = pd.Series(s.to_numpy(), index=pd.PeriodIndex(pd.to_datetime(s.index), freq="M"))
-    monthly = monthly[~monthly.index.duplicated(keep="last")].reindex(idx)
-    avg = monthly.rolling(c.avg_months, min_periods=max(c.avg_months - 1, 1)).mean().to_numpy()
-    if len(avg) < c.lookback_months + 1 or not np.isfinite(avg[-1]):
-        return math.nan
-    prior = avg[-1 - c.lookback_months : -1]
-    if np.isfinite(prior).sum() < c.lookback_months - 1:
-        return math.nan
-    return float(avg[-1] - np.nanmin(prior))
+        out = pd.Series(dtype=float)
+    else:
+        idx = pd.period_range(pd.Timestamp(s.index[0]), pd.Timestamp(s.index[-1]), freq="M")
+        monthly = pd.Series(s.to_numpy(), index=pd.PeriodIndex(pd.to_datetime(s.index), freq="M"))
+        monthly = monthly[~monthly.index.duplicated(keep="last")].reindex(idx)
+        avg = monthly.rolling(c.avg_months, min_periods=max(c.avg_months - 1, 1)).mean().to_numpy()
+        vals = np.full(len(avg), np.nan)
+        lb = c.lookback_months
+        for i in range(lb, len(avg)):
+            prior = avg[i - lb : i]
+            if np.isfinite(avg[i]) and np.isfinite(prior).sum() >= lb - 1:
+                vals[i] = avg[i] - np.nanmin(prior)
+        out = pd.Series(vals, index=idx)
+    m._cache[key] = out
+    return out
+
+
+def sahm(m: MarketState) -> float:
+    """The newest month of :func:`sahm_values`."""
+    v = sahm_values(m)
+    return float(v.iloc[-1]) if len(v) else math.nan
+
+
+def gdp_qoq_values(m: MarketState) -> pd.Series:
+    """(GDPC1 / previous quarter)^4 - 1 for every quarter known at T; NaN where the previous
+    quarter is missing."""
+    s = m.mac("GDPC1")
+    if len(s) < 2:
+        return pd.Series(dtype=float)
+    per = pd.PeriodIndex(pd.to_datetime(s.index), freq="Q")
+    v = s.to_numpy(dtype=float)
+    out = np.full(len(v), np.nan)
+    consecutive = (per[1:] - per[:-1]).map(lambda d: d.n) == 1
+    with np.errstate(divide="ignore", invalid="ignore"):
+        out[1:] = np.where(consecutive, (v[1:] / v[:-1]) ** 4 - 1, np.nan)
+    return pd.Series(out, index=per)
 
 
 def gdp_qoq(m: MarketState) -> float:

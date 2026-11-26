@@ -479,6 +479,7 @@ class MacroState:
         self._asof: pd.Timestamp | None = None
         self._known: dict[str, dict[date, tuple[date, float | None]]] = {}
         self._last_release: dict[str, pd.Timestamp] = {}
+        self._newest: dict[str, tuple[date, int]] = {}  # newest period, its first release
         self._cache: dict[str, pd.Series] = {}
 
     def advance(self, asof: datetime) -> None:
@@ -498,6 +499,9 @@ class MacroState:
             old = known.get(per)
             if old is None or vin >= old[0]:
                 known[per] = (vin, self._value[self._i])
+            top = self._newest.get(sid)
+            if pd.notna(self._value[self._i]) and (top is None or per > top[0]):
+                self._newest[sid] = (per, int(self._rel_ns[self._i]))
             self._last_release[sid] = pd.Timestamp(self._rel_ns[self._i], tz=UTC)
             self._cache.pop(sid, None)
             self._i += 1
@@ -522,6 +526,14 @@ class MacroState:
     def last_release(self, series_id: str) -> pd.Timestamp | None:
         """When the newest row of ``series_id`` known now was released."""
         return self._last_release.get(series_id)
+
+    def newest_period_release(self, series_id: str) -> tuple[date, pd.Timestamp] | None:
+        """The newest period with a value known now, and when it was first released.
+
+        A revision of an older period doesn't move it (that's not new information about now).
+        """
+        top = self._newest.get(series_id)
+        return None if top is None else (top[0], pd.Timestamp(top[1], tz=UTC))
 
 
 # ---------------------------------------------------------------- event calendars, crypto structure

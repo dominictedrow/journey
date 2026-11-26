@@ -223,3 +223,55 @@ market:
     # most USDT was on Omni, apparently untracked), so early % changes measure chain migration,
     # not supply. From 2020 it tracks the market (Jan 2020: $5.2bn). D-039
     valid_from: {stablecoins: "2020-01-01"}
+
+# Regime models (section 6, D-033 Q5/Q6). Stored in `regime` (append-only, versioned) and as
+# market features. A change to any of these numbers ships as a new regime version.
+regime:
+  version: 1
+  quadrant:
+    # Growth up = Sahm <= the mean of its last sahm_avg_months monthly values (this one included)
+    # + sahm_flat_tol (flat counts as falling) AND real GDP QoQ annualized > the mean of its last
+    # gdp_avg_quarters values (this one included). Inflation up = core CPI momentum > 0.
+    sahm_flat_tol: 0.05
+    sahm_avg_months: 3
+    gdp_avg_quarters: 4
+    inflation_series: CPILFESL
+  stress:
+    z_window: 252                     # mean of z(VIX), z(BAA10Y), z(-(DGS10 - DGS3MO)), VIX/VIX3M > 1
+  hmm:
+    states: 3                         # sorted by mean SPY vol into calm < normal < stress (locked)
+    covariance: full
+    n_seeds: 20                       # restarts with seeds 0..n_seeds-1; best log-likelihood wins
+    n_iter: 200
+    tol: 1.0e-4
+    min_covar: 1.0e-3
+    min_weeks: 260                    # weekly samples needed before the first fit
+    ret_window: 21                    # SPY 21-session log return
+    vol_window: 21                    # SPY 21-session realized vol, annualized
+    credit_chg_window: 21             # BAA10Y 21-session change
+    annualization: 252
+    first_obs: "2007-01-01"           # weekly samples from here (^VIX3M starts 2006-07-17 on yfinance)
+    sample_et: "18:00"                # a week's sample is its last session at the decision time
+    refit_weekday: 6                  # monthly refit on the first Sunday ...
+    refit_et: "06:00"                 # ... at this New York time (the fit is usable from then)
+    stability_weeks: 52               # a refit that relabels > 20% of the prior 52 weeks alerts
+    stability_threshold: 0.20
+    model_dir: models/hmm
+
+# Normalization, masks and staleness (section 7).
+normalize:
+  z_window: 252                       # rolling z over the last n values (this one included)
+  winsor: 4.0                         # z clipped to +-4
+  min_frac: 0.9                       # z needs this share of the window finite (data gaps)
+  # Time-series z (<name>_tsz252) for these market groups: levels and changes, not features
+  # that are already z-scores, one-hots, event counts or staleness counts.
+  market_groups: [macro_rates, macro_growth_inflation, credit_vol, cross_asset, framework,
+                  risk_appetite, breadth, gli, crypto_ratio, crypto_structure, regime_stress]
+  # Per-asset z over the asset's own bars, for classes that are not ranked cross-sectionally
+  # (stocks get ranks instead, section 5.2).
+  asset_classes: [etf, crypto]
+  asset_groups: [price_returns, price_vol, price_trend, price_liquidity, price_market_link,
+                 price_mean_reversion]
+  mask_windows: [21, 63, 126, 252]   # hist_ok_<n>: the asset has n returns (n + 1 bars)
+  # days_since_release for every macro series these market groups read
+  staleness_groups: [macro_rates, macro_growth_inflation, credit_vol, cross_asset, framework, gli]
