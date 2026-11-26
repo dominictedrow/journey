@@ -36,6 +36,17 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+def unwrap(body: Any) -> list[dict[str, Any]]:
+    """The rows of a response. The live API wraps them as ``{"code": 0, "message": "success",
+    "data": [...]}`` (first keyed call, 2026-11-26); the docs show a bare array. Any other shape,
+    or a non-zero code, is an error."""
+    if isinstance(body, list):
+        return body
+    if isinstance(body, dict) and body.get("code") == 0 and isinstance(body.get("data"), list):
+        return body["data"]
+    raise RuntimeError(f"unexpected response: {str(body)[:200]}")
+
+
 def flow_rows(subject: str, items: list[dict[str, Any]], fetched: datetime,
               pit_cfg: Any) -> list[tuple]:  # fmt: skip
     out = []
@@ -78,8 +89,7 @@ class SosovalueCollector:
                     params={"symbol": sym, "country_code": cfg.country_code, "limit": limit},
                     headers=hdr,
                 ).json()
-                if isinstance(items, dict):  # error envelope instead of the documented array
-                    raise RuntimeError(f"unexpected response: {str(items)[:200]}")
+                items = unwrap(items)
                 rows = flow_rows(subject, items, now, ctx.settings.config.collect.pit)
                 res.add("raw_metrics", insert_rows(ctx.conn, "raw_metrics", METRIC_COLS, rows))
                 ctx.conn.commit()

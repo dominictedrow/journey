@@ -11,7 +11,7 @@
 | **Phase** | **Phase 3 (Features + regimes): build steps 1–4 done** (foundations; 36 price features; fundamentals + ranks + composites, D-037; 57 market features, D-038; event clock + crypto structure, 13 features + FOMC/CPI calendar collectors, D-039); Phase 2 exit gate still running in parallel |
 | **Last session** | S04: questioning, spec, steps 1–4b, identity fix ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
 | **Git** | `89f522d` pushed (4a `509f639` was already pushed) |
-| **Tests** | 648 passed, ruff clean |
+| **Tests** | 650 passed, ruff clean |
 | **Service** | launchd `com.qt.scheduler` (paper), restarted on `89f522d` (PID 62917); weekly job runs `fomc_cal`/`cpi_cal` from Sun 18:00 ET; Congress backfill driver still running |
 
 ### Next exact task
@@ -19,7 +19,6 @@
 2. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
-- [ ] **SoSoValue key:** Dom is getting it (walkthrough given S04). Once in `.env`, run `python -m qt.collect.backfill --source sosovalue` and check for 403
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---

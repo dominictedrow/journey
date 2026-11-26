@@ -415,5 +415,32 @@ def test_sosovalue_skipped_without_key(env):
     from qt.collect.sosovalue import SosovalueCollector
 
     kw, _ = env
-    out = run_collector(SosovalueCollector(clock=lambda: NOW), **kw)
+    s = kw["settings"]  # independent of whatever key the real .env holds
+    s = dataclasses.replace(s, secrets=s.secrets.model_copy(update={"sosovalue_api_key": None}))
+    out = run_collector(SosovalueCollector(clock=lambda: NOW), **dict(kw, settings=s))
     assert out.status == "skipped" and "SOSOVALUE_API_KEY" in out.error
+
+
+def test_sosovalue_unwraps_the_live_envelope():
+    from qt.collect.sosovalue import unwrap
+
+    rows = [{"date": "2026-11-25", "total_net_inflow": -4.5e8}]
+    assert unwrap({"code": 0, "message": "success", "data": rows}) == rows  # live shape
+    assert unwrap(rows) == rows  # documented shape
+    for bad in ({"code": 40001, "message": "invalid key", "data": None},
+                {"code": 0, "data": {"x": 1}}, "nope"):  # fmt: skip
+        with pytest.raises(RuntimeError, match="unexpected response"):
+            unwrap(bad)
+
+
+@pytest.mark.db
+def test_sosovalue_envelope_end_to_end(env):
+    kw, _ = env
+    day = {"date": "2026-11-24", "total_net_inflow": -5.5e7, "total_value_traded": 4.1e9,
+           "total_net_assets": 5.6e10, "cum_net_inflow": 1.35e10}  # fmt: skip
+    wrap = {"code": 0, "message": "success", "data": [day]}
+    kw2, Col, _ = sosovalue_env(kw, {"BTC": wrap, "ETH": wrap, "SOL": wrap})
+    out = run_collector(Col(clock=lambda: NOW), **kw2)
+    assert out.status == "ok", out.error
+    assert _q(kw2, "SELECT count(*) FROM raw_metrics WHERE source = 'sosovalue'")[0][0] == 12
+    kw2["http"].close()

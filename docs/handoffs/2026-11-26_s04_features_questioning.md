@@ -164,3 +164,9 @@
 ## Next exact task (updated)
 1. Phase 3 build step 5: regime (§6: quadrant, HMM, stress), normalization + masks (§7), `matrix.py`/`build.py` (one entry point that loads everything, incl. the new event/crypto inputs), §9 survivorship.
 2. Restart `com.qt.scheduler` on the new commit so the weekly job runs `fomc_cal`/`cpi_cal` (first run Sun 18:00 ET).
+
+## Addendum 7: SoSoValue key live
+- Pushed `89f522d`. Step 4a (`509f639`) was already on the remote. Scheduler restarted on it (PID 62917).
+- Dom added `SOSOVALUE_API_KEY`. The first keyed call returned data, but inside an envelope: `{"code": 0, "message": "success", "data": [...]}`. The docs show a bare array, so the collector rejected it. Fixed with `sosovalue.unwrap`, which also treats a non-zero code as an error. Tests were added. `test_sosovalue_skipped_without_key` read the real `.env`; it now clears the key itself. 650 tests pass.
+- **Backfilled:** 264 rows. BTC, ETH and SOL each have 22 trade dates (2026-10-27 → 2026-11-25), even though we asked for 300. The API serves only about one month of history, so ETF flows accrue from here. BTC ETF flows are negative every day in the window, e.g. −$453M on 11-25, so `etf_flow_5d_btc` ≈ −$2.5bn.
+
