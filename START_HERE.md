@@ -4,28 +4,30 @@
 
 ---
 
-## CURRENT CHECKPOINT: v10 / 2026-11-26 (Session 04, Phase 3 build step 2)
+## CURRENT CHECKPOINT: v11 / 2026-11-26 (Session 04, Phase 3 build step 3)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3 (Features + regimes): build steps 1–2 done** (foundations; 35 per-asset price features, D-036); Phase 2 exit gate still running in parallel |
-| **Last session** | S04: questioning, spec, step 1, identity fix (D-035), step 2 ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
-| **Git** | `cb03720` pushed; `bed7b04`, `3a951b2`, `1b16d47`, `b4462eb` and the step 2 commit not pushed |
-| **Tests** | 337 passed, ruff clean |
-| **Service** | launchd `com.qt.scheduler` (paper); Congress backfill driver still running |
+| **Phase** | **Phase 3 (Features + regimes): build steps 1–3 done** (foundations; 36 price features; fundamentals + ranks + 5 composites, D-037); Phase 2 exit gate still running in parallel |
+| **Last session** | S04: questioning, spec, steps 1–3, identity fix ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
+| **Git** | `498b7f2` pushed; step 3 commit not pushed |
+| **Tests** | 473 passed, ruff clean |
+| **Service** | launchd `com.qt.scheduler` (paper), restarted on step 3 (EDGAR collector change); Congress backfill driver still running |
 
 ### Next exact task
-1. Phase 3 build step 3: cross-sectional ranks + 5 composites (§5.2) with the EDGAR concept map; per-asset values come from `price.compute_series` (values + per-feature `ready_at`).
+1. Phase 3 build step 4: market vector (§5.3).
 2. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
-- [ ] Push the 5 local commits (`bed7b04`, `3a951b2`, `1b16d47`, `b4462eb`, step 2)?
+- [ ] Push the step 3 commit?
 - [ ] **SoSoValue key:** the `.env` line still holds only a placeholder comment. Paste the key after `SOSOVALUE_API_KEY=`
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v10 / 2026-11-26 (Session 04, Phase 3 build step 2)
+- 35 per-asset price features, per-feature readiness, D-036. Pushed as `498b7f2`.
 ### v9 / 2026-11-26 (Session 04, Phase 3 questioning + build step 1)
 - Q1–Q9 answered, spec `docs/components/03_features.md`, D-033 to D-035: top-up, migration 008, registry/inputs/adjust, identity overrides. [Handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)
 ### v8 / 2026-11-26 (Session 03e, Phase 2 build step 5)

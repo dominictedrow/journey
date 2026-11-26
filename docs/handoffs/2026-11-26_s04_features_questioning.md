@@ -106,6 +106,20 @@
   - Crypto correlations needed `min_pair_frac` 0.6.
   - The earnings history only shows report dates 5 sessions ahead (backfill rule), so `earn_days_next` is capped at 5 to match live.
 
+## Addendum 4: build step 3, fundamentals + cross-section (Dom: "push the commits then begin step 3")
+- Pushed `cb03720..498b7f2`. Step 3 is D-037. 473 tests pass, ruff clean.
+- **EDGAR top-up live:** 22 concepts and 4 predecessor CIKs (XOM, BLK, BG, APA, now with history from 2009). About 680k new fact rows. The concept-list skip key forces a one-time refetch.
+- **`features/fundamentals.py`:** a point-in-time filing timeline (TTM from 3M and YTD durations, vintage-consistent differences, restatements, tag priority, sum options, staleness) and 8 ratios: earnings yield, FCF yield, EBITDA/EV, ROIC, GM stability, net debt/EBITDA, revenue YoY, EPS YoY. These ride on the `PriceFrame`, gated by bar readiness like earnings.
+- **`features/cross_section.py`:** `Panel` → universe and sector percentile ranks for 41 features (82 rank features) plus 5 composites. `inputs.load_fundamentals`, `load_membership`, `members_at`.
+- **Tests:**
+  - `test_fundamentals_features.py` (39): hand values from the generator's true quarters at every 3rd bar, no-lookahead plus backfill = daily, the split, fallbacks, debt-free, and no facts.
+  - `test_cross_section.py` (92): naive counting ranks for every spec, ties, NaN, small sectors, components, as-of membership.
+- **Caught by the tests:** a restated 9M figure made Q4 = FY − 9M wrong until the next 10-K. Fixed with vintage-consistent differences.
+- **Universe smoke:**
+  - About 70 s for 503 members at one T (after a 10× timeline speedup).
+  - 2019-06-28 works too; coverage there is a little lower, because delisted members have no CIK yet (§9.2).
+
 ## Next exact task (updated)
-1. Build step 3: cross-sectional ranks + composites (§5.2), with the EDGAR concept map.
-2. Ask Dom to push `bed7b04`, `3a951b2`, `1b16d47`, `b4462eb` and the step 2 commit.
+1. Build step 4: market vector (§5.3): macro, cross-asset, GLI, breadth, crypto structure.
+2. Later: §9.2 CIK mapping for delisted members (lifts historical fundamentals coverage), the SIC sector map, and `build.py` (persisting price, fundamentals and ranks per T).
+

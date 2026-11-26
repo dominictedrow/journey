@@ -212,6 +212,43 @@ edgar:
     - us-gaap:PaymentsToAcquirePropertyPlantAndEquipment
     - us-gaap:CommonStockDividendsPerShareDeclared
     - dei:EntityCommonStockSharesOutstanding
+    # Phase 3 composites (D-037): EBITDA, ROIC, total debt, gross profit fallback, cash fallback.
+    # Adding a concept refetches every filer once (the skip check is keyed on this list).
+    - us-gaap:DepreciationDepletionAndAmortization
+    - us-gaap:DepreciationAndAmortization
+    - us-gaap:DepreciationAmortizationAndAccretionNet
+    - us-gaap:Depreciation
+    - us-gaap:IncomeTaxExpenseBenefit
+    - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+    - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments
+    - us-gaap:LongTermDebtCurrent
+    - us-gaap:DebtCurrent
+    - us-gaap:ShortTermBorrowings
+    - us-gaap:LongTermDebtAndCapitalLeaseObligations
+    - us-gaap:CostOfRevenue
+    - us-gaap:CostOfGoodsAndServicesSold
+    - us-gaap:CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents
+    - us-gaap:RevenuesNetOfInterestExpense    # banks' quarterly revenue
+    - us-gaap:PaymentsToAcquireProductiveAssets
+    - us-gaap:PaymentsToAcquireOilAndGasPropertyAndEquipment
+    - us-gaap:CostsAndExpenses
+    - us-gaap:OperatingCostsAndExpenses
+    - us-gaap:CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization
+    - us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent
+    - us-gaap:DebtInstrumentCarryingAmount
+  # Holding-company reorganizations: the ticker now maps to a new CIK with little history, while
+  # the years before sit under the old filer. Its facts are stored under the same asset, only for
+  # periods ending before `until` (the new filer's own comparatives take over from there).
+  # Verified against SEC submissions 2026-11-26 (D-037).
+  predecessor_ciks:
+    "SPX:XOM:2015-12-31":
+      - {cik: "0000034088", until: "2026-04-01", note: "Exxon Mobil Corp -> ExxonMobil Holdings Corp (2026)"}
+    "SPX:BLK:2015-12-31":
+      - {cik: "0001364742", until: "2024-07-01", note: "BlackRock Inc (now BlackRock Finance) -> BlackRock, Inc. (GIP deal, 2024)"}
+    "SPX:BG:2023-03-15":
+      - {cik: "0001144519", until: "2023-10-01", note: "Bunge Ltd -> Bunge Global SA (redomicile, 2023)"}
+    "SPX:APA:2015-12-31":
+      - {cik: "0000006769", until: "2021-01-01", note: "Apache Corp -> APA Corp (holding company, 2021)"}
 
 # yfinance (6.2): spec tickers daily + index-level history from 2000 for the HMM. Never mixed with
 # Alpaca rows (source 'yfinance'). Close is yfinance's split-adjusted close (its "raw" close).

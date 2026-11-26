@@ -5,12 +5,17 @@ For every live member with a CIK (``aliases`` fills ``assets.cik`` from the SEC 
 1. ``submissions/CIK##########.json`` gives each filing's ``acceptanceDateTime`` (true UTC:
    checked against the filing index pages, 2026-11-26). Older filings sit in extra pages listed
    under ``filings.files``; those never change, so they're cached under ``edgar.cache_dir``.
-2. If the newest accession equals last week's, the company is skipped (nothing new filed).
+2. If the newest accession equals last week's, the company is skipped (nothing new filed). The
+   cursor keys that check on the concept list as well, so adding a concept refetches every
+   company once (otherwise its history would never arrive for unchanged filers).
 3. ``companyfacts`` for the configured concepts, every unit. One row per
    ``(fiscal_period, metric, accession)``: ``fiscal_period`` = ``start/end`` for durations, ``end``
    for instants, so a filing's prior-year comparatives don't collide with its current figures.
    ``released_at`` = that filing's acceptance time, else ``filed + 1 day`` 00:00 ET
    (``pit.edgar_fact``; the fallback is counted in the cursor).
+
+Predecessor CIKs (``edgar.predecessor_ciks``, holding-company reorganizations) are fetched like
+any filer and stored under the successor's asset, for periods ending before their ``until`` date.
 
 Every request carries ``SEC_EDGAR_USER_AGENT``; the collector refuses to start without one that
 contains an ``@`` (SEC fair access).
@@ -18,6 +23,7 @@ contains an ``@`` (SEC fair access).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from collections.abc import Callable
@@ -110,6 +116,7 @@ class EdgarFactsCollector:
         cfg = ctx.settings.config.collect.edgar
         cursor = dict(ctx.cursor)
         latest: dict[str, str] = cursor.setdefault("latest", {})
+        concepts_sha = hashlib.sha256("|".join(sorted(cfg.concepts)).encode()).hexdigest()[:12]
         res = CollectResult(cursor=cursor)
         companies = ctx.conn.execute(
             "SELECT asset_id, cik FROM assets WHERE cik IS NOT NULL AND security_key IS NOT NULL "
@@ -123,12 +130,28 @@ class EdgarFactsCollector:
         by_cik: dict[str, list[int]] = {}
         for aid, cik in companies:
             by_cik.setdefault(str(cik).zfill(10), []).append(aid)
+        # predecessor filers (holding-company reorganizations): their facts go to the same asset,
+        # for periods ending before `until`
+        until: dict[tuple[str, int], date] = {}
+        if cfg.predecessor_ciks:
+            keys = dict(ctx.conn.execute(
+                "SELECT security_key, asset_id FROM assets WHERE security_key = ANY(%s)",
+                (list(cfg.predecessor_ciks),),
+            ).fetchall())  # fmt: skip
+            for key, preds in cfg.predecessor_ciks.items():
+                if key not in keys:
+                    log.warning("edgar_predecessor_unknown_security", extra={"security_key": key})
+                    continue
+                for pr in preds:
+                    c10 = pr.cik.zfill(10)
+                    by_cik.setdefault(c10, []).append(keys[key])
+                    until[(c10, keys[key])] = pr.until
         for cik10, aids in by_cik.items():
             try:
                 sub = self._get(ctx, cfg.submissions_url.format(cik=cik10))
                 recent = sub["filings"]["recent"]
                 newest = recent["accessionNumber"][0] if recent["accessionNumber"] else None
-                if newest is not None and latest.get(cik10) == newest:
+                if newest is not None and latest.get(cik10) == f"{newest}|{concepts_sha}":
                     skipped += 1
                     continue
                 pages = [recent] + [
@@ -139,12 +162,15 @@ class EdgarFactsCollector:
                 for aid in aids:
                     rows, n_approx = fact_rows(aid, facts, cfg.concepts, accepted,
                                                ctx.settings.config.collect.pit)  # fmt: skip
+                    cut = until.get((cik10, aid))
+                    if cut is not None:  # period end is the part after '/' (or the instant)
+                        rows = [r for r in rows if date.fromisoformat(r[1].split("/")[-1]) < cut]
                     approx += n_approx
                     stats = insert_rows(ctx.conn, "raw_fundamentals", FUND_COLS, rows)
                     res.add("raw_fundamentals", stats)
                 ctx.conn.commit()
                 if newest is not None:
-                    latest[cik10] = newest
+                    latest[cik10] = f"{newest}|{concepts_sha}"
             except Exception as e:  # noqa: BLE001  (one filer failing never stops the rest)
                 ctx.conn.rollback()
                 failed[cik10] = f"{type(e).__name__}: {e}"

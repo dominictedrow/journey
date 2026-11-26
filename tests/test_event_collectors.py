@@ -341,7 +341,7 @@ def test_acceptance_map_parses_utc():
     assert m["a-1"] == datetime(2026, 11, 3, 13, 5, 15, tzinfo=UTC)
 
 
-def edgar_routes(h, newest="0001-26-000002"):
+def edgar_routes(h, newest="0001-26-000002", cik="0000000001"):
     sub = {
         "filings": {
             "recent": {
@@ -414,13 +414,14 @@ def edgar_routes(h, newest="0001-26-000002"):
             },
         }
     }
-    h.routes[("data.sec.gov", "/submissions/CIK0000000001.json")] = lambda r: httpx.Response(
+    sub["filings"]["files"] = [{"name": f"CIK{cik}-submissions-001.json"}]
+    h.routes[("data.sec.gov", f"/submissions/CIK{cik}.json")] = lambda r: httpx.Response(
         200, json=sub
     )
-    h.routes[("data.sec.gov", "/submissions/CIK0000000001-submissions-001.json")] = lambda r: (
+    h.routes[("data.sec.gov", f"/submissions/CIK{cik}-submissions-001.json")] = lambda r: (
         httpx.Response(200, json=old)
     )
-    h.routes[("data.sec.gov", "/api/xbrl/companyfacts/CIK0000000001.json")] = lambda r: (
+    h.routes[("data.sec.gov", f"/api/xbrl/companyfacts/CIK{cik}.json")] = lambda r: (
         httpx.Response(200, json=facts)
     )
 
@@ -481,6 +482,36 @@ def test_edgar_facts_acceptance_join_fallback_and_skip(env, tmp_path):
     out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
     assert out.result.cursor["unchanged"] == 1
     assert not any("companyfacts" in p for _, p, _ in h.calls)  # nothing new filed: skipped
+
+    # a new concept in config refetches every filer once, even with nothing new filed
+    concepts = kw["settings"].config.collect.edgar.concepts + ["us-gaap:CostOfRevenue"]
+    kw = _with(kw, edgar={"cache_dir": str(tmp_path / "edgar"), "concepts": concepts})
+    h.calls.clear()
+    out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
+    assert out.result.cursor["unchanged"] == 0
+    assert any("companyfacts" in p for _, p, _ in h.calls)
+    h.calls.clear()
+    out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
+    assert out.result.cursor["unchanged"] == 1
+
+
+@pytest.mark.db
+def test_edgar_predecessor_cik_only_before_until(env, tmp_path):
+    kw, h = env
+    edgar_routes(h)
+    edgar_routes(h, newest="0009-26-000002", cik="0000000009")  # the old filer
+    from qt.common.config import PredecessorCikCfg
+
+    pred = {"SPX:AAA:2016-01-01": [PredecessorCikCfg(cik="9", until="2020-01-01", note="t")]}
+    kw = _with(kw, edgar={"cache_dir": str(tmp_path / "edgar"), "predecessor_ciks": pred})
+    out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
+    assert out.status == "ok", out.error
+    assert out.result.cursor["filers"] == 2
+    assert any("CIK0000000009.json" in p for _, p, _ in h.calls)
+    # the old filer's 2025/2026 periods are cut (>= until); only the successor's remain
+    rows = _q(kw, "SELECT fiscal_period, accession FROM raw_fundamentals")
+    assert not [r for r in rows if r[1].startswith("0009-")]
+    assert ("2014-10-01/2014-12-31", "0001-15-000009") in rows
 
 
 @pytest.mark.db

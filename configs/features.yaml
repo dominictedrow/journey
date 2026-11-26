@@ -50,7 +50,7 @@ price:
   min_pair_frac: 0.6
   returns: [1, 5, 21, 63, 126, 252]   # log return over n bars
   momentum: {long: 252, skip: 21}      # 12-1: log(P[t-21] / P[t-252])
-  rvol: [21, 63]                       # stdev of daily log returns, annualized
+  rvol: [21, 63, 252]                  # stdev of daily log returns, annualized (252: low-vol composite)
   gk_vol: [21]                         # Garman-Klass
   downside_dev: [63]                   # sqrt(mean(min(r, 0)^2)), annualized
   max_dd: [63, 252]                    # worst peak-to-trough inside the last n closes
@@ -76,3 +76,72 @@ price:
     # shows more than 5 sessions; live sees 28 days ahead. Capping at 5 keeps the feature's
     # training and live ranges the same (no report known within 5 sessions -> NaN).
     max_sessions_ahead: 5
+
+# Fundamentals (section 5.2 inputs). EDGAR facts as known at T: for each fiscal period the newest
+# released value wins (restatements included once filed). Per period, the first tag present in
+# the list wins (companies switch tags, e.g. Revenues -> RevenueFromContract... with ASC 606).
+# "A+B": a sum at the same instant; the first term is required, later ones count 0 if absent.
+fundamentals:
+  concepts:
+    revenue: [us-gaap:Revenues, us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax,
+              us-gaap:SalesRevenueNet, us-gaap:RevenuesNetOfInterestExpense]
+    cost_of_revenue: [us-gaap:CostOfRevenue, us-gaap:CostOfGoodsAndServicesSold,
+                      us-gaap:CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization]
+    gross_profit: [us-gaap:GrossProfit]          # else revenue - cost_of_revenue, per quarter
+    operating_income: [us-gaap:OperatingIncomeLoss]   # else revenue - costs_and_expenses (same E)
+    costs_and_expenses: [us-gaap:CostsAndExpenses, us-gaap:OperatingCostsAndExpenses]
+    net_income: [us-gaap:NetIncomeLoss]
+    eps_diluted: [us-gaap:EarningsPerShareDiluted]
+    da: [us-gaap:DepreciationDepletionAndAmortization, us-gaap:DepreciationAndAmortization,
+         us-gaap:DepreciationAmortizationAndAccretionNet, us-gaap:Depreciation]
+    income_tax: [us-gaap:IncomeTaxExpenseBenefit]
+    pretax_income:
+      - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+      - us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments
+    cfo: [us-gaap:NetCashProvidedByUsedInOperatingActivities]
+    capex: [us-gaap:PaymentsToAcquirePropertyPlantAndEquipment, us-gaap:PaymentsToAcquireProductiveAssets,
+            us-gaap:PaymentsToAcquireOilAndGasPropertyAndEquipment]
+    equity: [us-gaap:StockholdersEquity]
+    cash: [us-gaap:CashAndCashEquivalentsAtCarryingValue,
+           us-gaap:CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents]
+    # LongTermDebt includes its current portion; Noncurrent doesn't, so it gets the current part
+    debt:
+      - us-gaap:LongTermDebt+us-gaap:ShortTermBorrowings
+      - us-gaap:LongTermDebtNoncurrent+us-gaap:LongTermDebtCurrent+us-gaap:ShortTermBorrowings
+      - us-gaap:LongTermDebtAndCapitalLeaseObligations+us-gaap:LongTermDebtCurrent+us-gaap:ShortTermBorrowings
+      - us-gaap:LongTermDebtAndCapitalLeaseObligations+us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent+us-gaap:ShortTermBorrowings
+      - us-gaap:DebtInstrumentCarryingAmount+us-gaap:ShortTermBorrowings
+    shares: [dei:EntityCommonStockSharesOutstanding]
+  # Units kept per input (anything else, e.g. EPS tagged in "pure" or CHF dividends, is dropped).
+  units: {eps_diluted: USD/shares, shares: shares, default: USD}
+  quarter_days: [80, 100]             # a duration this long is a quarter
+  annual_days: [350, 380]             # ... or a fiscal year
+  step_tol_days: 10                   # consecutive quarter ends: 91 +- this; YoY: 365 +- this
+  max_age_days: 200                   # period end older than this at the bar date -> NaN
+  gm_quarters: 8                      # gross-margin stability: stdev over this many quarters
+  tax: {default_rate: 0.21, max_rate: 0.5}   # ROIC tax rate = tax / pretax, clipped; else default
+  eps_yoy_min_base: 0.05              # |EPS a year ago| below this (USD) -> NaN (growth undefined)
+  split_guard_years: 2                # EPS YoY -> NaN if a split's ex date is this close (EPS
+                                      # bases before/after a split may not be restated alike)
+  # Many filers tag debt only with company extensions, which standard tags can't see: their debt
+  # stays NaN. A company that has never filed any debt option (by T) is treated as debt-free (0).
+  debt_absent_as_zero: true
+  # Banks and REITs: EBITDA-based ratios are undefined, so NaN (not a fudged value)
+  no_ebitda_sectors: [Financials, Real Estate]
+
+# Cross-section (section 5.2): percentile ranks across the point-in-time S&P 500 members at T,
+# and again within sector. Average rank for ties; NaN stays out of the rank and stays NaN.
+cross_section:
+  index_code: SPX
+  min_sector_size: 5                  # fewer valid members in a sector -> sector rank NaN
+  # Ranked: these groups' features (earnings proximity is a calendar fact, not a factor).
+  rank_groups: [price_returns, price_vol, price_trend, price_liquidity, price_market_link,
+                price_mean_reversion, fundamentals]
+  min_components: 2                   # a composite needs this many component ranks
+  # Composite -> components; "-x" ranks the negative (lower is better).
+  composites:
+    value: [earnings_yield, fcf_yield, ebitda_ev]
+    quality: [roic, gm_stability, -net_debt_ebitda]
+    momentum: [mom_12_1, ret_63d]
+    low_vol: [-rvol_252d, -beta_252d]
+    growth: [revenue_yoy, eps_yoy]

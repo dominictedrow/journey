@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 
-from qt.common.config import AdjustCfg, PriceCfg
+from qt.common.config import AdjustCfg, FundamentalsCfg, PriceCfg
 from qt.features import registry
 from qt.features.adjust import adjust
 
@@ -78,6 +78,13 @@ class PriceFrame:
     earnings: pd.DataFrame
     sessions: np.ndarray  # XNYS sessions, datetime64[D]
     cfg: PriceCfg
+    # fundamentals (stocks): the filing timeline, its config, the sector, split-only price
+    # factors (market cap carries shares across splits) and split ex dates
+    fund: pd.DataFrame | None = None
+    fcfg: FundamentalsCfg | None = None
+    sector: str | None = None
+    split_pf: np.ndarray | None = None
+    split_dates: np.ndarray = field(default_factory=lambda: np.array([], dtype="datetime64[D]"))
     _cache: dict[str, np.ndarray] = field(default_factory=dict, repr=False)
 
     @property
@@ -145,12 +152,16 @@ def prepare(
     ctx: Mapping[str, CtxSeries] | None = None,
     earnings: pd.DataFrame | None = None,
     sessions: np.ndarray | None = None,
+    facts: pd.DataFrame | None = None,
+    fund_cfg: FundamentalsCfg | None = None,
+    sector: str | None = None,
 ) -> PriceFrame | None:
     """Cut one asset's inputs at ``asof`` (``released_at <= asof``) and build its frame.
 
     ``bars`` are that asset's rows from :func:`qt.features.inputs.load_bars`; ``actions`` its
     mapped corporate actions; ``ctx`` the context series by key (``bench`` plus the keys of
-    ``cfg.corr.series``); ``earnings`` its rows from :func:`qt.features.inputs.load_earnings`.
+    ``cfg.corr.series``); ``earnings`` its rows from :func:`qt.features.inputs.load_earnings`;
+    ``facts`` its rows from :func:`qt.features.inputs.load_fundamentals` (with ``fund_cfg``).
     """
     t = pd.Timestamp(asof)
     if t.tzinfo is None:
@@ -168,6 +179,16 @@ def prepare(
     for key, series in (ctx or {}).items():
         aligned[key], ctx_ready[key] = _ctx_changes(series, t, dates)
     e = earnings if earnings is not None else pd.DataFrame()
+    split_pf = a["price_factor"].to_numpy(dtype=float) if "price_factor" in a else np.ones(len(a))
+    if not acts.empty:  # split-only factors: the same actions with dividends switched off
+        split_pf = adjust(b, acts, t.to_pydatetime(), adjust_cfg.model_copy(
+            update={"dividends": False}))["price_factor"].to_numpy(dtype=float)  # fmt: skip
+    jumps = np.flatnonzero(np.diff(split_pf) != 0) + 1
+    tl = None
+    if facts is not None and fund_cfg is not None:
+        from qt.features import fundamentals
+
+        tl = fundamentals.timeline(_known(facts, t) if not facts.empty else facts, fund_cfg)
     return PriceFrame(
         asset_class=asset_class,
         dates=dates,
@@ -185,6 +206,11 @@ def prepare(
         earnings=_known(e, t) if not e.empty else e,
         sessions=sessions if sessions is not None else _xnys_sessions(),
         cfg=cfg,
+        fund=tl,
+        fcfg=fund_cfg,
+        sector=sector,
+        split_pf=split_pf,
+        split_dates=dates[jumps],
     )
 
 
@@ -193,6 +219,7 @@ def _unadjusted(b: pd.DataFrame) -> pd.DataFrame:
     for c in ("open", "high", "low", "close"):
         out[f"adj_{c}"] = out[c]
     out["adj_volume"] = out["volume"]
+    out["price_factor"] = 1.0
     return out
 
 
@@ -227,9 +254,9 @@ def compute_series(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Every spec over the frame's whole history: ``(values, ready_at)``.
 
-    Both are indexed by bar date with one column per spec key. ``ready_at`` (UTC epoch ns) says from which
-    decision time each value may be used; at decision time T a model reads, per feature, the
-    newest row whose ``ready_at <= T``.
+    Both are indexed by bar date with one column per spec key. ``ready_at`` (UTC epoch ns) says
+    from which decision time each value may be used; at decision time T a model reads, per
+    feature, the newest row whose ``ready_at <= T``.
     """
     idx = pd.Index(frame.dates, name="date")
     cols = pd.Index([s.key for s in specs], tupleize_cols=False)  # (name, version), no MultiIndex

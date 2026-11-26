@@ -148,6 +148,7 @@ src/qt/features/
   inputs.py          PIT loaders: adjusted bars, macro as-of, fundamentals TTM, events (all via db.pit)
   adjust.py          split/dividend adjustment factors from alpaca_ca as known at T
   price.py           §5.1
+  fundamentals.py    point-in-time TTM/instants and the §5.2 ratios (added in the build, D-037)
   cross_section.py   ranks, sector ranks, composites, EDGAR concept map
   macro.py           §5.3 incl. GLI, framework additions, breadth
   crypto.py          crypto structure

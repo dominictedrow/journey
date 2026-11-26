@@ -366,6 +366,54 @@ def load_earnings(conn: psycopg.Connection, asof: datetime, bars: pd.DataFrame) 
     return mapped.rename(columns={"ex_date": "report_date"})[EARNINGS_COLUMNS]
 
 
+# ---------------------------------------------------------------- fundamentals, membership
+def load_fundamentals(
+    conn: psycopg.Connection,
+    asof: datetime,
+    metrics: Sequence[str],
+    asset_ids: Iterable[int] | None = None,
+) -> pd.DataFrame:
+    """EDGAR facts released by ``asof`` (every accession, so restatements stay visible in time)."""
+    where_in: dict[str, list] = {"metric": list(metrics)}
+    if asset_ids is not None:
+        where_in["asset_id"] = list(asset_ids)
+    df = frame_asof(
+        conn,
+        "raw_fundamentals",
+        asof,
+        where_in=where_in,
+        columns=["asset_id", "fiscal_period", "metric", "value", "unit", "accession",
+                 "released_at"],  # fmt: skip
+        order_by=("asset_id", "released_at", "accession"),
+    )
+    df["released_at"] = pd.to_datetime(df["released_at"], utc=True)
+    return df
+
+
+def load_membership(conn: psycopg.Connection, asof: datetime, index_code: str) -> pd.DataFrame:
+    """Every index snapshot row released by ``asof``: snapshot_at, ticker, asset_id, released_at."""
+    df = frame_asof(
+        conn,
+        "index_membership",
+        asof,
+        where={"index_code": index_code},
+        columns=["snapshot_at", "ticker", "source", "asset_id", "released_at"],
+        order_by=("released_at", "snapshot_at"),
+    )
+    for c in ("snapshot_at", "released_at"):
+        df[c] = pd.to_datetime(df[c], utc=True)
+    return df
+
+
+def members_at(membership: pd.DataFrame, asof: datetime) -> set[int]:
+    """Mapped members of the newest snapshot released by ``asof`` (as-of rule, D-031 item 9)."""
+    m = membership[membership["released_at"] <= pd.Timestamp(asof)]
+    if m.empty:
+        return set()
+    snap = m[m["snapshot_at"] == m["snapshot_at"].max()]
+    return {int(a) for a in snap["asset_id"].dropna()}
+
+
 # ---------------------------------------------------------------- macro
 def load_macro(conn: psycopg.Connection, series: Sequence[str], asof: datetime) -> pd.DataFrame:
     """Every vintage of ``series`` released by ``asof`` (ALFRED rows, source 'alfred')."""

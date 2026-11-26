@@ -18,7 +18,7 @@ from typing import Any, Literal
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 from qt.common.paths import CONFIG_DIR, ENV_FILE, visible_files
 
@@ -272,6 +272,12 @@ class MembershipCfg(_Strict):
     crosscheck_report: str
 
 
+class PredecessorCikCfg(_Strict):
+    cik: str
+    until: date  # only the predecessor's facts for periods ending before this date
+    note: str
+
+
 class EdgarCfg(_Strict):
     tickers_url: str
     max_rps: float = Field(gt=0, le=10)
@@ -280,6 +286,7 @@ class EdgarCfg(_Strict):
     submissions_file_url: str
     cache_dir: str
     concepts: list[str] = Field(min_length=1)
+    predecessor_ciks: dict[str, list[PredecessorCikCfg]] = {}  # security_key -> old filers
 
     @field_validator("concepts")
     @classmethod
@@ -608,10 +615,58 @@ class PriceCfg(_Strict):
         return self.bench.get(asset_class, self.bench["default"])
 
 
+class TaxCfg(_Strict):
+    default_rate: float = Field(ge=0, lt=1)
+    max_rate: float = Field(gt=0, lt=1)
+
+
+FUND_INPUTS = (
+    "revenue", "cost_of_revenue", "gross_profit", "operating_income", "costs_and_expenses",
+    "net_income",
+    "eps_diluted", "da", "income_tax", "pretax_income", "cfo", "capex", "equity", "cash", "debt",
+    "shares",
+)  # fmt: skip
+
+
+class FundamentalsCfg(_Strict):
+    concepts: dict[str, list[str]]
+    units: dict[str, str]
+    quarter_days: tuple[int, int]
+    annual_days: tuple[int, int]
+    step_tol_days: int = Field(ge=1)
+    max_age_days: int = Field(ge=1)
+    gm_quarters: int = Field(ge=3)
+    tax: TaxCfg
+    eps_yoy_min_base: float = Field(gt=0)
+    split_guard_years: float = Field(ge=0)
+    debt_absent_as_zero: bool = False
+    no_ebitda_sectors: list[str] = []
+
+    @model_validator(mode="after")
+    def _all_inputs(self) -> FundamentalsCfg:
+        missing = set(FUND_INPUTS) - set(self.concepts)
+        if missing:
+            raise ValueError(f"fundamentals.concepts lacks {sorted(missing)}")
+        return self
+
+    def unit(self, item: str) -> str:
+        return self.units.get(item, self.units["default"])
+
+
+class CrossSectionCfg(_Strict):
+    index_code: str
+    min_sector_size: int = Field(ge=2)
+    rank_groups: list[str]
+    min_components: int = Field(ge=1)
+    composites: dict[str, list[str]]
+
+
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
     adjust: AdjustCfg
     price: PriceCfg
+    fundamentals: FundamentalsCfg
+    cross_section: CrossSectionCfg
 
 
 class Config(_Strict):
