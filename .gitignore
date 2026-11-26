@@ -1,0 +1,43 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# local data / artifacts (keep folders)
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+logs/*
+!logs/.gitkeep
+reports/*
+!reports/.gitkeep
+*.parquet
+*.dump
+*.sqlite
+*.pt
+*.ckpt
+*.safetensors
+
+# notebooks
+.ipynb_checkpoints/
+
+# os / editor
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+.claude/settings.local.json
