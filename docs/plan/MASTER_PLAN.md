@@ -13,7 +13,7 @@ A phase may take several sessions. A session should never end halfway through a 
 | # | Component | Main deliverables | Exit gate | Status |
 |---|---|---|---|---|
 | 0 | Framework | Repo, folder tree, docs, branch | Branch pushed, START_HERE auto-read works | ✅ done 2026-11-25 |
-| 1 | Infrastructure | `docker-compose.yml` (TimescaleDB), `schema.sql` plus migrations for all spec tables, config loader (YAML + .env), `run_id`, logging, XNYS calendar helpers, uv project | `docker compose up` works, the schema migrates on an empty DB, and `uv run pytest` is green | ⏳ next |
+| 1 | Infrastructure | `docker-compose.yml` (TimescaleDB), `schema.sql` plus migrations for all spec tables, config loader (YAML + .env), `run_id`, logging, XNYS calendar helpers, uv project | `docker compose up` works, the schema migrates on an empty DB, and `uv run pytest` is green (full gate: `docs/components/01_infrastructure.md` §14) | ⏳ (a) done, (b) build next |
 | 2 | Collectors (point-in-time) | Alpaca bars and assets, FRED + ALFRED vintages, yfinance (fallbacks), EDGAR companyfacts, Fed calendar + RSS, Congress.gov, crypto structure (CoinGecko, DefiLlama, OKX/Deribit/Kraken/Hyperliquid, SoSoValue), **news fetch + trafilatura + daily archive**, historical S&P 500 membership, APScheduler daily job | 10+ years backfilled, every row has `released_at`, and the daily job runs unattended for 5 days | |
 | 3 | Feature layer + regimes | All per-asset, cross-sectional and macro features, normalization, GLI, feature registry, quadrant, HMM (filtered only), stress score | Every feature unit-tested against a hand calculation; no-lookahead tests pass | |
 | 4 | Labels + validation harness | Triple-barrier labels, walk-forward with purge and embargo, metrics (log loss, Brier, rank IC, Sharpe/Sortino/MDD/turnover), cost model | The harness reproduces a known toy result, and the leak test fails when leakage is injected on purpose | |
@@ -44,7 +44,7 @@ The `WINDOWS_SETUP.md` instructions must be written for Claude Code running on t
 4. **Set up secrets:** copy `.env` across by hand. It is never in git.
 5. **Move the database:**
    - run `docker compose up -d`
-   - `pg_restore` the dump made on the Mac with `scripts/db_dump.py`
+   - `pg_restore` the dump made on the Mac with `scripts/db_backup.py` (D-017)
 6. **Move data and models:** copy the `data/` and `models/` folders (gitignored) by external drive or `rsync`.
 7. **Set up the scheduler:** register a Task Scheduler entry at logon for the APScheduler service, timezone America/New_York.
 8. **Verify:** run `uv run python scripts/verify_setup.py`, which checks the DB connection, API keys, GPU, feed freshness and a dry-run cycle.

@@ -28,6 +28,7 @@ Legend: ✅ free, no key · 🔑 free with a key · ⚠️ fragile, unofficial o
 | News (economics) | CNBC Markets `https://www.cnbc.com/id/100003114/device/rss/rss.html`, BBC Business `https://feeds.bbci.co.uk/news/business/rss.xml`, NPR Economy `https://feeds.npr.org/1006/rss.xml` | ✅ | none | | Same |
 | Historical S&P 500 membership | github.com/fja05680/sp500 (MIT) | ✅ | none | | 1996 onward. Map tickers to CIK because tickers get reused |
 | News metadata backfill (optional) | GDELT DOC API | ✅ ⚠️ | none | 1 request per 5 s | URLs only, no text. Many old URLs are dead or paywalled |
+| Push alerts (D-016) | ntfy.sh public server (`POST https://ntfy.sh/<topic>`) | ✅ ⚠️ | none (the topic name acts as the secret) | Daily per-IP message cap on the free server, believed to be ~250/day but **unverified**. Confirm during the Phase 1 build | Anyone who knows the topic can read it, so use a long random `NTFY_TOPIC` in `.env`. Self-hosting is an option later |
 
 ## ❌ Not free: flagged and NOT used
 | Item | Cost | Replacement |

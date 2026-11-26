@@ -4,23 +4,33 @@
 
 ---
 
-## CURRENT CHECKPOINT: v0 / 2026-11-25 (Session 00)
+## CURRENT CHECKPOINT: v1 / 2026-11-25 (Session 01)
 
 | | |
 |---|---|
-| **Phase** | 0 (Framework) is done → **Phase 1 (Infrastructure), step (a): questioning** |
-| **Last session** | S00: repo, docs, folder tree and branch created ([handoff](docs/handoffs/2026-11-25_s00_framework.md)) |
-| **Git** | Branch `vibe/quant_trader` on `dominictedrow/journey` |
+| **Phase** | **Phase 1 (Infrastructure), step (b): build**. Step (a) questioning is done |
+| **Last session** | S01: Phase 1 questioning done, build spec written, D-012 to D-018 logged ([handoff](docs/handoffs/2026-11-25_s01_infra_questioning.md)) |
+| **Git** | Branch `vibe/quant_trader` on `dominictedrow/journey`. S01 doc changes not yet committed |
 | **Code written** | None yet. Package skeleton only. |
 | **Tests** | None yet |
 
 ### Next exact task
-Run the **Phase 1 questioning** with Dom, using [`docs/interrogation/01_infrastructure.md`](docs/interrogation/01_infrastructure.md):
-1. Ask one question at a time and record his answers inline.
-2. Write `docs/components/01_infrastructure.md`.
-3. Build Phase 1: Docker TimescaleDB, schema, config loader, run_id and calendar utilities.
+**Build Phase 1** from [`docs/components/01_infrastructure.md`](docs/components/01_infrastructure.md), in this order:
+1. uv project
+2. docker-compose (`db` + `db_backup`)
+3. migrations 001 to 004 and the runner
+4. config and profiles
+5. `run_id` and `run_context`
+6. logging and ntfy alerts
+7. `scripts/db_backup.py`
+8. calendar
+9. tests
 
-**Urgent: news collection starts on day one.** Text models can only learn from news collected from the first collection day onward. Phase 2 should reach the news collector quickly, even before the other collectors are finished. Also archive `BAMLH0A0HYM2` daily from day one (D-001).
+Exit gate: §14 of that file, including one test push reaching Dom's phone.
+
+Before building, check that Docker Desktop is installed and that Dom has the ntfy app; generate an `NTFY_TOPIC` for him.
+
+**Urgent: news collection starts on day one.** Per D-018, only the collectors run on the Mac. Text models can only learn from news collected from the first collection day onward. Phase 2 should reach the news collector quickly, even before the other collectors are finished. Also archive `BAMLH0A0HYM2` daily from day one (D-001).
 
 ### Open questions for Dom (carried forward)
 - [ ] The LLM's final size (spec: 50–125M) and the KV-cache experiment design → Phase 8
@@ -37,4 +47,7 @@ Run the **Phase 1 questioning** with Dom, using [`docs/interrogation/01_infrastr
 ---
 
 ## Prior checkpoints
-_(none)_
+### v0 / 2026-11-25 (Session 00)
+- Phase 0 (Framework) done: repo, docs, folder tree and branch.
+- Next task was the Phase 1 questioning, which was completed in S01.
+- [Handoff](docs/handoffs/2026-11-25_s00_framework.md)
