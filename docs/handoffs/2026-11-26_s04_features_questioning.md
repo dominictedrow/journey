@@ -77,6 +77,17 @@
   - Asset 79 BBT holds another company's bars, all of them. The real BB&T history is served under TFC, which was confirmed with a 2017 probe.
   - A dollar-volume scan of every S&P member flagged only these two. WYND and AABA have no bars during their membership spells, so the survivorship gap list grows from 3 to 5.
 
+## Addendum 2: identity fix (Dom: "go ahead with that fix")
+- D-035, committed as `1b16d47`. 190 tests pass, ruff clean. Service restarted on it.
+- **Overrides:** `collect.identity_overrides` config.
+  - BBT: listed_until 2019-12-06, Alpaca bars excluded, 990 real BB&T bars refetched under TFC (source `alpaca_succ`).
+  - PARA: listed_until 2025-08-06, Bannix bars excluded.
+  - Membership and aliases were re-run, so both assets are now unlinked from the live Alpaca assets.
+- **New collector** `succ_bars` (stock_daily; runs once per override entry).
+- **Daily summary** has an "Identity check" section: members with median dollar volume during membership < $10M. Without the overrides it flags exactly PARA and BBT; with them, nothing.
+- **Survivorship list (spec §9.3)** is now SNDK, TE, STI, Paramount 2022–2025, WYND, AABA.
+- Feature loaders must pass `exclude=inputs.bar_exclusions(conn, overrides)` to `load_bars`. The step-2 build wires this into one entry point.
+
 ## Next exact task (updated)
-1. Dom decides the identity fix (exclusions + successor refetch), then implement it.
-2. Build step 2: per-asset price features (§5.1) with hand-calc + no-lookahead tests parametrized over the registry.
+1. Build step 2: per-asset price features (§5.1), with hand-calc + no-lookahead tests parametrized over the registry. Bars come through `load_bars(..., exclude=bar_exclusions(...))` + `mapped_corp_actions` + `adjust`.
+2. Ask Dom to push `bed7b04`, `3a951b2`, `1b16d47` (+ this handoff).
