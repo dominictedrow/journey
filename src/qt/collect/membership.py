@@ -313,14 +313,16 @@ def upsert_member_assets(
         row = conn.execute(
             """
             INSERT INTO assets (ticker, asset_class, name, cik, alpaca_id, gics_sector,
-                                alpaca_tradable, security_key, listed_until)
-            VALUES (%s, 'equity', %s, %s, %s, %s, %s, %s, %s)
+                                alpaca_tradable, security_key, listed_until, sector_source)
+            VALUES (%s, 'equity', %s, %s, %s, %s, %s, %s, %s,
+                    CASE WHEN %s::text IS NOT NULL THEN 'wikipedia_gics' END)
             ON CONFLICT (security_key) DO UPDATE SET
                 ticker = EXCLUDED.ticker,
                 name = COALESCE(EXCLUDED.name, assets.name),
                 cik = COALESCE(EXCLUDED.cik, assets.cik),
                 alpaca_id = EXCLUDED.alpaca_id,
                 gics_sector = COALESCE(EXCLUDED.gics_sector, assets.gics_sector),
+                sector_source = COALESCE(EXCLUDED.sector_source, assets.sector_source),
                 alpaca_tradable = EXCLUDED.alpaca_tradable,
                 listed_until = EXCLUDED.listed_until,
                 updated_at = now()
@@ -335,6 +337,7 @@ def upsert_member_assets(
                 bool(a and a.get("tradable")),
                 s.key,
                 s.listed_until,
+                (w or {}).get("sector"),
             ),
         ).fetchone()
         ids[s.key] = row[0]

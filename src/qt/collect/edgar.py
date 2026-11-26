@@ -1,6 +1,7 @@
 """EDGAR XBRL facts -> raw_fundamentals (component doc 6.4, D-031). Weekly, after ``aliases``.
 
-For every live member with a CIK (``aliases`` fills ``assets.cik`` from the SEC ticker map):
+For every member with a CIK, current or former (``aliases`` fills ``assets.cik`` from the SEC
+ticker map, and former members' CIKs from ``configs/cik_overrides.yaml``, D-043):
 
 1. ``submissions/CIK##########.json`` gives each filing's ``acceptanceDateTime`` (true UTC:
    checked against the filing index pages, 2026-11-26). Older filings sit in extra pages listed
@@ -120,7 +121,7 @@ class EdgarFactsCollector:
         res = CollectResult(cursor=cursor)
         companies = ctx.conn.execute(
             "SELECT asset_id, cik FROM assets WHERE cik IS NOT NULL AND security_key IS NOT NULL "
-            "AND listed_until IS NULL ORDER BY cik"
+            "ORDER BY cik"
         ).fetchall()
         if not companies:
             raise RuntimeError("no CIKs mapped: run aliases first")

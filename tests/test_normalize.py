@@ -104,6 +104,34 @@ def test_asset_ts_z_values_and_ready(clean_registry):
     assert zr[10] == 100
 
 
+def test_asset_ts_z_ready_exact_in_int64(clean_registry):
+    """Epoch-ns ready times and the never-ready sentinel survive the window max exactly."""
+    registry.feature("y_feat", 1, kind="asset", group="price_returns", formula="y")(
+        lambda f: None)  # fmt: skip
+    (spec,) = normalize.register_ts_z([registry.get("y_feat", 1)], NCFG, ["price_returns"])
+    n = 400
+    inf = np.iinfo(np.int64).max
+    ready = 1_764_194_400_000_000_001 + np.arange(n, dtype="int64") * 86_400 * 10**9
+    ready[50] = ready[50] + 7  # odd ns that float64 can't hold
+    ready[60] = inf  # an inner row that's never ready holds its window back for good
+    idx = pd.Index(range(n))
+    cols = pd.Index([("y_feat", 1)], tupleize_cols=False)
+    v = pd.DataFrame(np.ones((n, 1)), index=idx, columns=cols)
+    r = pd.DataFrame(ready[:, None], index=idx, columns=cols)
+    with np.errstate(all="raise"):
+        _, zr = normalize.asset_ts_z(v, r, [spec])
+    zr = zr[spec.key].to_numpy()
+    assert zr.dtype == np.int64
+    assert zr[50] == ready[50] and zr[59] == ready[59]
+    assert (zr[60 : 60 + 252] == inf).all() and zr[60 + 252] == ready[60 + 252]
+
+
+def test_rolling_max_int():
+    x = np.array([3, 1, 4, 1, 5, 9, 2, 6], dtype="int64")
+    np.testing.assert_array_equal(normalize.rolling_max_int(x, 3), [3, 3, 4, 4, 5, 9, 9, 9])
+    assert normalize.rolling_max_int(np.array([], dtype="int64"), 3).size == 0
+
+
 def _frame(n):
     rng = np.random.default_rng(3)
     c = 50 * np.exp(np.cumsum(rng.normal(0, 0.01, n)))

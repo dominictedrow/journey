@@ -141,6 +141,11 @@ Mean of z(VIX), z(BAA10Y), z(−curve slope 10y−3m) and the VIX/VIX3M > 1 flag
 - Accept only an exact ticker whose last bar matches the known delisting date within 5 sessions **(default)**. Never splice in a successor company's prices.
 - Stored as `raw_prices` source `yfinance` / `stooq` under the existing asset. Misses are documented.
 
+### 9.4 As built (D-043)
+- Names and sectors of former members come from the Wikipedia constituents table as of their membership (old page revisions); `sector_source` `wikipedia_gics_hist`, SIC map as the fallback.
+- CIK matching as in 9.2, plus: every candidate (exact too) must pass the filing check, exactly one must, and Wikipedia's CIK vetoes (never accepts) a match when it names another covering filer.
+- Bars (9.3): no series passed; Stooq is behind a bot check. All six are documented gaps.
+
 ## 10. Package layout
 ```
 src/qt/features/

@@ -848,6 +848,113 @@ class BuildCfg(_Strict):
     def _time(cls, v: str) -> str:
         return _check_hhmm(v)
 
+GICS_SECTORS = (
+    "Communication Services", "Consumer Discretionary", "Consumer Staples", "Energy",
+    "Financials", "Health Care", "Industrials", "Information Technology", "Materials",
+    "Real Estate", "Utilities",
+)  # fmt: skip
+
+
+class SurvivorshipCfg(_Strict):
+    cache_dir: str
+    wiki_cache_dir: str
+    cik_lookup_url: str
+    cik_lookup_max_age_days: int = Field(ge=1)
+    submissions_url: str
+    submissions_file_url: str
+    wiki_api_url: str
+    wiki_index_url: str
+    wiki_page: str
+    wiki_revisions_since: date
+    wiki_min_rows: int = Field(ge=1)
+    wiki_lookback_days: list[int] = Field(min_length=1)
+    wiki_changes_revid: int
+    wiki_changes_window_days: int = Field(ge=0)
+    name_suffixes: list[str]
+    fuzzy_threshold: float = Field(gt=0, le=100)
+    fuzzy_candidates: int = Field(ge=1)
+    periodic_forms: list[str] = Field(min_length=1)
+    span_start_tol_days: int = Field(ge=0)
+    span_end_tol_days: int = Field(ge=0)
+    target_mapped_share: float = Field(gt=0, le=1)
+    sector_aliases: dict[str, str] = {}
+    bar_gaps: list[str] = []
+    bar_date_tol_sessions: int = Field(ge=0)
+    stooq_url: str
+
+    @field_validator("sector_aliases")
+    @classmethod
+    def _aliases(cls, v: dict[str, str]) -> dict[str, str]:
+        bad = sorted(set(v.values()) - set(GICS_SECTORS))
+        if bad:
+            raise ValueError(f"sector_aliases map to unknown sectors {bad}")
+        return v
+
+
+class SicRange(_Strict):
+    from_: int = Field(alias="from", ge=0, le=9999)
+    to: int = Field(ge=0, le=9999)
+    sector: str
+
+    @model_validator(mode="after")
+    def _check(self) -> SicRange:
+        if self.to < self.from_:
+            raise ValueError(f"SIC range {self.from_}-{self.to} is reversed")
+        if self.sector not in GICS_SECTORS:
+            raise ValueError(f"unknown GICS sector {self.sector!r}")
+        return self
+
+
+class SicToGicsCfg(_Strict):
+    ranges: list[SicRange] = Field(min_length=1)
+
+    def sector(self, sic: int | str | None) -> str | None:
+        """The narrowest range holding ``sic`` (None if no range does)."""
+        try:
+            code = int(str(sic).strip())
+        except (TypeError, ValueError):
+            return None
+        hits = [r for r in self.ranges if r.from_ <= code <= r.to]
+        return min(hits, key=lambda r: r.to - r.from_).sector if hits else None
+
+
+class CikOverride(_Strict):
+    security_key: str
+    ticker: str
+    cik: str = Field(pattern=r"^\d{10}$")
+    match: Literal["exact", "fuzzy", "manual"]
+    name: str | None = None          # the member's name (Wikipedia)
+    matched_name: str | None = None  # the cik-lookup-data name it matched
+    score: float | None = None
+    note: str | None = None
+
+
+class CikOverridesCfg(_Strict):
+    entries: list[CikOverride] = []
+
+
+class SectorOverride(_Strict):
+    security_key: str
+    ticker: str
+    sector: str
+    source: Literal["wikipedia_gics_hist", "sic_map"]  # assets.sector_source
+    name: str | None = None
+    sic: str | None = None
+    revid: int | None = None
+    manual: bool = False  # set by hand after review: the script never changes or drops it
+    note: str | None = None
+
+    @field_validator("sector")
+    @classmethod
+    def _sector(cls, v: str) -> str:
+        if v not in GICS_SECTORS:
+            raise ValueError(f"unknown GICS sector {v!r}")
+        return v
+
+
+class SectorOverridesCfg(_Strict):
+    entries: list[SectorOverride] = []
+
 
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
@@ -859,6 +966,7 @@ class FeaturesCfg(_Strict):
     regime: RegimeCfg
     normalize: NormalizeCfg
     build: BuildCfg
+    survivorship: SurvivorshipCfg
 
 
 class Config(_Strict):
@@ -869,6 +977,9 @@ class Config(_Strict):
     collect: CollectCfg
     aliases: AliasesCfg
     features: FeaturesCfg
+    sic_to_gics: SicToGicsCfg
+    cik_overrides: CikOverridesCfg
+    sector_overrides: SectorOverridesCfg
 
 
 # ---------------------------------------------------------------- secrets

@@ -24,6 +24,7 @@ from typing import Any
 
 import psycopg
 
+from qt.collect import survivorship
 from qt.collect.base import CollectResult, RunCtx
 from qt.common.config import AliasesCfg
 
@@ -148,6 +149,12 @@ class AliasesCollector:
                     "AND cik IS DISTINCT FROM %s",
                     (e["cik"], aid, e["cik"]),
                 ).rowcount
+        # former members: CIKs / names / sectors from scripts/map_delisted_ciks.py (D-043)
+        ov = survivorship.apply_overrides(conn, c)
+        if any(ov.values()):
+            assets = conn.execute(
+                "SELECT asset_id, ticker, name, listed_until, security_key IS NOT NULL FROM assets"
+            ).fetchall()
         rows = build_aliases(assets, ticker_eras(conn), edgar, c.aliases)
         conn.execute("DELETE FROM aliases")
         with conn.cursor() as cur:
@@ -158,6 +165,7 @@ class AliasesCollector:
             )
         res = CollectResult(cursor=dict(ctx.cursor))
         res.rows["aliases"] = len(rows)
-        res.cursor.update({"aliases": len(rows), "cik_updates": ciks, "edgar_tickers": len(edgar)})
+        res.cursor.update({"aliases": len(rows), "cik_updates": ciks, "edgar_tickers": len(edgar),
+                           "overrides": ov})
         log.info("aliases_rebuilt", extra={"aliases": len(rows), "cik_updates": ciks})
         return res

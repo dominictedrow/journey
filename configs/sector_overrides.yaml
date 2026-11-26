@@ -1,0 +1,1571 @@
+# Names and sectors of former S&P members (component doc 03 section 9.1, Q3, D-043). Written by
+# scripts/map_delisted_ciks.py; applied by the aliases collector to assets with no current
+# Wikipedia sector. source: wikipedia_gics_hist (the constituents table at revision `revid`,
+# while the security was a member) | sic_map (configs/sic_to_gics.yaml). An entry with
+# manual: true was set by hand; the script never changes or drops it.
+entries:
+- security_key: SPX:AAL:2015-12-31
+  ticker: AAL
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: American Airlines Group
+  sic: '4512'
+  revid: 1232650967
+- security_key: SPX:AAP:2015-12-31
+  ticker: AAP
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Advance Auto Parts
+  sic: '5531'
+  revid: 1160956732
+- security_key: SPX:ABMD:2018-05-31
+  ticker: ABMD
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Abiomed
+  sic: '3841'
+  revid: 1128048329
+- security_key: SPX:ADS:2015-12-31
+  ticker: ADS
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Alliance Data Systems
+  sic: '6141'
+  revid: 957930024
+- security_key: SPX:ADT:2015-12-31
+  ticker: ADT
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: ADT Corp
+  revid: 717406907
+- security_key: SPX:AET:2015-12-31
+  ticker: AET
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Aetna Inc
+  sic: '6324'
+  revid: 870885561
+- security_key: SPX:AGN:2015-12-31
+  ticker: AGN
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Allergan, plc
+  sic: '2834'
+  revid: 949009265
+- security_key: SPX:AIV:2015-12-31
+  ticker: AIV
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: Apartment Investment & Management
+  sic: '6798'
+  revid: 989112360
+- security_key: SPX:ALK:2016-05-13
+  ticker: ALK
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Alaska Air Group
+  sic: '4512'
+  revid: 1180651667
+- security_key: SPX:ALXN:2015-12-31
+  ticker: ALXN
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Alexion Pharmaceuticals
+  sic: '2834'
+  revid: 1026559184
+- security_key: SPX:AMG:2015-12-31
+  ticker: AMG
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Affiliated Managers Group Inc
+  sic: '6282'
+  revid: 929916144
+- security_key: SPX:AMTM:2024-09-30
+  ticker: AMTM
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Amentum
+  sic: '7389'
+  revid: 1259572709
+- security_key: SPX:AN:2015-12-31
+  ticker: AN
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: AutoNation Inc
+  sic: '5500'
+  revid: 794265120
+- security_key: SPX:ANDV:2015-12-31
+  ticker: ANDV
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Andeavor
+  sic: '2911'
+  revid: 860719462
+- security_key: SPX:ANSS:2017-06-19
+  ticker: ANSS
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Ansys
+  sic: '7372'
+  revid: 1298602361
+- security_key: SPX:APC:2015-12-31
+  ticker: APC
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Anadarko Petroleum Corp
+  sic: '1311'
+  revid: 909030353
+- security_key: SPX:ARG:2015-12-31
+  ticker: ARG
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Airgas Inc
+  sic: '5084'
+  revid: 720758542
+- security_key: SPX:ARNC:2015-12-31
+  ticker: ARNC
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Arconic Inc.
+  sic: '3350'
+  revid: 948755187
+- security_key: SPX:ATVI:2015-12-31
+  ticker: ATVI
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Activision Blizzard
+  sic: '7372'
+  revid: 1177710839
+- security_key: SPX:AVB:2015-12-31
+  ticker: AVB
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: AvalonBay Communities
+  sic: '6798'
+  revid: 1367510220
+- security_key: SPX:AYI:2016-05-03
+  ticker: AYI
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Acuity Brands Inc
+  sic: '3640'
+  revid: 845433606
+- security_key: SPX:BBBY:2015-12-31
+  ticker: BBBY
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Bed Bath & Beyond
+  revid: 791721841
+- security_key: SPX:BBT:2015-12-31
+  ticker: BBT
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: BB&T Corporation
+  sic: '6021'
+  revid: 929330766
+- security_key: SPX:BBWI:2021-08-03
+  ticker: BBWI
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Bath & Body Works, Inc.
+  sic: '5990'
+  revid: 1248180345
+- security_key: SPX:BCR:2015-12-31
+  ticker: BCR
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Bard (C.R.) Inc.
+  revid: 816702509
+- security_key: SPX:BHF:2017-08-07
+  ticker: BHF
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Brighthouse Financial Inc
+  sic: '6311'
+  revid: 885213270
+- security_key: SPX:BIO:2020-06-22
+  ticker: BIO
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Bio-Rad
+  sic: '3826'
+  revid: 1232650967
+- security_key: SPX:BLDR:2023-12-18
+  ticker: BLDR
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Builders FirstSource
+  sic: '5211'
+  revid: 1369930777
+- security_key: SPX:BRCM:2015-12-31
+  ticker: BRCM
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Broadcom Corporation
+  revid: 701133155
+- security_key: SPX:BWA:2015-12-31
+  ticker: BWA
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: BorgWarner
+  sic: '3714'
+  revid: 1263846433
+- security_key: SPX:BXLT:2015-12-31
+  ticker: BXLT
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Baxalta
+  sic: '2834'
+  revid: 722392889
+- security_key: SPX:CA:2015-12-31
+  ticker: CA
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: CA, Inc.
+  sic: '7372'
+  revid: 864491901
+- security_key: SPX:CAG:2015-12-31
+  ticker: CAG
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Conagra Brands
+  sic: '2000'
+  revid: 1361192599
+- security_key: SPX:CAM:2015-12-31
+  ticker: CAM
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Cameron International Corp.
+  sic: '3533'
+  revid: 712739840
+- security_key: SPX:CBS:2015-12-31
+  ticker: CBS
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: CBS Corp.
+  sic: '4833'
+  revid: 927216237
+- security_key: SPX:CCE:2015-12-31
+  ticker: CCE
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Coca-Cola Enterprises
+  sic: '2086'
+  revid: 721329708
+- security_key: SPX:CCEP:2016-01-04
+  ticker: CCEP
+  sector: Consumer Staples
+  source: sic_map
+  sic: '2086'
+- security_key: SPX:CDAY:2021-09-20
+  ticker: CDAY
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Ceridian
+  revid: 1190304073
+- security_key: SPX:CE:2018-12-24
+  ticker: CE
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Celanese
+  sic: '2820'
+  revid: 1263846433
+- security_key: SPX:CELG:2015-12-31
+  ticker: CELG
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Celgene Corp.
+  sic: '2834'
+  revid: 924551591
+- security_key: SPX:CERN:2015-12-31
+  ticker: CERN
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Cerner
+  sic: '7373'
+  revid: 1086770611
+- security_key: SPX:CHK:2015-12-31
+  ticker: CHK
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Chesapeake Energy
+  sic: '1311'
+  revid: 829877594
+- security_key: SPX:CMA:2015-12-31
+  ticker: CMA
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Comerica
+  sic: '6021'
+  revid: 1222817288
+- security_key: SPX:CNX:2015-12-31
+  ticker: CNX
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: CONSOL Energy Inc.
+  sic: '1311'
+  revid: 707909219
+- security_key: SPX:COG:2015-12-31
+  ticker: COG
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Cabot Oil & Gas
+  sic: '1311'
+  revid: 1044399957
+- security_key: SPX:COL:2015-12-31
+  ticker: COL
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Rockwell Collins
+  sic: '3728'
+  revid: 868740149
+- security_key: SPX:COTY:2016-10-03
+  ticker: COTY
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Coty, Inc
+  sic: '2844'
+  revid: 978246445
+- security_key: SPX:CPB:2015-12-31
+  ticker: CPB
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Campbell's Company (The)
+  sic: '2000'
+  revid: 1357270377
+- security_key: SPX:CPGX:2015-12-31
+  ticker: CPGX
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Columbia Pipeline Group Inc
+  sic: '4922'
+  revid: 727141812
+- security_key: SPX:CPRI:2016-01-04
+  ticker: CPRI
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Capri Holdings
+  sic: '3100'
+  revid: 949009265
+- security_key: SPX:CSRA:2015-12-31
+  ticker: CSRA
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: CSRA Inc.
+  sic: '7373'
+  revid: 833052312
+- security_key: SPX:CTL:2015-12-31
+  ticker: LUMN
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Lumen Technologies
+  sic: '4813'
+  revid: 1144696835
+- security_key: SPX:CTLT:2020-09-21
+  ticker: CTLT
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Catalent
+  sic: '2834'
+  revid: 1259572709
+- security_key: SPX:CTRA:2021-10-04
+  ticker: CTRA
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Coterra
+  sic: '1311'
+  revid: 1347841961
+- security_key: SPX:CTVA:2019-06-03
+  ticker: CTVA
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Corteva
+  sic: '0100'
+  revid: 1369930777
+- security_key: SPX:CTXS:2015-12-31
+  ticker: CTXS
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Citrix
+  sic: '7372'
+  revid: 1111048643
+- security_key: SPX:CVC:2015-12-31
+  ticker: CVC
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Cablevision Systems Corp.
+  revid: 725883307
+- security_key: SPX:CXO:2016-02-22
+  ticker: CXO
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Concho Resources
+  sic: '1311'
+  revid: 998698671
+- security_key: SPX:CZR:2021-03-22
+  ticker: CZR
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Caesars Entertainment
+  sic: '7011'
+  revid: 1307821377
+- security_key: SPX:DAY:2024-02-01
+  ticker: DAY
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Dayforce
+  sic: '7372'
+  revid: 1332480993
+- security_key: SPX:DFS:2015-12-31
+  ticker: DFS
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Discover Financial
+  revid: 1280724180
+- security_key: SPX:DISCA:2015-12-31
+  ticker: DISCA
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Discovery (Series A)
+  sic: '4841'
+  revid: 1080645928
+- security_key: SPX:DISCK:2015-12-31
+  ticker: DISCK
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Discovery (Series C)
+  sic: '4841'
+  revid: 1080645928
+- security_key: SPX:DISH:2017-03-13
+  ticker: DISH
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Dish Network
+  sic: '4841'
+  revid: 1158372419
+- security_key: SPX:DNB:2015-12-31
+  ticker: DNB
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Dun & Bradstreet
+  revid: 773680668
+- security_key: SPX:DO:2015-12-31
+  ticker: DO
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Diamond Offshore Drilling
+  sic: '1381'
+  revid: 741534637
+- security_key: SPX:DOW:2015-12-31
+  ticker: DOW
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Dow Chemical
+  sic: '2821'
+  revid: 797887606
+- security_key: SPX:DRE:2017-07-26
+  ticker: DRE
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: Duke Realty
+  sic: '6798'
+  revid: 1111048643
+- security_key: SPX:DXC:2017-04-04
+  ticker: DXC
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: DXC Technology
+  sic: '7374'
+  revid: 1175843090
+- security_key: SPX:EA:2015-12-31
+  ticker: EA
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Electronic Arts
+  sic: '7372'
+  revid: 1361794875
+- security_key: SPX:EMC:2015-12-31
+  ticker: EMC
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: EMC Corp.
+  sic: '3572'
+  revid: 737380205
+- security_key: SPX:EMN:2015-12-31
+  ticker: EMN
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Eastman Chemical Company
+  sic: '2821'
+  revid: 1319995707
+- security_key: SPX:ENDP:2015-12-31
+  ticker: ENDP
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Endo International
+  sic: '2834'
+  revid: 767962013
+- security_key: SPX:ENPH:2021-01-07
+  ticker: ENPH
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Enphase Energy
+  sic: '3674'
+  revid: 1307821377
+- security_key: SPX:EPAM:2021-12-14
+  ticker: EPAM
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: EPAM Systems
+  sic: '7371'
+  revid: 1355685534
+- security_key: SPX:ESRX:2015-12-31
+  ticker: ESRX
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Express Scripts
+  sic: '5912'
+  revid: 873420324
+- security_key: SPX:ESV:2015-12-31
+  ticker: ESV
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Ensco plc
+  sic: '1381'
+  revid: 712350627
+- security_key: SPX:ETFC:2015-12-31
+  ticker: ETFC
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: E*Trade
+  sic: '6035'
+  revid: 978246445
+- security_key: SPX:ETSY:2020-09-21
+  ticker: ETSY
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Etsy
+  sic: '7389'
+  revid: 1232650967
+- security_key: SPX:EVHC:2016-12-02
+  ticker: EVHC
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Envision Healthcare
+  sic: '8011'
+  revid: 862333838
+- security_key: SPX:FBHS:2016-06-24
+  ticker: FBHS
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Fortune Brands Home & Security
+  sic: '2430'
+  revid: 1119345461
+- security_key: SPX:FL:2016-04-04
+  ticker: FL
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Foot Locker Inc
+  sic: '5661'
+  revid: 909030353
+- security_key: SPX:FLIR:2015-12-31
+  ticker: FLIR
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: FLIR Systems
+  sic: '3812'
+  revid: 1018327617
+- security_key: SPX:FLR:2015-12-31
+  ticker: FLR
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Fluor Corp.
+  sic: '1600'
+  revid: 899412784
+- security_key: SPX:FLS:2015-12-31
+  ticker: FLS
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Flowserve Corporation
+  sic: '3561'
+  revid: 1006294714
+- security_key: SPX:FMC:2015-12-31
+  ticker: FMC
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: FMC Corporation
+  sic: '2800'
+  revid: 1263846433
+- security_key: SPX:FOSL:2015-12-31
+  ticker: FOSL
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Fossil, Inc.
+  sic: '3873'
+  revid: 697200065
+- security_key: SPX:FRC:2019-01-02
+  ticker: FRC
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: First Republic Bank
+  revid: 1145621599
+- security_key: SPX:FTI:2015-12-31
+  ticker: FTI
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: TechnipFMC
+  sic: '3533'
+  revid: 1001619834
+- security_key: SPX:FTR:2015-12-31
+  ticker: FTR
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Frontier Communications
+  sic: '4813'
+  revid: 770527631
+- security_key: SPX:GAS:2015-12-31
+  ticker: GAS
+  sector: Utilities
+  source: wikipedia_gics_hist
+  name: AGL Resources Inc.
+  sic: '4924'
+  revid: 727141812
+- security_key: SPX:GGP:2015-12-31
+  ticker: GGP
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: General Growth Properties Inc.
+  sic: '6798'
+  revid: 854892073
+- security_key: SPX:GMCR:2015-12-31
+  ticker: GMCR
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Keurig Green Mountain
+  sic: '2090'
+  revid: 705845275
+- security_key: SPX:GME:2015-12-31
+  ticker: GME
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: GameStop Corp.
+  sic: '5734'
+  revid: 715875894
+- security_key: SPX:GPS:2015-12-31
+  ticker: GPS
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Gap
+  sic: '5651'
+  revid: 1064634686
+- security_key: SPX:GT:2015-12-31
+  ticker: GT
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Goodyear Tire & Rubber
+  sic: '3011'
+  revid: 882495083
+- security_key: SPX:HAR:2015-12-31
+  ticker: HAR
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Harman Int'l Industries
+  revid: 769477973
+- security_key: SPX:HBI:2015-12-31
+  ticker: HBI
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Hanesbrands
+  sic: '5600'
+  revid: 1059762050
+- security_key: SPX:HCP:2015-12-31
+  ticker: HCP
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: HCP Inc.
+  sic: '6798'
+  revid: 920715925
+- security_key: SPX:HES:2015-12-31
+  ticker: HES
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Hess Corporation
+  sic: '2911'
+  revid: 1301047406
+- security_key: SPX:HFC:2018-06-18
+  ticker: HFC
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: HollyFrontier Corp
+  sic: '2911'
+  revid: 1022707473
+- security_key: SPX:HOG:2015-12-31
+  ticker: HOG
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Harley-Davidson
+  sic: '3751'
+  revid: 957930024
+- security_key: SPX:HOLX:2016-03-30
+  ticker: HOLX
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Hologic
+  sic: '3844'
+  revid: 1344139540
+- security_key: SPX:HOT:2015-12-31
+  ticker: HOT
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Starwood Hotels & Resorts
+  revid: 738858823
+- security_key: SPX:HP:2015-12-31
+  ticker: HP
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Helmerich & Payne
+  sic: '1381'
+  revid: 956186340
+- security_key: SPX:HRB:2015-12-31
+  ticker: HRB
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: H&R Block
+  sic: '7200'
+  revid: 978246445
+- security_key: SPX:INFO:2017-06-02
+  ticker: INFO
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: IHS Markit
+  sic: '7370'
+  revid: 1071927940
+- security_key: SPX:IPG:2015-12-31
+  ticker: IPG
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Interpublic Group of Companies (The)
+  sic: '7311'
+  revid: 1320656535
+- security_key: SPX:IPGP:2018-03-07
+  ticker: IPGP
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: IPG Photonics
+  sic: '3674'
+  revid: 1092253312
+- security_key: SPX:JEF:2015-12-31
+  ticker: JEF
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Jefferies Financial Group
+  sic: '6211'
+  revid: 916751467
+- security_key: SPX:JNPR:2015-12-31
+  ticker: JNPR
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Juniper Networks
+  sic: '3576'
+  revid: 1290794279
+- security_key: SPX:JWN:2015-12-31
+  ticker: JWN
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Nordstrom
+  sic: '5651'
+  revid: 957930024
+- security_key: SPX:K:2015-12-31
+  ticker: K
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Kellanova
+  sic: '2040'
+  revid: 1324180318
+- security_key: SPX:KMX:2015-12-31
+  ticker: KMX
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: CarMax
+  sic: '5500'
+  revid: 1319149625
+- security_key: SPX:KORS:2015-12-31
+  ticker: KORS
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Michael Kors Holdings
+  sic: '3100'
+  revid: 859585968
+- security_key: SPX:KSS:2015-12-31
+  ticker: KSS
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Kohl's Corp.
+  sic: '5311'
+  revid: 978246445
+- security_key: SPX:KSU:2015-12-31
+  ticker: KSU
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Kansas City Southern
+  sic: '4011'
+  revid: 1047978206
+- security_key: SPX:KVUE:2023-08-25
+  ticker: KVUE
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Kenvue
+  sic: '2844'
+  revid: 1369930777
+- security_key: SPX:LB:2015-12-31
+  ticker: LB
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: L Brands
+  sic: '5990'
+  revid: 1034388861
+- security_key: SPX:LEG:2015-12-31
+  ticker: LEG
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Leggett & Platt
+  sic: '2510'
+  revid: 1059762050
+- security_key: SPX:LKQ:2016-05-23
+  ticker: LKQ
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: LKQ Corporation
+  sic: '5010'
+  revid: 1326768608
+- security_key: SPX:LLL:2015-12-31
+  ticker: LLL
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: L-3 Communications Holdings
+  sic: '3663'
+  revid: 900334032
+- security_key: SPX:LLTC:2015-12-31
+  ticker: LLTC
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Linear Technology Corp.
+  sic: '3674'
+  revid: 769477973
+- security_key: SPX:LM:2015-12-31
+  ticker: LM
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Legg Mason
+  sic: '6282'
+  revid: 751982247
+- security_key: SPX:LNC:2015-12-31
+  ticker: LNC
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Lincoln Financial
+  sic: '6311'
+  revid: 1172751898
+- security_key: SPX:LVLT:2015-12-31
+  ticker: LVLT
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Level 3 Communications
+  sic: '4813'
+  revid: 801637797
+- security_key: SPX:LW:2018-12-03
+  ticker: LW
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Lamb Weston
+  sic: '2030'
+  revid: 1337172541
+- security_key: SPX:M:2015-12-31
+  ticker: M
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Macy's Inc.
+  sic: '5311'
+  revid: 948755187
+- security_key: SPX:MAC:2015-12-31
+  ticker: MAC
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: Macerich
+  sic: '6798'
+  revid: 929916144
+- security_key: SPX:MAT:2015-12-31
+  ticker: MAT
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Mattel Inc.
+  sic: '3942'
+  revid: 899412784
+- security_key: SPX:MHK:2015-12-31
+  ticker: MHK
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Mohawk Industries
+  sic: '2273'
+  revid: 1326768608
+- security_key: SPX:MJN:2015-12-31
+  ticker: MJN
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Mead Johnson
+  revid: 783413863
+- security_key: SPX:MKTX:2019-07-01
+  ticker: MKTX
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: MarketAxess
+  sic: '6211'
+  revid: 1307821377
+- security_key: SPX:MNK:2015-12-31
+  ticker: MNK
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Mallinckrodt Plc
+  sic: '2834'
+  revid: 791721841
+- security_key: SPX:MOH:2022-03-02
+  ticker: MOH
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Molina Healthcare
+  sic: '6324'
+  revid: 1337172541
+- security_key: SPX:MON:2015-12-31
+  ticker: MON
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Monsanto Co.
+  sic: '2870'
+  revid: 844622519
+- security_key: SPX:MRO:2015-12-31
+  ticker: MRO
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Marathon Oil
+  sic: '1311'
+  revid: 1248679132
+- security_key: SPX:MTCH:2021-09-20
+  ticker: MTCH
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Match Group
+  sic: '7370'
+  revid: 1337172541
+- security_key: SPX:MUR:2015-12-31
+  ticker: MUR
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Murphy Oil
+  sic: '1311'
+  revid: 791721841
+- security_key: SPX:MXIM:2018-12-03
+  ticker: MXIM
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Maxim Integrated
+  revid: 1034925865
+- security_key: SPX:MYL:2015-12-31
+  ticker: MYL
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Mylan N.V.
+  sic: '2834'
+  revid: 982853964
+- security_key: SPX:NAVI:2015-12-31
+  ticker: NAVI
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Navient
+  sic: '6211'
+  revid: 843790751
+- security_key: SPX:NBL:2015-12-31
+  ticker: NBL
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Noble Energy
+  sic: '1311'
+  revid: 981397977
+- security_key: SPX:NFX:2015-12-31
+  ticker: NFX
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Newfield Exploration Co
+  sic: '1311'
+  revid: 878489286
+- security_key: SPX:NKTR:2018-03-19
+  ticker: NKTR
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Nektar Therapeutics
+  sic: '2834'
+  revid: 917840340
+- security_key: SPX:NLSN:2015-12-31
+  ticker: NLSN
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Nielsen Holdings
+  sic: '7389'
+  revid: 1113365991
+- security_key: SPX:NOV:2015-12-31
+  ticker: NOV
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Nov
+  sic: '3533'
+  revid: 1041124731
+- security_key: SPX:NWL:2015-12-31
+  ticker: NWL
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Newell Brands
+  sic: '3089'
+  revid: 1172751898
+- security_key: SPX:OGN:2021-06-04
+  ticker: OGN
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Organon & Co.
+  sic: '2834'
+  revid: 1177710839
+- security_key: SPX:OI:2015-12-31
+  ticker: OI
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Owens-Illinois Inc
+  sic: '3221'
+  revid: 751982247
+- security_key: SPX:PARA:2022-02-17
+  ticker: PARA
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Paramount Global
+  sic: '4833'
+  revid: 1302049498
+- security_key: SPX:PAYC:2020-01-28
+  ticker: PAYC
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Paycom
+  sic: '7372'
+  revid: 1337172541
+- security_key: SPX:PBCT:2015-12-31
+  ticker: PBCT
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: People's United Financial
+  sic: '6035'
+  revid: 1074772297
+- security_key: SPX:PBI:2015-12-31
+  ticker: PBI
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Pitney-Bowes
+  sic: '3579'
+  revid: 767081693
+- security_key: SPX:PCL:2015-12-31
+  ticker: PCL
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Plum Creek Timber Co.
+  sic: '6798'
+  revid: 705185006
+- security_key: SPX:PCP:2015-12-31
+  ticker: PCP
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Precision Castparts
+  sic: '3320'
+  revid: 701133155
+- security_key: SPX:PDCO:2015-12-31
+  ticker: PDCO
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Patterson Companies
+  sic: '5047'
+  revid: 829877594
+- security_key: SPX:PENN:2021-03-22
+  ticker: PENN
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Penn National Gaming
+  sic: '7011'
+  revid: 1094886624
+- security_key: SPX:POM:2015-12-31
+  ticker: POM
+  sector: Utilities
+  source: wikipedia_gics_hist
+  name: Pepco Holdings Inc.
+  sic: '4931'
+  revid: 709698634
+- security_key: SPX:POOL:2020-10-07
+  ticker: POOL
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Pool Corporation
+  sic: '5090'
+  revid: 1357270377
+- security_key: SPX:PRGO:2015-12-31
+  ticker: PRGO
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Perrigo
+  sic: '2834'
+  revid: 1041124731
+- security_key: SPX:PSKY:2025-08-08
+  ticker: PSKY
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Paramount Skydance Corporation
+  sic: '4833'
+  revid: 1369930777
+- security_key: SPX:PVH:2015-12-31
+  ticker: PVH
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: PVH
+  sic: '2320'
+  revid: 1094886624
+- security_key: SPX:PX:2015-12-31
+  ticker: PX
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Praxair Inc.
+  sic: '2810'
+  revid: 864491901
+- security_key: SPX:PXD:2015-12-31
+  ticker: PXD
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Pioneer Natural Resources
+  sic: '1311'
+  revid: 1216758013
+- security_key: SPX:QRVO:2015-12-31
+  ticker: QRVO
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Qorvo
+  sic: '3674'
+  revid: 1259572709
+- security_key: SPX:R:2015-12-31
+  ticker: R
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Ryder System
+  sic: '7510'
+  revid: 785709102
+- security_key: SPX:RAI:2015-12-31
+  ticker: RAI
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Reynolds American Inc.
+  sic: '2111'
+  revid: 790739400
+- security_key: SPX:RHI:2015-12-31
+  ticker: RHI
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Robert Half
+  sic: '7363'
+  revid: 1222817288
+- security_key: SPX:RHT:2015-12-31
+  ticker: RHT
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Red Hat Inc.
+  sic: '7370'
+  revid: 903160297
+- security_key: SPX:RIG:2015-12-31
+  ticker: RIG
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Transocean
+  sic: '1381'
+  revid: 791721841
+- security_key: SPX:RRC:2015-12-31
+  ticker: RRC
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Range Resources Corp.
+  sic: '1311'
+  revid: 845433606
+- security_key: SPX:RTN:2015-12-31
+  ticker: RTN
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Raytheon Co.
+  sic: '3812'
+  revid: 948755187
+- security_key: SPX:SATS:2026-03-23
+  ticker: SATS
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: EchoStar
+  sic: '4899'
+  revid: 1360191682
+- security_key: SPX:SBNY:2021-12-20
+  ticker: SBNY
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Signature Bank
+  revid: 1131427753
+- security_key: SPX:SCG:2015-12-31
+  ticker: SCG
+  sector: Utilities
+  source: wikipedia_gics_hist
+  name: SCANA Corp
+  sic: '4931'
+  revid: 873420324
+- security_key: SPX:SE:2015-12-31
+  ticker: SE
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Spectra Energy Corp.
+  sic: '4923'
+  revid: 767081693
+- security_key: SPX:SEDG:2021-12-20
+  ticker: SEDG
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: SolarEdge
+  sic: '3674'
+  revid: 1180651667
+- security_key: SPX:SEE:2015-12-31
+  ticker: SEE
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Sealed Air
+  sic: '2820'
+  revid: 1180651667
+- security_key: SPX:SIG:2015-12-31
+  ticker: SIG
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Signet Jewelers
+  sic: '5944'
+  revid: 829877594
+- security_key: SPX:SIVB:2018-03-19
+  ticker: SIVB
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: SVB Financial
+  sic: '6022'
+  revid: 1131427753
+- security_key: SPX:SLG:2015-12-31
+  ticker: SLG
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: SL Green Realty
+  sic: '6798'
+  revid: 1006294714
+- security_key: SPX:SNDK:2015-12-31
+  ticker: SNDK
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: SanDisk Corporation
+  sic: '3572'
+  revid: 718710170
+- security_key: SPX:SNI:2015-12-31
+  ticker: SNI
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Scripps Networks Interactive Inc.
+  sic: '4841'
+  revid: 826876184
+- security_key: SPX:SOLS:2025-10-30
+  ticker: SOLS
+  sector: Materials
+  source: wikipedia_gics_hist
+  name: Solstice Advanced Materials
+  sic: '2800'
+  revid: 1326768608
+- security_key: SPX:SPLS:2015-12-31
+  ticker: SPLS
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Staples Inc.
+  sic: '5940'
+  revid: 799790674
+- security_key: SPX:SRCL:2015-12-31
+  ticker: SRCL
+  sector: Industrials
+  source: wikipedia_gics_hist
+  name: Stericycle Inc
+  sic: '4955'
+  revid: 870885561
+- security_key: SPX:STI:2015-12-31
+  ticker: STI
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: SunTrust Banks
+  sic: '6021'
+  revid: 929330766
+- security_key: SPX:STJ:2015-12-31
+  ticker: STJ
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: St Jude Medical
+  sic: '3845'
+  revid: 758047021
+- security_key: SPX:SWN:2015-12-31
+  ticker: SWN
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Southwestern Energy
+  sic: '1311'
+  revid: 772907257
+- security_key: SPX:SYMC:2015-12-31
+  ticker: SYMC
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Symantec Corp.
+  sic: '7372'
+  revid: 920715925
+- security_key: SPX:TAP:2015-12-31
+  ticker: TAP
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Molson Coors Beverage Company
+  sic: '2082'
+  revid: 1369930777
+- security_key: SPX:TDC:2015-12-31
+  ticker: TDC
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Teradata Corp.
+  sic: '7372'
+  revid: 785709102
+- security_key: SPX:TE:2015-12-31
+  ticker: TE
+  sector: Utilities
+  source: wikipedia_gics_hist
+  name: TECO Energy
+  sic: '4911'
+  revid: 727141812
+- security_key: SPX:TFX:2019-01-18
+  ticker: TFX
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Teleflex
+  sic: '3841'
+  revid: 1263846433
+- security_key: SPX:TGNA:2015-12-31
+  ticker: TGNA
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Tegna, Inc.
+  sic: '4833'
+  revid: 781676795
+- security_key: SPX:THC:2015-12-31
+  ticker: THC
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Tenet Healthcare Corp.
+  sic: '8062'
+  revid: 715014044
+- security_key: SPX:TIF:2015-12-31
+  ticker: TIF
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Tiffany & Co.
+  sic: '5944'
+  revid: 993823827
+- security_key: SPX:TRIP:2015-12-31
+  ticker: TRIP
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: TripAdvisor
+  sic: '7370'
+  revid: 929916144
+- security_key: SPX:TSS:2015-12-31
+  ticker: TSS
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Total System Services
+  sic: '7389'
+  revid: 909989452
+- security_key: SPX:TTD:2025-07-18
+  ticker: TTD
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Trade Desk (The)
+  sic: '7370'
+  revid: 1369930777
+- security_key: SPX:TWC:2015-12-31
+  ticker: TWC
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Time Warner Cable Inc.
+  sic: '4841'
+  revid: 720528599
+- security_key: SPX:TWTR:2018-06-07
+  ticker: TWTR
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Twitter Inc.
+  sic: '7370'
+  revid: 1113907007
+- security_key: SPX:TWX:2015-12-31
+  ticker: TWX
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Time Warner Inc.
+  sic: '4841'
+  revid: 845433606
+- security_key: SPX:UA:2016-04-08
+  ticker: UA
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Under Armour (Class C)
+  sic: '2300'
+  revid: 1092253312
+- security_key: SPX:UAA:2015-12-31
+  ticker: UAA
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Under Armour (Class A)
+  sic: '2300'
+  revid: 1092253312
+- security_key: SPX:UNM:2015-12-31
+  ticker: UNM
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Unum Group
+  sic: '6321'
+  revid: 1041124731
+- security_key: SPX:URBN:2015-12-31
+  ticker: URBN
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Urban Outfitters
+  sic: '5651'
+  revid: 770527631
+- security_key: SPX:VAR:2015-12-31
+  ticker: VAR
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Varian Medical Systems
+  sic: '3845'
+  revid: 1012787466
+- security_key: SPX:VFC:2015-12-31
+  ticker: VFC
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: VF Corporation
+  sic: '2320'
+  revid: 1214293223
+- security_key: SPX:VIAB:2015-12-31
+  ticker: VIAB
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Viacom Inc.
+  revid: 927216237
+- security_key: SPX:VIAC:2019-12-05
+  ticker: VIAC
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: ViacomCBS
+  sic: '4833'
+  revid: 1071927940
+- security_key: SPX:VNO:2015-12-31
+  ticker: VNO
+  sector: Real Estate
+  source: wikipedia_gics_hist
+  name: Vornado Realty Trust
+  sic: '6798'
+  revid: 1128403831
+- security_key: SPX:VNT:2020-10-12
+  ticker: VNT
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Vontier
+  sic: '3824'
+  revid: 1006294714
+- security_key: SPX:WBA:2015-12-31
+  ticker: WBA
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Walgreens Boots Alliance
+  sic: '5912'
+  revid: 1304102019
+- security_key: SPX:WBD:2022-04-11
+  ticker: WBD
+  sector: Communication Services
+  source: wikipedia_gics_hist
+  name: Warner Bros. Discovery
+  sic: '4841'
+  revid: 1369930777
+- security_key: SPX:WCG:2018-09-17
+  ticker: WCG
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: WellCare
+  sic: '6324'
+  revid: 931604300
+- security_key: SPX:WFM:2015-12-31
+  ticker: WFM
+  sector: Consumer Staples
+  source: wikipedia_gics_hist
+  name: Whole Foods Market
+  sic: '5411'
+  revid: 795364341
+- security_key: SPX:WHR:2015-12-31
+  ticker: WHR
+  sector: Consumer Discretionary
+  source: wikipedia_gics_hist
+  name: Whirlpool Corporation
+  sic: '3630'
+  revid: 1211713210
+- security_key: SPX:WU:2015-12-31
+  ticker: WU
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Western Union
+  sic: '7389'
+  revid: 1059762050
+- security_key: SPX:XEC:2015-12-31
+  ticker: XEC
+  sector: Energy
+  source: wikipedia_gics_hist
+  name: Cimarex Energy
+  sic: '1311'
+  revid: 936131783
+- security_key: SPX:XL:2015-12-31
+  ticker: XL
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: XL Group
+  sic: '6331'
+  revid: 858009440
+- security_key: SPX:XLNX:2015-12-31
+  ticker: XLNX
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Xilinx
+  sic: '3674'
+  revid: 1069360289
+- security_key: SPX:XRAY:2015-12-31
+  ticker: XRAY
+  sector: Health Care
+  source: wikipedia_gics_hist
+  name: Dentsply Sirona
+  sic: '3843'
+  revid: 1216084649
+- security_key: SPX:XRX:2015-12-31
+  ticker: XRX
+  sector: Information Technology
+  source: wikipedia_gics_hist
+  name: Xerox
+  sic: '3577'
+  revid: 1006294714
+- security_key: SPX:ZION:2015-12-31
+  ticker: ZION
+  sector: Financials
+  source: wikipedia_gics_hist
+  name: Zions Bancorporation
+  sic: '6021'
+  revid: 1211713210

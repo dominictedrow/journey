@@ -5,10 +5,12 @@ bars:
   # Per asset and bar date the first source present wins. Equities and ETFs come from Alpaca;
   # yfinance fills index/futures/FX and ETF history before Alpaca's 2016 start.
   # alpaca_succ: real history refetched under a successor symbol (collect.identity_overrides).
-  source_priority: [alpaca, alpaca_succ, yfinance]
+  source_priority: [alpaca, alpaca_succ, yfinance, yfinance_surv, stooq_surv]
   # yfinance Close is split-adjusted as of the fetch (D-031), so never mix it with Alpaca bars
   # for an asset class that splits; only these classes may take yfinance bars.
   yfinance_classes: [etf, index, future, fx]
+  # yfinance_surv / stooq_surv: bars for delisted equities Alpaca doesn't serve (section 9.3),
+  # accepted only for an exact ticker whose dates match the membership span
   # Alpaca serves flat zero-volume filler bars around delistings (D-030): drop them for traded
   # classes. Index levels legitimately report zero volume.
   drop_zero_volume_classes: [equity, etf, crypto]
@@ -292,3 +294,49 @@ build:
   gate_feeds: [bars_equity, bars_crypto, fred]
   job_timeout_min: 60                 # the scheduler runs the build in a subprocess
   compress: true                      # compress each finished 30-day chunk during a backfill
+
+# Survivorship gaps (section 9, Q3/Q9, D-043): CIKs, names and sectors of former S&P members,
+# and bars for delisted names Alpaca doesn't serve. Run by scripts/map_delisted_ciks.py; the
+# results land in configs/cik_overrides.yaml and configs/sector_overrides.yaml.
+survivorship:
+  cache_dir: data/cache/sec               # cik-lookup-data.txt, submissions JSON of candidates
+  wiki_cache_dir: data/cache/wikipedia    # page revisions (never change once cached)
+  cik_lookup_url: https://www.sec.gov/Archives/edgar/cik-lookup-data.txt
+  cik_lookup_max_age_days: 30
+  submissions_url: https://data.sec.gov/submissions/CIK{cik}.json
+  submissions_file_url: https://data.sec.gov/submissions/{name}
+  wiki_api_url: https://en.wikipedia.org/w/api.php
+  wiki_index_url: https://en.wikipedia.org/w/index.php
+  wiki_page: List of S&P 500 companies
+  wiki_revisions_since: "2015-12-01"
+  wiki_min_rows: 450                       # a shorter constituents table is a broken revision
+  # Look-back steps (days before the security's last membership day) for the revision whose
+  # constituents table still lists it; Wikipedia is sometimes edited ahead of a change.
+  wiki_lookback_days: [0, 7, 30, 90, 180]
+  # The "Selected changes" table left the page after this revision (2026-05-23): its removed-name
+  # column is a second name source for matching.
+  wiki_changes_revid: 1355685534
+  wiki_changes_window_days: 45            # removal row within this many days of the last day
+  # Name normalization (Q9a): lowercase, & -> and, drop punctuation and state tags (/DE/), drop
+  # a leading "the" and these trailing words, repeatedly.
+  # "group" added in the build (D-043): "SVB Financial Group" otherwise missed its exact match.
+  name_suffixes: [inc, incorporated, corp, corporation, co, company, ltd, limited, holdings,
+                  holding, group, plc, nv, sa, ag, llc, lp, the]
+  fuzzy_threshold: 92                      # rapidfuzz ratio on normalized names (Q9a default)
+  fuzzy_candidates: 5                      # best distinct CIKs checked against their filings
+  # A candidate CIK must have periodic filings across the membership span: one filed by
+  # span start + start_tol_days and one on or after span end - end_tol_days (an acquired company
+  # files its last 10-Q a few months before the deal closes).
+  periodic_forms: ["10-K", "10-Q", "10-K405", "10-KT", "10-QT", "10-K/A", "10-Q/A", "20-F", "40-F"]
+  span_start_tol_days: 120
+  span_end_tol_days: 200
+  target_mapped_share: 0.80                # report target (Q9a default)
+  # GICS names in older revisions -> the 11 current sector names
+  sector_aliases:
+    Telecommunication Services: Communication Services
+    Telecommunications Services: Communication Services
+  # Q9b: delisted names with no bars inside their membership spell (D-035 widened the list)
+  bar_gaps: ["SPX:SNDK:2015-12-31", "SPX:TE:2015-12-31", "SPX:STI:2015-12-31",
+             "SPX:PARA:2022-02-17", "SPX:WYND:2015-12-31", "SPX:AABA:2015-12-31"]
+  bar_date_tol_sessions: 5                 # first/last bar vs the membership span (Q9b default)
+  stooq_url: https://stooq.com/q/d/l/?s={symbol}.us&i=d

@@ -31,6 +31,19 @@ NS_PER_DAY = 86_400 * 10**9
 
 
 # ---------------------------------------------------------------- z
+def rolling_max_int(x: np.ndarray, window: int) -> np.ndarray:
+    """Trailing max over ``window`` rows (fewer at the start), exact in int64.
+
+    ``Series.rolling`` goes through float64, which rounds epoch-ns timestamps and turns the
+    int64-max "never ready" sentinel into int64-min on the way back.
+    """
+    x = np.asarray(x, dtype="int64")
+    if x.size == 0:
+        return x.copy()
+    pad = np.concatenate([np.full(window - 1, np.iinfo(np.int64).min, dtype="int64"), x])
+    return np.lib.stride_tricks.sliding_window_view(pad, window).max(axis=1)
+
+
 def rolling_z(x: np.ndarray, window: int, winsor: float, min_frac: float) -> np.ndarray:
     """z of each value against the last ``window`` values (itself included), clipped."""
     s = pd.Series(np.asarray(x, dtype=float))
@@ -107,8 +120,8 @@ def asset_ts_z(
         w = int(s.window)
         vals[s.key] = s.fn(x)
         rdy[s.key] = np.maximum(
-            pd.Series(r).rolling(w, min_periods=1).max().to_numpy().astype("int64"),
-            ready[b].to_numpy(),
+            rolling_max_int(r, w),
+            ready[b].to_numpy(dtype="int64"),
         )
     cols = pd.Index([s.key for s in specs], tupleize_cols=False)
     v = pd.DataFrame(vals, index=values.index)

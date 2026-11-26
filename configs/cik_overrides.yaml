@@ -1,0 +1,846 @@
+# CIKs for former S&P members missing from SEC's current ticker map (component doc 03 section
+# 9.2, Q9a). Written by scripts/map_delisted_ciks.py; loaded into assets.cik by the aliases
+# collector, then edgar_facts backfills them. match: exact | fuzzy (both checked against the
+# filer's periodic filings across the membership span) | manual (added by hand after review;
+# the script never changes or drops a manual entry).
+entries:
+- security_key: SPX:ABMD:2018-05-31
+  ticker: ABMD
+  cik: 0000815094
+  match: exact
+  name: Abiomed
+  matched_name: abiomed
+  score: 100.0
+- security_key: SPX:ADS:2015-12-31
+  ticker: ADS
+  cik: '0001101215'
+  match: exact
+  name: Alliance Data Systems
+  matched_name: alliance data systems
+  score: 100.0
+- security_key: SPX:AET:2015-12-31
+  ticker: AET
+  cik: '0001122304'
+  match: exact
+  name: Aetna Inc
+  matched_name: aetna
+  score: 100.0
+- security_key: SPX:AGN:2015-12-31
+  ticker: AGN
+  cik: 0001578845
+  match: exact
+  name: Allergan, plc
+  matched_name: allergan
+  score: 100.0
+- security_key: SPX:ALXN:2015-12-31
+  ticker: ALXN
+  cik: 0000899866
+  match: exact
+  name: Alexion Pharmaceuticals
+  matched_name: alexion pharmaceuticals
+  score: 100.0
+- security_key: SPX:ANDV:2015-12-31
+  ticker: ANDV
+  cik: '0000050104'
+  match: exact
+  name: Andeavor
+  matched_name: andeavor
+  score: 100.0
+- security_key: SPX:ANSS:2017-06-19
+  ticker: ANSS
+  cik: '0001013462'
+  match: exact
+  name: Ansys
+  matched_name: ansys
+  score: 100.0
+- security_key: SPX:APC:2015-12-31
+  ticker: APC
+  cik: 0000773910
+  match: exact
+  name: Anadarko Petroleum Corp
+  matched_name: anadarko petroleum
+  score: 100.0
+- security_key: SPX:ARG:2015-12-31
+  ticker: ARG
+  cik: 0000804212
+  match: exact
+  name: Airgas Inc
+  matched_name: airgas
+  score: 100.0
+- security_key: SPX:ARNC:2015-12-31
+  ticker: ARNC
+  cik: 0000004281
+  match: exact
+  name: Arconic Inc.
+  matched_name: arconic
+  score: 100.0
+- security_key: SPX:ATVI:2015-12-31
+  ticker: ATVI
+  cik: 0000718877
+  match: exact
+  name: Activision Blizzard
+  matched_name: activision blizzard
+  score: 100.0
+- security_key: SPX:AVB:2015-12-31
+  ticker: AVB
+  cik: 0000915912
+  match: exact
+  name: AvalonBay Communities
+  matched_name: avalonbay communities
+  score: 100.0
+- security_key: SPX:BBT:2015-12-31
+  ticker: BBT
+  cik: 0000092230
+  match: exact
+  name: BB&T Corporation
+  matched_name: bb and t
+  score: 100.0
+- security_key: SPX:BXLT:2015-12-31
+  ticker: BXLT
+  cik: '0001620546'
+  match: exact
+  name: Baxalta
+  matched_name: baxalta
+  score: 100.0
+- security_key: SPX:CA:2015-12-31
+  ticker: CA
+  cik: 0000356028
+  match: exact
+  name: CA, Inc.
+  matched_name: ca
+  score: 100.0
+- security_key: SPX:CAM:2015-12-31
+  ticker: CAM
+  cik: 0000941548
+  match: exact
+  name: Cameron International Corp.
+  matched_name: cameron international
+  score: 100.0
+- security_key: SPX:CBS:2015-12-31
+  ticker: CBS
+  cik: 0000813828
+  match: exact
+  name: CBS Corp.
+  matched_name: cbs
+  score: 100.0
+- security_key: SPX:CCE:2015-12-31
+  ticker: CCE
+  cik: 0001491675
+  match: exact
+  name: Coca-Cola Enterprises
+  matched_name: coca cola enterprises
+  score: 100.0
+- security_key: SPX:CELG:2015-12-31
+  ticker: CELG
+  cik: 0000816284
+  match: exact
+  name: Celgene Corp.
+  matched_name: celgene
+  score: 100.0
+- security_key: SPX:CERN:2015-12-31
+  ticker: CERN
+  cik: 0000804753
+  match: exact
+  name: Cerner
+  matched_name: cerner
+  score: 100.0
+- security_key: SPX:CHK:2015-12-31
+  ticker: CHK
+  cik: 0000895126
+  match: exact
+  name: Chesapeake Energy
+  matched_name: chesapeake energy
+  score: 100.0
+- security_key: SPX:CMA:2015-12-31
+  ticker: CMA
+  cik: 0000028412
+  match: exact
+  name: Comerica
+  matched_name: comerica
+  score: 100.0
+- security_key: SPX:COG:2015-12-31
+  ticker: COG
+  cik: 0000858470
+  match: exact
+  name: Cabot Oil & Gas
+  matched_name: cabot oil and gas
+  score: 100.0
+- security_key: SPX:COL:2015-12-31
+  ticker: COL
+  cik: '0001137411'
+  match: exact
+  name: Rockwell Collins
+  matched_name: rockwell collins
+  score: 100.0
+- security_key: SPX:CPGX:2015-12-31
+  ticker: CPGX
+  cik: 0001629995
+  match: exact
+  name: Columbia Pipeline Group Inc
+  matched_name: columbia pipeline
+  score: 100.0
+- security_key: SPX:CSRA:2015-12-31
+  ticker: CSRA
+  cik: 0001646383
+  match: exact
+  name: CSRA Inc.
+  matched_name: csra
+  score: 100.0
+- security_key: SPX:CTLT:2020-09-21
+  ticker: CTLT
+  cik: 0001596783
+  match: exact
+  name: Catalent
+  matched_name: catalent
+  score: 100.0
+- security_key: SPX:CTRA:2021-10-04
+  ticker: CTRA
+  cik: 0000858470
+  match: exact
+  name: Coterra
+  matched_name: coterra energy
+  score: 100.0
+- security_key: SPX:CTXS:2015-12-31
+  ticker: CTXS
+  cik: 0000877890
+  match: exact
+  name: Citrix
+  matched_name: citrix systems
+  score: 100.0
+- security_key: SPX:CXO:2016-02-22
+  ticker: CXO
+  cik: 0001358071
+  match: exact
+  name: Concho Resources
+  matched_name: concho resources
+  score: 100.0
+- security_key: SPX:DAY:2024-02-01
+  ticker: DAY
+  cik: '0001725057'
+  match: exact
+  name: Dayforce
+  matched_name: dayforce
+  score: 100.0
+- security_key: SPX:DISCA:2015-12-31
+  ticker: DISCA
+  cik: '0001437107'
+  match: exact
+  name: Discovery (Series A)
+  matched_name: discovery
+  score: 100.0
+- security_key: SPX:DISCK:2015-12-31
+  ticker: DISCK
+  cik: '0001437107'
+  match: exact
+  name: Discovery (Series C)
+  matched_name: discovery
+  score: 100.0
+- security_key: SPX:DISH:2017-03-13
+  ticker: DISH
+  cik: 0001001082
+  match: exact
+  name: Dish Network
+  matched_name: dish network
+  score: 100.0
+- security_key: SPX:DO:2015-12-31
+  ticker: DO
+  cik: 0000949039
+  match: exact
+  name: Diamond Offshore Drilling
+  matched_name: diamond offshore drilling
+  score: 100.0
+- security_key: SPX:DOW:2015-12-31
+  ticker: DOW
+  cik: 0000029915
+  match: exact
+  name: Dow Chemical
+  matched_name: dow chemical
+  score: 100.0
+- security_key: SPX:DRE:2017-07-26
+  ticker: DRE
+  cik: 0000783280
+  match: exact
+  name: Duke Realty
+  matched_name: duke realty
+  score: 100.0
+- security_key: SPX:EA:2015-12-31
+  ticker: EA
+  cik: '0000712515'
+  match: exact
+  name: Electronic Arts
+  matched_name: electronic arts
+  score: 100.0
+- security_key: SPX:EMC:2015-12-31
+  ticker: EMC
+  cik: 0000790070
+  match: exact
+  name: EMC Corp.
+  matched_name: emc
+  score: 100.0
+- security_key: SPX:ENDP:2015-12-31
+  ticker: ENDP
+  cik: 0001593034
+  match: exact
+  name: Endo International
+  matched_name: endo international
+  score: 100.0
+- security_key: SPX:ESRX:2015-12-31
+  ticker: ESRX
+  cik: '0001532063'
+  match: exact
+  name: Express Scripts
+  matched_name: express scripts
+  score: 100.0
+- security_key: SPX:ESV:2015-12-31
+  ticker: ESV
+  cik: 0000314808
+  match: exact
+  name: Ensco plc
+  matched_name: ensco
+  score: 100.0
+- security_key: SPX:ETFC:2015-12-31
+  ticker: ETFC
+  cik: 0001015780
+  match: exact
+  name: E*Trade
+  matched_name: e trade
+  score: 100.0
+- security_key: SPX:EVHC:2016-12-02
+  ticker: EVHC
+  cik: 0001678531
+  match: exact
+  name: Envision Healthcare
+  matched_name: envision healthcare
+  score: 100.0
+- security_key: SPX:FBHS:2016-06-24
+  ticker: FBHS
+  cik: 0001519751
+  match: exact
+  name: Fortune Brands Home & Security
+  matched_name: fortune brands home and security
+  score: 100.0
+- security_key: SPX:FL:2016-04-04
+  ticker: FL
+  cik: 0000850209
+  match: exact
+  name: Foot Locker Inc
+  matched_name: foot locker
+  score: 100.0
+- security_key: SPX:FLIR:2015-12-31
+  ticker: FLIR
+  cik: 0000354908
+  match: exact
+  name: FLIR Systems
+  matched_name: flir systems
+  score: 100.0
+- security_key: SPX:FTR:2015-12-31
+  ticker: FTR
+  cik: '0000020520'
+  match: exact
+  name: Frontier Communications
+  matched_name: frontier communications
+  score: 100.0
+- security_key: SPX:GAS:2015-12-31
+  ticker: GAS
+  cik: '0001004155'
+  match: exact
+  name: AGL Resources Inc.
+  matched_name: agl resources
+  score: 100.0
+- security_key: SPX:GGP:2015-12-31
+  ticker: GGP
+  cik: 0001496048
+  match: exact
+  name: General Growth Properties Inc.
+  matched_name: general growth properties
+  score: 100.0
+- security_key: SPX:GMCR:2015-12-31
+  ticker: GMCR
+  cik: 0000909954
+  match: exact
+  name: Keurig Green Mountain
+  matched_name: keurig green mountain
+  score: 100.0
+- security_key: SPX:GPS:2015-12-31
+  ticker: GPS
+  cik: 0000039911
+  match: exact
+  name: Gap
+  matched_name: gap
+  score: 100.0
+- security_key: SPX:HBI:2015-12-31
+  ticker: HBI
+  cik: 0001359841
+  match: exact
+  name: Hanesbrands
+  matched_name: hanesbrands
+  score: 100.0
+- security_key: SPX:HCP:2015-12-31
+  ticker: HCP
+  cik: 0000765880
+  match: exact
+  name: HCP Inc.
+  matched_name: hcp
+  score: 100.0
+- security_key: SPX:HES:2015-12-31
+  ticker: HES
+  cik: '0000004447'
+  match: exact
+  name: Hess Corporation
+  matched_name: hess
+  score: 100.0
+- security_key: SPX:HFC:2018-06-18
+  ticker: HFC
+  cik: 0000048039
+  match: exact
+  name: HollyFrontier Corp
+  matched_name: hollyfrontier
+  score: 100.0
+- security_key: SPX:HOLX:2016-03-30
+  ticker: HOLX
+  cik: 0000859737
+  match: exact
+  name: Hologic
+  matched_name: hologic
+  score: 100.0
+- security_key: SPX:INFO:2017-06-02
+  ticker: INFO
+  cik: 0001598014
+  match: exact
+  name: IHS Markit
+  matched_name: ihs markit
+  score: 100.0
+- security_key: SPX:IPG:2015-12-31
+  ticker: IPG
+  cik: '0000051644'
+  match: exact
+  name: Interpublic Group of Companies (The)
+  matched_name: interpublic group of companies
+  score: 100.0
+- security_key: SPX:JNPR:2015-12-31
+  ticker: JNPR
+  cik: '0001043604'
+  match: exact
+  name: Juniper Networks
+  matched_name: juniper networks
+  score: 100.0
+- security_key: SPX:JWN:2015-12-31
+  ticker: JWN
+  cik: '0000072333'
+  match: exact
+  name: Nordstrom
+  matched_name: nordstrom
+  score: 100.0
+- security_key: SPX:K:2015-12-31
+  ticker: K
+  cik: '0000055067'
+  match: exact
+  name: Kellanova
+  matched_name: kellanova
+  score: 100.0
+- security_key: SPX:KORS:2015-12-31
+  ticker: KORS
+  cik: '0001530721'
+  match: exact
+  name: Michael Kors Holdings
+  matched_name: michael kors
+  score: 100.0
+- security_key: SPX:KSU:2015-12-31
+  ticker: KSU
+  cik: 0000054480
+  match: exact
+  name: Kansas City Southern
+  matched_name: kansas city southern
+  score: 100.0
+- security_key: SPX:KVUE:2023-08-25
+  ticker: KVUE
+  cik: 0001944048
+  match: exact
+  name: Kenvue
+  matched_name: kenvue
+  score: 100.0
+- security_key: SPX:LB:2015-12-31
+  ticker: LB
+  cik: 0000701985
+  match: exact
+  name: L Brands
+  matched_name: l brands
+  score: 100.0
+- security_key: SPX:LEG:2015-12-31
+  ticker: LEG
+  cik: 0000058492
+  match: exact
+  name: Leggett & Platt
+  matched_name: leggett and platt
+  score: 100.0
+- security_key: SPX:LLL:2015-12-31
+  ticker: LLL
+  cik: 0001039101
+  match: exact
+  name: L-3 Communications Holdings
+  matched_name: l 3 communications
+  score: 100.0
+- security_key: SPX:LLTC:2015-12-31
+  ticker: LLTC
+  cik: 0000791907
+  match: exact
+  name: Linear Technology Corp.
+  matched_name: linear technology
+  score: 100.0
+- security_key: SPX:LM:2015-12-31
+  ticker: LM
+  cik: '0000704051'
+  match: exact
+  name: Legg Mason
+  matched_name: legg mason
+  score: 100.0
+- security_key: SPX:LVLT:2015-12-31
+  ticker: LVLT
+  cik: 0000794323
+  match: exact
+  name: Level 3 Communications
+  matched_name: level 3 communications
+  score: 100.0
+- security_key: SPX:MNK:2015-12-31
+  ticker: MNK
+  cik: 0001567892
+  match: exact
+  name: Mallinckrodt Plc
+  matched_name: mallinckrodt
+  score: 100.0
+- security_key: SPX:MON:2015-12-31
+  ticker: MON
+  cik: 0001110783
+  match: exact
+  name: Monsanto Co.
+  matched_name: monsanto
+  score: 100.0
+- security_key: SPX:MRO:2015-12-31
+  ticker: MRO
+  cik: 0000101778
+  match: exact
+  name: Marathon Oil
+  matched_name: marathon oil
+  score: 100.0
+- security_key: SPX:MYL:2015-12-31
+  ticker: MYL
+  cik: '0001623613'
+  match: exact
+  name: Mylan N.V.
+  matched_name: mylan
+  score: 100.0
+- security_key: SPX:NBL:2015-12-31
+  ticker: NBL
+  cik: '0000072207'
+  match: exact
+  name: Noble Energy
+  matched_name: noble energy
+  score: 100.0
+- security_key: SPX:NFX:2015-12-31
+  ticker: NFX
+  cik: 0000912750
+  match: exact
+  name: Newfield Exploration Co
+  matched_name: newfield exploration
+  score: 100.0
+- security_key: SPX:NLSN:2015-12-31
+  ticker: NLSN
+  cik: 0001492633
+  match: exact
+  name: Nielsen Holdings
+  matched_name: nielsen
+  score: 100.0
+- security_key: SPX:PARA:2022-02-17
+  ticker: PARA
+  cik: 0000813828
+  match: exact
+  name: Paramount Global
+  matched_name: paramount global
+  score: 100.0
+- security_key: SPX:PBCT:2015-12-31
+  ticker: PBCT
+  cik: 0001378946
+  match: exact
+  name: People's United Financial
+  matched_name: people s united financial
+  score: 100.0
+- security_key: SPX:PCL:2015-12-31
+  ticker: PCL
+  cik: 0000849213
+  match: exact
+  name: Plum Creek Timber Co.
+  matched_name: plum creek timber
+  score: 100.0
+- security_key: SPX:PCP:2015-12-31
+  ticker: PCP
+  cik: 0000079958
+  match: exact
+  name: Precision Castparts
+  matched_name: precision castparts
+  score: 100.0
+- security_key: SPX:PDCO:2015-12-31
+  ticker: PDCO
+  cik: 0000891024
+  match: exact
+  name: Patterson Companies
+  matched_name: patterson companies
+  score: 100.0
+- security_key: SPX:POM:2015-12-31
+  ticker: POM
+  cik: 0001135971
+  match: exact
+  name: Pepco Holdings Inc.
+  matched_name: pepco
+  score: 100.0
+- security_key: SPX:PSKY:2025-08-08
+  ticker: PSKY
+  cik: '0002041610'
+  match: exact
+  name: Paramount Skydance Corporation
+  matched_name: paramount skydance
+  score: 100.0
+- security_key: SPX:PX:2015-12-31
+  ticker: PX
+  cik: 0000884905
+  match: exact
+  name: Praxair Inc.
+  matched_name: praxair
+  score: 100.0
+- security_key: SPX:PXD:2015-12-31
+  ticker: PXD
+  cik: 0001038357
+  match: exact
+  name: Pioneer Natural Resources
+  matched_name: pioneer natural resources
+  score: 100.0
+- security_key: SPX:QRVO:2015-12-31
+  ticker: QRVO
+  cik: 0001604778
+  match: exact
+  name: Qorvo
+  matched_name: qorvo
+  score: 100.0
+- security_key: SPX:RAI:2015-12-31
+  ticker: RAI
+  cik: 0001275283
+  match: exact
+  name: Reynolds American Inc.
+  matched_name: reynolds american
+  score: 100.0
+- security_key: SPX:RHT:2015-12-31
+  ticker: RHT
+  cik: 0001087423
+  match: exact
+  name: Red Hat Inc.
+  matched_name: red hat
+  score: 100.0
+- security_key: SPX:RTN:2015-12-31
+  ticker: RTN
+  cik: '0001047122'
+  match: exact
+  name: Raytheon Co.
+  matched_name: raytheon
+  score: 100.0
+- security_key: SPX:SATS:2026-03-23
+  ticker: SATS
+  cik: '0001415404'
+  match: exact
+  name: EchoStar
+  matched_name: echostar
+  score: 100.0
+- security_key: SPX:SCG:2015-12-31
+  ticker: SCG
+  cik: '0000754737'
+  match: exact
+  name: SCANA Corp
+  matched_name: scana
+  score: 100.0
+- security_key: SPX:SE:2015-12-31
+  ticker: SE
+  cik: 0001373835
+  match: exact
+  name: Spectra Energy Corp.
+  matched_name: spectra energy
+  score: 100.0
+- security_key: SPX:SEE:2015-12-31
+  ticker: SEE
+  cik: '0001012100'
+  match: exact
+  name: Sealed Air
+  matched_name: sealed air
+  score: 100.0
+- security_key: SPX:SIVB:2018-03-19
+  ticker: SIVB
+  cik: 0000719739
+  match: exact
+  name: SVB Financial
+  matched_name: svb financial
+  score: 100.0
+- security_key: SPX:SNDK:2015-12-31
+  ticker: SNDK
+  cik: 0001000180
+  match: exact
+  name: SanDisk Corporation
+  matched_name: sandisk
+  score: 100.0
+- security_key: SPX:SNI:2015-12-31
+  ticker: SNI
+  cik: '0001430602'
+  match: exact
+  name: Scripps Networks Interactive Inc.
+  matched_name: scripps networks interactive
+  score: 100.0
+- security_key: SPX:SPLS:2015-12-31
+  ticker: SPLS
+  cik: 0000791519
+  match: exact
+  name: Staples Inc.
+  matched_name: staples
+  score: 100.0
+- security_key: SPX:SRCL:2015-12-31
+  ticker: SRCL
+  cik: 0000861878
+  match: exact
+  name: Stericycle Inc
+  matched_name: stericycle
+  score: 100.0
+- security_key: SPX:STI:2015-12-31
+  ticker: STI
+  cik: '0000750556'
+  match: exact
+  name: SunTrust Banks
+  matched_name: suntrust banks
+  score: 100.0
+- security_key: SPX:STJ:2015-12-31
+  ticker: STJ
+  cik: '0000203077'
+  match: exact
+  name: St Jude Medical
+  matched_name: st jude medical
+  score: 100.0
+- security_key: SPX:SWN:2015-12-31
+  ticker: SWN
+  cik: '0000007332'
+  match: exact
+  name: Southwestern Energy
+  matched_name: southwestern energy
+  score: 100.0
+- security_key: SPX:SYMC:2015-12-31
+  ticker: SYMC
+  cik: 0000849399
+  match: exact
+  name: Symantec Corp.
+  matched_name: symantec
+  score: 100.0
+- security_key: SPX:TE:2015-12-31
+  ticker: TE
+  cik: '0000350563'
+  match: exact
+  name: TECO Energy
+  matched_name: teco energy
+  score: 100.0
+- security_key: SPX:TGNA:2015-12-31
+  ticker: TGNA
+  cik: 0000039899
+  match: exact
+  name: Tegna, Inc.
+  matched_name: tegna
+  score: 100.0
+- security_key: SPX:TIF:2015-12-31
+  ticker: TIF
+  cik: 0000098246
+  match: exact
+  name: Tiffany & Co.
+  matched_name: tiffany and
+  score: 100.0
+- security_key: SPX:TSS:2015-12-31
+  ticker: TSS
+  cik: 0000721683
+  match: exact
+  name: Total System Services
+  matched_name: total system services
+  score: 100.0
+- security_key: SPX:TWC:2015-12-31
+  ticker: TWC
+  cik: '0001377013'
+  match: exact
+  name: Time Warner Cable Inc.
+  matched_name: time warner cable
+  score: 100.0
+- security_key: SPX:TWTR:2018-06-07
+  ticker: TWTR
+  cik: 0001418091
+  match: exact
+  name: Twitter Inc.
+  matched_name: twitter
+  score: 100.0
+- security_key: SPX:TWX:2015-12-31
+  ticker: TWX
+  cik: '0001105705'
+  match: exact
+  name: Time Warner Inc.
+  matched_name: time warner
+  score: 100.0
+- security_key: SPX:VAR:2015-12-31
+  ticker: VAR
+  cik: '0000203527'
+  match: exact
+  name: Varian Medical Systems
+  matched_name: varian medical systems
+  score: 100.0
+- security_key: SPX:VIAC:2019-12-05
+  ticker: VIAC
+  cik: 0000813828
+  match: exact
+  name: ViacomCBS
+  matched_name: viacomcbs
+  score: 100.0
+- security_key: SPX:WBA:2015-12-31
+  ticker: WBA
+  cik: 0001618921
+  match: exact
+  name: Walgreens Boots Alliance
+  matched_name: walgreens boots alliance
+  score: 100.0
+- security_key: SPX:WBD:2022-04-11
+  ticker: WBD
+  cik: '0001437107'
+  match: exact
+  name: Warner Bros. Discovery
+  matched_name: warner bros discovery
+  score: 100.0
+- security_key: SPX:WCG:2018-09-17
+  ticker: WCG
+  cik: 0001279363
+  match: exact
+  name: WellCare
+  matched_name: wellcare
+  score: 100.0
+- security_key: SPX:WFM:2015-12-31
+  ticker: WFM
+  cik: 0000865436
+  match: exact
+  name: Whole Foods Market
+  matched_name: whole foods market
+  score: 100.0
+- security_key: SPX:XEC:2015-12-31
+  ticker: XEC
+  cik: 0001168054
+  match: exact
+  name: Cimarex Energy
+  matched_name: cimarex energy
+  score: 100.0
+- security_key: SPX:XL:2015-12-31
+  ticker: XL
+  cik: 0000875159
+  match: exact
+  name: XL Group
+  matched_name: xl
+  score: 100.0
+- security_key: SPX:XLNX:2015-12-31
+  ticker: XLNX
+  cik: 0000743988
+  match: exact
+  name: Xilinx
+  matched_name: xilinx
+  score: 100.0
