@@ -185,10 +185,96 @@ class FreshnessCfg(_Strict):
         return self.collectors.get(collector, self.default)
 
 
+class SimhashCfg(_Strict):
+    bits: Literal[64]
+    shingle: int = Field(ge=1)
+    max_hamming: int = Field(ge=0, le=64)
+    window_days: int = Field(ge=1)
+
+
+class NewsCfg(_Strict):
+    min_words: int = Field(ge=0)
+    simhash: SimhashCfg
+    archive_dir: str
+    max_new_per_feed: int = Field(ge=1)
+    feed_fail_alert_after: int = Field(ge=1)
+    feeds: dict[str, str]
+
+
+class KindRule(_Strict):
+    pattern: str
+    kind: str
+
+    @field_validator("pattern")
+    @classmethod
+    def _regex(cls, v: str) -> str:
+        re.compile(v)
+        return v
+
+
+class FedCfg(_Strict):
+    feeds: dict[str, str]
+    kind_rules: list[KindRule]
+    feed_default_kind: dict[str, str]
+    speaker_roles: dict[str, str]
+    default_role: str
+    feed_fail_alert_after: int = Field(ge=1)
+
+
+class WeeklyCfg(_Strict):
+    day: Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    time_et: str
+
+    @field_validator("time_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+
+class ScheduleCfg(_Strict):
+    news_every_min: int = Field(ge=1)
+    crypto_utc: str
+    congress_et: str
+    earnings_et: str
+    replan_et: str
+    weekly: WeeklyCfg
+    summary_et: str
+    heartbeat_min: int = Field(ge=1)
+    heartbeat_gap_min: int = Field(ge=1)
+    freshness_check_min: int = Field(ge=1)
+    misfire_grace_s: int = Field(ge=1)
+    run_dir: str
+
+    @field_validator("crypto_utc", "congress_et", "earnings_et", "replan_et", "summary_et")
+    @classmethod
+    def _time(cls, v: str) -> str:
+        return _check_hhmm(v)
+
+
 class CollectCfg(_Strict):
     pit: PitCfg
     http: HttpCfg
     freshness: FreshnessCfg
+    news: NewsCfg
+    fed: FedCfg
+    schedule: ScheduleCfg
+
+
+# ---------------------------------------------------------------- aliases.yaml
+class ManualAlias(_Strict):
+    ticker: str
+    alias: str
+    kind: Literal["manual", "short", "ticker"] = "manual"
+    case_sensitive: bool = False
+    needs_cue: bool = False
+    valid_from: str | None = None
+    valid_to: str | None = None
+
+
+class AliasesCfg(_Strict):
+    finance_cues: list[str]
+    strip_suffixes: list[str]
+    manual: list[ManualAlias]
 
 
 class Config(_Strict):
@@ -197,6 +283,7 @@ class Config(_Strict):
     backup: BackupCfg
     calendar: CalendarCfg
     collect: CollectCfg
+    aliases: AliasesCfg
 
 
 # ---------------------------------------------------------------- secrets

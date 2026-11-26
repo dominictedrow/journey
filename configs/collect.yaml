@@ -42,3 +42,56 @@ freshness:
     fred: {critical: true, max_hours: 30}
     news: {critical: true, max_hours: 2}
     funding: {critical: true, max_hours: 26}
+
+# News (D-008, D-022). Every article is stored; filtering happens downstream (Phase 8).
+news:
+  min_words: 150                      # below this: extract_status = 'short' (still stored)
+  simhash: {bits: 64, shingle: 5, max_hamming: 3, window_days: 30}
+  archive_dir: data/news_archive      # raw HTML, YYYY/MM/DD/<source>.jsonl.gz
+  max_new_per_feed: 100               # safety cap per loop
+  feed_fail_alert_after: 4            # consecutive failed fetches of one feed (= 1 h) -> critical alert
+  feeds:
+    cointelegraph: https://cointelegraph.com/rss
+    decrypt: https://decrypt.co/feed
+    cnbc_markets: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    bbc_business: https://feeds.bbci.co.uk/news/business/rss.xml
+    npr_economy: https://feeds.npr.org/1006/rss.xml
+
+# Fed RSS, polled in the news loop so first-seen times are accurate (component doc 6.7).
+fed:
+  feeds:                              # order matters: an item in several feeds keeps the first kind
+    press_monetary: https://www.federalreserve.gov/feeds/press_monetary.xml
+    speeches: https://www.federalreserve.gov/feeds/speeches.xml
+    press_all: https://www.federalreserve.gov/feeds/press_all.xml
+  kind_rules:                         # first regex match on the title wins (case-insensitive)
+    - {pattern: "issues FOMC statement", kind: fomc_statement}
+    - {pattern: "^Minutes of the Federal Open Market Committee", kind: minutes}
+    - {pattern: "economic projections", kind: projections}
+    - {pattern: "schedule of Federal Open Market Committee meetings", kind: fomc_schedule}
+  feed_default_kind: {press_monetary: press, speeches: speech, press_all: press}
+  speaker_roles:                      # speeches feed titles are "<Surname>, <title>". VERIFY roles.
+    Warsh: Chair
+    Jefferson: Vice Chair
+    Bowman: Vice Chair for Supervision
+    Barr: Governor
+    Cook: Governor
+    Waller: Governor
+    Miran: Governor
+  default_role: Board                 # unmapped surname: logged as fed_speaker_unmapped
+  feed_fail_alert_after: 4
+
+# Scheduler (component doc section 7). APScheduler 3.x, timezone America/New_York.
+# The backup time comes from backup.yaml (evening_time_et); the stock job from calendar.yaml.
+schedule:
+  news_every_min: 15
+  crypto_utc: "00:15"
+  congress_et: "06:00"
+  earnings_et: "07:00"
+  replan_et: "06:00"                  # stock_daily re-plans itself for the day's session
+  weekly: {day: sun, time_et: "18:00"}
+  summary_et: "21:30"
+  heartbeat_min: 5
+  heartbeat_gap_min: 15               # daily summary flags heartbeat gaps longer than this
+  freshness_check_min: 30             # stale critical feeds alert once, on turning stale
+  misfire_grace_s: 900
+  run_dir: data/run

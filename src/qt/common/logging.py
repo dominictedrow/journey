@@ -176,6 +176,7 @@ def setup(
         setattr(h, _QT_HANDLER, True)
         root.addHandler(h)
     # Quiet noisy libraries; their errors still reach the alert handler.
-    for name in ("httpx", "httpcore", "psycopg.pool"):
+    for name in ("httpx", "httpcore", "psycopg.pool", "trafilatura", "htmldate", "apscheduler",
+                 "charset_normalizer", "urllib3"):
         logging.getLogger(name).setLevel(logging.WARNING)
     return logging.getLogger("qt")

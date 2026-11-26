@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Synthetic Fed speeches</title>
+<item><title>Waller, Opening Remarks</title><link>https://fed.example/newsevents/speech/waller20261120a.htm</link>
+<guid>https://fed.example/newsevents/speech/waller20261120a.htm</guid><pubDate>Fri, 20 Nov 2026 13:25:00 GMT</pubDate><description>Speech At a conference</description><category>Speech</category></item>
+<item><title>Newname, Some Speech</title><link>https://fed.example/newsevents/speech/newname20261121a.htm</link>
+<guid>https://fed.example/newsevents/speech/newname20261121a.htm</guid><pubDate>Sat, 21 Nov 2026 13:25:00 GMT</pubDate><description>Speech</description></item>
+</channel></rss>

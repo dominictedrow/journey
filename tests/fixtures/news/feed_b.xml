@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Synthetic Feed B</title><link>https://news-b.example/</link>
+<item><title>RATES HOLD STEADY as inflation cools!</title>
+<link>https://news-b.example/2026/11/20/rates-hold-steady/</link>
+<guid>b-1</guid>
+<pubDate>Fri, 20 Nov 2026 16:00:00 GMT</pubDate><description>Syndicated copy.</description></item>
+<item><title>Brief: market wrap</title>
+<link>https://news-b.example/2026/11/24/wrap</link>
+<guid>b-2</guid>
+<pubDate>Tue, 24 Nov 2026 21:00:00 GMT</pubDate><description>Short item.</description></item>
+</channel></rss>

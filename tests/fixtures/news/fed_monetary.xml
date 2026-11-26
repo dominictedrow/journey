@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Synthetic Fed monetary</title>
+<item><title>Federal Reserve issues FOMC statement</title><link>https://fed.example/newsevents/pressreleases/monetary20261028a.htm</link>
+<guid>https://fed.example/newsevents/pressreleases/monetary20261028a.htm</guid><pubDate>Wed, 28 Oct 2026 18:00:00 GMT</pubDate><description>FOMC statement</description><category>Monetary Policy</category></item>
+<item><title>Minutes of the Federal Open Market Committee, October 27-28, 2026</title><link>https://fed.example/newsevents/pressreleases/monetary20261118a.htm</link>
+<guid>https://fed.example/newsevents/pressreleases/monetary20261118a.htm</guid><pubDate>Wed, 18 Nov 2026 19:00:00 GMT</pubDate><description>Minutes</description></item>
+</channel></rss>

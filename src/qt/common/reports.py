@@ -12,6 +12,12 @@ from qt.common.paths import repo_path
 
 PENDING = "_Not built yet (filled in by a later phase)._"
 
+# Raw tables whose daily inserts are counted under "Rows collected" (all carry ingested_at).
+RAW_TABLES = (
+    "raw_prices", "raw_macro", "raw_fundamentals", "articles", "index_membership",
+    "raw_events", "raw_metrics", "raw_crypto_derivs",
+)  # fmt: skip
+
 
 def _day_bounds(d: date) -> tuple[datetime, datetime]:
     start = datetime(d.year, d.month, d.day, tzinfo=UTC)
@@ -31,7 +37,14 @@ def write_daily_summary(
     settings: Settings,
     connect: Callable[[], Any] | None = None,
     out_dir: Path | None = None,
+    freshness: list[tuple[Any, ...]] | None = None,
+    heartbeat_gaps: list[tuple[Any, ...]] | None = None,
 ) -> Path:
+    """Write ``reports/daily/<d>.md``.
+
+    ``freshness`` rows: (collector, critical, last ok UTC, age h, max h, status, STALE?).
+    ``heartbeat_gaps`` rows: (from UTC, to UTC, minutes). Both are computed by the scheduler.
+    """
     out_dir = out_dir or repo_path(settings.config.app.reports.daily_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     start, end = _day_bounds(d)
@@ -39,8 +52,16 @@ def write_daily_summary(
     runs: list[tuple[Any, ...]] = []
     alerts_rows: list[tuple[Any, ...]] = []
     backups: list[tuple[Any, ...]] = []
+    collected: list[tuple[Any, ...]] = []
     if connect is not None:
         with connect() as conn:
+            for t in RAW_TABLES:
+                n = conn.execute(
+                    f"SELECT count(*) FROM {t} WHERE ingested_at >= %s AND ingested_at < %s",
+                    (start, end),
+                ).fetchone()[0]
+                if n:
+                    collected.append((t, f"{n:,}"))
             runs = conn.execute(
                 "SELECT stage, status, count(*) FROM runs "
                 "WHERE started_at >= %s AND started_at < %s GROUP BY 1, 2 ORDER BY 1, 2",
@@ -57,15 +78,31 @@ def write_daily_summary(
                 (start, end),
             ).fetchall()
 
+    fresh_md = (
+        _table(["collector", "critical", "last ok (UTC)", "age h", "max h", "status", "stale"],
+               freshness)
+        if freshness is not None
+        else PENDING
+    )
+    collected_md = _table(["table", "rows inserted"], collected) if connect else PENDING
+    hb_md = (
+        ("No gaps." if not heartbeat_gaps else
+         _table(["from (UTC)", "to (UTC)", "minutes"], heartbeat_gaps))
+        if heartbeat_gaps is not None
+        else PENDING
+    )
     body = f"""# QT daily summary: {d.isoformat()} (UTC day)
 
 Profile `{settings.profile}` · config `{settings.config_hash[:12]}`
 
 ## Feed freshness
-{PENDING}
+{fresh_md}
 
 ## Rows collected
-{PENDING}
+{collected_md}
+
+## Scheduler heartbeat
+{hb_md}
 
 ## Runs
 {_table(["stage", "status", "count"], runs)}

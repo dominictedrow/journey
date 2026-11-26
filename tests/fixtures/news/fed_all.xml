@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Synthetic Fed all</title>
+<item><title>Federal Reserve issues FOMC statement</title><link>https://fed.example/newsevents/pressreleases/monetary20261028a.htm</link>
+<guid>https://fed.example/newsevents/pressreleases/monetary20261028a.htm</guid><pubDate>Wed, 28 Oct 2026 18:00:00 GMT</pubDate><description>FOMC statement</description></item>
+<item><title>Agencies announce dollar thresholds</title><link>https://fed.example/newsevents/pressreleases/bcreg20261125a.htm</link>
+<guid>https://fed.example/newsevents/pressreleases/bcreg20261125a.htm</guid><pubDate>Wed, 25 Nov 2026 20:00:00 GMT</pubDate><description>Thresholds</description></item>
+</channel></rss>

@@ -1,0 +1,7 @@
+# Alias tagging for news (component doc 6.6, Q7). The weekly rebuild merges this with EDGAR names.
+# needs_cue aliases match only case-sensitively AND with a finance cue in the same article.
+finance_cues: [shares, stock, stocks, earnings, revenue, investors, analysts, Nasdaq, NYSE,
+               "S&P 500", quarter, guidance, dividend, market cap, valuation, CEO]
+strip_suffixes: [Inc, "Inc.", Corp, "Corp.", Corporation, Co, "Co.", Company, Ltd, "Ltd.",
+                 plc, PLC, Holdings, Group, "N.V.", "S.A.", "& Co", "/DE/", Class A, Class B]
+manual: []                            # filled in build step 4 (aliases + membership)

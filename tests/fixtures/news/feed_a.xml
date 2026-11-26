@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Synthetic Feed A</title><link>https://news-a.example/</link>
+<item><title>Rates hold steady as inflation cools</title>
+<link>https://news-a.example/markets/rates-hold?utm_source=rss&amp;utm_medium=feed</link>
+<guid>https://news-a.example/markets/rates-hold#0</guid>
+<pubDate>Fri, 20 Nov 2026 14:00:00 GMT</pubDate><description>Central bank keeps rates unchanged.</description></item>
+<item><title>Chipmaker shares jump on record quarter</title>
+<link>https://news-a.example/tech/chipmaker-record</link>
+<guid>a-2</guid>
+<pubDate>Tue, 24 Nov 2026 15:30:00 GMT</pubDate><description>Revenue beats estimates.</description></item>
+</channel></rss>

@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "ML quant pipeline (paper trading only)"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "apscheduler>=3.10,<4",
     "exchange-calendars>=4.13.3",
+    "feedparser>=6.0.14",
     "httpx>=0.28.1",
     "pandas>=3.1.1",
     "psycopg[binary,pool]>=3.3.9",
@@ -12,6 +14,7 @@ dependencies = [
     "pydantic>=2.14.4",
     "python-dotenv>=1.2.4",
     "pyyaml>=6.0.4",
+    "trafilatura>=2.4.0",
 ]
 
 [build-system]

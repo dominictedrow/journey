@@ -188,14 +188,10 @@ def _record(settings: Settings, run_id: str, res: BackupResult | None, error: st
         log.exception("backup_log_write_failed")
 
 
-def main() -> int:
-    from qt.common import config
-    from qt.common import logging as qtlog
+def backup_job(settings: Settings, connect) -> bool:
+    """One backup under ``run_context`` (used by the CLI and the scheduler). Never raises."""
     from qt.common.runs import run_context
 
-    settings = config.load()
-    connect = lambda: dbconn.connect(settings)  # noqa: E731
-    qtlog.setup(settings, connect=connect)
     try:
         with run_context("backup", settings, connect) as run:
             res: BackupResult | None = None
@@ -218,8 +214,18 @@ def main() -> int:
                 f"{len(res.row_counts)} tables / {total:,} rows match.",
             )
     except Exception:
-        return 1
-    return 0
+        return False
+    return True
+
+
+def main() -> int:
+    from qt.common import config
+    from qt.common import logging as qtlog
+
+    settings = config.load()
+    connect = lambda: dbconn.connect(settings)  # noqa: E731
+    qtlog.setup(settings, connect=connect)
+    return 0 if backup_job(settings, connect) else 1
 
 
 if __name__ == "__main__":
