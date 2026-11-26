@@ -8,19 +8,19 @@
 
 | | |
 |---|---|
-| **Phase** | **Phase 3 (Features + regimes): questioning done, spec written**; Phase 2 exit gate still running in parallel |
+| **Phase** | **Phase 3 (Features + regimes): build step 1 done** (top-up, migration 008, registry/inputs/adjust); Phase 2 exit gate still running in parallel |
 | **Last session** | S04: Q1–Q9 answered, [`docs/components/03_features.md`](docs/components/03_features.md), D-033 (closes D-001) ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
-| **Git** | `308483b` + S04 docs; not committed/pushed yet |
-| **Tests** | 170 passed (no code change) |
+| **Git** | S04 docs pushed (`cb03720`); step 1 `bed7b04` committed, not pushed |
+| **Tests** | 188 passed, ruff clean |
 | **Service** | launchd `com.qt.scheduler` (paper); Congress backfill driver still running |
 
 ### Next exact task
-1. Dom accepts or changes the **(default)** items in the Phase 3 spec.
-2. Phase 3 build step 1: collector top-up (§4, incl. TLT) + migration 008 + registry/inputs/adjust skeleton.
+1. Dom decides the PARA/BBT contaminated-identity fix (D-034 item 5, handoff addendum), then implement it.
+2. Phase 3 build step 2: per-asset price features (§5.1).
 3. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
-- [ ] Accept the Phase 3 (default) items?
+- [ ] Identity fix for PARA/BBT (exclude the wrong bars, refetch BB&T under TFC)? Push `bed7b04`?
 - [ ] **SoSoValue key:** the `.env` line still holds only a placeholder comment. Paste the key after `SOSOVALUE_API_KEY=`
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 

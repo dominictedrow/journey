@@ -59,3 +59,24 @@
 - Accept the (default) items in the Phase 3 spec?
 - OK to commit this session's docs and push them with `308483b`?
 - SoSoValue key: paste it into `.env` after `SOSOVALUE_API_KEY=` (no `#`).
+
+## Addendum: build step 1 (same session, after Dom accepted the defaults and said "start the build")
+- Pushed `308483b`, `de6fe67`, `cb03720`. Step 1 committed as `bed7b04` (not pushed). 188 tests pass, ruff clean.
+- **Top-up backfilled:**
+  - FRED: 6 series, about 1.0M vintage rows. NFCI alone is 940k, because every weekly vintage revises its whole history.
+  - Alpaca: 8 ETFs, 2,741 bars each from 2016.
+  - yfinance: 5 tickers from 2000–2007.
+- **Migration 008 applied to the live DB.** Service restarted on `bed7b04`.
+- **New modules:** `features/registry.py`, `features/inputs.py`, `features/adjust.py`, plus `db.pit.frame_asof`.
+- **Bugs caught:**
+  - pandas 3 microsecond timestamps made `MacroState` see every release at once (a lookahead). Caught by the test and fixed.
+  - `corp_actions` never backfilled symbols added after its first run. Fixed, and 580 rows recovered, including SOXX's 2024 split.
+- **Adjustment checked on live data.** After the split price check, name-change ticker history, zero-volume filter and the KDP manual dividend, the biggest remaining adjusted daily moves are real events (bankruptcies, SVB/FRC, COVID, spin-offs) apart from PARA.
+- **Open for Dom: contaminated identities (D-034 item 5).** Alpaca serves a symbol's *current* holder's history.
+  - Asset 505 PARA holds Bannix's bars, all of them.
+  - Asset 79 BBT holds another company's bars, all of them. The real BB&T history is served under TFC, which was confirmed with a 2017 probe.
+  - A dollar-volume scan of every S&P member flagged only these two. WYND and AABA have no bars during their membership spells, so the survivorship gap list grows from 3 to 5.
+
+## Next exact task (updated)
+1. Dom decides the identity fix (exclusions + successor refetch), then implement it.
+2. Build step 2: per-asset price features (§5.1) with hand-calc + no-lookahead tests parametrized over the registry.
