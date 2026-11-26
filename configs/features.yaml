@@ -36,3 +36,43 @@ adjust:
     - {security_key: "SPX:KDP:2015-12-31", kind: ca_cash_dividends, ex_date: "2018-07-10",
        rate: 103.75, special: true,
        source: "Keurig Dr Pepper merger special dividend to DPS holders (8-K 2018-07-09)"}
+
+# Per-asset price features (section 5.1). Windows are in bars (rows), not calendar days. Feature
+# names carry their window (ret_21d), so a new window here is a new feature and a changed
+# definition of an existing name fails the registry sync until its version is bumped.
+price:
+  annualization: {default: 252, crypto: 365}
+  # Beta/correlation benchmark per asset class (spec: OLS on SPY, coins on BTC).
+  bench: {default: SPY, crypto: BTC/USD}
+  # Paired-return features (beta, residual vol, correlations) need this share of the window to
+  # have both returns on the same date. Coins trade 7 days and SPY/DXY/10y 5, so a coin's 63
+  # bars hold ~45 weekday pairs (0.71): 0.6 lets those through. Stocks pair on ~every bar.
+  min_pair_frac: 0.6
+  returns: [1, 5, 21, 63, 126, 252]   # log return over n bars
+  momentum: {long: 252, skip: 21}      # 12-1: log(P[t-21] / P[t-252])
+  rvol: [21, 63]                       # stdev of daily log returns, annualized
+  gk_vol: [21]                         # Garman-Klass
+  downside_dev: [63]                   # sqrt(mean(min(r, 0)^2)), annualized
+  max_dd: [63, 252]                    # worst peak-to-trough inside the last n closes
+  sma: {fast: 50, slow: 200}
+  rsi: 14                              # simple-average (Cutler) RSI: finite window, no seed effect
+  # EMAs are truncated to trunc_spans x span bars (weights renormalized) so a value never
+  # depends on where the loaded history starts. (1 - 2/(26+1))^104 = 3e-4 of weight dropped.
+  macd: {fast: 12, slow: 26, signal: 9, trunc_spans: 4}
+  bollinger: {window: 20, k: 2.0}
+  atr: 14                              # simple mean of true range / close
+  volume_z: 21                         # log volume vs the previous n bars
+  amihud: {window: 21, scale: 1.0e9}   # mean(|r| / dollar volume) x scale
+  beta: [63, 252]                      # OLS beta and residual vol vs the bench
+  corr:
+    window: 63
+    # context series -> where the builder takes it from (asset ticker, or FRED series: changes)
+    series: {spy: SPY, dxy: DX-Y.NYB, y10: DGS10}
+  mr_z: 63                             # (ln P - mean) / stdev of ln P over n
+  ou: {window: 126, halflife_cap: 504} # no mean reversion (b >= 0) or longer -> the cap
+  hurst: {window: 126, q: 10}          # variance ratio of q-bar vs 1-bar returns (Q4)
+  earnings:
+    # Backfilled report dates are known only 7 days ahead (D-031: report - 7 d), so history never
+    # shows more than 5 sessions; live sees 28 days ahead. Capping at 5 keeps the feature's
+    # training and live ranges the same (no report known within 5 sessions -> NaN).
+    max_sessions_ahead: 5

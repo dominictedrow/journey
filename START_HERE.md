@@ -4,28 +4,30 @@
 
 ---
 
-## CURRENT CHECKPOINT: v9 / 2026-11-26 (Session 04, Phase 3 questioning)
+## CURRENT CHECKPOINT: v10 / 2026-11-26 (Session 04, Phase 3 build step 2)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3 (Features + regimes): build step 1 done** (top-up, migration 008, registry/inputs/adjust); Phase 2 exit gate still running in parallel |
-| **Last session** | S04: Q1–Q9 answered, [`docs/components/03_features.md`](docs/components/03_features.md), D-033 (closes D-001) ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
-| **Git** | S04 docs pushed (`cb03720`); `bed7b04`, `3a951b2`, `1b16d47` committed, not pushed |
-| **Tests** | 190 passed, ruff clean |
+| **Phase** | **Phase 3 (Features + regimes): build steps 1–2 done** (foundations; 35 per-asset price features, D-036); Phase 2 exit gate still running in parallel |
+| **Last session** | S04: questioning, spec, step 1, identity fix (D-035), step 2 ([handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)) |
+| **Git** | `cb03720` pushed; `bed7b04`, `3a951b2`, `1b16d47`, `b4462eb` and the step 2 commit not pushed |
+| **Tests** | 337 passed, ruff clean |
 | **Service** | launchd `com.qt.scheduler` (paper); Congress backfill driver still running |
 
 ### Next exact task
-1. Phase 3 build step 2: per-asset price features (§5.1). The identity fix (D-035) is done.
-3. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
+1. Phase 3 build step 3: cross-sectional ranks + 5 composites (§5.2) with the EDGAR concept map; per-asset values come from `price.compute_series` (values + per-feature `ready_at`).
+2. Phase 2 gate: Congress `backfill.done`; 5 unattended days from Fri 2026-11-27.
 
 ### Open questions for Dom
-- [ ] Push `bed7b04`, `3a951b2`, `1b16d47` and the handoff commit?
+- [ ] Push the 5 local commits (`bed7b04`, `3a951b2`, `1b16d47`, `b4462eb`, step 2)?
 - [ ] **SoSoValue key:** the `.env` line still holds only a placeholder comment. Paste the key after `SOSOVALUE_API_KEY=`
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v9 / 2026-11-26 (Session 04, Phase 3 questioning + build step 1)
+- Q1–Q9 answered, spec `docs/components/03_features.md`, D-033 to D-035: top-up, migration 008, registry/inputs/adjust, identity overrides. [Handoff](docs/handoffs/2026-11-26_s04_features_questioning.md)
 ### v8 / 2026-11-26 (Session 03e, Phase 2 build step 5)
 - Phase 2 build complete (5 of 5): yfinance, corp actions, EDGAR facts, earnings, Congress, crypto structure, SoSoValue collector (D-031, D-032). `32c5117`/`e147c04` pushed, `308483b` not. [Handoff](docs/handoffs/2026-11-26_s03e_collectors_build_rest.md)
 ### v7 / 2026-11-26 (Session 03d, Phase 2 build step 4)

@@ -312,6 +312,60 @@ def mapped_corp_actions(
     return out
 
 
+# ---------------------------------------------------------------- earnings calendar
+EARNINGS_COLUMNS = [
+    "asset_id",
+    "quarter_key",
+    "report_date",
+    "pre_market",
+    "surprise",
+    "approx",
+    "released_at",
+]
+
+
+def _pct(x: object) -> float:
+    try:
+        return float(str(x).replace("%", "").replace(",", ""))
+    except (TypeError, ValueError):
+        return float("nan")
+
+
+def load_earnings(conn: psycopg.Connection, asof: datetime, bars: pd.DataFrame) -> pd.DataFrame:
+    """Earnings-calendar observations released by ``asof`` (``raw_events`` source ``nasdaq``).
+
+    One row per observation (a moved date is a new row; the older one is superseded from the
+    newer row's ``released_at`` on). ``surprise`` is Nasdaq's % surprise, present only once the
+    report happened; features must not use it before the report (see ``price.py``). Each row is
+    mapped to the asset that held its symbol on the report date, like corporate actions.
+    """
+    df = frame_asof(
+        conn,
+        "raw_events",
+        asof,
+        where={"source": "nasdaq", "kind": "earnings"},
+        columns=["external_id", "payload", "released_at"],
+        order_by=("released_at",),
+    )
+    if df.empty:
+        return pd.DataFrame(columns=EARNINGS_COLUMNS)
+    p = df["payload"]
+    obs = pd.DataFrame(
+        {
+            "quarter_key": df["external_id"],
+            "symbol": p.map(lambda x: x.get("symbol")),
+            "ex_date": pd.to_datetime(p.map(lambda x: x.get("report_date"))).dt.date,
+            "pre_market": p.map(lambda x: x.get("time") == "time-pre-market"),
+            "surprise": p.map(lambda x: _pct(x.get("surprise"))),
+            "approx": p.map(lambda x: bool(x.get("approx", False))),
+            "released_at": pd.to_datetime(df["released_at"], utc=True),
+        }
+    )
+    assets = load_assets(conn)
+    mapped = map_actions_to_assets(obs, ticker_history(conn), assets, bars)
+    return mapped.rename(columns={"ex_date": "report_date"})[EARNINGS_COLUMNS]
+
+
 # ---------------------------------------------------------------- macro
 def load_macro(conn: psycopg.Connection, series: Sequence[str], asof: datetime) -> pd.DataFrame:
     """Every vintage of ``series`` released by ``asof`` (ALFRED rows, source 'alfred')."""

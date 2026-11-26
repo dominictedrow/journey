@@ -532,9 +532,86 @@ class AdjustCfg(_Strict):
     manual: list[ManualActionCfg] = []
 
 
+class _Windows(_Strict):
+    window: int = Field(ge=2)
+
+
+class MomentumCfg(_Strict):
+    long: int = Field(ge=2)
+    skip: int = Field(ge=1)
+
+
+class SmaCfg(_Strict):
+    fast: int = Field(ge=2)
+    slow: int = Field(ge=2)
+
+
+class MacdCfg(_Strict):
+    fast: int = Field(ge=2)
+    slow: int = Field(ge=2)
+    signal: int = Field(ge=2)
+    trunc_spans: int = Field(ge=1)
+
+
+class BollingerCfg(_Windows):
+    k: float = Field(gt=0)
+
+
+class AmihudCfg(_Windows):
+    scale: float = Field(gt=0)
+
+
+class CorrCfg(_Windows):
+    series: dict[str, str] = Field(min_length=1)
+
+
+class OuCfg(_Windows):
+    halflife_cap: float = Field(gt=0)
+
+
+class HurstCfg(_Windows):
+    q: int = Field(ge=2)
+
+
+class EarningsFeatCfg(_Strict):
+    max_sessions_ahead: int = Field(ge=1)
+
+
+class PriceCfg(_Strict):
+    annualization: dict[str, int]
+    bench: dict[str, str]
+    min_pair_frac: float = Field(gt=0, le=1)
+    returns: list[int] = Field(min_length=1)
+    momentum: MomentumCfg
+    rvol: list[int]
+    gk_vol: list[int]
+    downside_dev: list[int]
+    max_dd: list[int]
+    sma: SmaCfg
+    rsi: int = Field(ge=2)
+    macd: MacdCfg
+    bollinger: BollingerCfg
+    atr: int = Field(ge=1)
+    volume_z: int = Field(ge=2)
+    amihud: AmihudCfg
+    beta: list[int]
+    corr: CorrCfg
+    mr_z: int = Field(ge=2)
+    ou: OuCfg
+    hurst: HurstCfg
+    earnings: EarningsFeatCfg
+
+    def ann(self, asset_class: str) -> int:
+        return self.annualization.get(asset_class, self.annualization["default"])
+
+    def bench_for(self, asset_class: str) -> str:
+        return self.bench.get(asset_class, self.bench["default"])
+
+
 class FeaturesCfg(_Strict):
     bars: FeatureBarsCfg
     adjust: AdjustCfg
+    price: PriceCfg
 
 
 class Config(_Strict):

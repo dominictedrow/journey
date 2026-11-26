@@ -88,6 +88,24 @@
 - **Survivorship list (spec §9.3)** is now SNDK, TE, STI, Paramount 2022–2025, WYND, AABA.
 - Feature loaders must pass `exclude=inputs.bar_exclusions(conn, overrides)` to `load_bars`. The step-2 build wires this into one entry point.
 
+
+## Addendum 3: build step 2, per-asset price features (Dom: "move onto the next")
+- D-036. 337 tests pass, ruff clean.
+- **`features/price.py`:** 35 features registered from `features.price` config: returns, vol, trend, technicals, liquidity, beta/correlations and mean reversion, plus earnings proximity. `prepare()` does the PIT cut (bars, actions, context, earnings by `released_at <= asof`) and adjusts in memory. `compute_series()` returns values plus a per-feature `ready_at`; `compute_asof()` is the daily form.
+- **New loader:** `inputs.load_earnings` (Nasdaq calendar rows mapped to assets like corporate actions).
+- **Tests:** `tests/test_price_features.py`, 147 tests.
+  - A loop-based hand calculation for every registered feature, at 13 dates (early dates assert NaN).
+  - No-lookahead per feature at 3 decision times, mutating every row released later. This includes a late split, a context revision and moved earnings dates.
+  - A check that the mutation actually changes visible values.
+  - Backfill pass = daily at every T.
+  - Readiness waits for context; values are scale-free under a later split.
+- **Caught by the tests:** DGS10 posts 45 min after the bar, so a single per-row ready time made backfill ≠ daily. Fixed with per-feature readiness: a context-using feature's row waits until its series has a row dated on or after the bar date.
+- **Live smoke** (SPY, AAPL, NVDA, BBT, BTC, ETH):
+  - ~0.04 s per stock for the whole history, so roughly 30 s for the universe.
+  - SPY's high 21-day vol is real (the November selloff, with large overnight gaps).
+  - Crypto correlations needed `min_pair_frac` 0.6.
+  - The earnings history only shows report dates 5 sessions ahead (backfill rule), so `earn_days_next` is capped at 5 to match live.
+
 ## Next exact task (updated)
-1. Build step 2: per-asset price features (§5.1), with hand-calc + no-lookahead tests parametrized over the registry. Bars come through `load_bars(..., exclude=bar_exclusions(...))` + `mapped_corp_actions` + `adjust`.
-2. Ask Dom to push `bed7b04`, `3a951b2`, `1b16d47` (+ this handoff).
+1. Build step 3: cross-sectional ranks + composites (§5.2), with the EDGAR concept map.
+2. Ask Dom to push `bed7b04`, `3a951b2`, `1b16d47`, `b4462eb` and the step 2 commit.

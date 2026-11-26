@@ -78,7 +78,12 @@ def feature(
             fn=fn,
         )
         old = _REGISTRY.get(spec.key)
-        if old is not None and old.fn is not fn:
+        # Re-registering the same definition (config-driven families registered again) is fine;
+        # two different definitions under one (name, version) are not.
+        if old is not None and old.fn is not fn and (old.definition(), old.kind) != (
+            spec.definition(),
+            spec.kind,
+        ):
             raise RegistryError(f"feature {name} v{version} registered twice")
         _REGISTRY[spec.key] = spec
         return fn
