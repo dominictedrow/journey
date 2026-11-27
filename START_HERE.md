@@ -4,31 +4,32 @@
 
 ---
 
-## CURRENT CHECKPOINT: v16 / 2026-11-26 (Session 07, Phase 3 build step 5c)
+## CURRENT CHECKPOINT: v17 / 2026-11-27 (Session 08, Phase 3 exit gate check)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3: steps 1–5c done** (5c survivorship, D-043, migration 010). Rebuild verified. Left: the exit gate (3 unattended `features_daily` sessions). Phase 2 gate still running in parallel |
-| **Last session** | S07 ([handoff](docs/handoffs/2026-11-26_s07_survivorship_step5c.md)) |
-| **Git** | Pushed through the S07 close commit |
-| **Tests** | 739 passed, ruff clean |
-| **Service** | `com.qt.scheduler` (paper), PID 22950 on `5008828`. First unattended `features_daily` 2026-11-26: ok |
-| **Data** | 120/137 former-member CIKs (+298k EDGAR facts), 226 historical sectors. `features` rebuilt 2016-01-01 → 2026-11-26: 194.8M rows, 1.7 GB compressed. Fundamentals price ratios v2 (D-045): earnings yield 94.5% non-NaN; only FOSL/PCP still lack it |
+| **Phase** | **Phase 3: build done, exit gate 6/7.** Criteria 1–6 pass (S08 handoff table). Criterion 7 (3 unattended `features_daily` sessions) is 0/3. Phase 2 gate still running in parallel |
+| **Last session** | S08 ([handoff](docs/handoffs/2026-11-27_s08_exit_gate_check.md)) |
+| **Git** | `c67453b` (alert mute, D-046) and the S08 docs commit are **not pushed** (Dom pushes) |
+| **Tests** | 762 passed, ruff clean |
+| **Service** | `com.qt.scheduler` (paper), PID 89957 on `c67453b`, restarted 2026-11-26 19:34 PST |
+| **Data** | `features` 2016-01-01 → 2026-11-26, 350 registry rows. No change this session |
 
 ### Next exact task
-1. ~~Verify the rebuild~~: done (S07 handoff, Rebuild results).
-2. Exit gate: `features_daily` unattended Fri 11-27, Mon 11-30, Tue 12-1; Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3 and start Phase 4 questioning.
+1. Criterion 7: check `features_daily` after Fri 11-27 (early close; job still runs 18:00 ET), Mon 11-30, Tue 12-1 (`runs` stage `features` ok, plus the Features table in `reports/daily/<date>.md`).
+2. Phase 2 gate: Congress `backfill.done`, 5 unattended days from Fri 11-27.
+3. When both pass, close Phase 3 and start Phase 4 questioning.
 
 ### Open questions for Dom
-- [x] Pushed through `4bc3579`.
-- [x] Fundamentals coverage bug fixed: price ratios v2 (D-045), history backfilled.
-- [x] 17 CIK review names: dropped by Dom, accepted gap with no CIK (D-044).
+- [ ] Push `c67453b` and the S08 docs commit.
 - [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
 ---
 
 ## Prior checkpoints
+### v16 / 2026-11-26 (Session 07, Phase 3 build step 5c)
+- Survivorship (D-043, migration 010), rebuild verified, fundamentals v2 (D-045), `build --only`. Pushed through `c3ac2fa`. [Handoff](docs/handoffs/2026-11-26_s07_survivorship_step5c.md)
 ### v15 / 2026-11-26 (Session 05, Phase 3 build step 5b)
 - Build/matrix/jobs, migration 009, D-042; inflation v2 (D-041). `d8c37b4`/`70b05bf`/`153e9ad` on origin.
 ### v14 / 2026-11-26 (Session 05, Phase 3 build step 5a)
