@@ -4,30 +4,35 @@
 
 ---
 
-## CURRENT CHECKPOINT: v17 / 2026-11-27 (Session 08, Phase 3 exit gate check)
+## CURRENT CHECKPOINT: v18 / 2026-11-26 (Session 09, Windows setup)
 
 | | |
 |---|---|
-| **Phase** | **Phase 3: build done, exit gate 6/7.** Criteria 1–6 pass (S08 handoff table). Criterion 7 (3 unattended `features_daily` sessions) is 0/3. Phase 2 gate still running in parallel |
-| **Last session** | S08 ([handoff](docs/handoffs/2026-11-27_s08_exit_gate_check.md)) |
-| **Git** | Pushed through `43bff83` (S08: alert mute D-046 `c67453b`, docs) |
-| **Tests** | 762 passed, ruff clean |
-| **Service** | `com.qt.scheduler` (paper), PID 89957 on `c67453b`, restarted 2026-11-26 19:34 PST |
-| **Data** | `features` 2016-01-01 → 2026-11-26, 350 registry rows. No change this session |
+| **Phase** | Phase 3 exit gate still 6/7 (unchanged). This session moved dev to Windows, the new home (D-047) |
+| **Last session** | S09 ([handoff](docs/handoffs/2026-11-26_s09_windows_setup.md)) |
+| **Git** | S09 changes uncommitted (int64 earnings fix, DB host, `.env.example`, Python pin + lock, docs) |
+| **Env** | Windows, conda `ai` (Python 3.14, pin `>=3.13,<3.15`, D-048), no venv. Docker DB + backup up, migrations 010 |
+| **Tests** | 756 passed + 6 that need Alpaca keys in `.env` (pass with them), ruff clean |
+| **Service** | Still `com.qt.scheduler` on the Mac. Windows scheduler not built (Phase 12) |
+| **Data** | Windows DB empty. Mac DB has `features` 2016-01-01 → 2026-11-26 |
 
 ### Next exact task
-1. Criterion 7: check `features_daily` after Fri 11-27 (early close; job still runs 18:00 ET), Mon 11-30, Tue 12-1 (`runs` stage `features` ok, plus the Features table in `reports/daily/<date>.md`).
-2. Phase 2 gate: Congress `backfill.done`, 5 unattended days from Fri 11-27.
-3. When both pass, close Phase 3 and start Phase 4 questioning.
+1. Dom: copy the API keys from the Mac `.env` into the Windows `.env`, then re-run the suite (expect 762).
+2. Keep the Mac running the gate: criterion 7 after Fri 11-27, Mon 11-30, Tue 12-1; Phase 2's 5 days.
+3. **Next session (Dom's call):** rebuild the data on Windows (fresh backfill, not a Mac restore) and build the
+   Windows scheduler (pulled forward from Phase 12).
 
 ### Open questions for Dom
-- [x] Pushed `c67453b` and `43bff83`.
-- [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
-- [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
+- [x] Python pin widened to `<3.15`, re-locked (D-048).
+- [x] Data: rebuild on Windows. Scheduler: build it. Both in a separate session.
+- [ ] Carried from S08: duplicate `D-041` note; LLM size, shares, same-session rule, starting NAV, crypto volume source, short-history threshold
 
 ---
 
 ## Prior checkpoints
+### v17 / 2026-11-27 (Session 08, Phase 3 exit gate check)
+- Exit gate 6/7; alert mute D-046 `c67453b`; scheduler PID 89957. [Handoff](docs/handoffs/2026-11-27_s08_exit_gate_check.md)
+
 ### v16 / 2026-11-26 (Session 07, Phase 3 build step 5c)
 - Survivorship (D-043, migration 010), rebuild verified, fundamentals v2 (D-045), `build --only`. Pushed through `c3ac2fa`. [Handoff](docs/handoffs/2026-11-26_s07_survivorship_step5c.md)
 ### v15 / 2026-11-26 (Session 05, Phase 3 build step 5b)

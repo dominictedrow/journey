@@ -36,9 +36,12 @@ Each phase runs in two steps.
   - Write device-agnostic torch code (cuda, then mps, then cpu). Use fp32 on MPS.
 
 ## Environment
-- `DOMS_DRIVE` is exFAT, which breaks venvs. Keep the venv off the drive:
-  `export UV_PROJECT_ENVIRONMENT=~/.venvs/quant_trader` (on Windows, `%USERPROFILE%\.venvs\quant_trader`).
-- Python 3.13 and uv (`uv sync`, `uv run pytest`).
+- **Windows (home from S09, D-047):** use the conda `ai` env, no venv. Python is
+  `C:\Users\blazi\miniconda3\envs\ai\python.exe` (3.14): `python -m pytest`, `python -m ruff check .`,
+  `python -m qt.db.migrate`. The project is installed editable
+  (`pip install --no-deps -e .`; pin widened in D-048).
+- **Mac (legacy, still runs the gate):** `DOMS_DRIVE` is exFAT, which breaks venvs. Keep the venv off
+  the drive: `export UV_PROJECT_ENVIRONMENT=~/.venvs/quant_trader`. Python 3.13 and uv (`uv sync`, `uv run pytest`).
 - The database runs in Docker (`docker compose up -d`, TimescaleDB, named volume). Its data never sits on exFAT.
 - Secrets live in `.env` (gitignored). `.env.example` lists the key names. Never print or commit key values.
 
