@@ -2,7 +2,7 @@
 name = "quant-trader"
 version = "0.1.0"
 description = "ML quant pipeline (paper trading only)"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.13,<3.15"
 dependencies = [
     "apscheduler>=3.10,<4",
     "exchange-calendars>=4.13.3",
