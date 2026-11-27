@@ -1,5 +1,5 @@
 # Database settings (D-012, D-017). Credentials come from .env, never from here.
-host: localhost
+host: 127.0.0.1     # not localhost: Windows tries ::1 first and waits out connect_timeout_s (compose binds 127.0.0.1)
 port: 54320          # primary (qt_db); env QT_DB_PORT overrides
 backup_port: 54321   # backup (qt_db_backup); env QT_DB_BACKUP_PORT overrides
 name: quant_trader

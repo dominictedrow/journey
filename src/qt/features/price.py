@@ -606,7 +606,9 @@ def _earnings(f: PriceFrame) -> dict[str, np.ndarray]:
     if not e.empty:
         e = e.sort_values(["quarter_key", "released_at"]).reset_index(drop=True)
         rel = pd.to_datetime(e["released_at"], utc=True).dt.as_unit("ns").astype("int64")
-        nxt = rel.groupby(e["quarter_key"]).shift(-1).fillna(NS_INF).astype("int64").to_numpy()
+        # fill_value keeps int64: a float round-trip turns NS_INF into 2**63, which wraps to
+        # INT64_MIN on x86 (ARM saturates), so the latest row per quarter never went live.
+        nxt = rel.groupby(e["quarter_key"]).shift(-1, fill_value=NS_INF).to_numpy()
         rel = rel.to_numpy()
         rdates = np.array(e["report_date"].tolist(), dtype="datetime64[D]")
         pre = e["pre_market"].to_numpy(dtype=bool)
