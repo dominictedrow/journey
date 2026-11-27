@@ -10,7 +10,7 @@
 |---|---|
 | **Phase** | **Phase 3: build done, exit gate 6/7.** Criteria 1–6 pass (S08 handoff table). Criterion 7 (3 unattended `features_daily` sessions) is 0/3. Phase 2 gate still running in parallel |
 | **Last session** | S08 ([handoff](docs/handoffs/2026-11-27_s08_exit_gate_check.md)) |
-| **Git** | `c67453b` (alert mute, D-046) and the S08 docs commit are **not pushed** (Dom pushes) |
+| **Git** | Pushed through `43bff83` (S08: alert mute D-046 `c67453b`, docs) |
 | **Tests** | 762 passed, ruff clean |
 | **Service** | `com.qt.scheduler` (paper), PID 89957 on `c67453b`, restarted 2026-11-26 19:34 PST |
 | **Data** | `features` 2016-01-01 → 2026-11-26, 350 registry rows. No change this session |
@@ -21,7 +21,7 @@
 3. When both pass, close Phase 3 and start Phase 4 questioning.
 
 ### Open questions for Dom
-- [ ] Push `c67453b` and the S08 docs commit.
+- [x] Pushed `c67453b` and `43bff83`.
 - [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
