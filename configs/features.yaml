@@ -93,6 +93,10 @@ fundamentals:
     operating_income: [us-gaap:OperatingIncomeLoss]   # else revenue - costs_and_expenses (same E)
     costs_and_expenses: [us-gaap:CostsAndExpenses, us-gaap:OperatingCostsAndExpenses]
     net_income: [us-gaap:NetIncomeLoss]
+    # v2 ratios (D-045): filers without NetIncomeLoss (ITW, PNC, BSX, ...) tag income to common or
+    # ProfitLoss (incl. minority interest); per period the first tag present wins
+    net_income_v2: [us-gaap:NetIncomeLoss, us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic,
+                    us-gaap:ProfitLoss]
     eps_diluted: [us-gaap:EarningsPerShareDiluted]
     da: [us-gaap:DepreciationDepletionAndAmortization, us-gaap:DepreciationAndAmortization,
          us-gaap:DepreciationAmortizationAndAccretionNet, us-gaap:Depreciation]
@@ -114,8 +118,11 @@ fundamentals:
       - us-gaap:LongTermDebtAndCapitalLeaseObligations+us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent+us-gaap:ShortTermBorrowings
       - us-gaap:DebtInstrumentCarryingAmount+us-gaap:ShortTermBorrowings
     shares: [dei:EntityCommonStockSharesOutstanding]
+    # v2 ratios: diluted weighted-average shares (all classes) when the cover-page count is missing
+    # (multi-class filers report it per class, which companyfacts leaves out) or older than it
+    shares_wavg: [us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding]
   # Units kept per input (anything else, e.g. EPS tagged in "pure" or CHF dividends, is dropped).
-  units: {eps_diluted: USD/shares, shares: shares, default: USD}
+  units: {eps_diluted: USD/shares, shares: shares, shares_wavg: shares, default: USD}
   quarter_days: [80, 100]             # a duration this long is a quarter
   annual_days: [350, 380]             # ... or a fiscal year
   step_tol_days: 10                   # consecutive quarter ends: 91 +- this; YoY: 365 +- this

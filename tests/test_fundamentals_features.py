@@ -386,3 +386,70 @@ def test_parse_instants_only():
     assert p["start"].isna().all() and list(p["end"]) == [date(2023, 12, 31), date(2024, 3, 31)]
     tl = fu.timeline(facts, CFG.fundamentals)
     assert len(tl) == 2 and tl["shares"].iloc[-1] == 1.1e6
+
+
+# ---------------------------------------------------------------- v2 fallbacks (D-045)
+WAVG = "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding"
+V1 = {s.name: s for s in SPECS if s.version == 1}
+V2 = {s.name: s for s in SPECS if s.version == 2}
+
+
+def _wavg_rows():
+    """Diluted weighted-average shares (100) for each quarter, as 3-month (or FY) durations."""
+    rows = []
+    for y in YEARS:
+        for k in (1, 2, 3, 4):
+            rel = filing_time(y, k)
+            period = (f"{qstart(y, 1)}/{qend(y, 4)}" if k == 4
+                      else f"{qstart(y, k)}/{qend(y, k)}")  # fmt: skip
+            rows.append({"asset_id": 1, "fiscal_period": period, "metric": WAVG, "value": 100.0,
+                         "unit": "shares", "accession": f"acc-{y}-{k}", "released_at": rel})
+    return pd.DataFrame(rows)
+
+
+def _vals(spec, facts):
+    return np.asarray(spec.fn(frame(facts=facts)), dtype=float)
+
+
+def _eq(a, b):
+    return bool(np.all((np.isnan(a) & np.isnan(b)) | np.isclose(a, b, rtol=1e-12)))
+
+
+def test_v2_equals_v1_when_cover_shares_and_net_income_exist():
+    facts = pd.concat([FACTS, _wavg_rows()], ignore_index=True)
+    for name in V2:
+        assert _eq(_vals(V2[name], facts), _vals(V1[name], FACTS)), name
+
+
+def test_v2_multi_class_filer_uses_weighted_shares_and_profit_loss():
+    # no cover-page count and no NetIncomeLoss: v1 is all NaN, v2 matches the full filer
+    # (the split never falls between a quarter end and its filing, so the share dates agree).
+    # Before the first bar after a share date (2022-12-31 < first bar) market cap is NaN: there is
+    # no bar to carry splits from, so compare from the first quarter end inside the bars.
+    facts = FACTS[FACTS["metric"] != "dei:EntityCommonStockSharesOutstanding"].copy()
+    facts.loc[facts["metric"] == "us-gaap:NetIncomeLoss", "metric"] = "us-gaap:ProfitLoss"
+    facts = pd.concat([facts, _wavg_rows()], ignore_index=True)
+    inside = FULL.dates >= np.datetime64(filing_time(2023, 1).date())
+    for name in V2:
+        assert np.isnan(_vals(V1[name], facts)).all(), name
+        assert _eq(_vals(V2[name], facts)[inside], _vals(V1[name], FACTS)[inside]), name
+        assert np.isfinite(_vals(V2[name], facts)).any(), name
+
+
+def test_v2_net_income_prefers_net_income_loss():
+    extra = FACTS[FACTS["metric"] == "us-gaap:NetIncomeLoss"].assign(
+        metric="us-gaap:ProfitLoss", value=lambda d: d["value"] * 1.5)
+    facts = pd.concat([FACTS, extra], ignore_index=True)
+    assert _eq(_vals(V2["earnings_yield"], facts), _vals(V1["earnings_yield"], FACTS))
+
+
+def test_v2_stale_cover_count_gives_way_to_newer_weighted_shares():
+    # the cover-page count stops after 2023: v1 goes stale, v2 carries on with the average
+    old = (FACTS["metric"] == "dei:EntityCommonStockSharesOutstanding") & (
+        pd.to_datetime(FACTS["released_at"]) > pd.Timestamp("2024-01-01", tz="UTC"))
+    facts = pd.concat([FACTS[~old], _wavg_rows()], ignore_index=True)
+    late = FULL.dates > np.datetime64("2025-01-01")
+    v1 = _vals(V1["earnings_yield"], facts)
+    v2 = _vals(V2["earnings_yield"], facts)
+    assert np.isnan(v1[late]).all()
+    assert _eq(v2[late], _vals(V1["earnings_yield"], FACTS)[late])

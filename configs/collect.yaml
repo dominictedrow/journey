@@ -243,6 +243,9 @@ edgar:
     - us-gaap:CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization
     - us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent
     - us-gaap:DebtInstrumentCarryingAmount
+    # Net income fallbacks for filers without NetIncomeLoss (D-045)
+    - us-gaap:NetIncomeLossAvailableToCommonStockholdersBasic
+    - us-gaap:ProfitLoss
   # Holding-company reorganizations: the ticker now maps to a new CIK with little history, while
   # the years before sit under the old filer. Its facts are stored under the same asset, only for
   # periods ending before `until` (the new filer's own comparatives take over from there).

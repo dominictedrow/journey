@@ -132,6 +132,14 @@ def test_every_ranked_feature_and_composite_registered():
     assert not any(s.name.startswith("earn_") for s in SPECS)  # calendar facts aren't ranked
 
 
+def test_ranks_take_the_base_version_and_composites_count_bumps():
+    v = {s.name: s.version for s in SPECS}
+    assert v["earnings_yield_xs"] == v["earnings_yield_xs_sec"] == 2  # base v2 (D-045)
+    assert v["roic_xs"] == 1
+    assert v["comp_value"] == 4  # 1 + three components at v2
+    assert v["comp_quality"] == 1
+
+
 def test_members_as_of():
     def ts(d):
         return pd.Timestamp(datetime.fromisoformat(d).replace(tzinfo=UTC))

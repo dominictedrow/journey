@@ -83,30 +83,37 @@ def pct_rank(x: pd.Series) -> pd.Series:
 def register(cfg: CrossSectionCfg, base: list[registry.FeatureSpec]) -> list[registry.FeatureSpec]:
     """Register ranks for every ``base`` spec in the rank groups, plus the composites."""
     keys: list[tuple[str, int]] = []
-    ranked = {s.name: s for s in base if s.group in cfg.rank_groups}
+    ranked: dict[str, registry.FeatureSpec] = {}
+    for s in base:  # the newest version of each ranked base
+        newer = s.name not in ranked or s.version > ranked[s.name].version
+        if s.group in cfg.rank_groups and newer:
+            ranked[s.name] = s
     for name, s in sorted(ranked.items()):
+        v = s.version  # a rank takes its base's version: a base bump bumps its ranks
         registry.feature(
-            f"{name}_xs", 1, kind="asset", group=GROUP_RANK,
+            f"{name}_xs", v, kind="asset", group=GROUP_RANK,
             formula=f"percentile rank (average ties, NaN kept) of {name} v{s.version} across "
             f"the {cfg.index_code} members at T", sources=(f"xs:{name}",),
         )(lambda p, name=name: p.rank(name))  # fmt: skip
         registry.feature(
-            f"{name}_xs_sec", 1, kind="asset", group=GROUP_SECTOR,
+            f"{name}_xs_sec", v, kind="asset", group=GROUP_SECTOR,
             formula=f"percentile rank of {name} v{s.version} within the member's sector "
             f"(NaN if < {cfg.min_sector_size} valid in the sector)", sources=(f"xs:{name}",),
         )(lambda p, name=name: p.sector_rank(name))  # fmt: skip
-        keys += [(f"{name}_xs", 1), (f"{name}_xs_sec", 1)]
+        keys += [(f"{name}_xs", v), (f"{name}_xs_sec", v)]
     for comp, parts in cfg.composites.items():
         missing = [c.lstrip("-") for c in parts if c.lstrip("-") not in ranked]
         if missing:
             raise registry.RegistryError(f"composite {comp}: no ranked feature {missing}")
         vers = ", ".join(f"{c} v{ranked[c.lstrip('-')].version}" for c in parts)
+        # 1 + every component bump since v1, so bumping any component bumps the composite
+        cv = 1 + sum(ranked[c.lstrip("-")].version - 1 for c in parts)
         registry.feature(
-            f"comp_{comp}", 1, kind="asset", group=GROUP_COMPOSITE,
+            f"comp_{comp}", cv, kind="asset", group=GROUP_COMPOSITE,
             formula=f"mean of universe ranks of [{vers}] ('-x' = 1 - rank); needs >= "
             f"{cfg.min_components}", sources=tuple(f"xs:{c.lstrip('-')}" for c in parts),
         )(lambda p, parts=parts: p.composite(parts))  # fmt: skip
-        keys.append((f"comp_{comp}", 1))
+        keys.append((f"comp_{comp}", cv))
     return [registry.get(*k) for k in keys]
 
 

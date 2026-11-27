@@ -642,9 +642,9 @@ class TaxCfg(_Strict):
 
 FUND_INPUTS = (
     "revenue", "cost_of_revenue", "gross_profit", "operating_income", "costs_and_expenses",
-    "net_income",
+    "net_income", "net_income_v2",
     "eps_diluted", "da", "income_tax", "pretax_income", "cfo", "capex", "equity", "cash", "debt",
-    "shares",
+    "shares", "shares_wavg",
 )  # fmt: skip
 
 

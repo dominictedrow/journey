@@ -15,6 +15,10 @@ share a start (6M - 3M = Q2, FY - 9M = Q4), so cash-flow statements (YTD only) w
 period end E = the fiscal-year duration ending at E if reported, else the sum of the four quarters
 ending at E (each ~91 days apart). Ratios that need a price use raw close x shares outstanding, with
 the shares carried forward across later splits.
+
+v2 of the price ratios (D-045) falls back where v1 is always NaN: net income from the
+``net_income_v2`` tags (income to common, then ProfitLoss), and shares from the diluted
+weighted-average count when the cover-page count is missing or older than it (multi-class filers).
 """
 
 from __future__ import annotations
@@ -32,22 +36,23 @@ SOURCES = ("fundamentals", "bars")
 
 FLOWS = (
     "revenue", "cost_of_revenue", "gross_profit", "operating_income", "costs_and_expenses",
-    "net_income",
+    "net_income", "net_income_v2",
     "eps_diluted", "da", "income_tax", "pretax_income", "cfo", "capex",
 )  # fmt: skip
 INSTANTS = ("equity", "cash", "debt", "shares")
+AVERAGES = ("shares_wavg",)  # period averages: the newest period end's shortest duration
 
 # timeline columns: value columns, then the period end (or instant date) each one refers to
 COLUMNS = (
     "revenue_ttm", "revenue_prev", "revenue_end",
-    "ni_ttm", "ni_end",
+    "ni_ttm", "ni_end", "ni2_ttm", "ni2_end",
     "fcf_ttm", "fcf_end",
     "opinc_ttm", "opinc_end", "ebitda_ttm", "ebitda_end",
     "tax_rate",
     "eps_ttm", "eps_prev", "eps_end",
     "gm_std", "gm_end",
     "equity", "equity_end", "cash", "cash_end", "debt", "debt_end",
-    "shares", "shares_end",
+    "shares", "shares_end", "shares2", "shares2_end",
 )  # fmt: skip
 
 
@@ -238,6 +243,15 @@ def _gm_std(gp_q: dict, rev_q: dict, cost_q: dict, cfg: FundamentalsCfg):
     return float(np.std(seq, ddof=1)), end
 
 
+def _latest_average(durs: dict) -> tuple[date | None, float | None]:
+    """The newest period end's value, from its shortest duration (a quarter over a year)."""
+    if not durs:
+        return None, None
+    e = max(k[1] for k in durs)
+    s = max(k[0] for k in durs if k[1] == e)
+    return e, durs[(s, e)][-1][1]
+
+
 def snapshot(resolved: dict[str, dict], cfg: FundamentalsCfg) -> dict[str, float | date | None]:
     """Every timeline column from each input's version histories known at one time."""
     flows, inst = {}, {}
@@ -259,6 +273,8 @@ def snapshot(resolved: dict[str, dict], cfg: FundamentalsCfg) -> dict[str, float
                revenue_prev=year_before(*flows["revenue"], e, cfg) if e else None)  # fmt: skip
     e, v = latest_ttm(*flows["net_income"], cfg)
     out.update(ni_ttm=v, ni_end=e)
+    e, v = latest_ttm(*flows["net_income_v2"], cfg)
+    out.update(ni2_ttm=v, ni2_end=e)
     e, cfo = latest_ttm(*flows["cfo"], cfg)
     capex = at("capex", e)
     if cfo is not None and capex is not None:
@@ -287,6 +303,13 @@ def snapshot(resolved: dict[str, dict], cfg: FundamentalsCfg) -> dict[str, float
     for item in INSTANTS:
         e, v = inst[item]
         out[item], out[f"{item}_end"] = v, e
+    we, wv = _latest_average(
+        {key: h for key, h in resolved["shares_wavg"].items() if isinstance(key, tuple)}
+    )
+    if out["shares_end"] is None or (we is not None and we > out["shares_end"]):
+        out["shares2"], out["shares2_end"] = wv, we
+    else:
+        out["shares2"], out["shares2_end"] = out["shares"], out["shares_end"]
     if cfg.debt_absent_as_zero and not resolved["debt"] and out["equity_end"] is not None:
         out["debt"], out["debt_end"] = 0.0, out["equity_end"]  # never tagged any debt: none
     return out
@@ -297,7 +320,8 @@ def timeline(facts: pd.DataFrame, cfg: FundamentalsCfg) -> pd.DataFrame:
     p = parse(facts)
     if p.empty:
         return pd.DataFrame(columns=list(COLUMNS), index=pd.Index([], dtype="int64", name="rel"))
-    hists = {item: _histories(p, cfg.concepts[item], cfg.unit(item)) for item in FLOWS + INSTANTS}
+    items = FLOWS + INSTANTS + AVERAGES
+    hists = {item: _histories(p, cfg.concepts[item], cfg.unit(item)) for item in items}
     uniq = np.unique(p["rel"].to_numpy())
     rows = [snapshot({i: _cut(h, int(r)) for i, h in hists.items()}, cfg) for r in uniq]
     return pd.DataFrame(rows, index=pd.Index(uniq, name="rel"), columns=list(COLUMNS))
@@ -342,10 +366,10 @@ def _v(f, col: str) -> np.ndarray:
     return aligned(f, col).astype(float)
 
 
-def market_cap(f) -> np.ndarray:
+def market_cap(f, shares_col: str = "shares") -> np.ndarray:
     """Raw close x shares outstanding, with the shares carried across splits since their date."""
-    shares = _v(f, "shares")
-    sd = aligned(f, "shares_end")
+    shares = _v(f, shares_col)
+    sd = aligned(f, f"{shares_col}_end")
     idx = np.searchsorted(f.dates, sd, side="right") - 1  # the bar on/before the shares date
     ok = ~np.isnat(sd) & (idx >= 0)
     pf_then = np.where(ok, f.split_pf[np.maximum(idx, 0)], np.nan)
@@ -373,15 +397,29 @@ def fcf_yield(f) -> np.ndarray:
                     np.nan)  # fmt: skip
 
 
-def enterprise_value(f) -> np.ndarray:
-    return market_cap(f) + _v(f, "debt") - _v(f, "cash")
+def enterprise_value(f, shares_col: str = "shares") -> np.ndarray:
+    return market_cap(f, shares_col) + _v(f, "debt") - _v(f, "cash")
 
 
-def ebitda_ev(f) -> np.ndarray:
+def ebitda_ev(f, shares_col: str = "shares") -> np.ndarray:
     if _no_ebitda(f):
         return np.full(f.n, np.nan)
-    ok = _fresh(f, "ebitda_end", "shares_end", "debt_end", "cash_end")
-    return np.where(ok, _div(_v(f, "ebitda_ttm"), enterprise_value(f)), np.nan)
+    ok = _fresh(f, "ebitda_end", f"{shares_col}_end", "debt_end", "cash_end")
+    return np.where(ok, _div(_v(f, "ebitda_ttm"), enterprise_value(f, shares_col)), np.nan)
+
+
+def earnings_yield_v2(f) -> np.ndarray:
+    return np.where(_fresh(f, "ni2_end", "shares2_end"),
+                    _div(_v(f, "ni2_ttm"), market_cap(f, "shares2")), np.nan)  # fmt: skip
+
+
+def fcf_yield_v2(f) -> np.ndarray:
+    return np.where(_fresh(f, "fcf_end", "shares2_end"),
+                    _div(_v(f, "fcf_ttm"), market_cap(f, "shares2")), np.nan)  # fmt: skip
+
+
+def ebitda_ev_v2(f) -> np.ndarray:
+    return ebitda_ev(f, "shares2")
 
 
 def roic(f) -> np.ndarray:
@@ -447,8 +485,18 @@ def register(cfg: FundamentalsCfg) -> list[registry.FeatureSpec]:
          f"{cfg.eps_yoy_min_base} or a split within {cfg.split_guard_years} y -> NaN",
          eps_yoy),
     ]  # fmt: skip
+    fb = ("v2: shares = diluted weighted-average shares when the cover-page count is missing or "
+          "older")
+    v2 = [
+        ("earnings_yield", f"{defs[0][1]}; {fb}; net income falls back to income to common, "
+         "then ProfitLoss", earnings_yield_v2),
+        ("fcf_yield", f"{defs[1][1]}; {fb}", fcf_yield_v2),
+        ("ebitda_ev", f"{defs[2][1]}; {fb}", ebitda_ev_v2),
+    ]  # fmt: skip
     keys = []
-    for name, formula, fn in defs:
-        registry.feature(name, 1, kind="asset", group=GROUP, formula=formula, sources=SOURCES)(fn)
-        keys.append((name, 1))
+    for ver, items in ((1, defs), (2, v2)):
+        for name, formula, fn in items:
+            registry.feature(name, ver, kind="asset", group=GROUP, formula=formula,
+                             sources=SOURCES)(fn)  # fmt: skip
+            keys.append((name, ver))
     return [registry.get(*k) for k in keys]
