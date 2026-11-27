@@ -494,6 +494,20 @@ def test_edgar_facts_acceptance_join_fallback_and_skip(env, tmp_path):
     out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
     assert out.result.cursor["unchanged"] == 1
 
+    # an asset that gains this filer's CIK later (renamed ticker, former member) is fetched once
+    with kw["connect"]() as c:
+        c.execute(
+            "INSERT INTO assets (ticker, asset_class, cik, security_key) "
+            "VALUES ('AAC', 'equity', '0000000001', 'SPX:AAC:2016-01-01')"
+        )
+    h.calls.clear()
+    out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
+    assert out.result.cursor["unchanged"] == 0
+    assert _q(kw, "SELECT count(*) FROM raw_fundamentals f JOIN assets a USING (asset_id) "
+                  "WHERE a.ticker = 'AAC'") == [(5,)]
+    out = run_collector(EdgarFactsCollector(clock=lambda: NOW), **kw)
+    assert out.result.cursor["unchanged"] == 1
+
 
 @pytest.mark.db
 def test_edgar_predecessor_cik_only_before_until(env, tmp_path):

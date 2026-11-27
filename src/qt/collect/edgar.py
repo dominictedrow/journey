@@ -152,7 +152,11 @@ class EdgarFactsCollector:
                 sub = self._get(ctx, cfg.submissions_url.format(cik=cik10))
                 recent = sub["filings"]["recent"]
                 newest = recent["accessionNumber"][0] if recent["accessionNumber"] else None
-                if newest is not None and latest.get(cik10) == f"{newest}|{concepts_sha}":
+                # the skip key includes the assets mapped to this filer: an asset that gains the
+                # CIK later (a former member's override, a renamed ticker) fetches it once too
+                assets_key = ",".join(str(a) for a in sorted(aids))
+                key = f"{newest}|{concepts_sha}|{assets_key}"
+                if newest is not None and latest.get(cik10) == key:
                     skipped += 1
                     continue
                 pages = [recent] + [
@@ -171,7 +175,7 @@ class EdgarFactsCollector:
                     res.add("raw_fundamentals", stats)
                 ctx.conn.commit()
                 if newest is not None:
-                    latest[cik10] = f"{newest}|{concepts_sha}"
+                    latest[cik10] = key
             except Exception as e:  # noqa: BLE001  (one filer failing never stops the rest)
                 ctx.conn.rollback()
                 failed[cik10] = f"{type(e).__name__}: {e}"
