@@ -34,6 +34,19 @@
 | Sectors | 225 historical GICS, 1 SIC map, 2 unresolved (AABA, WYND, which also have no bars) |
 | Bars | 0 / 6. yfinance serves today's holders of SNDK/TE/STI/PARA and nothing for AABA/WYND. Yahoo's TNL (same entity as WYN) is spin-off-adjusted before 2018-06, so it isn't used. Stooq serves a JS proof-of-work bot check (not circumvented). All documented gaps. |
 
+## Rebuild results (finished 2026-11-27 01:02 UTC)
+- `run_finished status=ok`, 0 errors. **194,847,723 rows** (offered = written), 2016-01-01 → 2026-11-26, 2,741 regime rows, 4,879 s (81 min).
+- Size: 1,699 MB compressed (38 GB raw), 131/133 chunks compressed; `hypertable_size` 2,217 MB including indexes and the 2 open chunks.
+- NaN by group: price 3.5–4.5%, xs_rank / xs_sector_rank 9.0%, fundamentals 30.5%, earnings 65.2%, composite 20.8%, event_clock 21.5%, asset_ts_z 14.7%, market_ts_z 17.1%, gli 16.2%, crypto_ratio 49.3%, crypto_structure 85.9%; regime, macro, masks and framework 0–0.6%.
+- Former members: **98 of the 120 with a CIK now have fundamentals values**. The other 22:
+  - 8 renamed tickers whose facts sit on the successor's row (KORS, SYMC, HCP, CHK, LB, ARNC, SATS, PSKY);
+  - 4 with no or few bars (SNDK, TE, STI, PCP);
+  - 10 with facts and bars but no price-based ratios (SNI, CBS, LM, VIAC, DISCA, DISCK, DRE, DISH, PARA, CMA).
+- **The last group is a fundamentals coverage bug that predates 5c.** It also hits 63 of 572 current names (GOOGL, META, MA, NKE, CMCSA, F, PNC, ITW, …). They have `eps_yoy` but `earnings_yield`, `fcf_yield` and `ebitda_ev` are always NaN. Two causes seen so far:
+  - Multi-class filers report `dei:EntityCommonStockSharesOutstanding` per class, which companyfacts leaves out. GOOGL and META have 0 rows.
+  - Some filers have no `us-gaap:NetIncomeLoss` collected (ITW 0 rows, PNC 18).
+  - Not fixed. It needs a fallback shares and net-income tag list plus a fundamentals version bump.
+
 ## Files touched
 | File | Change |
 |---|---|
@@ -54,7 +67,7 @@
 - DB: migrations up to 010. `features` was truncated; the rebuild is running in the background.
 - `features_daily` first unattended run 2026-11-26 23:00 UTC: **ok** (17 min, holiday, crypto only). Its rows were wiped with the rest and are rebuilt by the backfill.
 - Scheduler: `com.qt.scheduler` (paper), PID 22950 on `5008828`.
-- Git: `5008828` committed, **not pushed**.
+- Git: pushed through `4bc3579`.
 
 ## Blockers / surprises
 - **`DECISIONS.md` has two `D-041` rows** (S06 model plan + S05 inflation v2). The file is append-only, so I left it. Refer to them as D-041 (model plan) and D-041 (infl v2), or tell me to add a renumbering note.
@@ -63,9 +76,9 @@
 - `features_daily` took 17 min for a holiday (crypto-only) run on the 8 GB Mac, against a 60 min timeout. Worth watching on a full session day.
 
 ## Next exact task
-1. When the rebuild finishes: check rows, size (~1.8 GB expected), NaN rates per group, compression. Spot-check that delisted members now have fundamentals ranks.
+1. ~~Rebuild check~~: done, see Rebuild results.
 2. ~~CIK review~~: Dom dropped the 17 names, accepted gap (D-044).
 3. Exit gate: `features_daily` unattended for 3 sessions (Fri 11-27, Mon 11-30, Tue 12-1); Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3.
 
 ## Questions to ask Dom next session
-- Push `5008828` (+ the docs commit)?
+- Fix the fundamentals coverage bug now (fallback tags, version bump, rebuild of the fundamentals features), or after the exit gate?

@@ -8,19 +8,20 @@
 
 | | |
 |---|---|
-| **Phase** | **Phase 3: steps 1–5c done** (5c survivorship, D-043, migration 010). Left: verify the rebuild, then the exit gate (3 unattended `features_daily` sessions). Phase 2 gate still running in parallel |
+| **Phase** | **Phase 3: steps 1–5c done** (5c survivorship, D-043, migration 010). Rebuild verified. Left: the exit gate (3 unattended `features_daily` sessions). Phase 2 gate still running in parallel |
 | **Last session** | S07 ([handoff](docs/handoffs/2026-11-26_s07_survivorship_step5c.md)) |
-| **Git** | `5008828` committed, not pushed (`153e9ad` = origin) |
+| **Git** | Pushed through `4bc3579` |
 | **Tests** | 739 passed, ruff clean |
 | **Service** | `com.qt.scheduler` (paper), PID 22950 on `5008828`. First unattended `features_daily` 2026-11-26: ok |
-| **Data** | 120/137 former-member CIKs (+298k EDGAR facts), 226 historical sectors. `features` wiped and being rebuilt 2016-01-01 → 2026-11-26 (`logs/features_rebuild_20261126.log`) |
+| **Data** | 120/137 former-member CIKs (+298k EDGAR facts), 226 historical sectors. `features` rebuilt 2016-01-01 → 2026-11-26: 194.8M rows, 1.7 GB compressed. Fundamentals coverage bug (63 current + 10 former names lack price ratios), see S07 handoff |
 
 ### Next exact task
-1. Verify the rebuild: rows, size (~1.8 GB), NaN rates per group, compression; delisted members carry fundamentals ranks.
+1. ~~Verify the rebuild~~: done (S07 handoff, Rebuild results).
 2. Exit gate: `features_daily` unattended Fri 11-27, Mon 11-30, Tue 12-1; Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3 and start Phase 4 questioning.
 
 ### Open questions for Dom
-- [ ] Push `5008828` and the S07 docs commit?
+- [x] Pushed through `4bc3579`.
+- [ ] Fix the fundamentals coverage bug (multi-class shares, missing net income) now, or after the exit gate?
 - [x] 17 CIK review names: dropped by Dom, accepted gap with no CIK (D-044).
 - [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
