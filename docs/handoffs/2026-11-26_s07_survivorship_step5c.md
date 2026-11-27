@@ -64,9 +64,8 @@
 
 ## Next exact task
 1. When the rebuild finishes: check rows, size (~1.8 GB expected), NaN rates per group, compression. Spot-check that delisted members now have fundamentals ranks.
-2. Dom: go through `reports/cik_review_20261126.md` (17 names). To confirm one, add it as `match: manual` to `configs/cik_overrides.yaml`.
+2. ~~CIK review~~: Dom dropped the 17 names, accepted gap (D-044).
 3. Exit gate: `features_daily` unattended for 3 sessions (Fri 11-27, Mon 11-30, Tue 12-1); Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3.
 
 ## Questions to ask Dom next session
 - Push `5008828` (+ the docs commit)?
-- The 17 CIK review names: confirm any by hand, or accept them as the known gap?

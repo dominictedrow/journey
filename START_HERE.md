@@ -21,7 +21,7 @@
 
 ### Open questions for Dom
 - [ ] Push `5008828` and the S07 docs commit?
-- [ ] 17 CIK review names (`reports/cik_review_20261126.md`): confirm any as `match: manual`, or accept as the known gap?
+- [x] 17 CIK review names: dropped by Dom, accepted gap with no CIK (D-044).
 - [ ] DECISIONS has two `D-041` rows (append-only; left as is). Add a renumbering note?
 - [ ] Carried: LLM size (Phase 8), whole vs fractional shares (Phase 6), same-session rule (Phase 5), starting NAV (Phase 5), crypto size-cap volume source (Phase 6), short-history trading threshold (Phase 5, from Q8)
 
