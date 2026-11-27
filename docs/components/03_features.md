@@ -68,6 +68,10 @@ As in the spec table, unchanged:
   - Growth: revenue YoY, EPS YoY
 - **(default)** A composite needs ≥ 2 of its components for a value. Otherwise it's NaN with a mask.
 - **(default)** An EDGAR concept map in `configs/features.yaml` lists the XBRL tags per input (e.g. revenue = `Revenues` → `RevenueFromContractWithCustomerExcludingAssessedTax` → `SalesRevenueNet`, first present wins). Banks and REITs get NaN where a concept is undefined (EBITDA/EV, net debt/EBITDA), not a fudged value.
+- **v2 price ratios (D-045).** `earnings_yield`, `fcf_yield` and `ebitda_ev` v2:
+  - Shares: the diluted weighted-average count is used when the cover-page count (`dei:EntityCommonStockSharesOutstanding`) is missing or older than it. Multi-class filers (GOOGL, META, …) report the cover count per class, which companyfacts leaves out.
+  - Net income: falls back to `NetIncomeLossAvailableToCommonStockholdersBasic`, then `ProfitLoss`.
+  - Ranks take their base's version; a composite's version is 1 + the sum of its components' bumps.
 
 ### 5.3 Market vector
 **Spec list, unchanged except where noted:**

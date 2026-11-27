@@ -45,7 +45,35 @@
 - **The last group is a fundamentals coverage bug that predates 5c.** It also hits 63 of 572 current names (GOOGL, META, MA, NKE, CMCSA, F, PNC, ITW, …). They have `eps_yoy` but `earnings_yield`, `fcf_yield` and `ebitda_ev` are always NaN. Two causes seen so far:
   - Multi-class filers report `dei:EntityCommonStockSharesOutstanding` per class, which companyfacts leaves out. GOOGL and META have 0 rows.
   - Some filers have no `us-gaap:NetIncomeLoss` collected (ITW 0 rows, PNC 18).
-  - Not fixed. It needs a fallback shares and net-income tag list plus a fundamentals version bump.
+  - **Fixed in v2 (D-045), see below.**
+
+## Fundamentals v2 fix (2026-11-27, Dom: "fix it now")
+- `earnings_yield` / `fcf_yield` / `ebitda_ev` v2 (`13e2b17`):
+  - Shares: diluted weighted-average shares when the cover-page count is missing or older.
+  - Net income: falls back to `NetIncomeLossAvailableToCommonStockholdersBasic`, then `ProfitLoss`.
+  - v1 is unchanged.
+  - Ranks now take their base's version, and `comp_value` is v4.
+  - EDGAR collects the two fallback tags (186,968 new fact rows).
+- EDGAR skip bug (`3057c30`): an asset that gained an existing filer's CIK (renamed tickers, former members) never got facts until the filer filed again. The skip key now includes the mapped assets, so the next weekly run refetches every filer once.
+- `build --only` (`39844b9`, written by a helper agent): a backfill writes only the selected features, with fnmatch globs. Compute stays full.
+  - A full-history run that re-offers every row into compressed chunks took ~4 h.
+  - With `--only` it took 34 min.
+- Backfill of the v2 history:
+  - Data: 2016-01-01 → 2017-11-10 from a full run (stopped, its `runs` row marked failed); 2017-11 → 2026-11-15 with `--only` (11.4M rows); 2026-11-16..26 from a probe run.
+  - Every one of the 2,741 dates has v2 rows.
+- Coverage (whole history, non-NaN rows):
+
+| Feature | v1 | v2 |
+|---|---|---|
+| `earnings_yield` | 1,070,977 | 1,301,834 (94.5%) |
+| `fcf_yield` | 914,510 | 991,524 |
+| `ebitda_ev` | 770,226 | 837,307 |
+| `comp_value` | 993,003 | 1,131,736 |
+
+- Names with EPS but no earnings yield: 73 → 2 (FOSL, PCP).
+- Former members with a CIK that have v2 ratios: 98 → 111 of 120.
+- `.git` cleanup (helper agent): 908 verified AppleDouble `._*` files removed; `git fsck` is clean.
+- Scheduler restarted on `39844b9` (PID 75620).
 
 ## Files touched
 | File | Change |
@@ -61,17 +89,17 @@
 | `DECISIONS.md` (D-043), `docs/components/03_features.md` (§9.4) | Docs |
 
 ## Tests
-- `uv run pytest -q`: **739 passed**. `ruff check` clean.
+- `uv run pytest -q`: **760 passed** (after the v2 fix, the EDGAR skip fix and `--only`). `ruff check` clean.
 
 ## State of the system
 - DB: migrations up to 010. `features` was truncated; the rebuild is running in the background.
 - `features_daily` first unattended run 2026-11-26 23:00 UTC: **ok** (17 min, holiday, crypto only). Its rows were wiped with the rest and are rebuilt by the backfill.
-- Scheduler: `com.qt.scheduler` (paper), PID 22950 on `5008828`.
-- Git: pushed through `4bc3579`.
+- Scheduler: `com.qt.scheduler` (paper), PID 75620 on `39844b9`.
+- Git: pushed through the S07 close commit.
 
 ## Blockers / surprises
 - **`DECISIONS.md` has two `D-041` rows** (S06 model plan + S05 inflation v2). The file is append-only, so I left it. Refer to them as D-041 (model plan) and D-041 (infl v2), or tell me to add a renumbering note.
-- **macOS `._*` files** litter `.git/objects` (exFAT AppleDouble), so git prints "garbage found" / "non-monotonic index" warnings. Harmless. I removed the three in `objects/pack`; `dot_clean -m .git` would clear the rest.
+- **macOS `._*` files** in `.git`: cleaned 2026-11-27. They come back over time on exFAT; delete the verified `._*` files again if git warns.
 - The migration runner waits for `assets` locks: a long build or the survivorship script holding a read transaction blocks it. Apply migrations between jobs.
 - `features_daily` took 17 min for a holiday (crypto-only) run on the 8 GB Mac, against a 60 min timeout. Worth watching on a full session day.
 
@@ -81,4 +109,3 @@
 3. Exit gate: `features_daily` unattended for 3 sessions (Fri 11-27, Mon 11-30, Tue 12-1); Phase 2 gate (Congress `backfill.done`, 5 unattended days from Fri 11-27). Then close Phase 3.
 
 ## Questions to ask Dom next session
-- Fix the fundamentals coverage bug now (fallback tags, version bump, rebuild of the fundamentals features), or after the exit gate?
