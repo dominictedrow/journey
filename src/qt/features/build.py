@@ -1,6 +1,8 @@
 """Feature build: the daily job and the backfill (component doc 03 section 10, D-042).
 
     uv run python -m qt.features.build --since 2016-01-01 --until 2026-11-26
+    uv run python -m qt.features.build --since 2016-01-01 --until 2026-11-26 \\
+        --only 'earnings_yield,fcf_yield,earnings_yield_xs*'   # write just these names (backfill)
     uv run python -m qt.features.build --daily           # today's decision time only
     uv run python -m qt.features.build --refit-hmm       # missing monthly HMM fits up to now
 
@@ -24,6 +26,7 @@ One code path for both. Every input is loaded once, cut at the run's last decisi
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import io
 import logging
 import math
@@ -450,6 +453,25 @@ def _sessions() -> np.ndarray:
     return _SESS
 
 
+# ---------------------------------------------------------------- selection
+def select_features(cat: catalog_mod.Catalog, patterns) -> set[tuple[str, int]]:
+    """Keys ``(name, version)`` of the catalog specs whose name matches any pattern (``fnmatch``).
+
+    ``patterns`` is a comma-separated string or an iterable of names/globs. A pattern that
+    matches nothing raises ``ValueError`` (a typo must not silently write nothing).
+    """
+    pats = [p.strip() for p in patterns.split(",")] if isinstance(patterns, str) \
+        else [p.strip() for p in patterns]  # fmt: skip
+    pats = [p for p in pats if p]
+    if not pats:
+        raise ValueError("--only: no feature names given")
+    specs = cat.all()
+    unknown = [p for p in pats if not any(fnmatch.fnmatchcase(s.name, p) for s in specs)]
+    if unknown:
+        raise ValueError(f"--only: no feature in the catalog matches {', '.join(unknown)}")
+    return {s.key for s in specs if any(fnmatch.fnmatchcase(s.name, p) for p in pats)}
+
+
 # ---------------------------------------------------------------- writing
 class Writer:
     """Buffers rows and inserts them append-only (COPY into a temp table, then INSERT ... ON
@@ -458,15 +480,17 @@ class Writer:
     COLS = ("asof", "asset_id", "feature_name", "feature_version", "value", "run_id")
 
     def __init__(self, conn: psycopg.Connection, run_id: str | None, batch: int,
-                 compress: bool, groups: dict | None = None) -> None:  # fmt: skip
+                 compress: bool, groups: dict | None = None,
+                 only: set[tuple[str, int]] | None = None) -> None:  # fmt: skip
         self.conn, self.run_id, self.batch, self.compress = conn, run_id, batch, compress
+        self.only = only  # write only these (name, version) keys; None writes everything
         self.groups = groups or {}
         self.group_names: list[str] = sorted(set(self.groups.values()) | {"?"})
         gi = {g: i for i, g in enumerate(self.group_names)}
         self._gi = gi
         self.n_total = np.zeros(len(self.group_names), dtype=np.int64)
         self.n_nan = np.zeros(len(self.group_names), dtype=np.int64)
-        self._meta: dict[tuple, tuple[list[str], np.ndarray]] = {}
+        self._meta: dict[tuple, tuple[list[str], np.ndarray, np.ndarray | None]] = {}
         self.buf = io.StringIO()
         self.n_buf = 0
         self.written = 0
@@ -478,18 +502,30 @@ class Writer:
             "ON COMMIT PRESERVE ROWS"
         )
 
-    def _key_meta(self, keys) -> tuple[list[str], np.ndarray]:
+    def _key_meta(self, keys) -> tuple[list[str], np.ndarray, np.ndarray | None]:
+        """Per key tuple: COPY text pieces, group indexes and (when ``only`` is set and drops
+        some of the keys) the keep mask. Pieces and indexes are already filtered."""
         k = tuple(keys)
         m = self._meta.get(k)
         if m is None:
-            m = ([f"\t{n}\t{v}\t" for n, v in k],
-                 np.array([self._gi[self.groups.get(x, "?")] for x in k], dtype=np.int64))
+            keep = None
+            if self.only is not None:
+                keep = np.array([x in self.only for x in k], dtype=bool)
+                if keep.all():
+                    keep = None
+            kept = k if keep is None else tuple(x for x, ok in zip(k, keep, strict=True) if ok)
+            m = ([f"\t{n}\t{v}\t" for n, v in kept],
+                 np.array([self._gi[self.groups.get(x, "?")] for x in kept], dtype=np.int64), keep)
             self._meta[k] = m
         return m
 
     def add(self, asof_iso: str, asset_id: int | None, keys, values) -> None:
-        mid, gidx = self._key_meta(keys)
+        mid, gidx, keep = self._key_meta(keys)
+        if not mid:
+            return
         v = np.asarray(values, dtype=float)
+        if keep is not None:
+            v = v[keep]
         fin = np.isfinite(v)
         self.n_total += np.bincount(gidx, minlength=len(self.group_names))
         self.n_nan += np.bincount(gidx[~fin], minlength=len(self.group_names))
@@ -565,12 +601,22 @@ def build(
     conn: psycopg.Connection, settings: Settings, since: date, until: date, *,
     run_id: str | None = None, compress: bool | None = None, inp: BuildInputs | None = None,
     cat: catalog_mod.Catalog | None = None, cal: TradingCalendar | None = None,
+    only=None,
 ) -> BuildResult:  # fmt: skip
-    """Compute and write every feature and regime row for decision times on ``since..until``."""
+    """Compute and write every feature and regime row for decision times on ``since..until``.
+
+    ``only`` (comma-separated names or an iterable, globs allowed) limits what is WRITTEN to the
+    matching features; everything is still computed (ranks and composites read the whole panel).
+    Regime rows are skipped then. Unknown names raise before any work.
+    """
     t_start = time.monotonic()
     f = settings.config.features
     cal = cal or TradingCalendar(settings.config.calendar)
     cat = cat or catalog_mod.register_all(f)
+    selected = select_features(cat, only) if only is not None else None
+    if selected is not None:
+        log.info("build_selection", extra={"keys": len(selected), "of": len(cat.keys()),
+                                           "regime_rows": "skipped"})  # fmt: skip
     t_until = decision_time(until, f.build.run_et)
     if inp is None:
         inp = load_inputs(conn, settings, t_until.to_pydatetime(), cat)
@@ -625,7 +671,7 @@ def build(
     sectors = pd.Series(prep.sector)
     groups = {s.key: s.group for s in cat.all()}
     w = Writer(conn, run_id, f.build.write_batch_rows,
-               f.build.compress if compress is None else compress, groups)  # fmt: skip
+               f.build.compress if compress is None else compress, groups, selected)  # fmt: skip
     last_month = None
     for wi, d in enumerate(wgrid.days):
         t = pd.Timestamp(int(wgrid.t[wi]), tz=UTC)
@@ -652,8 +698,9 @@ def build(
         if session:
             zv = [tsz_base_fn(tsz_base[k], hist[k]) for k in tsz_base]
             w.add(iso, None, tsz_keys, zv)
-            w.add_regime(regime_mod.regime_row(m, f.market, f.regime))
-            res.regime_rows += 1
+            if selected is None:
+                w.add_regime(regime_mod.regime_row(m, f.market, f.regime))
+                res.regime_rows += 1
         # -- assets at T
         members = inputs.members_at(inp.membership, t.to_pydatetime()) if session else set()
         panel_rows = {}
@@ -702,14 +749,17 @@ def run_daily(settings: Settings, connect, now: datetime | None = None,
         return res
 
 
-def run_backfill(settings: Settings, connect, since: date, until: date) -> BuildResult:
+def run_backfill(settings: Settings, connect, since: date, until: date,
+                 only=None) -> BuildResult:  # fmt: skip
     from qt.common.runs import run_context
 
+    cat = catalog_mod.register_all(settings.config.features)
+    if only is not None:
+        select_features(cat, only)  # a bad pattern fails here, before a run row or any load
     with run_context("features_backfill", settings, connect) as run, connect() as conn:
-        cat = catalog_mod.register_all(settings.config.features)
         registry.sync(conn)
         conn.commit()
-        res = build(conn, settings, since, until, run_id=run.run_id, cat=cat)
+        res = build(conn, settings, since, until, run_id=run.run_id, cat=cat, only=only)
         conn.commit()
         return res
 
@@ -742,7 +792,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--until", type=date.fromisoformat)
     ap.add_argument("--daily", action="store_true", help="today's decision time only")
     ap.add_argument("--refit-hmm", action="store_true", help="fit missing monthly HMMs first")
+    ap.add_argument("--only", help="backfill only: write just these feature names "
+                    "(comma-separated, fnmatch globs allowed); regime rows are skipped")
     a = ap.parse_args(argv)
+    if a.only is not None and a.daily:
+        ap.error("--only is backfill-only and cannot be combined with --daily")
+    if a.only is not None and not a.since:
+        ap.error("--only needs --since (backfill)")
     settings = config.load()
     connect = lambda: dbconn.connect(settings)  # noqa: E731
     qtlog.setup(settings, connect=connect)
@@ -753,7 +809,13 @@ def main(argv: list[str] | None = None) -> int:
         res = run_daily(settings, connect)
     elif a.since:
         until = a.until or pd.Timestamp.now(tz=ET).date()
-        res = run_backfill(settings, connect, a.since, until)
+        if a.only is not None:
+            try:
+                select_features(catalog_mod.register_all(settings.config.features), a.only)
+            except ValueError as e:
+                print(e, file=sys.stderr)
+                return 2
+        res = run_backfill(settings, connect, a.since, until, only=a.only)
     else:
         return 0 if a.refit_hmm else ap.print_usage() or 2
     if res is not None:

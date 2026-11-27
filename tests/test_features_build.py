@@ -286,6 +286,82 @@ def test_matrix_reads_back(built, cfg_settings):
     assert set(two.market.index) <= {"infl_mom_core_cpi@v1", "infl_mom_core_cpi@v2"}
 
 
+# ---------------------------------------------------------------- write-only selection (--only)
+ONLY_SINCE = date(2023, 7, 3)
+
+
+def _window_rows(settings, db):
+    with connect(settings, "primary", db) as c:
+        return {(r[0], r[1], r[2], r[3]): r[4] for r in c.execute(
+            "SELECT asof, asset_id, feature_name, feature_version, value FROM features "
+            "WHERE asof >= %s", (_t(ONLY_SINCE),)).fetchall()}  # fmt: skip
+
+
+def _same(x, y):
+    return x == y or (x is not None and y is not None and math.isclose(x, y, rel_tol=1e-9))
+
+
+@pytest.fixture(scope="module")
+def only_db(cfg_settings):
+    """A fresh DB for the selection builds (same window end as ``built``: same input cut)."""
+    name, ids = _db(cfg_settings)
+    try:
+        yield name, ids
+    finally:
+        _drop(cfg_settings, name)
+
+
+def test_only_writes_selected_names_with_full_build_values(built, only_db, cfg_settings):
+    name, _ = only_db
+    only = "ret_21d,ret_21d_xs*,stress_score"
+    cat = catalog.register_all(cfg_settings.config.features)
+    want = build.select_features(cat, only)
+    assert ("ret_21d", 1) in want and ("stress_score", 1) in want
+    with connect(cfg_settings, "primary", name) as c:
+        registry.sync(c)
+        res = build.build(c, cfg_settings, ONLY_SINCE, UNTIL, compress=False, only=only)
+        c.commit()
+        assert c.execute("SELECT count(*) FROM regime").fetchone()[0] == 0
+    assert res.regime_rows == 0
+    got = _window_rows(cfg_settings, name)
+    full = _window_rows(cfg_settings, built["a"])
+    assert got and res.rows_offered == res.rows_written == len(got)
+    assert {k[2:] for k in got} == want  # nothing else landed, every selected key did
+    exp = {k: v for k, v in full.items() if k[2:] in want}
+    assert got.keys() == exp.keys()
+    assert [k for k in got if not _same(got[k], exp[k])] == []
+    # NaN stats cover the selected keys only
+    assert set(res.nan_rate) <= {s.group for s in cat.all() if s.key in want}
+
+
+def test_only_glob_matching(cfg_settings):
+    cat = catalog.register_all(cfg_settings.config.features)
+    got = build.select_features(cat, ["ret_21d_*", " stress_score "])
+    names = {n for n, _ in got}
+    assert {"ret_21d_xs", "ret_21d_tsz252", "stress_score"} <= names
+    assert "ret_21d" not in names and "ret_63d_xs" not in names
+    assert all(n.startswith("ret_21d_") or n == "stress_score" for n in names)
+    assert build.select_features(cat, "ret_21d") == {("ret_21d", 1)}
+
+
+def test_only_unmatched_pattern_raises_before_any_write(only_db, cfg_settings):
+    name, _ = only_db
+    with connect(cfg_settings, "primary", name) as c:
+        before = c.execute("SELECT count(*) FROM features").fetchone()[0]
+        with pytest.raises(ValueError, match="no_such_feature"):
+            build.build(c, cfg_settings, ONLY_SINCE, UNTIL, compress=False,
+                        only="ret_21d,no_such_feature*")  # fmt: skip
+        assert c.execute("SELECT count(*) FROM features").fetchone()[0] == before
+    with pytest.raises(ValueError, match="no_such_feature"):
+        build.run_backfill(cfg_settings, None, ONLY_SINCE, UNTIL, only="no_such_feature")
+
+
+def test_only_rejected_with_daily():
+    with pytest.raises(SystemExit) as e:
+        build.main(["--daily", "--only", "ret_21d"])
+    assert e.value.code == 2
+
+
 # ---------------------------------------------------------------- unit pieces
 def test_resolve_matches_compute_asof():
     rng = np.random.default_rng(0)
