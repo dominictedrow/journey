@@ -11,5 +11,10 @@ alerts:
   timeout_s: 5
   priority: {info: 3, warn: 4, critical: 5}
   os_fallback: true
+  # Expected library ERROR lines: still in the file log, never pushed (D-046).
+  # AABA and WYND are former members yfinance no longer serves (D-044 gap).
+  mute:
+    - {logger: yfinance, contains: "$AABA: possibly delisted"}
+    - {logger: yfinance, contains: "$WYND: possibly delisted"}
 reports:
   daily_dir: reports/daily

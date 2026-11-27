@@ -51,6 +51,25 @@ def test_log_error_pushes_exactly_once(settings, cfg, tmp_path):
     assert "feed_failed" in posts[0]["title"] and posts[0]["topic"] == "topic-x"
 
 
+def test_muted_library_error_is_logged_not_pushed(settings, cfg, tmp_path):
+    a, posts, *_ = make(cfg)
+    qtlog.setup(settings, log_dir=tmp_path, alerter=a, console=False)
+    logging.getLogger("yfinance").error("$AABA: possibly delisted; no timezone found")
+    logging.getLogger("yfinance").error("$WYND: possibly delisted; no timezone found")
+    assert posts == []
+    logged = "".join(p.read_text() for p in tmp_path.glob("*.jsonl"))
+    assert "$AABA: possibly delisted" in logged
+
+
+def test_mute_is_narrow(settings, cfg, tmp_path):
+    a, posts, *_ = make(cfg)
+    qtlog.setup(settings, log_dir=tmp_path, alerter=a, console=False)
+    logging.getLogger("yfinance").error("$SPY: possibly delisted; no timezone found")
+    logging.getLogger("qt.collect.yfinance").error("$AABA: other failure")
+    logging.getLogger("other").error("$AABA: possibly delisted")
+    assert len(posts) == 3
+
+
 def test_identical_alerts_coalesce_then_follow_up(cfg):
     a, posts, *_rest, clock = make(cfg)
     for _ in range(5):

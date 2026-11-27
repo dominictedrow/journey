@@ -72,6 +72,13 @@ class AlertPriorityCfg(_Strict):
     critical: int = Field(ge=1, le=5)
 
 
+class AlertMuteCfg(_Strict):
+    """An expected library ERROR line that is logged but not pushed (D-046)."""
+
+    logger: str = Field(min_length=1)
+    contains: str = Field(min_length=1)
+
+
 class AlertsCfg(_Strict):
     enabled: bool
     provider: Literal["ntfy"]
@@ -80,6 +87,7 @@ class AlertsCfg(_Strict):
     timeout_s: float = Field(gt=0)
     priority: AlertPriorityCfg
     os_fallback: bool
+    mute: tuple[AlertMuteCfg, ...] = ()
 
 
 class ReportsCfg(_Strict):

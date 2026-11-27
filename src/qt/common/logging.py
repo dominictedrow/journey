@@ -169,7 +169,7 @@ def setup(
             sink=alerts.db_sink(connect) if connect else None,
         )
     alerts.install(alerter)
-    handlers.append(alerts.AlertHandler(alerter))
+    handlers.append(alerts.AlertHandler(alerter, settings.config.app.alerts.mute))
 
     for h in handlers:
         h.addFilter(ctx)

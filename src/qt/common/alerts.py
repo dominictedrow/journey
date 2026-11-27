@@ -22,7 +22,7 @@ from typing import Literal
 
 import httpx
 
-from qt.common.config import AlertsCfg
+from qt.common.config import AlertMuteCfg, AlertsCfg
 
 Severity = Literal["info", "warn", "critical"]
 SEVERITIES: tuple[Severity, ...] = ("info", "warn", "critical")
@@ -168,16 +168,33 @@ def os_notify(title: str, body: str) -> bool:
     return False
 
 
-class AlertHandler(logging.Handler):
-    """Root-logger handler: every ERROR/CRITICAL record becomes a critical push (D-016)."""
+def is_muted(record: logging.LogRecord, mute: tuple[AlertMuteCfg, ...]) -> bool:
+    """True when ``record`` matches a configured mute rule (its logger or a child, and the text)."""
+    if not mute:
+        return False
+    msg = record.getMessage()
+    return any(
+        (record.name == m.logger or record.name.startswith(m.logger + ".")) and m.contains in msg
+        for m in mute
+    )
 
-    def __init__(self, alerter: Alerter) -> None:
+
+class AlertHandler(logging.Handler):
+    """Root-logger handler: every ERROR/CRITICAL record becomes a critical push (D-016).
+
+    Records matching ``alerts.mute`` (D-046) are skipped here; the file log still keeps them.
+    """
+
+    def __init__(self, alerter: Alerter, mute: tuple[AlertMuteCfg, ...] = ()) -> None:
         super().__init__(level=logging.ERROR)
         self.alerter = alerter
+        self.mute = mute
         self._guard = threading.local()
 
     def emit(self, record: logging.LogRecord) -> None:
         if record.name.startswith("qt.alerts") or getattr(self._guard, "busy", False):
+            return
+        if is_muted(record, self.mute):
             return
         self._guard.busy = True
         try:
